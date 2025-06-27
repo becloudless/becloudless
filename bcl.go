@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"github.com/becloudless/becloudless/version"
+	"github.com/becloudless/becloudless/pkg/version"
 	"github.com/blang/semver/v4"
 	"github.com/juju/fslock"
 	"github.com/mitchellh/go-homedir"

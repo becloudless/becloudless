@@ -1,7 +1,7 @@
 package git
 
 import (
-	"github.com/becloudless/becloudless/utils"
+	"github.com/becloudless/becloudless/pkg/utils"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
