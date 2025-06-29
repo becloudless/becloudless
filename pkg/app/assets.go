@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	"strings"
 )
 
-//go:embed assets
 var Assets embed.FS
 
 // RestoreCollection restores a specific collection (one entry of the go:embed statement) into dir

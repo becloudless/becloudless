@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -15,62 +15,66 @@ import (
 	"strings"
 )
 
-var bcl Bcl
-
 const pathAssets = "assets"
 const PathVersionAssetsPrefix = pathAssets + ".v"
 const pathLock = "lock"
 const pathVersion = "version"
 const pathVersionLock = "version.lock"
 
-type Bcl struct {
-	home    string
+type App struct {
+	Name string
+	Home string
+
 	version version.SemVersion
 }
 
-func (bcl *Bcl) SetVersion(v string) error {
+func (app *App) SetVersion(v string) error {
 	semVersion, err := semver.Parse(v)
 	if err != nil {
 		return errs.WithEF(err, data.WithField("Version", v), "Failed to parse Version")
 	}
-	bcl.version = version.SemVersion{semVersion}
+	app.version = version.SemVersion{Version: semVersion}
 	return nil
 }
 
-func (bcl *Bcl) SetHomeFolder(homeFolder string) {
-	bcl.home = homeFolder
+func (app *App) DefaultHomeFolder() string {
+	home, err := homedir.Dir()
+	if err != nil {
+		logs.WithE(err).Warn("Failed to find home directory")
+		home = filepath.Join(os.TempDir(), app.Name)
+	}
+	return filepath.Join(home, ".config/"+app.Name)
 }
 
 // PrepareAssets updates the assets in the home folder with this versions' assets, unless they're up to date.
 // In order to avoid gone files, new assets are first extracted into a version-specific folder, which is then symlinked
 // to the actual assets path (typically "assets"). The version-specific folder looks like "assets.v1.0.0".
-
-func (bcl *Bcl) PrepareAssets() error {
-	if err := os.MkdirAll(bcl.home, 0755); err != nil {
-		return errs.WithE(err, "Failed to create the BBC home directory")
+func (app *App) PrepareAssets() error {
+	if err := os.MkdirAll(app.Home, 0755); err != nil {
+		return errs.WithE(err, "Failed to create "+app.Name+" home directory")
 	}
 
-	lock := fslock.New(filepath.Join(bcl.home, pathLock))
+	lock := fslock.New(filepath.Join(app.Home, pathLock))
 	if err := lock.Lock(); err != nil {
 		return errs.WithE(err, "Failed to get asset extract lock")
 	}
 
 	defer lock.Unlock()
 
-	bytes, err := os.ReadFile(filepath.Join(bcl.home, pathVersion))
+	bytes, err := os.ReadFile(filepath.Join(app.Home, pathVersion))
 	if err != nil {
 		logs.WithE(err).Warn("Failed to read home version. May be first run")
 	}
 
-	if string(bytes) != bcl.version.String() || err != nil {
+	if string(bytes) != app.version.String() || err != nil {
 		logs.
 			WithField("homeVersion", string(bytes)).
-			WithField("currentVersion", bcl.version.String()).
+			WithField("currentVersion", app.version.String()).
 			Info("BCL version changed, extract of assets required")
 
-		assetsPath := filepath.Join(bcl.home, pathAssets)
-		versionAssetsName := PathVersionAssetsPrefix + bcl.version.String()
-		versionAssetsPath := filepath.Join(bcl.home, versionAssetsName)
+		assetsPath := filepath.Join(app.Home, pathAssets)
+		versionAssetsName := PathVersionAssetsPrefix + app.version.String()
+		versionAssetsPath := filepath.Join(app.Home, versionAssetsName)
 
 		if err := Restore(context.TODO(), versionAssetsPath); err != nil {
 			return errs.WithEF(err, data.WithField("path", versionAssetsPath), "Failed to restore assets")
@@ -84,20 +88,20 @@ func (bcl *Bcl) PrepareAssets() error {
 			return errs.WithE(err, "Unable to activate new assets")
 		}
 
-		if err := os.WriteFile(filepath.Join(bcl.home, pathVersion), []byte(bcl.version.String()), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(app.Home, pathVersion), []byte(app.version.String()), 0644); err != nil {
 			logs.WithE(err).Error("Failed to write current bbc version to home")
 		}
 	}
 
-	if err := bcl.cleanupAssets(); err != nil {
+	if err := app.cleanupAssets(); err != nil {
 		logs.WithE(err).Warn("Failed to cleanup bbc assets")
 	}
 
 	return nil
 }
 
-func (bcl *Bcl) cleanupAssets() error {
-	dir, err := os.ReadDir(bcl.home)
+func (app *App) cleanupAssets() error {
+	dir, err := os.ReadDir(app.Home)
 	if err != nil {
 		return errs.WithE(err, "Failed to read bbc home folder")
 	}
@@ -128,25 +132,13 @@ func (bcl *Bcl) cleanupAssets() error {
 		})
 
 		oldestAssets := assets[0]
-		if oldestAssets == PathVersionAssetsPrefix+bcl.version.String() {
-			logs.WithField("assets", oldestAssets).Debug("oldest bcl assets version is currently used version, not cleaning it up")
+		if oldestAssets == PathVersionAssetsPrefix+app.version.String() {
+			logs.WithField("assets", oldestAssets).Debug("oldest app assets version is currently used version, not cleaning it up")
 			return nil
 		}
-		if err := os.RemoveAll(filepath.Join(bcl.home, oldestAssets)); err != nil {
-			return errs.WithEF(err, data.WithField("folder", filepath.Join(bcl.home, oldestAssets)), "Failed to cleanup old bbc assets")
+		if err := os.RemoveAll(filepath.Join(app.Home, oldestAssets)); err != nil {
+			return errs.WithEF(err, data.WithField("folder", filepath.Join(app.Home, oldestAssets)), "Failed to cleanup old bbc assets")
 		}
 	}
 	return nil
-}
-
-///////////////////////////////
-
-func DefaultHomeFolder() string {
-	home, err := homedir.Dir()
-	if err != nil {
-		logs.WithE(err).Warn("Failed to find home directory")
-		home = filepath.Join(os.TempDir(), "bcl")
-	}
-
-	return filepath.Join(home, ".config/bcl")
 }

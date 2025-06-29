@@ -2,6 +2,7 @@ package git
 
 import (
 	"github.com/becloudless/becloudless/pkg/utils"
+	"github.com/go-git/go-git/v6"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
@@ -14,7 +15,21 @@ import (
 
 type Repository struct {
 	repoDir string
+	Repo    *git.Repository
 	logData data.Fields
+}
+
+func InitRepository(path string) (*Repository, error) {
+	field := data.WithField("path", path)
+	repo, err := git.PlainInit(path, false)
+	if err != nil {
+		return nil, errs.WithEF(err, field, "Failed to init repository")
+	}
+	return &Repository{
+		path,
+		repo,
+		field,
+	}, nil
 }
 
 // OpenRepository
