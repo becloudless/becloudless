@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"runtime"
 )
@@ -17,7 +18,15 @@ import (
 // TODO renovate
 const NIX_VERSION = "2.19.2"
 
-func NixInstall() error {
+func EnsureNixIsAvailable() error {
+	_, err := exec.LookPath("nix")
+	if err != nil {
+		return errs.WithE(err, "nix command is not available")
+	}
+	return nil
+}
+
+func InstallNixLocally() error {
 	arch := runtime.GOARCH
 	if arch == "amd64" {
 		arch = "x86_64"
@@ -31,7 +40,7 @@ func NixInstall() error {
 		return errs.With("Failed to create temporary directory to download nix")
 	}
 	defer func(temp string) {
-		//_ = os.RemoveAll(temp)
+		_ = os.RemoveAll(temp)
 	}(temp)
 
 	filePath := path.Join(temp, NixFilename)

@@ -12,6 +12,7 @@ func NixCmd() *cobra.Command {
 	cmd.AddCommand(
 		NixInstallCmd(),
 		NixIsoCmd(),
+		NixPrepareCmd(),
 	)
 	return cmd
 }

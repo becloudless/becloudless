@@ -15,6 +15,10 @@ func NixInstallCmd() *cobra.Command {
 		Use:   "install",
 		Short: "Install remote device",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := nix.EnsureNixIsAvailable(); err != nil {
+				return errs.WithE(err, "Nix install failed")
+			}
+
 			//localRunner := runner.NewLocalRunner()
 			//if err := localRunner.RunCommand("ls", "-la", "/"); err != nil {
 			//	return err
@@ -28,10 +32,6 @@ func NixInstallCmd() *cobra.Command {
 			//sys := system.System{
 			//	Runner: sshRunner,
 			//}
-
-			if err := nix.NixInstall(); err != nil {
-				return errs.WithE(err, "Nix install failed")
-			}
 
 			//available, required, err := sys.IsSudoAvailableAndPasswordRequired()
 			//if !available {
@@ -54,10 +54,10 @@ func NixInstallCmd() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().StringVarP(&host, "host", "h", "", "host ip to install")
 	cmd.Flags().StringVarP(&user, "user", "u", "install", "user for the connection")
 	cmd.Flags().BoolVarP(&askPassword, "ask-password", "a", false, "ask password")
 
-	cmd.Flags().StringVarP(&host, "host", "h", "", "host ip to install")
 	if err := cmd.MarkFlagRequired("host"); err != nil {
 		logs.WithE(err).Fatal("failed")
 	}
