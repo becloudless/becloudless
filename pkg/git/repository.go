@@ -1,7 +1,7 @@
 package git
 
 import (
-	"github.com/becloudless/becloudless/pkg/utils"
+	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/go-git/go-git/v6"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
@@ -43,7 +43,7 @@ func OpenRepository(path string) (*Repository, error) {
 		path = filepath.Dir(path)
 	}
 
-	path, stderr, err := utils.ExecCmdGetStdoutAndStderr("git", "-C", path, "rev-parse", "--show-toplevel")
+	path, stderr, err := runner.ExecCmdGetStdoutAndStderr("git", "-C", path, "rev-parse", "--show-toplevel")
 	if err != nil {
 		return nil, errs.WithEF(err, data.WithField("stderr", stderr).WithField("path", path), "Failed to get git root folder")
 	}
@@ -59,7 +59,7 @@ func CloneRepository(path string, url string) (*Repository, error) {
 		return nil, errs.WithEF(err, data.WithField("path", path), "Failed to create folder to clone git repository")
 	}
 	logs.WithField("url", url).Info("Cloning repository...")
-	if err := utils.ExecCmd("git", "clone", url, path); err != nil {
+	if err := runner.ExecCmd("git", "clone", url, path); err != nil {
 		return nil, errs.WithEF(err, data.WithField("path", path).WithField("repo", url), "Failed to clone git repository")
 	}
 	return &Repository{
@@ -79,7 +79,7 @@ func (g Repository) HeadCommitHash(short bool) (string, error) {
 	if short {
 		args = append(args, "--short")
 	}
-	stdout, stderr, err := utils.ExecCmdGetStdoutAndStderr("git", args...)
+	stdout, stderr, err := runner.ExecCmdGetStdoutAndStderr("git", args...)
 	if err != nil {
 		return "", errs.WithEF(err, data.WithField("stdout", stdout).WithField("stderr", stderr), "Failed to get git head commit hash")
 	}
@@ -87,14 +87,14 @@ func (g Repository) HeadCommitHash(short bool) (string, error) {
 }
 
 func (g Repository) Checkout(ref string) error {
-	if err := utils.ExecCmd("git", "-C", g.repoDir, "checkout", "-q", ref); err != nil {
+	if err := runner.ExecCmd("git", "-C", g.repoDir, "checkout", "-q", ref); err != nil {
 		return errs.WithEF(err, g.logData.WithField("path", g.repoDir).WithField("ref", ref), "Failed to checkout ref")
 	}
 	return nil
 }
 
 func (g Repository) IsCommitHashExists(commitHash string) error {
-	stdout, stderr, err := utils.ExecCmdGetStdoutAndStderr("git", "-C", g.repoDir, "cat-file", "-e", commitHash)
+	stdout, stderr, err := runner.ExecCmdGetStdoutAndStderr("git", "-C", g.repoDir, "cat-file", "-e", commitHash)
 	if err != nil {
 		return errs.WithEF(err, g.logData.WithField("commit", commitHash).
 			WithField("stdout", stdout).
@@ -104,7 +104,7 @@ func (g Repository) IsCommitHashExists(commitHash string) error {
 }
 
 func (g Repository) GetRemoteOriginURL() (string, error) {
-	stdout, stderr, err := utils.ExecCmdGetStdoutAndStderr("git", "-C", g.repoDir, "config", "--get", "remote.origin.url")
+	stdout, stderr, err := runner.ExecCmdGetStdoutAndStderr("git", "-C", g.repoDir, "config", "--get", "remote.origin.url")
 	if err != nil {
 		return "", errs.WithEF(err, g.logData.WithField("stderr", stderr), "Failed to get git remote url")
 	}
@@ -112,7 +112,7 @@ func (g Repository) GetRemoteOriginURL() (string, error) {
 }
 
 func (g Repository) GetCurrentBranch() (string, error) {
-	stdout, stderr, err := utils.ExecCmdGetStdoutAndStderr("git", "-C", g.repoDir, "symbolic-ref", "--quiet", "HEAD")
+	stdout, stderr, err := runner.ExecCmdGetStdoutAndStderr("git", "-C", g.repoDir, "symbolic-ref", "--quiet", "HEAD")
 	if err != nil {
 		return "", errs.WithEF(err, g.logData.WithField("stderr", stderr), "Failed to get git current branch")
 	}
@@ -130,7 +130,7 @@ func (g Repository) IsFileExistsInRevision(file string, revision string) error {
 		return errs.WithEF(err, g.logData.WithField("file", file), "Failed to get absolute path of file")
 	}
 
-	_, err = utils.ExecCmdGetOutput("git", "-C", g.repoDir, "show", revision+":"+strings.TrimPrefix(fileAbsolutePath, g.repoDir+"/"))
+	_, err = runner.ExecCmdGetOutput("git", "-C", g.repoDir, "show", revision+":"+strings.TrimPrefix(fileAbsolutePath, g.repoDir+"/"))
 	if err != nil {
 		return errs.WithEF(err, g.logData.WithField("file", file).WithField("revision", revision),
 			"Failed to get content of file for revision")
@@ -150,13 +150,13 @@ func (g Repository) GetFileContentAndDateInRevision(file string, revision string
 		return "", t, errs.WithEF(err, g.logData.WithField("file", file), "Failed to get absolute path of file")
 	}
 
-	content, err := utils.ExecCmdGetOutput("git", "-C", g.repoDir, "show", revision+":"+strings.TrimPrefix(fileAbsolutePath, g.repoDir+"/"))
+	content, err := runner.ExecCmdGetOutput("git", "-C", g.repoDir, "show", revision+":"+strings.TrimPrefix(fileAbsolutePath, g.repoDir+"/"))
 	if err != nil {
 		return "", t, errs.WithEF(err, g.logData.WithField("file", file).WithField("revision", revision),
 			"Failed to get content of file for revision")
 	}
 
-	date, err := utils.ExecCmdGetOutput("git", "-C", g.repoDir,
+	date, err := runner.ExecCmdGetOutput("git", "-C", g.repoDir,
 		"log", revision, "-1", "--format=%ct", "--", fileAbsolutePath,
 	)
 	if err != nil {

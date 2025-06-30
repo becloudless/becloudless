@@ -1,14 +1,30 @@
-package utils
+package runner
 
 import (
 	"bytes"
+	"github.com/n0rad/go-erlog/logs"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/n0rad/go-erlog/logs"
 )
+
+type LocalRunner struct {
+}
+
+func NewLocalRunner() *LocalRunner {
+	return &LocalRunner{}
+}
+
+func (r LocalRunner) ExecCmd(head string, args ...string) error {
+	return ExecCmd(head, args...)
+}
+
+func (r LocalRunner) ExecCmdGetStdout(head string, args ...string) (string, error) {
+	return ExecCmdGetOutput(head, args...)
+}
+
+// ////////////////////////////////
 
 func ExecCmdGetStdoutStderrExitCode(head string, parts ...string) (string, string, int, error) {
 	var stdout bytes.Buffer

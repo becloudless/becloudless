@@ -1,7 +1,8 @@
 package cmd
 
 import (
-	"github.com/becloudless/becloudless/pkg/ssh"
+	"github.com/becloudless/becloudless/pkg/nix"
+	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"github.com/spf13/cobra"
 )
@@ -14,10 +15,42 @@ func NixInstallCmd() *cobra.Command {
 		Use:   "install",
 		Short: "Install remote device",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := ssh.RemoteRun(user, host, "", "ls -la / | grep a")
-			if err != nil {
-				return err
+			//localRunner := runner.NewLocalRunner()
+			//if err := localRunner.RunCommand("ls", "-la", "/"); err != nil {
+			//	return err
+			//}
+
+			//sshRunner, err := runner.NewSshRunner(host, user, "")
+			//if err != nil {
+			//	return err
+			//}
+
+			//sys := system.System{
+			//	Runner: sshRunner,
+			//}
+
+			if err := nix.NixInstall(); err != nil {
+				return errs.WithE(err, "Nix install failed")
 			}
+
+			//available, required, err := sys.IsSudoAvailableAndPasswordRequired()
+			//if !available {
+			//	println("sudo is not available")
+			//} else if required {
+			//	println("sudo password is required")
+			//} else {
+			//	println("sudo password is not required")
+			//}
+			//return err
+
+			//if err := sshRunner.RunCommand("ls", "-la", "/"); err != nil {
+			//	return errs.WithE(err, "Command failed on remote")
+			//}
+			//
+			//err := ssh.RemoteRun(user, , "", "ls -la / | grep a")
+			//if err != nil {
+			//	return err
+			//}
 			return nil
 		},
 	}
