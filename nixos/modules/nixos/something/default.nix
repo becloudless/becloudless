@@ -6,9 +6,9 @@
 }:
 with lib.bcl;
 let
-  cfg = config.bcl.system;
+  cfg = config.bcl.something;
 in {
-  options.bcl.system = {
+  options.bcl.something = {
     enable = lib.mkEnableOption "Enable the default settings?";
     ids = lib.mkOption {
       type = lib.types.str;

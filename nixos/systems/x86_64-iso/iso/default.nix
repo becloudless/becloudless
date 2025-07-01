@@ -1,6 +1,6 @@
 { config, lib, pkgs, ... }: {
 
-  bcl.system = {
+  bcl.something = {
     enable = true;
     hardware = "loksing-n100";
     role = "srv";
