@@ -5,6 +5,7 @@
     name = "install";
   };
 
+
   # faster compression, we do not care about size
   isoImage.squashfsCompression = "gzip -Xcompression-level 1";
 

@@ -1,6 +1,5 @@
 { config, lib, pkgs, ... }: {
 
-  config = lib.mkIf (config.bcl.role.name == "install") {
     bcl.wifi.enable = true;
 
     # this is impure to include ssh host key to iso, without having it in git
@@ -24,7 +23,6 @@
     environment.etc."issue.d/ip.issue".text = "\\4\n";
     networking.dhcpcd.runHook = "${pkgs.utillinux}/bin/agetty --reload";
 
-  };
 
 
 
