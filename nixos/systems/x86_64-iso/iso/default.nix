@@ -5,10 +5,11 @@
     name = "install";
   };
 
-
-  # faster compression, we do not care about size
+  # faster compression
   isoImage.squashfsCompression = "gzip -Xcompression-level 1";
+  # isoImage.squashfsCompression = "zstd -Xcompression-level 6";
 
   isoImage.volumeID = lib.mkForce "bcl-iso";
   isoImage.isoName = lib.mkForce "bcl.iso";
+
 }

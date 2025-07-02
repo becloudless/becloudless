@@ -1,5 +1,5 @@
 {
-  description = "LMR infra";
+  description = "bcl infra";
 
   outputs = {self, ...} @ inputs: let
     lib = inputs.snowfall-lib.mkLib {
@@ -8,10 +8,10 @@
 
       snowfall = {
         meta = {
-          name = "lmr";
-          title = "LMR Config";
+          name = "bcl";
+          title = "bcl Config";
         };
-        namespace = "lmr";
+        namespace = "bcl";
       };
     };
   in
@@ -30,6 +30,10 @@
             modules = with inputs; [
               "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
               "${nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
+            ];
+          };
+          orangepi5plus = {
+            modules = with inputs; [
             ];
           };
         };

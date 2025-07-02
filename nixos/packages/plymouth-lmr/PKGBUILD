@@ -1,0 +1,20 @@
+# Maintainer: Shayne Hartford <shayneehartford@gmail.com>
+
+pkgname=plymouth-theme-bcl
+pkgver=1
+pkgrel=1
+pkgdesc="Plymouth theme for bcl."
+arch=('any')
+url="https://gitea.bcl.io/bcl/plymouth-theme-bcl"
+license=('CCPL:cc-by-3.0')
+depends=('plymouth')
+source=()
+sha256sums=()
+
+
+package() {
+	cd $srcdir
+
+	mkdir -p $pkgdir/usr/share/plymouth/themes/bcl
+	install -Dm644 * $pkgdir/usr/share/plymouth/themes/bcl
+}

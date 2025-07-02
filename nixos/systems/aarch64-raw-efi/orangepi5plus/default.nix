@@ -4,7 +4,7 @@
   ...
 }:  {
 #
-  lmr.hardware = {
+  bcl.hardware = {
     device = "orangepi5plus";
   };
 #

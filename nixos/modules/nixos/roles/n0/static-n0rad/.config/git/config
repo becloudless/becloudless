@@ -1,0 +1,79 @@
+[user]
+  name = Arnaud Lemaire
+  email = alemaire@norad.fr
+[color]
+  branch = auto
+  diff = auto
+  status = auto
+[color "branch"]
+  current = yellow reverse
+  local = yellow 
+  remote = green
+[color "diff"]
+  meta = yellow bold
+  frag = magenta bold
+  old = red bold
+  new = green bold
+[color "status"]
+  added = yellow
+  changed = green
+  untracked = cyan
+[merge]
+      tool = meld
+[pull]
+  rebase = true
+  stat = true
+[merge]
+  stat = true
+[mergetool]
+  keepBackup = false
+
+[push]
+  default = simple
+[alias]
+  subtree = /usr/local/libexec/git-core/git-subtree
+  amend="commit --amend --no-edit"
+
+  logstat = log ORIG_HEAD.. --stat --no-merges
+  slog = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%ci) %C(bold blue)%an <%ae>%Creset' --abbrev-commit --date=short
+  last = !git --no-pager log --pretty=format:'Hash    : %Cred%H%Creset\nDate    : %Cgreen(%ci)%Creset\nRefs    : %C(yellow)%d%Creset\nSubject : %s\nAuthor  : %C(bold blue)%an <%ae>%Creset\n' --abbrev-commit --date=short -1 --date=short
+  serve = daemon --reuseaddr --verbose  --base-path=. --export-all ./.git
+  st = status
+  ci = commit
+  co = checkout
+  df = diff
+  who = shortlog -s --
+  branch-merged = "!branch_merged(){ for branch in `git branch -r --merged | grep -v HEAD | grep -v origin/master | grep -v origin/release` ;do git show --format=\"%C(yellow)%d %Cgreen%aN %C(cyan)%ar\" $branch | head -n 1 ; done }; branch_merged"
+  branch-not-merged = "!branch_not_merged(){ for branch in `git branch -r --no-merged | grep -v HEAD | grep -v origin/master | grep -v origin/release` ;do git show --format=\"%C(yellow)%d %Cgreen%aN %C(cyan)%ar\" $branch | head -n 1 ; done }; branch_not_merged"
+  ignore = "!gi() { curl http://www.gitignore.io/api/$@ ;}; gi"
+
+  lb = !git reflog show --pretty=format:'%gs ~ %gd' --date=relative | grep 'checkout:' | grep -oE '[^ ]+ ~ .*' | awk -F~ '!seen[$1]++' | head -n 10 | tac | awk -F' ~ HEAD@{' '{printf(\"  \\033[33m%s: \\033[37m %s\\033[0m\\n\", substr($2, 1, length($2)-1), $1)}'
+
+
+[core]
+#    pager = delta --plus-color="#012800" --minus-color="#340001" --theme='Monokai Extended Bright'
+  autocrlf = input
+  excludesfile = /home/n0rad/.config/git/ignore_global
+  quotepath = false
+  commitGraph = true
+[diff]
+  renames = copies
+  mnemonicprefix = true
+[rerere]
+  enabled = true
+[gc]
+  writeCommitGraph = true
+
+[credential]
+  helper = store
+[gpg]
+  format = ssh
+[gpg "ssh"]
+  defaultKeyCommand = ssh-add -L
+[commit]
+  gpgsign = true
+[url "git@github.com:"]
+    insteadOf = https://github.com/
+
+[includeIf "gitdir:**/Blablacar/**/"]
+  path = config-blablacar

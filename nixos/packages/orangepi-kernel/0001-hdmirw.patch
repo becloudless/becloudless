@@ -1,0 +1,42 @@
+diff --git i/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c w/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
+index 12d0be741..5392938f4 100644
+--- i/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
++++ w/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
+@@ -1360,7 +1360,7 @@ static int hdmirx_phy_register_write(struct rk_hdmirx_dev *hdmirx_dev,
+ 		u32 phy_reg, u32 val)
+ {
+ 	u32 i;
+-	struct device *dev = hdmirx_dev->dev;
++	/* struct device *dev = hdmirx_dev->dev; */
+ 
+ 	hdmirx_dev->cr_write_done = false;
+ 	/* clear irq status */
+@@ -1382,7 +1382,7 @@ static int hdmirx_phy_register_write(struct rk_hdmirx_dev *hdmirx_dev,
+ 	}
+ 
+ 	if (i == WAIT_PHY_REG_TIME) {
+-		dev_err(dev, "%s wait cr write done failed!\n", __func__);
++		/* dev_err(dev, "%s wait cr write done failed!\n", __func__); */
+ 		return -1;
+ 	}
+ 
+@@ -1476,7 +1476,7 @@ static void hdmirx_phy_config(struct rk_hdmirx_dev *hdmirx_dev)
+ static void hdmirx_controller_init(struct rk_hdmirx_dev *hdmirx_dev)
+ {
+ 	u32 i;
+-	struct device *dev = hdmirx_dev->dev;
++	/*struct device *dev = hdmirx_dev->dev;*/
+ 
+ 	hdmirx_dev->timer_base_lock = false;
+ 	hdmirx_clear_interrupt(hdmirx_dev, MAINUNIT_0_INT_CLEAR, 0xffffffff);
+@@ -1491,8 +1491,8 @@ static void hdmirx_controller_init(struct rk_hdmirx_dev *hdmirx_dev)
+ 			break;
+ 	}
+ 
+-	if (i == WAIT_TIMER_LOCK_TIME)
+-		dev_err(dev, "%s wait timer base lock failed!\n", __func__);
++	/* if (i == WAIT_TIMER_LOCK_TIME)
++		dev_err(dev, "%s wait timer base lock failed!\n", __func__); */
+ 
+ 	hdmirx_update_bits(hdmirx_dev, VIDEO_CONFIG2,
+ 			   VPROC_VSYNC_POL_OVR_VALUE |

@@ -1,0 +1,28 @@
+From adea7d6ee8c1740897d5af43a25e2626aa14a14a Mon Sep 17 00:00:00 2001
+From: Arnaud Lemaire <alemaire@norad.fr>
+Date: Sat, 21 Oct 2023 18:54:44 +0200
+Subject: [PATCH] no bar / no border
+
+---
+ config.def.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/config.def.h b/config.def.h
+index 061ad66..cb8175d 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -1,9 +1,9 @@
+ /* See LICENSE file for copyright and license details. */
+ 
+ /* appearance */
+-static const unsigned int borderpx  = 1;        /* border pixel of windows */
++static const unsigned int borderpx  = 0;        /* border pixel of windows */
+ static const unsigned int snap      = 32;       /* snap pixel */
+-static const int showbar            = 1;        /* 0 means no bar */
++static const int showbar            = 0;        /* 0 means no bar */
+ static const int topbar             = 1;        /* 0 means bottom bar */
+ static const char *fonts[]          = { "monospace:size=10" };
+ static const char dmenufont[]       = "monospace:size=10";
+-- 
+2.42.0
+
