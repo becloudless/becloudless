@@ -3,6 +3,7 @@ package runner
 import (
 	"bytes"
 	"fmt"
+	"github.com/awnumar/memguard"
 	"github.com/n0rad/go-erlog/errs"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -11,14 +12,15 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 type SshRunner struct {
 	client       *ssh.Client
-	sudoPassword string
+	sudoPassword *memguard.LockedBuffer
 }
 
-func NewSshRunner(addr string, user string, sudoPassword string) (*SshRunner, error) {
+func NewSshRunner(addr string, user string) (*SshRunner, error) {
 	// privateKey could be read from a file, or retrieved from another storage
 	// source, such as the Secret Service / GNOME Keyring
 	//key, err := ssh.ParsePrivateKey([]byte(privateKey))
@@ -60,12 +62,45 @@ func NewSshRunner(addr string, user string, sudoPassword string) (*SshRunner, er
 	}
 
 	return &SshRunner{
-		client:       client,
-		sudoPassword: sudoPassword,
+		client: client,
 	}, nil
 }
 
-func (r SshRunner) ExecCmd(head string, args ...string) error {
+func (r *SshRunner) Exec(stdin io.Reader, head string, args ...string) (string, string, int, error) {
+	session, err := r.client.NewSession()
+	if err != nil {
+		return "", "", 1, errs.WithE(err, "Failed to create ssh session")
+	}
+	defer session.Close()
+
+	modes := ssh.TerminalModes{
+		ssh.ECHO:          0,     // disable echoing
+		ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
+		ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
+	}
+
+	err = session.RequestPty("xterm", 80, 40, modes)
+	if err != nil {
+		return "", "", 1, errs.WithE(err, "Failed to request pty")
+	}
+
+	var stdout, stderr bytes.Buffer
+	session.Stdout = &stdout
+	session.Stderr = &stderr
+	session.Stdin = stdin
+
+	if err = session.Run(head + " " + strings.Join(args, " ")); err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			fmt.Printf("Command failed with exit code: %d\n", exitError.ExitCode())
+		}
+		return stdout.String(), stderr.String(), 1, errs.WithE(err, "Command failed")
+	}
+	return stdout.String(), stderr.String(), 0, nil
+}
+
+
+
+func (r *SshRunner) ExecCmd(head string, args ...string) error {
 	session, err := r.client.NewSession()
 	if err != nil {
 		return errs.WithE(err, "Failed to create ssh session")
@@ -90,7 +125,7 @@ func (r SshRunner) ExecCmd(head string, args ...string) error {
 	go func(in io.Writer, output *bytes.Buffer) {
 		for {
 			if strings.Contains(string(output.Bytes()), "[sudo] password for ") {
-				_, err = in.Write([]byte(r.sudoPassword + "\n"))
+				_, err = in.Write([]byte(r.sudoPassword.String() + "\n"))
 				if err != nil {
 					break
 				}
@@ -110,7 +145,7 @@ func (r SshRunner) ExecCmd(head string, args ...string) error {
 	return nil
 }
 
-func (r SshRunner) ExecCmdGetStdout(head string, args ...string) (string, error) {
+func (r *SshRunner) ExecCmdGetStdout(head string, args ...string) (string, error) {
 	session, err := r.client.NewSession()
 	if err != nil {
 		return "", errs.WithE(err, "Failed to create ssh session")
@@ -135,7 +170,7 @@ func (r SshRunner) ExecCmdGetStdout(head string, args ...string) (string, error)
 	go func(in io.Writer, output *bytes.Buffer) {
 		for {
 			if strings.Contains(string(output.Bytes()), "[sudo] password for ") {
-				_, err = in.Write([]byte(r.sudoPassword + "\n"))
+				_, err = in.Write([]byte(r.sudoPassword.String() + "\n"))
 				if err != nil {
 					break
 				}
@@ -159,6 +194,64 @@ func (r SshRunner) ExecCmdGetStdout(head string, args ...string) (string, error)
 		return "", errs.WithE(err, "Command failed")
 	}
 	return stdout.String(), nil
+}
+
+func (r *SshRunner) ExecCmdGetStderr(head string, args ...string) (string, error) {
+	session, err := r.client.NewSession()
+	if err != nil {
+		return "", errs.WithE(err, "Failed to create ssh session")
+	}
+	defer session.Close()
+
+	modes := ssh.TerminalModes{
+		ssh.ECHO:          0,     // disable echoing
+		ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
+		ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
+	}
+
+	err = session.RequestPty("xterm", 80, 40, modes)
+	if err != nil {
+		return "", errs.WithE(err, "Failed to request pty")
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	session.Stdout = &stdout
+	session.Stderr = &stderr
+	in, _ := session.StdinPipe()
+
+	go func(in io.Writer, output *bytes.Buffer) {
+		for {
+			s := string(output.Bytes())
+			if strings.Contains(s"Sorry, try again.") {
+				in.Write("\d")
+			}
+			if strings.Contains(s, "[sudo] password for ") {
+				_, err = in.Write([]byte(r.sudoPassword.String() + "\n"))
+				if err != nil {
+					break
+				}
+				//fmt.Println("put the password ---  end .")
+				//break
+			}
+			time.Sleep(1000)
+		}
+	}(in, &stdout)
+
+	//err = session.Start()
+	//if err != nil {
+	//	return "", errs.WithE(err, "Failed to start command")
+	//}
+	//err = session.Wait()
+
+	if err = session.Run(head + " " + strings.Join(args, " ")); err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			fmt.Printf("Command failed with exit code: %d\n", exitError.ExitCode())
+		}
+
+		return "", errs.WithE(err, "Command failed")
+	}
+	return stderr.String(), nil
 }
 
 //// Create a session. It is one session per command.

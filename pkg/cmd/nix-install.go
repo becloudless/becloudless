@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"github.com/awnumar/memguard"
 	"github.com/becloudless/becloudless/pkg/nix"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 func NixInstallCmd() *cobra.Command {
@@ -19,13 +21,19 @@ func NixInstallCmd() *cobra.Command {
 				return errs.WithE(err, "Nix install failed")
 			}
 
+			var password *memguard.LockedBuffer
+			if askPassword {
+				print("Sudo password? ")
+				key, err := memguard.NewBufferFromReaderUntil(os.Stdin, '\n')
+				if err != nil {
+					return errs.WithE(err, "Failed to grab sudo password")
+				}
+				password = key
+			}
+			return nix.InstallAnywhere(host, user, password)
+
 			//localRunner := runner.NewLocalRunner()
 			//if err := localRunner.RunCommand("ls", "-la", "/"); err != nil {
-			//	return err
-			//}
-
-			//sshRunner, err := runner.NewSshRunner(host, user, "")
-			//if err != nil {
 			//	return err
 			//}
 
@@ -56,7 +64,7 @@ func NixInstallCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&host, "host", "h", "", "host ip to install")
 	cmd.Flags().StringVarP(&user, "user", "u", "install", "user for the connection")
-	cmd.Flags().BoolVarP(&askPassword, "ask-password", "a", false, "ask password")
+	cmd.Flags().BoolVarP(&askPassword, "ask-password", "P", false, "ask password")
 
 	if err := cmd.MarkFlagRequired("host"); err != nil {
 		logs.WithE(err).Fatal("failed")

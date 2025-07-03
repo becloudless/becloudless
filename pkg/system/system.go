@@ -1,7 +1,9 @@
 package system
 
 import (
+	"github.com/awnumar/memguard"
 	"github.com/becloudless/becloudless/pkg/system/runner"
+	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 )
 
@@ -9,18 +11,21 @@ type System struct {
 	Runner runner.Runner
 }
 
-func (s System) IsSudoAvailableAndPasswordRequired() (bool, bool, error) {
+func (s System) IsSudoWorking(password *memguard.LockedBuffer) error {
 	err := s.Runner.ExecCmd("command", "-v", "sudo")
 	if err != nil {
-		return false, false, nil
+		return errs.WithE(err, "Sudo is not available")
 	}
 
-	stdout, err := s.Runner.ExecCmdGetStdout("sudo", "-n", "true")
-	if err != nil {
-		return true, false, errs.WithE(err, "Failed to get sudo")
+	if password == nil || password.Size() == 0 {
+		if stderr, err := s.Runner.ExecCmdGetStderr("sudo", "-n", "true"); err != nil {
+			return errs.WithEF(err, data.WithField("stderr", stderr), "Sudo require a password")
+		}
+	} else {
+		s.Runner.SupportSudoPassword(password)
+		if stderr, err := s.Runner.ExecCmdGetStderr("sudo", "true"); err != nil {
+			return errs.WithEF(err, data.WithField("stderr", stderr), "Sudo password is not working")
+		}
 	}
-	if stdout == "sudo: a password is required" {
-		return true, true, nil
-	}
-	return true, false, nil
+	return nil
 }

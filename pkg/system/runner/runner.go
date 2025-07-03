@@ -1,6 +1,7 @@
 package runner
 
+import "io"
+
 type Runner interface {
-	ExecCmdGetStdout(head string, args ...string) (string, error)
-	ExecCmd(head string, args ...string) error
+	Exec(stdin io.Reader, head string, args ...string) (stdout string, stderr string, exitCode int, err error)
 }

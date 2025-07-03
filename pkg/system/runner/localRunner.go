@@ -2,6 +2,7 @@ package runner
 
 import (
 	"bytes"
+	"github.com/awnumar/memguard"
 	"github.com/n0rad/go-erlog/logs"
 	"io"
 	"os"
@@ -10,18 +11,27 @@ import (
 )
 
 type LocalRunner struct {
+	sudoPassword *memguard.LockedBuffer
 }
 
 func NewLocalRunner() *LocalRunner {
 	return &LocalRunner{}
 }
 
-func (r LocalRunner) ExecCmd(head string, args ...string) error {
+func (r *LocalRunner) ExecCmd(head string, args ...string) error {
 	return ExecCmd(head, args...)
 }
 
-func (r LocalRunner) ExecCmdGetStdout(head string, args ...string) (string, error) {
+func (r *LocalRunner) ExecCmdGetStdout(head string, args ...string) (string, error) {
 	return ExecCmdGetOutput(head, args...)
+}
+
+func (r *LocalRunner) ExecCmdGetStderr(head string, args ...string) (string, error) {
+	return ExecCmdGetStderr(head, args...)
+}
+
+func (r *LocalRunner) SupportSudoPassword(password *memguard.LockedBuffer) {
+	r.sudoPassword = password
 }
 
 // ////////////////////////////////
