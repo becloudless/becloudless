@@ -3,6 +3,7 @@ package runner
 import (
 	"bytes"
 	"github.com/awnumar/memguard"
+	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"io"
 	"os"
@@ -18,20 +19,36 @@ func NewLocalRunner() *LocalRunner {
 	return &LocalRunner{}
 }
 
+func (r *LocalRunner) Exec(stdin io.Reader, stdout io.Writer, stderr io.Writer, head string, args ...string) (int, error) {
+	cmd := exec.Command(head, args...)
+	cmd.Stderr = stderr
+	cmd.Stdout = stdout
+	cmd.Stdin = stdin
+	if logs.IsTraceEnabled() {
+		logs.WithField("command", strings.Join([]string{head, " ", strings.Join(args, " ")}, " ")).Debug("Running external command")
+	}
+	if err := cmd.Start(); err != nil {
+		return -1, errs.WithE(err, "Failed to start command")
+	}
+	err := cmd.Wait()
+	return cmd.ProcessState.ExitCode(), err
+}
+
 func (r *LocalRunner) ExecCmd(head string, args ...string) error {
-	return ExecCmd(head, args...)
+	_, err := r.Exec(os.Stdin, os.Stdout, os.Stderr, head, args...)
+	return err
 }
 
 func (r *LocalRunner) ExecCmdGetStdout(head string, args ...string) (string, error) {
-	return ExecCmdGetOutput(head, args...)
+	var stdout bytes.Buffer
+	_, err := r.Exec(os.Stdin, &stdout, os.Stderr, head, args...)
+	return stdout.String(), err
 }
 
 func (r *LocalRunner) ExecCmdGetStderr(head string, args ...string) (string, error) {
-	return ExecCmdGetStderr(head, args...)
-}
-
-func (r *LocalRunner) SupportSudoPassword(password *memguard.LockedBuffer) {
-	r.sudoPassword = password
+	var stderr bytes.Buffer
+	_, err := r.Exec(os.Stdin, &stderr, os.Stderr, head, args...)
+	return stderr.String(), err
 }
 
 // ////////////////////////////////

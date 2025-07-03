@@ -15,18 +15,27 @@ func InstallAnywhere(host string, user string, sudoPassword *memguard.LockedBuff
 	if err != nil {
 		return err
 	}
-	sys := system.System{
-		Runner: run,
+
+	//sudoRunner, err := runner.NewSudoRunner(run, sudoPassword)
+	sudoRunner, err := runner.NewInlineSudoRunner(run, sudoPassword)
+	if err != nil {
+		return errs.WithE(err, "Sudo cannot be run successfully on host to install")
 	}
 
-	if err := sys.IsSudoWorking(sudoPassword); err != nil {
-		return errs.WithE(err, "Sudo cannot be run successfully on host to install")
+	sys := system.System{
+		SudoRunner: sudoRunner,
 	}
 
 	info, err := ExtractSystemInfo(sys)
 	if err != nil {
 		return errs.WithE(err, "Failed to extract system information from host to install")
 	}
+
+	// find host info in nixos config
+	// find role associated to host
+	// ask cryptsetup passwprd
+	// extract ssh host key for role to prepared folder
+	// trigger nixos-anywhere
 
 	fmt.Println("Ready to install", info)
 
@@ -49,20 +58,20 @@ const disks = "disks"
 
 func ExtractSystemInfo(sys system.System) (SystemInfo, error) {
 	info := SystemInfo{}
-	res, err := sys.Runner.ExecCmdGetStdout(`
-		echo "`+motherboardUuid+`=$(cat /sys/devices/virtual/dmi/id/product_uuid 2> /dev/null)" > /tmp/info
-		echo "`+cpuSerial+`=$(grep "Serial" /proc/cpuinfo | cut -f2 -d: | sed -e 's/^[[:space:]]*//')" >> /tmp/info
-		echo "`+netWorkMacs+`=$(find /sys/class/net/*/ -maxdepth 1 -type l -name device -exec sh -c "grep -q up \$(dirname {})/operstate && cat \$(dirname {})/address | tr '\n' ','" \;)" >> /tmp/info
-		echo "`+netWorkIps+`=$(ip -o addr show scope global | grep -E ": (wl|en|br)" | awk '{gsub(/\/.*/," ",$4); print $4}' | tr '\n' ' ')" >> /tmp/info
-		echo "`+disks+`=$(find /dev/disk/by-id/ -lname '*sd*' -o  -lname '*nvme*' -o -lname '*vd*' -o -lname '*scsi*' | grep -E -v -- "-part?" | grep '/ata\|/nvme\|usb\|/scsi'| tr '\n' ' ')" >> /tmp/info
+	res, err := sys.SudoRunner.ExecCmdGetStdout(`\
+		echo "` + motherboardUuid + `=$(sudo -S cat /sys/devices/virtual/dmi/id/product_uuid 2> /dev/null)" > /tmp/info
+		echo "` + cpuSerial + `=$(grep "Serial" /proc/cpuinfo | cut -f2 -d: | sed -e 's/^[[:space:]]*//')" >> /tmp/info
+		echo "` + netWorkMacs + `=$(find /sys/class/net/*/ -maxdepth 1 -type l -name device -exec sh -c "grep -q up \$(dirname {})/operstate && cat \$(dirname {})/address | tr '\n' ','" \;)" >> /tmp/info
+		echo "` + netWorkIps + `=$(ip -o addr show scope global | grep -E ": (wl|en|br)" | awk '{gsub(/\/.*/," ",$4); print $4}' | tr '\n' ' ')" >> /tmp/info
+		echo "` + disks + `=$(find /dev/disk/by-id/ -lname '*sd*' -o  -lname '*nvme*' -o -lname '*vd*' -o -lname '*scsi*' | grep -E -v -- "-part?" | grep '/ata\|/nvme\|usb\|/scsi'| tr '\n' ' ')" >> /tmp/info
 		cat /tmp/info
 		rm /tmp/info
-	`, "")
+	`)
 	if err != nil {
 		return info, errs.WithE(err, "Failed")
 	}
 
-	keyValues := strings.Split(res, "\r\n")
+	keyValues := strings.Split(res, "\n")
 	for _, keyValueString := range keyValues {
 		if keyValueString == "" {
 			continue
@@ -99,21 +108,3 @@ func ExtractSystemInfo(sys system.System) (SystemInfo, error) {
 	}
 	return info, nil
 }
-
-//func RunGetStdout(client *ssh.Client, cmd string) (string, error) {
-//	session, err := client.NewSession()
-//	var stdout bytes.Buffer
-//	var stderr bytes.Buffer
-//	session.Stdout = &stdout
-//	session.Stderr = &stderr
-//
-//	if err != nil {
-//		return "", errs.WithE(err, "Failed to open ssh session")
-//	}
-//	defer session.Close()
-//
-//	if err := session.Run(cmd); err != nil {
-//		return "", errs.WithEF(err, data.WithField("stderr", stderr.String()), "Failed to info")
-//	}
-//	return stdout.String(), nil
-//}
