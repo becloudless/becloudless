@@ -2,7 +2,6 @@ package nix
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/becloudless/becloudless/pkg/bcl"
 	"github.com/becloudless/becloudless/pkg/system"
 	"github.com/becloudless/becloudless/pkg/system/runner"
@@ -52,13 +51,18 @@ func InstallAnywhere(host string, user string, sudoPassword *memguarded.Service)
 		return errs.WithE(err, "Failed to list nixos configurations")
 	}
 
+	system, err := newHost(info)
+	if err != nil {
+		return errs.WithE(err, "Failed to create new host")
+	}
+
+	logs.WithField("something", system).Debug("system")
+
 	// find host info in nixos config
 	// find role associated to host
 	// ask cryptsetup passwprd
 	// extract ssh host key for role to prepared folder
 	// trigger nixos-anywhere
-
-	fmt.Println("Ready to install", info)
 
 	return nil
 }
