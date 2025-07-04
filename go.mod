@@ -14,6 +14,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/n0rad/go-erlog v0.0.0-20240412093139-2d3c00f17991
 	github.com/n0rad/gomake v0.0.0-20240823070356-e5d952862596
+	github.com/n0rad/memguarded v1.20201101.100527-031299f
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
@@ -40,10 +41,12 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
+	github.com/oklog/run v1.1.0 // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/youmark/pkcs8 v0.0.0-20200403053413-436114b17e7c // indirect
 	golang.org/x/exp v0.0.0-20250531010427-b6e5de432a8b // indirect
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.41.0 // indirect

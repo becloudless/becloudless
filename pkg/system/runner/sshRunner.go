@@ -95,11 +95,11 @@ func (r *SshRunner) ExecCmd(head string, args ...string) error {
 func (r *SshRunner) ExecCmdGetStdout(head string, args ...string) (string, error) {
 	var stdout bytes.Buffer
 	_, err := r.Exec(os.Stdin, &stdout, os.Stderr, head, args...)
-	return stdout.String(), err
+	return strings.TrimSpace(stdout.String()), err
 }
 
 func (r *SshRunner) ExecCmdGetStderr(head string, args ...string) (string, error) {
 	var stderr bytes.Buffer
-	_, err := r.Exec(os.Stdin, &stderr, os.Stderr, head, args...)
-	return stderr.String(), err
+	_, err := r.Exec(os.Stdin, os.Stdout, &stderr, head, args...)
+	return strings.TrimSpace(stderr.String()), err
 }

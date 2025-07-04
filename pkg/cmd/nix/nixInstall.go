@@ -1,12 +1,11 @@
 package nix
 
 import (
-	"github.com/awnumar/memguard"
 	"github.com/becloudless/becloudless/pkg/nix"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
+	"github.com/n0rad/memguarded"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 func NixInstallCmd() *cobra.Command {
@@ -21,16 +20,15 @@ func NixInstallCmd() *cobra.Command {
 				return errs.WithE(err, "Nix install failed")
 			}
 
-			var password *memguard.LockedBuffer
+			sudoPasswordService := memguarded.Service{}
 			if askPassword {
-				print("Sudo password? ")
-				key, err := memguard.NewBufferFromReaderUntil(os.Stdin, '\n')
-				if err != nil {
-					return errs.WithE(err, "Failed to grab sudo password")
-				}
-				password = key
+				//TODO
+				//if err := sudoPasswordService.AskSecret(false, "Sudo password on host to install? "); err != nil {
+				//	return errs.WithE(err, "Failed to grab sudo password")
+				//}
 			}
-			return nix.InstallAnywhere(host, user, password)
+
+			return nix.InstallAnywhere(host, user, &sudoPasswordService)
 
 			//localRunner := runner.NewLocalRunner()
 			//if err := localRunner.RunCommand("ls", "-la", "/"); err != nil {
@@ -59,7 +57,6 @@ func NixInstallCmd() *cobra.Command {
 			//if err != nil {
 			//	return err
 			//}
-			return nil
 		},
 	}
 	cmd.Flags().StringVarP(&host, "host", "h", "", "host ip to install")

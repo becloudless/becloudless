@@ -2,15 +2,15 @@ package nix
 
 import (
 	"fmt"
-	"github.com/awnumar/memguard"
 	"github.com/becloudless/becloudless/pkg/system"
 	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
+	"github.com/n0rad/memguarded"
 	"strings"
 )
 
-func InstallAnywhere(host string, user string, sudoPassword *memguard.LockedBuffer) error {
+func InstallAnywhere(host string, user string, sudoPassword *memguarded.Service) error {
 	run, err := runner.NewSshRunner(host, user)
 	if err != nil {
 		return err
@@ -65,8 +65,8 @@ func ExtractSystemInfo(sys system.System) (SystemInfo, error) {
 		echo "` + motherboardUuid + `=$(sudo -S cat /sys/devices/virtual/dmi/id/product_uuid 2> /dev/null)" > /tmp/info
 		echo "` + cpuSerial + `=$(grep "Serial" /proc/cpuinfo | cut -f2 -d: | sed -e 's/^[[:space:]]*//')" >> /tmp/info
 		echo "` + netWorkMacs + `=$(find /sys/class/net/*/ -maxdepth 1 -type l -name device -exec sh -c "grep -q up \$(dirname {})/operstate && cat \$(dirname {})/address | tr '\n' ','" \;)" >> /tmp/info
-		echo "` + netWorkIps + `=$(ip -o addr show scope global | grep -E ": (wl|en|br)" | awk '{gsub(/\/.*/," ",$4); print $4}' | tr '\n' ' ')" >> /tmp/info
-		echo "` + disks + `=$(find /dev/disk/by-id/ -lname '*sd*' -o  -lname '*nvme*' -o -lname '*vd*' -o -lname '*scsi*' | grep -E -v -- "-part?" | grep '/ata\|/nvme\|usb\|/scsi'| tr '\n' ' ')" >> /tmp/info
+		echo "` + netWorkIps + `=$(ip -o addr show scope global | grep -E ": (wl|en|br)" | awk '{gsub(/\/.*/,"",$4); print $4}' | tr '\n' ',')" >> /tmp/info
+		echo "` + disks + `=$(find /dev/disk/by-id/ -lname '*sd*' -o  -lname '*nvme*' -o -lname '*vd*' -o -lname '*scsi*' | grep -E -v -- "-part?" | grep '/ata\|/nvme\|usb\|/scsi'| tr '\n' ',')" >> /tmp/info
 		cat /tmp/info
 		rm /tmp/info
 	`)
