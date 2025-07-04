@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"github.com/becloudless/becloudless/pkg/bcl"
+	"github.com/becloudless/becloudless/pkg/cmd/nix"
+	"github.com/becloudless/becloudless/pkg/cmd/version"
 	"github.com/n0rad/go-erlog/logs"
 	"github.com/spf13/cobra"
 	"os"
@@ -29,12 +31,12 @@ func RootCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		VersionCmd(),
+		version.VersionCmd(),
+		nix.NixCmd(),
 		WebCmd(),
-		NixCmd(),
 	)
 
-	// Remove the -h help shorthand, as gitlab auth login uses it for hostname
+	// Remove the -h help, useful for 'host' arguments
 	cmd.PersistentFlags().BoolP("help", "", false, "help for this command")
 
 	cmd.PersistentFlags().StringVarP(&logLevel, "log-level", "L", "", "Set log level")

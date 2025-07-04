@@ -11,7 +11,6 @@ import (
 	"time"
 )
 
-// TODO move somewhere?
 type Version struct {
 	Version    string
 	Generation int64

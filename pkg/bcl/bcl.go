@@ -1,7 +1,7 @@
 package bcl
 
 import (
-	"github.com/becloudless/becloudless/pkg/app"
+	"github.com/becloudless/becloudless/pkg/bcl/app"
 )
 
 // BCL is the global app instance

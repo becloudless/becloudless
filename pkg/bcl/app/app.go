@@ -2,7 +2,7 @@ package app
 
 import (
 	"embed"
-	"github.com/becloudless/becloudless/pkg/version"
+	"github.com/becloudless/becloudless/pkg/bcl/app/version"
 	"github.com/juju/fslock"
 	"github.com/mitchellh/go-homedir"
 	"github.com/n0rad/go-erlog/data"
@@ -19,27 +19,13 @@ import (
 const pathAssets = "assets"
 const pathLock = "lock"
 const pathVersion = "version"
-const pathVersionLock = "version.lock"
 
 type App struct {
-	Name string
-	Home string
-
-	version    version.SemVersion
-	assets     embed.FS
-	assetsPath string
-}
-
-func (app *App) SetVersion(v version.SemVersion) {
-	app.version = v
-}
-
-func (app *App) SetAssets(assets embed.FS) {
-	app.assets = assets
-}
-
-func (app *App) AssetPath() string {
-	return app.assetsPath
+	Name       string
+	Home       string
+	Version    version.SemVersion
+	Assets     embed.FS
+	AssetsPath string
 }
 
 func (app *App) DefaultHomeFolder() string {
@@ -67,18 +53,18 @@ func (app *App) PrepareHome() error {
 		logs.WithE(err).Warn("Failed to read home version. May be first run")
 	}
 
-	app.assetsPath = filepath.Join(app.Home, pathAssets, app.version.String())
+	app.AssetsPath = filepath.Join(app.Home, pathAssets, app.Version.String())
 
-	if string(bytes) != app.version.String() || err != nil {
+	if string(bytes) != app.Version.String() || err != nil {
 		logs.WithField("homeVersion", string(bytes)).
-			WithField("currentVersion", app.version.String()).
+			WithField("currentVersion", app.Version.String()).
 			Info(app.Name + " version changed")
 
-		if err := app.ExtractAssets(app.assetsPath); err != nil {
-			return errs.WithEF(err, data.WithField("path", app.assetsPath), "Failed to restore assets")
+		if err := app.extractAssets(app.AssetsPath); err != nil {
+			return errs.WithEF(err, data.WithField("path", app.AssetsPath), "Failed to restore assets")
 		}
 
-		if err := os.WriteFile(filepath.Join(app.Home, pathVersion), []byte(app.version.String()), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(app.Home, pathVersion), []byte(app.Version.String()), 0644); err != nil {
 			logs.WithE(err).Error("Failed to write current " + app.Name + " version to home")
 		}
 	}
@@ -90,8 +76,10 @@ func (app *App) PrepareHome() error {
 	return nil
 }
 
-func (app *App) ExtractAssets(target string) error {
-	return fs.WalkDir(app.assets, ".", func(path string, d fs.DirEntry, err error) error {
+///////////////////
+
+func (app *App) extractAssets(target string) error {
+	return fs.WalkDir(app.Assets, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -106,7 +94,7 @@ func (app *App) ExtractAssets(target string) error {
 			return errs.WithF(data.WithField("path", path), "Embedded asset is invalid, not a regular file")
 		}
 
-		r, err := app.assets.Open(path)
+		r, err := app.Assets.Open(path)
 		if err != nil {
 			return err
 		}
@@ -127,8 +115,6 @@ func (app *App) ExtractAssets(target string) error {
 		return w.Close()
 	})
 }
-
-///////////////////
 
 func (app *App) cleanupAssets() error {
 	dir, err := os.ReadDir(filepath.Join(app.Home, pathAssets))
@@ -159,7 +145,7 @@ func (app *App) cleanupAssets() error {
 		})
 
 		oldestAssets := assets[0]
-		if oldestAssets == app.version.String() {
+		if oldestAssets == app.Version.String() {
 			logs.WithField("assets", oldestAssets).Debug("oldest app assets version is currently used version, not cleaning it up")
 			return nil
 		}

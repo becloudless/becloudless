@@ -1,4 +1,4 @@
-package cmd
+package nix
 
 import (
 	"github.com/spf13/cobra"
