@@ -10,7 +10,7 @@ import (
 	"os"
 )
 
-//go:embed assets
+//go:embed all:assets
 var Assets embed.FS
 
 var Version = "0.0.0"
