@@ -2,28 +2,11 @@ package cmd
 
 import (
 	"github.com/becloudless/becloudless/pkg/bcl"
-	"github.com/n0rad/go-erlog/logs"
 	"github.com/spf13/cobra"
 	"log/slog"
 	"os"
 	"path/filepath"
 )
-
-// HandleResult must exit the program and should be the only one doing so
-//func HandleResult(err error) {
-//	if err != nil {
-//		slog.With("dst", "something", "err", err).Error("Command failed")
-//		os.Exit(1)
-//	}
-//	os.Exit(0)
-//}
-
-func HandleResult(err error) {
-	if err != nil {
-		logs.WithE(err).Fatal("Command failed")
-	}
-	os.Exit(0)
-}
 
 func RootCmd() *cobra.Command {
 	var logLevel string

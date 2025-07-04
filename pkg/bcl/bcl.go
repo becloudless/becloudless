@@ -5,6 +5,7 @@ import (
 	"github.com/becloudless/becloudless/pkg/app"
 )
 
+// BCL is the global app instance
 var BCL Bcl
 
 func init() {
@@ -16,5 +17,8 @@ type Bcl struct {
 }
 
 func (bcl *Bcl) Init(assets embed.FS) error {
+	if err := bcl.PrepareHome(); err != nil {
+		return err
+	}
 	return nil
 }

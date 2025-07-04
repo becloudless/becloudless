@@ -2,8 +2,8 @@ package app
 
 import (
 	"context"
+	"embed"
 	"github.com/becloudless/becloudless/pkg/version"
-	"github.com/blang/semver/v4"
 	"github.com/juju/fslock"
 	"github.com/mitchellh/go-homedir"
 	"github.com/n0rad/go-erlog/data"
@@ -26,15 +26,15 @@ type App struct {
 	Home string
 
 	version version.SemVersion
+	assets  embed.FS
 }
 
-func (app *App) SetVersion(v string) error {
-	semVersion, err := semver.Parse(v)
-	if err != nil {
-		return errs.WithEF(err, data.WithField("Version", v), "Failed to parse Version")
-	}
-	app.version = version.SemVersion{Version: semVersion}
-	return nil
+func (app *App) SetVersion(v version.SemVersion) {
+	app.version = v
+}
+
+func (app *App) SetAssets(assets embed.FS) {
+	app.assets = assets
 }
 
 func (app *App) DefaultHomeFolder() string {
@@ -46,17 +46,14 @@ func (app *App) DefaultHomeFolder() string {
 	return filepath.Join(home, ".config/"+app.Name)
 }
 
-// PrepareAssets updates the assets in the home folder with this versions' assets, unless they're up to date.
-// In order to avoid gone files, new assets are first extracted into a version-specific folder, which is then symlinked
-// to the actual assets path (typically "assets"). The version-specific folder looks like "assets.v1.0.0".
-func (app *App) PrepareAssets() error {
+func (app *App) PrepareHome() error {
 	if err := os.MkdirAll(app.Home, 0755); err != nil {
 		return errs.WithE(err, "Failed to create "+app.Name+" home directory")
 	}
 
 	lock := fslock.New(filepath.Join(app.Home, pathLock))
 	if err := lock.Lock(); err != nil {
-		return errs.WithE(err, "Failed to get asset extract lock")
+		return errs.WithE(err, "Failed to get home preparation lock")
 	}
 
 	defer lock.Unlock()
@@ -70,7 +67,7 @@ func (app *App) PrepareAssets() error {
 		logs.
 			WithField("homeVersion", string(bytes)).
 			WithField("currentVersion", app.version.String()).
-			Info("BCL version changed, extract of assets required")
+			Info(app.Name + " version changed, extract of assets required")
 
 		assetsPath := filepath.Join(app.Home, pathAssets)
 		versionAssetsName := PathVersionAssetsPrefix + app.version.String()
@@ -99,6 +96,8 @@ func (app *App) PrepareAssets() error {
 
 	return nil
 }
+
+///////////////////
 
 func (app *App) cleanupAssets() error {
 	dir, err := os.ReadDir(app.Home)

@@ -31,6 +31,9 @@ func InstallAnywhere(host string, user string, sudoPassword *memguard.LockedBuff
 		return errs.WithE(err, "Failed to extract system information from host to install")
 	}
 
+	//localRunner := runner.NewLocalRunner()
+	//localRunner
+
 	// find host info in nixos config
 	// find role associated to host
 	// ask cryptsetup passwprd
