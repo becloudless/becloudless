@@ -5,10 +5,13 @@ import (
 	"github.com/becloudless/becloudless/pkg/bcl"
 	"github.com/becloudless/becloudless/pkg/system"
 	"github.com/becloudless/becloudless/pkg/system/runner"
+	"github.com/becloudless/becloudless/pkg/utils"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"github.com/n0rad/memguarded"
+	"gopkg.in/yaml.v3"
+	"os"
 	"path"
 	"strings"
 )
@@ -56,7 +59,32 @@ func InstallAnywhere(host string, user string, sudoPassword *memguarded.Service)
 		return errs.WithE(err, "Failed to create new host")
 	}
 
-	logs.WithField("something", system).Debug("system")
+	systemFolder := path.Join(bcl.BCL.Repository.Root, "nixos", "systems", "x86_64-linux", system.Name)
+	if err := os.MkdirAll(systemFolder, 0755); err != nil {
+		return errs.WithE(err, "Failed to create git system folder")
+	}
+
+	if err := utils.CopyFile(path.Join(bcl.BCL.AssetsPath, "repository", "nixos", "yamlSystem.nix"), path.Join(systemFolder, "default.nix")); err != nil {
+		return errs.WithE(err, "Failed to copy system's default.nix")
+	}
+
+	systemYamlFile := path.Join(systemFolder, "default.yaml")
+	file, err := os.OpenFile(systemYamlFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return errs.WithE(err, "Failed to open nix system file")
+	}
+	defer file.Close()
+	out, err := yaml.Marshal(system)
+	if err != nil {
+		return errs.WithE(err, "failed to marshal system configuration")
+	}
+	if _, err := file.Write(out); err != nil {
+		return errs.WithE(err, "Failed to write system configuration to file")
+	}
+
+	if err := bcl.BCL.Repository.AddAll(); err != nil {
+		return errs.WithE(err, "Failed to add new system to git repository")
+	}
 
 	// find host info in nixos config
 	// find role associated to host

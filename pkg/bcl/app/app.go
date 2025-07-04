@@ -54,11 +54,14 @@ func (app *App) PrepareHome() error {
 	}
 
 	app.AssetsPath = filepath.Join(app.Home, pathAssets, app.Version.String())
-
-	if string(bytes) != app.Version.String() || err != nil {
+	if app.Version.String() == "0.0.0" || string(bytes) != app.Version.String() || err != nil {
 		logs.WithField("homeVersion", string(bytes)).
 			WithField("currentVersion", app.Version.String()).
 			Info(app.Name + " version changed")
+
+		if err := os.RemoveAll(app.AssetsPath); err != nil {
+			logs.WithE(err).Warn("Failed to cleanup current assets before extract")
+		}
 
 		if err := app.extractAssets(app.AssetsPath); err != nil {
 			return errs.WithEF(err, data.WithField("path", app.AssetsPath), "Failed to restore assets")
