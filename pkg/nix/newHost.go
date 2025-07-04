@@ -8,7 +8,7 @@ import (
 )
 
 type NixosSystem struct {
-	Name     string
+	Name     string ``
 	Hardware string
 	Role     string
 	Ids      string

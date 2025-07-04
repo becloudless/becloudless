@@ -71,5 +71,9 @@
       url = "github:nix-community/nixos-generators";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    yaml = {
+      url = "github:jim3692/yaml.nix";
+    };
   };
 }

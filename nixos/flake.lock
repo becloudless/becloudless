@@ -161,6 +161,22 @@
         "type": "github"
       }
     },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1751271578,
+        "narHash": "sha256-P/SQmKDu06x8yv7i0s8bvnnuJYkxVGBWLWHaU+tt4YY=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "3016b4b15d13f3089db8a41ef937b13a9e33a8df",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "disko": "disko",
@@ -169,7 +185,8 @@
         "nixos-generators": "nixos-generators",
         "nixpkgs": "nixpkgs",
         "snowfall-lib": "snowfall-lib",
-        "sops-nix": "sops-nix"
+        "sops-nix": "sops-nix",
+        "yaml": "yaml"
       }
     },
     "snowfall-lib": {
@@ -226,6 +243,24 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "yaml": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_2"
+      },
+      "locked": {
+        "lastModified": 1718542560,
+        "narHash": "sha256-Jn0Avas3XK7RLTpR7jPHManng0nNCUA6+9ZmnuMHATU=",
+        "owner": "jim3692",
+        "repo": "yaml.nix",
+        "rev": "e8df95364b9b240bf8caecc9ad0f1dae0a8e4edd",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jim3692",
+        "repo": "yaml.nix",
         "type": "github"
       }
     }
