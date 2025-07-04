@@ -2,16 +2,25 @@ package bcl
 
 import (
 	"github.com/becloudless/becloudless/pkg/bcl/app"
+	"github.com/becloudless/becloudless/pkg/git"
+	"github.com/n0rad/go-erlog/data"
+	"github.com/n0rad/go-erlog/errs"
+	"github.com/n0rad/go-erlog/logs"
+	"os"
+	"path"
 )
 
 // BCL is the global app instance
 var BCL Bcl
+
+const pathRepository = "repository"
 
 func init() {
 	BCL.App.Name = "bcl"
 }
 
 type Bcl struct {
+	Repository *git.Repository
 	app.App
 }
 
@@ -21,7 +30,23 @@ func (bcl *Bcl) Init(home string) error {
 		return err
 	}
 
-	// TODO THINGS
+	repositoryPath := path.Join(bcl.Home, pathRepository)
+	if _, err := os.Stat(repositoryPath); os.IsNotExist(err) {
+		logs.WithField("path", repositoryPath).Warn("git repository does not exists, creating")
+		repository, err := git.InitRepository(repositoryPath)
+		if err != nil {
+			return errs.WithE(err, "Failed to init git repository")
+		}
+		bcl.Repository = repository
+	} else if err != nil {
+		return errs.WithEF(err, data.WithField("path", repositoryPath), "Failed to read git repository")
+	} else {
+		repository, err := git.OpenRepository(repositoryPath)
+		if err != nil {
+			return errs.WithEF(err, data.WithField("path", repositoryPath), "Failed to open git repository")
+		}
+		bcl.Repository = repository
+	}
 
 	return nil
 }

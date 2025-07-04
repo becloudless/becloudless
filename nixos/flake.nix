@@ -32,10 +32,6 @@
               "${nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
             ];
           };
-          orangepi5plus = {
-            modules = with inputs; [
-            ];
-          };
         };
       };
     };

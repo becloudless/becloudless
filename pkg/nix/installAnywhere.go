@@ -6,6 +6,7 @@ import (
 	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
+	"github.com/n0rad/go-erlog/logs"
 	"github.com/n0rad/memguarded"
 	"strings"
 )
@@ -26,10 +27,13 @@ func InstallAnywhere(host string, user string, sudoPassword *memguarded.Service)
 		SudoRunner: sudoRunner,
 	}
 
+	logs.Info("Extract system information from host to install")
 	info, err := ExtractSystemInfo(sys)
 	if err != nil {
 		return errs.WithE(err, "Failed to extract system information from host to install")
 	}
+
+	logs.Info("Looking for matching system")
 
 	//localRunner := runner.NewLocalRunner()
 	//localRunner
