@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"github.com/becloudless/becloudless/pkg/bcl"
+	"github.com/n0rad/go-erlog/logs"
 	"github.com/spf13/cobra"
-	"log/slog"
 	"os"
 	"path/filepath"
 )
@@ -16,19 +16,15 @@ func RootCmd() *cobra.Command {
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		Use:           filepath.Base(os.Args[0]),
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if logLevel != "" {
-				var level slog.Level
-				err := level.UnmarshalText([]byte(logLevel))
+				level, err := logs.ParseLevel(logLevel)
 				if err != nil {
-					slog.With("content", logLevel).Error("Unknown log level")
-					return err
+					logs.WithField("value", logLevel).Fatal("Unknown log level")
 				}
-				slog.SetLogLoggerLevel(level)
+				logs.SetLevel(level)
 			}
-
-			bcl.BCL.Home = home
-			return nil
+			return bcl.BCL.Init(home)
 		},
 	}
 
