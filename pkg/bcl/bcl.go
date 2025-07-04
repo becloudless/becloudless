@@ -3,6 +3,7 @@ package bcl
 import (
 	"github.com/becloudless/becloudless/pkg/bcl/app"
 	"github.com/becloudless/becloudless/pkg/git"
+	"github.com/becloudless/becloudless/pkg/utils"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
@@ -48,5 +49,32 @@ func (bcl *Bcl) Init(home string) error {
 		bcl.Repository = repository
 	}
 
+	if err := bcl.ensureNixos(); err != nil {
+		return err
+	}
+
+	//TODO commit?
+
+	return nil
+}
+
+func (bcl *Bcl) ensureNixos() error {
+	flakePath := path.Join(bcl.Repository.Root, "nixos", "flake.nix")
+	if _, err := os.Stat(flakePath); os.IsNotExist(err) {
+		logs.WithE(err).WithField("path", flakePath).Warn("flake does not exists, creating")
+
+		if err := os.MkdirAll(path.Dir(flakePath), 0755); err != nil {
+			return errs.WithE(err, "Failed to create nixos directory")
+		}
+
+		if err := utils.CopyFile(path.Join(bcl.AssetsPath, "repository", "nixos", "flake.nix"),
+			path.Join(bcl.Repository.Root, "nixos", "flake.nix")); err != nil {
+			return errs.WithE(err, "Failed to copy default flake.nix")
+		}
+
+		if err := bcl.Repository.AddAll(); err != nil {
+			return errs.WithE(err, "Failed to add new files to git")
+		}
+	}
 	return nil
 }

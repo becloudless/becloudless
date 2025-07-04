@@ -1,13 +1,16 @@
 package nix
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/becloudless/becloudless/pkg/bcl"
 	"github.com/becloudless/becloudless/pkg/system"
 	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"github.com/n0rad/memguarded"
+	"path"
 	"strings"
 )
 
@@ -34,9 +37,20 @@ func InstallAnywhere(host string, user string, sudoPassword *memguarded.Service)
 	}
 
 	logs.Info("Looking for matching system")
+	localRunner := runner.NewLocalRunner()
+	flakeShow, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes",
+		"flake", "show", path.Join(bcl.BCL.Repository.Root, "nixos"), "--json", "--all-systems")
+	if err != nil {
+		return errs.WithE(err, "Listing hosts declared in nix failed")
+	}
 
-	//localRunner := runner.NewLocalRunner()
-	//localRunner
+	flake := struct {
+		NixosConfigurations map[string]any `json:"nixosConfigurations"`
+	}{}
+
+	if err := json.Unmarshal([]byte(flakeShow), &flake); err != nil {
+		return errs.WithE(err, "Failed to list nixos configurations")
+	}
 
 	// find host info in nixos config
 	// find role associated to host

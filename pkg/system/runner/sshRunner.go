@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 type SshRunner struct {
@@ -37,7 +38,8 @@ func NewSshRunner(addr string, user string) (*SshRunner, error) {
 	agentClient := agent.NewClient(conn)
 
 	config := &ssh.ClientConfig{
-		User: user,
+		User:    user,
+		Timeout: 5 * time.Second,
 		// https://github.com/golang/go/issues/19767
 		// as clientConfig is non-permissive by default
 		// you can set ssh.InsercureIgnoreHostKey to allow any host
