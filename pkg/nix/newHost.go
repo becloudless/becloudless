@@ -7,16 +7,18 @@ import (
 	"strings"
 )
 
-type NixosSystem struct {
-	Name     string ``
+type NixosConfigBclSystem struct {
+	Name     string `yaml:"-"`
+	Enable   bool
 	Hardware string
 	Role     string
 	Ids      string
 	Devices  []string
 }
 
-func newHost(info SystemInfo) (*NixosSystem, error) {
-	system := NixosSystem{
+func newHost(info SystemInfo) (*NixosConfigBclSystem, error) {
+	system := NixosConfigBclSystem{
+		Enable:   true,
 		Ids:      "uuid=" + info.MotherboardUuid,
 		Hardware: "nuc",
 	}

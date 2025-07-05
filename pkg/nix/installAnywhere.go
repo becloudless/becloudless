@@ -40,10 +40,97 @@ func InstallAnywhere(host string, user string, sudoPassword *memguarded.Service)
 
 	logs.Info("Looking for matching system")
 	localRunner := runner.NewLocalRunner()
+	systemName, err := findSystem(localRunner, info)
+	if err != nil {
+		return errs.WithE(err, "Fail during process to find the system to install")
+	}
+	var system *NixosConfigBclSystem
+	if systemName == "" {
+		logs.Warn("Unkown system, creating")
+		system, err = createSystem(err, info)
+		if err != nil {
+			return errs.WithE(err, "System creation failed")
+		}
+	} else {
+		logs.WithField("name", systemName).Info("System found")
+		system = &NixosConfigBclSystem{Name: systemName}
+		systemFolder := path.Join(bcl.BCL.Repository.Root, "nixos", "systems", "x86_64-linux", system.Name)
+		systemYamlFile := path.Join(systemFolder, "default.yaml")
+		file, err := os.ReadFile(systemYamlFile)
+		if err != nil {
+			return errs.WithE(err, "Failed to read system yaml file")
+		}
+		if err := yaml.Unmarshal(file, system); err != nil {
+			return errs.WithEF(err, data.WithField("file", systemYamlFile), "system yaml file looks broken")
+		}
+		//TODO use nix instead 	role=$(nix --extra-experimental-features "nix-command flakes" eval "$DIR/../nixos#nixosConfigurations.$hostname.config.system.nixos.tags" | sed 's/.*role-\([a-z0-9-]*\).*/\1/')
+	}
+
+	if err := localRunner.ExecCmd("nix-shell", "--extra-experimental-features", "nix-command flakes", "-p", "nixos-anywhere", "--run", "nixos-anywhere --flake "+path.Join(bcl.BCL.Repository.Root, "nixos")+"#"+systemName+" "+user+"@"+host); err != nil {
+		return errs.WithE(err, "Installation failed")
+	}
+
+	// ask cryptsetup passwprd
+	// extract ssh host key for role to prepared folder
+	// trigger nixos-anywhere
+
+	return nil
+}
+
+type NixosConfig struct {
+	Bcl NixosConfigBcl
+}
+
+type NixosConfigBcl struct {
+	System NixosConfigBclSystem
+}
+
+func createSystem(err error, info SystemInfo) (*NixosConfigBclSystem, error) {
+	system, err := newHost(info)
+	if err != nil {
+		return nil, errs.WithE(err, "Failed to create new host")
+	}
+
+	bclConfig := NixosConfig{
+		Bcl: NixosConfigBcl{
+			System: *system,
+		},
+	}
+
+	systemFolder := path.Join(bcl.BCL.Repository.Root, "nixos", "systems", "x86_64-linux", system.Name)
+	if err := os.MkdirAll(systemFolder, 0755); err != nil {
+		return nil, errs.WithE(err, "Failed to create git system folder")
+	}
+
+	if err := utils.CopyFile(path.Join(bcl.BCL.AssetsPath, "repository", "nixos", "yamlSystem.nix"), path.Join(systemFolder, "default.nix")); err != nil {
+		return nil, errs.WithE(err, "Failed to copy system's default.nix")
+	}
+
+	systemYamlFile := path.Join(systemFolder, "default.yaml")
+	file, err := os.OpenFile(systemYamlFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return nil, errs.WithE(err, "Failed to open nix system file")
+	}
+	defer file.Close()
+	out, err := yaml.Marshal(bclConfig)
+	if err != nil {
+		return nil, errs.WithE(err, "failed to marshal system configuration")
+	}
+	if _, err := file.Write(out); err != nil {
+		return nil, errs.WithE(err, "Failed to write system configuration to file")
+	}
+
+	if err := bcl.BCL.Repository.AddAll(); err != nil {
+		return nil, errs.WithE(err, "Failed to add new system to git repository")
+	}
+	return system, nil
+}
+
+func findSystem(localRunner *runner.LocalRunner, info SystemInfo) (string, error) {
 	flakeShow, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes",
 		"flake", "show", path.Join(bcl.BCL.Repository.Root, "nixos"), "--json", "--all-systems")
 	if err != nil {
-		return errs.WithE(err, "Listing hosts declared in nix failed")
+		return "", errs.WithE(err, "Listing hosts declared in nix failed")
 	}
 
 	flake := struct {
@@ -51,48 +138,19 @@ func InstallAnywhere(host string, user string, sudoPassword *memguarded.Service)
 	}{}
 
 	if err := json.Unmarshal([]byte(flakeShow), &flake); err != nil {
-		return errs.WithE(err, "Failed to list nixos configurations")
+		return "", errs.WithE(err, "Failed to list nixos configurations")
 	}
 
-	system, err := newHost(info)
-	if err != nil {
-		return errs.WithE(err, "Failed to create new host")
+	for confName, _ := range flake.NixosConfigurations {
+		ids, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes", "eval", path.Join(bcl.BCL.Repository.Root, "nixos")+"#nixosConfigurations."+confName+".config.environment.etc.\"ids.env\".text", "--raw")
+		if err != nil {
+			logs.WithField("system", confName).Warn("system config is probably broken")
+		}
+		if ids == "uuid="+info.MotherboardUuid {
+			return confName, nil
+		}
 	}
-
-	systemFolder := path.Join(bcl.BCL.Repository.Root, "nixos", "systems", "x86_64-linux", system.Name)
-	if err := os.MkdirAll(systemFolder, 0755); err != nil {
-		return errs.WithE(err, "Failed to create git system folder")
-	}
-
-	if err := utils.CopyFile(path.Join(bcl.BCL.AssetsPath, "repository", "nixos", "yamlSystem.nix"), path.Join(systemFolder, "default.nix")); err != nil {
-		return errs.WithE(err, "Failed to copy system's default.nix")
-	}
-
-	systemYamlFile := path.Join(systemFolder, "default.yaml")
-	file, err := os.OpenFile(systemYamlFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return errs.WithE(err, "Failed to open nix system file")
-	}
-	defer file.Close()
-	out, err := yaml.Marshal(system)
-	if err != nil {
-		return errs.WithE(err, "failed to marshal system configuration")
-	}
-	if _, err := file.Write(out); err != nil {
-		return errs.WithE(err, "Failed to write system configuration to file")
-	}
-
-	if err := bcl.BCL.Repository.AddAll(); err != nil {
-		return errs.WithE(err, "Failed to add new system to git repository")
-	}
-
-	// find host info in nixos config
-	// find role associated to host
-	// ask cryptsetup passwprd
-	// extract ssh host key for role to prepared folder
-	// trigger nixos-anywhere
-
-	return nil
+	return "", nil
 }
 
 type SystemInfo struct {
@@ -110,6 +168,9 @@ const netWorkIps = "netWorkIps"
 const disks = "disks"
 
 func ExtractSystemInfo(sys system.System) (SystemInfo, error) {
+	// TODO available memory
+	// TODO UEFI support
+
 	info := SystemInfo{}
 	res, err := sys.SudoRunner.ExecCmdGetStdout(`\
 		echo "` + motherboardUuid + `=$(sudo -S cat /sys/devices/virtual/dmi/id/product_uuid 2> /dev/null)" > /tmp/info
