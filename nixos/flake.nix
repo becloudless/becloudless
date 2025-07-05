@@ -14,8 +14,8 @@
         namespace = "bcl";
       };
     };
-  in
-    lib.mkFlake {
+
+    flake = lib.mkFlake {
       systems = {
         modules = {
           nixos = with inputs; [
@@ -34,6 +34,20 @@
           };
         };
       };
+    };
+  in
+    flake // {
+      downstreamModules = [
+        flake.nixosModules.system
+        flake.nixosModules.roles
+        flake.nixosModules."parts/wm"
+        flake.nixosModules.hardware
+
+        inputs.sops-nix.nixosModules.sops
+        inputs.disko.nixosModules.disko
+        inputs.impermanence.nixosModules.impermanence
+        inputs.home-manager.nixosModules.home-manager
+      ];
     };
 
   #################################
