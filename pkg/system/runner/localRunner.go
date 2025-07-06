@@ -19,11 +19,23 @@ func NewLocalRunner() *LocalRunner {
 	return &LocalRunner{}
 }
 
-func (r *LocalRunner) Exec(stdin io.Reader, stdout io.Writer, stderr io.Writer, head string, args ...string) (int, error) {
+func (r *LocalRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, stderr io.Writer, head string, args ...string) (int, error) {
 	cmd := exec.Command(head, args...)
+	if envs != nil {
+		cmd.Env = append(cmd.Environ(), *envs...)
+	}
 	cmd.Stderr = stderr
 	cmd.Stdout = stdout
 	cmd.Stdin = stdin
+	if stderr == nil {
+		cmd.Stderr = os.Stderr
+	}
+	if stdout == nil {
+		cmd.Stdout = os.Stdout
+	}
+	if stdin == nil {
+		cmd.Stdin = os.Stdin
+	}
 	if logs.IsTraceEnabled() {
 		logs.WithField("command", strings.Join([]string{head, " ", strings.Join(args, " ")}, " ")).Debug("Running external command")
 	}
@@ -35,19 +47,19 @@ func (r *LocalRunner) Exec(stdin io.Reader, stdout io.Writer, stderr io.Writer, 
 }
 
 func (r *LocalRunner) ExecCmd(head string, args ...string) error {
-	_, err := r.Exec(os.Stdin, os.Stdout, os.Stderr, head, args...)
+	_, err := r.Exec(nil, os.Stdin, os.Stdout, os.Stderr, head, args...)
 	return err
 }
 
 func (r *LocalRunner) ExecCmdGetStdout(head string, args ...string) (string, error) {
 	var stdout bytes.Buffer
-	_, err := r.Exec(os.Stdin, &stdout, os.Stderr, head, args...)
+	_, err := r.Exec(nil, os.Stdin, &stdout, os.Stderr, head, args...)
 	return stdout.String(), err
 }
 
 func (r *LocalRunner) ExecCmdGetStderr(head string, args ...string) (string, error) {
 	var stderr bytes.Buffer
-	_, err := r.Exec(os.Stdin, &stderr, os.Stderr, head, args...)
+	_, err := r.Exec(nil, os.Stdin, &stderr, os.Stderr, head, args...)
 	return stderr.String(), err
 }
 

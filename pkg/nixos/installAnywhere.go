@@ -16,14 +16,14 @@ import (
 	"strings"
 )
 
-func InstallAnywhere(host string, user string, sudoPassword *memguarded.Service) error {
-	run, err := runner.NewSshRunner(host, user)
+func InstallAnywhere(host string, user string, password *memguarded.Service) error {
+	run, err := runner.NewSshRunner(host, user, password)
 	if err != nil {
-		return err
+		return errs.WithE(err, "Failed to connect to host to install")
 	}
 
-	//sudoRunner, err := runner.NewSudoRunner(run, sudoPassword)
-	sudoRunner, err := runner.NewInlineSudoRunner(run, sudoPassword)
+	//sudoRunner, err := runner.NewSudoRunner(run, password)
+	sudoRunner, err := runner.NewInlineSudoRunner(run, password)
 	if err != nil {
 		return errs.WithE(err, "Sudo cannot be run successfully on host to install")
 	}
@@ -66,9 +66,19 @@ func InstallAnywhere(host string, user string, sudoPassword *memguarded.Service)
 		//TODO use nix instead 	role=$(nix --extra-experimental-features "nix-command flakes" eval "$DIR/../nixos#nixosConfigurations.$hostname.config.system.nixos.tags" | sed 's/.*role-\([a-z0-9-]*\).*/\1/')
 	}
 
-	if err := localRunner.ExecCmd("nix-shell", "--extra-experimental-features", "nix-command flakes", "-p", "nixos-anywhere", "--run", "nixos-anywhere --flake "+path.Join(bcl.BCL.Repository.Root, "nixos")+"#"+systemName+" "+user+"@"+host); err != nil {
+	get, err := password.Get()
+	if err != nil {
+		return errs.WithE(err, "Failed to read password")
+	}
+	if _, err := localRunner.Exec(&[]string{"SSHPASS=" + get.String()}, nil, nil, nil,
+		"nix-shell", "--extra-experimental-features", "nix-command flakes", "-p", "nixos-anywhere", "--run",
+		"nixos-anywhere --env-password --flake "+path.Join(bcl.BCL.Repository.Root, "nixos")+"#"+systemName+" "+user+"@"+host); err != nil {
 		return errs.WithE(err, "Installation failed")
 	}
+
+	//if err := localRunner.ExecCmd("nix-shell", "--extra-experimental-features", "nix-command flakes", "-p", "nixos-anywhere", "--run", "nixos-anywhere --flake "+path.Join(bcl.BCL.Repository.Root, "nixos")+"#"+systemName+" "+user+"@"+host); err != nil {
+	//	return errs.WithE(err, "Installation failed")
+	//}
 
 	// ask cryptsetup passwprd
 	// extract ssh host key for role to prepared folder
@@ -76,6 +86,8 @@ func InstallAnywhere(host string, user string, sudoPassword *memguarded.Service)
 
 	return nil
 }
+
+// 08:80:27:f0:79:a6
 
 type NixosConfig struct {
 	Bcl NixosConfigBcl

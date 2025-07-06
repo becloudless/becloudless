@@ -42,7 +42,7 @@ func (r SudoRunner) Exec(stdin io.Reader, stdout io.Writer, stderr io.Writer, he
 	passwordReader := strings.NewReader(r.password.String() + "\n")
 	//-p ""
 	i := append([]string{"-S", head}, args...)
-	return r.ParentRunner.Exec(passwordReader, stdout, stderr, "sudo", i...)
+	return r.ParentRunner.Exec(nil, passwordReader, stdout, stderr, "sudo", i...)
 }
 
 func (r SudoRunner) ExecCmd(head string, args ...string) error {

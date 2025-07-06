@@ -49,7 +49,7 @@ func (r InlineSudoRunner) Exec(stdin io.Reader, stdout io.Writer, stderr io.Writ
 	} else {
 		passwordReader = strings.NewReader("\n")
 	}
-	return r.ParentRunner.Exec(passwordReader, stdout, stderr, head, args...)
+	return r.ParentRunner.Exec(nil, passwordReader, stdout, stderr, head, args...)
 }
 
 func (r InlineSudoRunner) ExecCmd(head string, args ...string) error {
