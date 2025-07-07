@@ -3,7 +3,9 @@ package runner
 import (
 	"bytes"
 	"github.com/awnumar/memguard"
+	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
+	"github.com/n0rad/memguarded"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"io"
@@ -19,7 +21,7 @@ type SshRunner struct {
 	sudoPassword *memguard.LockedBuffer
 }
 
-func NewSshRunner(addr string, user string) (*SshRunner, error) {
+func NewSshRunner(addr string, user string, password *memguarded.Service) (*SshRunner, error) {
 	// privateKey could be read from a file, or retrieved from another storage
 	// source, such as the Secret Service / GNOME Keyring
 	//key, err := ssh.ParsePrivateKey([]byte(privateKey))
@@ -43,17 +45,18 @@ func NewSshRunner(addr string, user string) (*SshRunner, error) {
 		// https://github.com/golang/go/issues/19767
 		// as clientConfig is non-permissive by default
 		// you can set ssh.InsercureIgnoreHostKey to allow any host
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO should not always be insecure
 		Auth: []ssh.AuthMethod{
-			ssh.PublicKeysCallback(agentClient.Signers),
 			//ssh.PublicKeys(key),
+			ssh.PublicKeysCallback(agentClient.Signers),
+			ssh.PasswordCallback(func() (secret string, err error) {
+				get, err := password.Get()
+				if err != nil {
+					return "", err
+				}
+				return get.String(), err
+			}),
 		},
-		//alternatively, you could use a password
-		/*
-		   Auth: []ssh.AuthMethod{
-		       ssh.Password("PASSWORD"),
-		   },
-		*/
 	}
 
 	// Connect
@@ -67,16 +70,37 @@ func NewSshRunner(addr string, user string) (*SshRunner, error) {
 	}, nil
 }
 
-func (r *SshRunner) Exec(stdin io.Reader, stdout io.Writer, stderr io.Writer, head string, args ...string) (int, error) {
+func (r *SshRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, stderr io.Writer, head string, args ...string) (int, error) {
 	session, err := r.client.NewSession()
 	if err != nil {
 		return -1, errs.WithE(err, "Failed to create ssh session")
 	}
 	defer session.Close()
 
+	if envs != nil {
+		for _, e := range *envs {
+			n := strings.SplitN(e, "=", 2)
+			v := ""
+			if len(n) == 2 {
+				v = n[1]
+			}
+			if err := session.Setenv(n[0], v); err != nil {
+				return -1, errs.WithEF(err, data.WithField("env", n[0]), "Failed to set env to ssh runner session")
+			}
+		}
+	}
 	session.Stdout = stdout
 	session.Stderr = stderr
 	session.Stdin = stdin
+	if stderr == nil {
+		session.Stderr = os.Stderr
+	}
+	if stdout == nil {
+		session.Stdout = os.Stdout
+	}
+	if stdin == nil {
+		session.Stdin = os.Stdin
+	}
 
 	cmd := head + " " + strings.Join(args, " ")
 	if err = session.Run(cmd); err != nil {
@@ -90,18 +114,18 @@ func (r *SshRunner) Exec(stdin io.Reader, stdout io.Writer, stderr io.Writer, he
 }
 
 func (r *SshRunner) ExecCmd(head string, args ...string) error {
-	_, err := r.Exec(os.Stdin, os.Stdout, os.Stderr, head, args...)
+	_, err := r.Exec(nil, os.Stdin, os.Stdout, os.Stderr, head, args...)
 	return err
 }
 
 func (r *SshRunner) ExecCmdGetStdout(head string, args ...string) (string, error) {
 	var stdout bytes.Buffer
-	_, err := r.Exec(os.Stdin, &stdout, os.Stderr, head, args...)
+	_, err := r.Exec(nil, os.Stdin, &stdout, os.Stderr, head, args...)
 	return strings.TrimSpace(stdout.String()), err
 }
 
 func (r *SshRunner) ExecCmdGetStderr(head string, args ...string) (string, error) {
 	var stderr bytes.Buffer
-	_, err := r.Exec(os.Stdin, os.Stdout, &stderr, head, args...)
+	_, err := r.Exec(nil, os.Stdin, os.Stdout, &stderr, head, args...)
 	return strings.TrimSpace(stderr.String()), err
 }
