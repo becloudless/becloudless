@@ -38,6 +38,7 @@
   in
     flake // {
       downstreamModules = [
+        flake.nixosModules.global
         flake.nixosModules.system
         flake.nixosModules.roles
         flake.nixosModules."parts/wm"

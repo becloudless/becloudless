@@ -23,7 +23,7 @@ func NixosInstallCmd() *cobra.Command {
 
 			passwordService := memguarded.Service{}
 			if askPassword {
-				if err := passwordService.AskSecret(false, "Sudo password on host to install? "); err != nil {
+				if err := passwordService.AskSecret(false, "Password on host to install? "); err != nil {
 					return errs.WithE(err, "Failed to grab sudo password")
 				}
 			}

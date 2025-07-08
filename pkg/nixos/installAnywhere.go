@@ -70,6 +70,8 @@ func InstallAnywhere(host string, user string, password *memguarded.Service) err
 	if err != nil {
 		return errs.WithE(err, "Failed to read password")
 	}
+
+	logs.WithField("system", systemName).Info("Starting installation")
 	if _, err := localRunner.Exec(&[]string{"SSHPASS=" + get.String()}, nil, nil, nil,
 		"nix-shell", "--extra-experimental-features", "nix-command flakes", "-p", "nixos-anywhere", "--run",
 		"nixos-anywhere --env-password --flake "+path.Join(bcl.BCL.Repository.Root, "nixos")+"#"+systemName+" "+user+"@"+host); err != nil {

@@ -3,3 +3,4 @@ dist-tools
 
 
 nixos/result
+/nixos/systems/x86_64-linux/
