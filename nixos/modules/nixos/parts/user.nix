@@ -13,7 +13,7 @@ in
     users.users."${cfg.name}" = {
       isNormalUser = true;
       group = "users";
-      hashedPasswordFile = config.sops.secrets."users.${cfg.name}.password".path;
+#      hashedPasswordFile = config.sops.secrets."users.${cfg.name}.password".path;
     };
 
     home-manager.users."${cfg.name}" = { lib, pkgs, ... }: {
