@@ -40,6 +40,6 @@ in {
   ###################
 
   config = lib.mkIf cfg.enable {
-    networking.domain = cfg.localDomain;
+#    networking.domain = cfg.localDomain;
   };
 }
