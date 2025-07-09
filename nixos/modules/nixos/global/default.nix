@@ -4,7 +4,7 @@ let
 in {
   options.bcl.global = {
     enable = lib.mkEnableOption "Enable the default settings?";
-    localDomain = lib.mkOption {
+    networking.domain = lib.mkOption {
       type = lib.types.str;
     };
 #    publicDomain = lib.mkOption {
@@ -40,6 +40,6 @@ in {
   ###################
 
   config = lib.mkIf cfg.enable {
-    networking.domain = cfg.localDomain;
+    networking.domain = cfg.networking.domain;
   };
 }

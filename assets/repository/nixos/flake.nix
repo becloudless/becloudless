@@ -9,7 +9,7 @@
    inputs.bcl.inputs.snowfall-lib.mkFlake {
       inputs = inputs.bcl.inputs // inputs;
       src = ./.;
-      systems.modules.nixos = inputs.bcl.downstreamModules;
-    } // inputs.bcl.outputs;
-
+      snowfall.namespace = "my";
+      systems.modules.nixos = inputs.bcl.bclModules;
+    };
 }

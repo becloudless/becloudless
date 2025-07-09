@@ -1,7 +1,8 @@
 bcl:
     global:
         enable: true
-        localDomain: demo.example.local
+        networking:
+            domain: demo.example.local
     system:
         enable: true
         hardware: nuc
