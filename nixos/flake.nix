@@ -37,7 +37,7 @@
     };
   in
     flake // {
-      downstreamModules = [
+      bclModules = [
         flake.nixosModules.global
         flake.nixosModules.system
         flake.nixosModules.roles
