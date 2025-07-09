@@ -7,6 +7,15 @@ in {
     networking.domain = lib.mkOption {
       type = lib.types.str;
     };
+    time.timeZone = lib.mkOption {
+      type = lib.types.str;
+      default = "Europe/Paris";
+    };
+    i18n.defaultLocale = lib.mkOption {
+      type = lib.types.str;
+      default = "en_US.UTF-8";
+    };
+
 #    publicDomain = lib.mkOption {
 #
 #    };
@@ -25,9 +34,6 @@ in {
 #      # name
 #      # secret key
 #    };
-#    timezone = lib.mkOption {
-#
-#    };
 #    defaultLanguage = lib.mkOption {
 #
 #    };
@@ -41,5 +47,7 @@ in {
 
   config = lib.mkIf cfg.enable {
     networking.domain = cfg.networking.domain;
+    time.timeZone = cfg.time.timeZone;
+    i18n.defaultLocale = cfg.i18n.defaultLocale;
   };
 }
