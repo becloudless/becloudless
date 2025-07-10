@@ -22,9 +22,13 @@ func NixosInstallCmd() *cobra.Command {
 				return errs.WithE(err, "Nix is not available")
 			}
 
-			password, err := term.ReadPassword(syscall.Stdin)
-			if err != nil {
-				return errs.WithE(err, "Failed to read password")
+			var password []byte
+			if askPassword {
+				pass, err := term.ReadPassword(syscall.Stdin)
+				if err != nil {
+					return errs.WithE(err, "Failed to read password")
+				}
+				password = pass
 			}
 
 			//passwordService := memguarded.Service{}
