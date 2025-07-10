@@ -66,8 +66,11 @@ func InstallNixLocally(password []byte) error {
 		return errs.WithEF(err, data.WithField("file", filePath), "Failed to untar file")
 	}
 
-	run := runner.LocalRunner{}
-	runner.NewSudoRunner(&run, password)
+	localRun := runner.LocalRunner{}
+	run, err := runner.NewInlineSudoRunner(&localRun, password)
+	if err != nil {
+		return errs.WithE(err, "Failed to prepare sudo runner")
+	}
 	installPath := path.Join(temp, NixFoldername, "install")
 	logs.WithField("path", NixReleaseUrl).Info("Running nix install")
 	if err := run.ExecCmd("/bin/sh", installPath, "--yes"); err != nil {
