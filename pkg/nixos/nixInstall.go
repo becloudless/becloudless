@@ -16,7 +16,7 @@ import (
 )
 
 // TODO renovate
-const NIX_VERSION = "2.19.2"
+const NIX_VERSION = "2.30.0"
 
 func EnsureNixIsAvailable() error {
 	_, err := exec.LookPath("nix")
@@ -26,10 +26,13 @@ func EnsureNixIsAvailable() error {
 	return nil
 }
 
-func InstallNixLocally() error {
+func InstallNixLocally(password []byte) error {
 	arch := runtime.GOARCH
-	if arch == "amd64" {
+	switch arch {
+	case "amd64":
 		arch = "x86_64"
+	case "arm64":
+		arch = "aarch64"
 	}
 	NixFoldername := "nix-" + NIX_VERSION + "-" + arch + "-" + runtime.GOOS
 	NixFilename := NixFoldername + ".tar.xz"
@@ -40,7 +43,7 @@ func InstallNixLocally() error {
 		return errs.With("Failed to create temporary directory to download nix")
 	}
 	defer func(temp string) {
-		_ = os.RemoveAll(temp)
+		//_ = os.RemoveAll(temp)
 	}(temp)
 
 	filePath := path.Join(temp, NixFilename)
@@ -63,10 +66,14 @@ func InstallNixLocally() error {
 		return errs.WithEF(err, data.WithField("file", filePath), "Failed to untar file")
 	}
 
-	run := runner.LocalRunner{}
+	localRun := runner.LocalRunner{}
+	run, err := runner.NewInlineSudoRunner(&localRun, password)
+	if err != nil {
+		return errs.WithE(err, "Failed to prepare sudo runner")
+	}
 	installPath := path.Join(temp, NixFoldername, "install")
 	logs.WithField("path", NixReleaseUrl).Info("Running nix install")
-	if err := run.ExecCmd("/bin/sh", installPath); err != nil {
+	if err := run.ExecCmd("/bin/sh", installPath, "--yes"); err != nil {
 		return errs.WithE(err, "Nix install failed")
 	}
 	return nil
@@ -109,7 +116,7 @@ func untarXZ(target string, file *os.File) error {
 			}
 
 			filePath := path.Join(target, hdr.Name)
-			w, err := os.Create(filePath)
+			w, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.FileMode(hdr.Mode))
 			if err != nil {
 				return errs.WithEF(err, data.WithField("path", filePath), "Failed to create file")
 			}

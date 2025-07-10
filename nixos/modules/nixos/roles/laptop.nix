@@ -44,10 +44,10 @@
       LC_TIME = "fr_FR.UTF-8";
     };
 
-    sops.secrets."users.kwiskas.password" = {
-      neededForUsers = true;
-      sopsFile = ./hideki.secrets.yaml;
-    };
+#    sops.secrets."users.kwiskas.password" = {
+#      neededForUsers = true;
+#      sopsFile = ./hideki.secrets.yaml;
+#    };
 
 
 

@@ -3,8 +3,9 @@ package nixos
 import (
 	"github.com/becloudless/becloudless/pkg/nixos"
 	"github.com/n0rad/go-erlog/errs"
-	"github.com/n0rad/memguarded"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
+	"syscall"
 )
 
 func NixosInstallCmd() *cobra.Command {
@@ -21,14 +22,23 @@ func NixosInstallCmd() *cobra.Command {
 				return errs.WithE(err, "Nix is not available")
 			}
 
-			passwordService := memguarded.Service{}
+			var password []byte
 			if askPassword {
-				if err := passwordService.AskSecret(false, "Sudo password on host to install? "); err != nil {
-					return errs.WithE(err, "Failed to grab sudo password")
+				pass, err := term.ReadPassword(syscall.Stdin)
+				if err != nil {
+					return errs.WithE(err, "Failed to read password")
 				}
+				password = pass
 			}
 
-			return nixos.InstallAnywhere(host, user, &passwordService)
+			//passwordService := memguarded.Service{}
+			//if askPassword {
+			//	if err := passwordService.AskSecret(false, "Password on host to install? "); err != nil {
+			//		return errs.WithE(err, "Failed to grab sudo password")
+			//	}
+			//}
+
+			return nixos.InstallAnywhere(host, user, password)
 		},
 	}
 	cmd.Flags().StringVarP(&user, "user", "u", "install", "user for the connection")

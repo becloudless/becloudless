@@ -5,7 +5,6 @@ import (
 	"github.com/awnumar/memguard"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
-	"github.com/n0rad/memguarded"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"io"
@@ -21,7 +20,7 @@ type SshRunner struct {
 	sudoPassword *memguard.LockedBuffer
 }
 
-func NewSshRunner(addr string, user string, password *memguarded.Service) (*SshRunner, error) {
+func NewSshRunner(addr string, user string, password []byte) (*SshRunner, error) {
 	// privateKey could be read from a file, or retrieved from another storage
 	// source, such as the Secret Service / GNOME Keyring
 	//key, err := ssh.ParsePrivateKey([]byte(privateKey))
@@ -50,11 +49,10 @@ func NewSshRunner(addr string, user string, password *memguarded.Service) (*SshR
 			//ssh.PublicKeys(key),
 			ssh.PublicKeysCallback(agentClient.Signers),
 			ssh.PasswordCallback(func() (secret string, err error) {
-				get, err := password.Get()
-				if err != nil {
+				if password == nil {
 					return "", err
 				}
-				return get.String(), err
+				return string(password), nil
 			}),
 		},
 	}

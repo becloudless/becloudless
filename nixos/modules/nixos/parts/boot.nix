@@ -87,7 +87,7 @@ in {
       plymouth = {
         enable = cfg.plymouth;
         theme = "bcl";
-        themePackages = with pkgs; [ bcl.plymouth-bcl ];
+#        themePackages = with pkgs; [ bcl.plymouth-bcl ];
       };
     };
 

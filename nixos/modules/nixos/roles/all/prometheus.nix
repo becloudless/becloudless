@@ -37,7 +37,7 @@
 
     systemd.services."prometheus-pushprox-client" = {
       serviceConfig = {
-        ExecStart = "${pkgs.bcl.prometheus-pushprox}/bin/pushprox-client --proxy-url=https://prom:something@pushprox.bcl.io";
+#        ExecStart = "${pkgs.bcl.prometheus-pushprox}/bin/pushprox-client --proxy-url=https://prom:something@pushprox.bcl.io";
       };
 
       after = [ "prometheus-node-exporter.service" ];
