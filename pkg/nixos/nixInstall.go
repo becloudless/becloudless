@@ -67,7 +67,7 @@ func InstallNixLocally() error {
 	}
 
 	run := runner.LocalRunner{}
-	installPath := path.Join(temp, NixFoldername, "install")
+	installPath := path.Join(temp, NixFoldername, "install", "--yes")
 	logs.WithField("path", NixReleaseUrl).Info("Running nix install")
 	if err := run.ExecCmd("/bin/sh", installPath); err != nil {
 		return errs.WithE(err, "Nix install failed")
