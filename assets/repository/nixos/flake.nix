@@ -1,7 +1,7 @@
 {
   inputs = {
     bcl = {
-      url = "github:becloudless/becloudless?ref=n0/init&dir=nixos";
+      url = "github:becloudless/becloudless?ref=main&dir=nixos";
     };
   };
 
