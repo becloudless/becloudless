@@ -28,8 +28,11 @@ func EnsureNixIsAvailable() error {
 
 func InstallNixLocally() error {
 	arch := runtime.GOARCH
-	if arch == "amd64" {
+	switch arch {
+	case "amd64":
 		arch = "x86_64"
+	case "arm64":
+		arch = "aarch64"
 	}
 	NixFoldername := "nix-" + NIX_VERSION + "-" + arch + "-" + runtime.GOOS
 	NixFilename := NixFoldername + ".tar.xz"
