@@ -2,7 +2,6 @@ package runner
 
 import (
 	"bytes"
-	"github.com/awnumar/memguard"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"io"
@@ -12,10 +11,10 @@ import (
 
 type SudoRunner struct {
 	ParentRunner Runner
-	password     *memguard.LockedBuffer
+	password     []byte
 }
 
-func NewSudoRunner(parent Runner, password *memguard.LockedBuffer) (*SudoRunner, error) {
+func NewSudoRunner(parent Runner, password []byte) (*SudoRunner, error) {
 	run := SudoRunner{
 		ParentRunner: parent,
 		password:     password,
@@ -25,7 +24,7 @@ func NewSudoRunner(parent Runner, password *memguard.LockedBuffer) (*SudoRunner,
 		return nil, errs.WithE(err, "Sudo is not available")
 	}
 
-	if password == nil || password.Size() == 0 {
+	if password == nil || len(password) == 0 {
 		if stderr, err := parent.ExecCmdGetStderr("sudo", "-n", "true"); err != nil {
 			return nil, errs.WithEF(err, data.WithField("stderr", stderr), "Sudo require a password")
 		}
@@ -39,7 +38,7 @@ func NewSudoRunner(parent Runner, password *memguard.LockedBuffer) (*SudoRunner,
 
 func (r SudoRunner) Exec(stdin io.Reader, stdout io.Writer, stderr io.Writer, head string, args ...string) (int, error) {
 	// TODO stdin is not used since replaced by the sudo password
-	passwordReader := strings.NewReader(r.password.String() + "\n")
+	passwordReader := strings.NewReader(string(r.password) + "\n")
 	//-p ""
 	i := append([]string{"-S", head}, args...)
 	return r.ParentRunner.Exec(nil, passwordReader, stdout, stderr, "sudo", i...)

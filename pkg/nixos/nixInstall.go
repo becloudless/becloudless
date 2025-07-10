@@ -26,7 +26,7 @@ func EnsureNixIsAvailable() error {
 	return nil
 }
 
-func InstallNixLocally() error {
+func InstallNixLocally(password []byte) error {
 	arch := runtime.GOARCH
 	switch arch {
 	case "amd64":
@@ -67,9 +67,10 @@ func InstallNixLocally() error {
 	}
 
 	run := runner.LocalRunner{}
-	installPath := path.Join(temp, NixFoldername, "install", "--yes")
+	runner.NewSudoRunner(&run, password)
+	installPath := path.Join(temp, NixFoldername, "install")
 	logs.WithField("path", NixReleaseUrl).Info("Running nix install")
-	if err := run.ExecCmd("/bin/sh", installPath); err != nil {
+	if err := run.ExecCmd("/bin/sh", installPath, "--yes"); err != nil {
 		return errs.WithE(err, "Nix install failed")
 	}
 	return nil
