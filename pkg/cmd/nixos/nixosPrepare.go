@@ -16,9 +16,13 @@ func NixosPrepareCmd() *cobra.Command {
 		Short: "prepare system to be able run nix commands",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			password, err := term.ReadPassword(syscall.Stdin)
-			if err != nil {
-				return errs.WithE(err, "Failed to read password")
+			var password []byte
+			if askPassword {
+				pass, err := term.ReadPassword(syscall.Stdin)
+				if err != nil {
+					return errs.WithE(err, "Failed to read password")
+				}
+				password = pass
 			}
 
 			logs.Info("Checking if nix command is available")
