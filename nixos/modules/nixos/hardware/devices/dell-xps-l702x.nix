@@ -7,7 +7,7 @@
 
   config = lib.mkIf (config.bcl.hardware.device == "dell-xps-l702x") {
     bcl.hardware.common = "intel-legacy";
-    bcl.boot.uefi = false;
+    bcl.boot.efi = false;
     bcl.disk.gpt = false;
 
     boot.initrd.availableKernelModules = [ "ehci_pci" "ahci" "xhci_pci" "usb_storage" "sd_mod" "sr_mod" ];
