@@ -7,8 +7,21 @@ import (
 	"strings"
 )
 
-type NixosConfigBclSystem struct {
-	Name     string `yaml:"-"`
+type SystemConfig struct {
+	Name string `yaml:"-"`
+	Bcl  SystemConfigBcl
+}
+
+type SystemConfigBcl struct {
+	Boot   SystemConfigBclBoot
+	System SystemConfigBclSystem
+}
+
+type SystemConfigBclBoot struct {
+	Efi bool
+}
+
+type SystemConfigBclSystem struct {
 	Enable   bool
 	Hardware string
 	Role     string
@@ -16,18 +29,24 @@ type NixosConfigBclSystem struct {
 	Devices  []string
 }
 
-func newHost(info SystemInfo) (*NixosConfigBclSystem, error) {
-	system := NixosConfigBclSystem{
-		Enable:   true,
-		Ids:      "uuid=" + info.MotherboardUuid,
-		Hardware: "nuc",
-	}
+func newSystemConfig(info SystemInfo) (SystemConfig, error) {
+	config := SystemConfig{
+		Bcl: SystemConfigBcl{
+			Boot: SystemConfigBclBoot{
+				Efi: info.EFI,
+			},
+			System: SystemConfigBclSystem{
+				Enable:   true,
+				Ids:      "uuid=" + info.MotherboardUuid,
+				Hardware: "nuc",
+			},
+		}}
 
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Machine name?").
-				Value(&system.Name).
+				Value(&config.Name).
 				// Validating fields is easy. The form will mark erroneous fields
 				// and display error messages accordingly.
 				Validate(func(str string) error {
@@ -47,7 +66,7 @@ func newHost(info SystemInfo) (*NixosConfigBclSystem, error) {
 					}
 					return nil
 				}).
-				Value(&system.Devices),
+				Value(&config.Bcl.System.Devices),
 
 			huh.NewSelect[string]().
 				Title("Role?").
@@ -57,13 +76,13 @@ func newHost(info SystemInfo) (*NixosConfigBclSystem, error) {
 					huh.NewOption("Server", "server"),
 					huh.NewOption("Point of presence", "pop"),
 				).
-				Value(&system.Role),
+				Value(&config.Bcl.System.Role),
 		),
 	)
 
 	if err := form.Run(); err != nil {
-		return nil, errs.WithE(err, "Failed to prepare system")
+		return config, errs.WithE(err, "Failed to prepare system")
 	}
 
-	return &system, nil
+	return config, nil
 }

@@ -13,7 +13,7 @@ in {
     quiet = lib.mkEnableOption "Stay quiet";
     plymouth = lib.mkEnableOption "Enable plymouth";
     ssh = lib.mkEnableOption "Enable";
-    uefi = lib.mkOption {
+    efi = lib.mkOption {
        type = lib.types.bool;
        default = true;
     };
@@ -50,14 +50,14 @@ in {
         [];
       loader = {
         timeout = if cfg.quiet then 0 else 1;
-        systemd-boot = lib.mkIf (cfg.uefi && (builtins.length config.bcl.disk.devices) == 1) {
+        systemd-boot = lib.mkIf (cfg.efi && (builtins.length config.bcl.disk.devices) == 1) {
           enable = true;
           configurationLimit = 10;
         };
-        grub = lib.mkIf (!cfg.uefi || (builtins.length config.bcl.disk.devices) > 1) {
+        grub = lib.mkIf (!cfg.efi || (builtins.length config.bcl.disk.devices) > 1) {
           enable = true;
-          efiSupport = cfg.uefi;
-          efiInstallAsRemovable = lib.mkIf cfg.uefi ((builtins.length config.bcl.disk.devices) > 1); # required to install on multiple disks
+          efiSupport = cfg.efi;
+          efiInstallAsRemovable = lib.mkIf cfg.efi ((builtins.length config.bcl.disk.devices) > 1); # required to install on multiple disks
           configurationLimit = 10;
 #          device = "nodev";
 #          theme = "${pkgs.grub-cyberexs}/share/grub/themes/CyberEXS";

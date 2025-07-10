@@ -12,6 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 )
 
@@ -43,23 +44,23 @@ func InstallAnywhere(host string, user string, password []byte) error {
 	if err != nil {
 		return errs.WithE(err, "Fail during process to find the system to install")
 	}
-	var system *NixosConfigBclSystem
+	var systemConfig SystemConfig
 	if systemName == "" {
 		logs.Warn("Unkown system, creating")
-		system, err = createSystem(err, info)
+		systemConfig, err = createSystemConfig(err, info)
 		if err != nil {
 			return errs.WithE(err, "System creation failed")
 		}
 	} else {
 		logs.WithField("name", systemName).Info("System found")
-		system = &NixosConfigBclSystem{Name: systemName}
-		systemFolder := path.Join(bcl.BCL.Repository.Root, "nixos", "systems", "x86_64-linux", system.Name)
+		systemConfig = SystemConfig{Name: systemName}
+		systemFolder := path.Join(bcl.BCL.Repository.Root, "nixos", "systems", "x86_64-linux", systemName)
 		systemYamlFile := path.Join(systemFolder, "default.yaml")
 		file, err := os.ReadFile(systemYamlFile)
 		if err != nil {
 			return errs.WithE(err, "Failed to read system yaml file")
 		}
-		if err := yaml.Unmarshal(file, system); err != nil {
+		if err := yaml.Unmarshal(file, systemConfig); err != nil {
 			return errs.WithEF(err, data.WithField("file", systemYamlFile), "system yaml file looks broken")
 		}
 		//TODO use nix instead 	role=$(nix --extra-experimental-features "nix-command flakes" eval "$DIR/../nixos#nixosConfigurations.$hostname.config.system.nixos.tags" | sed 's/.*role-\([a-z0-9-]*\).*/\1/')
@@ -83,55 +84,39 @@ func InstallAnywhere(host string, user string, password []byte) error {
 	return nil
 }
 
-// 08:80:27:f0:79:a6
-
-type NixosConfig struct {
-	Bcl NixosConfigBcl
-}
-
-type NixosConfigBcl struct {
-	System NixosConfigBclSystem
-}
-
-func createSystem(err error, info SystemInfo) (*NixosConfigBclSystem, error) {
-	system, err := newHost(info)
+func createSystemConfig(err error, info SystemInfo) (SystemConfig, error) {
+	config, err := newSystemConfig(info)
 	if err != nil {
-		return nil, errs.WithE(err, "Failed to create new host")
+		return config, errs.WithE(err, "Failed to create new host")
 	}
 
-	bclConfig := NixosConfig{
-		Bcl: NixosConfigBcl{
-			System: *system,
-		},
-	}
-
-	systemFolder := path.Join(bcl.BCL.Repository.Root, "nixos", "systems", "x86_64-linux", system.Name)
+	systemFolder := path.Join(bcl.BCL.Repository.Root, "nixos", "systems", "x86_64-linux", config.Name)
 	if err := os.MkdirAll(systemFolder, 0755); err != nil {
-		return nil, errs.WithE(err, "Failed to create git system folder")
+		return config, errs.WithE(err, "Failed to create git system folder")
 	}
 
 	if err := utils.CopyFile(path.Join(bcl.BCL.AssetsPath, "repository", "nixos", "yamlSystem.nix"), path.Join(systemFolder, "default.nix")); err != nil {
-		return nil, errs.WithE(err, "Failed to copy system's default.nix")
+		return config, errs.WithE(err, "Failed to copy system's default.nix")
 	}
 
 	systemYamlFile := path.Join(systemFolder, "default.yaml")
 	file, err := os.OpenFile(systemYamlFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		return nil, errs.WithE(err, "Failed to open nix system file")
+		return config, errs.WithE(err, "Failed to open nix system file")
 	}
 	defer file.Close()
-	out, err := yaml.Marshal(bclConfig)
+	out, err := yaml.Marshal(config)
 	if err != nil {
-		return nil, errs.WithE(err, "failed to marshal system configuration")
+		return config, errs.WithE(err, "failed to marshal system configuration")
 	}
 	if _, err := file.Write(out); err != nil {
-		return nil, errs.WithE(err, "Failed to write system configuration to file")
+		return config, errs.WithE(err, "Failed to write system configuration to file")
 	}
 
 	if err := bcl.BCL.Repository.AddAll(); err != nil {
-		return nil, errs.WithE(err, "Failed to add new system to git repository")
+		return config, errs.WithE(err, "Failed to add new system to git repository")
 	}
-	return system, nil
+	return config, nil
 }
 
 func findSystem(localRunner *runner.LocalRunner, info SystemInfo) (string, error) {
@@ -167,6 +152,8 @@ type SystemInfo struct {
 	NetworkMacs     []string
 	NetworkIps      []string
 	Disks           []string
+	EFI             bool
+	Memory          int
 }
 
 const motherboardUuid = "motherboardUuid"
@@ -174,6 +161,8 @@ const cpuSerial = "cpuSerial"
 const netWorkMacs = "netWorkMacs"
 const netWorkIps = "netWorkIps"
 const disks = "disks"
+const efi = "efi"
+const memory = "memory"
 
 func ExtractSystemInfo(sys system.System) (SystemInfo, error) {
 	// TODO available memory
@@ -186,6 +175,8 @@ func ExtractSystemInfo(sys system.System) (SystemInfo, error) {
 		echo "` + netWorkMacs + `=$(find /sys/class/net/*/ -maxdepth 1 -type l -name device -exec sh -c "grep -q up \$(dirname {})/operstate && cat \$(dirname {})/address | tr '\n' ','" \;)" >> /tmp/info
 		echo "` + netWorkIps + `=$(ip -o addr show scope global | grep -E ": (wl|en|br)" | awk '{gsub(/\/.*/,"",$4); print $4}' | tr '\n' ',')" >> /tmp/info
 		echo "` + disks + `=$(find /dev/disk/by-id/ -lname '*sd*' -o  -lname '*nvme*' -o -lname '*vd*' -o -lname '*scsi*' | grep -E -v -- "-part?" | grep '/ata\|/nvme\|usb\|/scsi'| tr '\n' ',')" >> /tmp/info
+		echo "[ -d /sys/firmware/efi ] && ` + efi + `=true || ` + efi + `=false" >> /tmp/info
+		echo "` + memory + `=$( cat /proc/meminfo | grep MemTotal: | awk '{ print $2; }')" >> /tmp/info
 		cat /tmp/info
 		rm /tmp/info
 	`)
@@ -226,6 +217,16 @@ func ExtractSystemInfo(sys system.System) (SystemInfo, error) {
 					info.Disks = append(info.Disks, s)
 				}
 			}
+		case efi:
+			if keyValue[1] == "true" {
+				info.EFI = true
+			}
+		case memory:
+			mem, err := strconv.Atoi(keyValue[1])
+			if err != nil {
+				return info, errs.WithEF(err, data.WithField("content", keyValue[1]), "Failed to parse memory size")
+			}
+			info.Memory = mem
 		}
 	}
 	return info, nil
