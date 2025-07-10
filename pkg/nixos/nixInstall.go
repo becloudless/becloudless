@@ -16,7 +16,7 @@ import (
 )
 
 // TODO renovate
-const NIX_VERSION = "2.19.2"
+const NIX_VERSION = "2.29.1"
 
 func EnsureNixIsAvailable() error {
 	_, err := exec.LookPath("nix")
