@@ -9,14 +9,13 @@ import (
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
-	"github.com/n0rad/memguarded"
 	"gopkg.in/yaml.v3"
 	"os"
 	"path"
 	"strings"
 )
 
-func InstallAnywhere(host string, user string, password *memguarded.Service) error {
+func InstallAnywhere(host string, user string, password []byte) error {
 	run, err := runner.NewSshRunner(host, user, password)
 	if err != nil {
 		return errs.WithE(err, "Failed to connect to host to install")
@@ -66,13 +65,8 @@ func InstallAnywhere(host string, user string, password *memguarded.Service) err
 		//TODO use nix instead 	role=$(nix --extra-experimental-features "nix-command flakes" eval "$DIR/../nixos#nixosConfigurations.$hostname.config.system.nixos.tags" | sed 's/.*role-\([a-z0-9-]*\).*/\1/')
 	}
 
-	get, err := password.Get()
-	if err != nil {
-		return errs.WithE(err, "Failed to read password")
-	}
-
 	logs.WithField("system", systemName).Info("Starting installation")
-	if _, err := localRunner.Exec(&[]string{"SSHPASS=" + get.String()}, nil, nil, nil,
+	if _, err := localRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
 		"nix-shell", "--extra-experimental-features", "nix-command flakes", "-p", "nixos-anywhere", "--run",
 		"nixos-anywhere --env-password --flake "+path.Join(bcl.BCL.Repository.Root, "nixos")+"#"+systemName+" "+user+"@"+host); err != nil {
 		return errs.WithE(err, "Installation failed")
