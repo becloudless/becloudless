@@ -43,7 +43,7 @@ func InstallNixLocally() error {
 		return errs.With("Failed to create temporary directory to download nix")
 	}
 	defer func(temp string) {
-		_ = os.RemoveAll(temp)
+		//_ = os.RemoveAll(temp)
 	}(temp)
 
 	filePath := path.Join(temp, NixFilename)
