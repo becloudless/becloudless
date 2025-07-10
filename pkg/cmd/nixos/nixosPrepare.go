@@ -1,6 +1,7 @@
 package nixos
 
 import (
+	"fmt"
 	"github.com/becloudless/becloudless/pkg/nixos"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
@@ -18,6 +19,7 @@ func NixosPrepareCmd() *cobra.Command {
 
 			var password []byte
 			if askPassword {
+				fmt.Print("Sudo password? ")
 				pass, err := term.ReadPassword(syscall.Stdin)
 				if err != nil {
 					return errs.WithE(err, "Failed to read password")

@@ -79,10 +79,6 @@ func InstallNixLocally(password []byte) error {
 	return nil
 }
 
-func IsNixAvailable() (bool, error) {
-	return false, nil
-}
-
 func untarXZ(target string, file *os.File) error {
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		return errs.WithE(err, "Failed to read from beginning of file")

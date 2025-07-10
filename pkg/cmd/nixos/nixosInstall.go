@@ -1,6 +1,7 @@
 package nixos
 
 import (
+	"fmt"
 	"github.com/becloudless/becloudless/pkg/nixos"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/spf13/cobra"
@@ -24,19 +25,13 @@ func NixosInstallCmd() *cobra.Command {
 
 			var password []byte
 			if askPassword {
+				fmt.Print("Password on host to install? ")
 				pass, err := term.ReadPassword(syscall.Stdin)
 				if err != nil {
 					return errs.WithE(err, "Failed to read password")
 				}
 				password = pass
 			}
-
-			//passwordService := memguarded.Service{}
-			//if askPassword {
-			//	if err := passwordService.AskSecret(false, "Password on host to install? "); err != nil {
-			//		return errs.WithE(err, "Failed to grab sudo password")
-			//	}
-			//}
 
 			return nixos.InstallAnywhere(host, user, password)
 		},
