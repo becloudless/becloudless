@@ -112,7 +112,7 @@ func untarXZ(target string, file *os.File) error {
 			}
 
 			filePath := path.Join(target, hdr.Name)
-			w, err := os.Create(filePath)
+			w, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.FileMode(hdr.Mode))
 			if err != nil {
 				return errs.WithEF(err, data.WithField("path", filePath), "Failed to create file")
 			}
