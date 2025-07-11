@@ -12,4 +12,4 @@ bcl:
             - /dev/disk/by-id/ata-VBOX_HARDDISK_VBeea22c18-af338798
 
     boot:
-        uefi: false
+        efi: false

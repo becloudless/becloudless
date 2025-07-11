@@ -60,7 +60,7 @@ func InstallAnywhere(host string, user string, password []byte) error {
 		if err != nil {
 			return errs.WithE(err, "Failed to read system yaml file")
 		}
-		if err := yaml.Unmarshal(file, systemConfig); err != nil {
+		if err := yaml.Unmarshal(file, &systemConfig); err != nil {
 			return errs.WithEF(err, data.WithField("file", systemYamlFile), "system yaml file looks broken")
 		}
 		//TODO use nix instead 	role=$(nix --extra-experimental-features "nix-command flakes" eval "$DIR/../nixos#nixosConfigurations.$hostname.config.system.nixos.tags" | sed 's/.*role-\([a-z0-9-]*\).*/\1/')
