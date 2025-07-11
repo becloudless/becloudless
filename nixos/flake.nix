@@ -1,9 +1,9 @@
 {
   description = "bcl infra";
 
-  outputs = {self, ...} @ inputs: let
-    bclSnowfallLib = inputs.snowfall-lib.mkLib {
-      inherit inputs;
+  outputs = {self, ...} @ bclInputs: let
+    bclSnowfallLib = bclInputs.snowfall-lib.mkLib {
+      inputs = bclInputs;
       src = ./.;
 
       snowfall = {
@@ -18,7 +18,7 @@
     bclFlake = bclSnowfallLib.mkFlake {
       systems = {
         modules = {
-          nixos = with inputs; [
+          nixos = with bclInputs; [
             sops-nix.nixosModules.sops
             disko.nixosModules.disko
             impermanence.nixosModules.impermanence
@@ -27,7 +27,7 @@
         };
         hosts = {
           iso = {
-            modules = with inputs; [
+            modules = with bclInputs; [
               "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
               "${nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
             ];
@@ -44,21 +44,20 @@
         bclFlake.nixosModules."parts/wm"
         bclFlake.nixosModules.hardware
 
-        inputs.sops-nix.nixosModules.sops
-        inputs.disko.nixosModules.disko
-        inputs.impermanence.nixosModules.impermanence
-        inputs.home-manager.nixosModules.home-manager
+        bclInputs.sops-nix.nixosModules.sops
+        bclInputs.disko.nixosModules.disko
+        bclInputs.impermanence.nixosModules.impermanence
+        bclInputs.home-manager.nixosModules.home-manager
     ];
 
-
-    mkLib = inputs.snowfall-lib.mkLib;
     mkFlake = flake-and-lib-options @ {
           inputs,
           src,
           ...
         }: let
-          lib = mkLib {
-            inherit inputs src;
+          lib = bclInputs.snowfall-lib.mkLib {
+            inputs = inputs // bclInputs;
+            inherit src;
             snowfall.namespace = "my";
             systems.modules.nixos = bclModules;
           };
@@ -67,7 +66,7 @@
           lib.mkFlake flake-options;
   in
     bclFlake // {
-      inherit mkFlake bclModules;
+      inherit mkFlake;
     };
 
   #################################
