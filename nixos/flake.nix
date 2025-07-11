@@ -53,12 +53,15 @@
     mkFlake = flake-and-lib-options @ {
           inputs,
           src,
+          snowfall ? {},
           ...
         }: let
           lib = bclInputs.snowfall-lib.mkLib {
-            inputs = bclInputs // inputs;
             inherit src;
-            snowfall.namespace = "my";
+            inputs = bclInputs // inputs;
+            snowfall = snowfall // {
+              namespace = "my";
+            };
             systems.modules.nixos = bclModules;
           };
           flake-options = builtins.removeAttrs flake-and-lib-options ["inputs" "src"];
