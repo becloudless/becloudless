@@ -66,7 +66,7 @@
           lib.mkFlake flake-options;
   in
     bclFlake // {
-      inherit mkFlake;
+      inherit mkFlake bclModules;
     };
 
   #################################
