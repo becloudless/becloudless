@@ -50,12 +50,14 @@
         inputs.home-manager.nixosModules.home-manager
     ];
 
+
+    mkLib = inputs.snowfall-lib.mkLib;
     mkFlake = flake-and-lib-options @ {
           inputs,
           src,
           ...
         }: let
-          lib = inputs.snowfall-lib.mkLib {
+          lib = mkLib {
             inherit inputs src;
             snowfall.namespace = "my";
             systems.modules.nixos = bclModules;
