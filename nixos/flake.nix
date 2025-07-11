@@ -2,7 +2,7 @@
   description = "bcl infra";
 
   outputs = {self, ...} @ inputs: let
-    lib = inputs.snowfall-lib.mkLib {
+    bclSnowfallLib = inputs.snowfall-lib.mkLib {
       inherit inputs;
       src = ./.;
 
@@ -15,7 +15,7 @@
       };
     };
 
-    flake = lib.mkFlake {
+    bclFlake = bclSnowfallLib.mkFlake {
       systems = {
         modules = {
           nixos = with inputs; [
@@ -38,11 +38,11 @@
 
 
     bclModules = [
-        flake.nixosModules.global
-        flake.nixosModules.system
-        flake.nixosModules.roles
-        flake.nixosModules."parts/wm"
-        flake.nixosModules.hardware
+        bclFlake.nixosModules.global
+        bclFlake.nixosModules.system
+        bclFlake.nixosModules.roles
+        bclFlake.nixosModules."parts/wm"
+        bclFlake.nixosModules.hardware
 
         inputs.sops-nix.nixosModules.sops
         inputs.disko.nixosModules.disko
@@ -55,7 +55,7 @@
           src,
           ...
         }: let
-          lib = lib.mkLib {
+          lib = inputs.snowfall-lib.mkLib {
             inherit inputs src;
             snowfall.namespace = "my";
             systems.modules.nixos = bclModules;
@@ -64,7 +64,7 @@
         in
           lib.mkFlake flake-options;
   in
-    flake // {
+    bclFlake // {
       inherit mkFlake bclModules;
     };
 
