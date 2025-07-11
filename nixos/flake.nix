@@ -1,9 +1,9 @@
 {
   description = "bcl infra";
 
-  outputs = {self, ...} @ bclInputs: let
-    bclSnowfallLib = bclInputs.snowfall-lib.mkLib {
-      inputs = bclInputs;
+  outputs = {self, ...} @ inputs: let
+    bclSnowfallLib = inputs.snowfall-lib.mkLib {
+      inherit inputs;
       src = ./.;
 
       snowfall = {
@@ -18,7 +18,7 @@
     bclFlake = bclSnowfallLib.mkFlake {
       systems = {
         modules = {
-          nixos = with bclInputs; [
+          nixos = with inputs; [
             sops-nix.nixosModules.sops
             disko.nixosModules.disko
             impermanence.nixosModules.impermanence
@@ -27,7 +27,7 @@
         };
         hosts = {
           iso = {
-            modules = with bclInputs; [
+            modules = with inputs; [
               "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
               "${nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
             ];
@@ -44,21 +44,20 @@
         bclFlake.nixosModules."parts/wm"
         bclFlake.nixosModules.hardware
 
-        bclInputs.sops-nix.nixosModules.sops
-        bclInputs.disko.nixosModules.disko
-        bclInputs.impermanence.nixosModules.impermanence
-        bclInputs.home-manager.nixosModules.home-manager
+        inputs.sops-nix.nixosModules.sops
+        inputs.disko.nixosModules.disko
+        inputs.impermanence.nixosModules.impermanence
+        inputs.home-manager.nixosModules.home-manager
     ];
 
     mkFlake = flake-and-lib-options @ {
           inputs,
           src,
-          snowfall ? {},
           ...
         }: let
-          lib = bclInputs.snowfall-lib.mkLib {
+          lib = inputs.snowfall-lib.mkLib {
             inherit inputs src;
-            snowfall = snowfall // { namespace = "my";};
+            snowfall.namespace = "my";
             systems.modules.nixos = bclModules;
           };
           flake-options = builtins.removeAttrs flake-and-lib-options ["inputs" "src"];
@@ -66,7 +65,7 @@
           lib.mkFlake flake-options;
   in
     bclFlake // {
-      inherit mkFlake;
+      inherit mkFlake bclModules;
     };
 
   #################################
