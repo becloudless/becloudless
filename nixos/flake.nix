@@ -1,9 +1,9 @@
 {
   description = "bcl infra";
 
-  outputs = {self, ...} @ inputs: let
-    lib = inputs.snowfall-lib.mkLib {
-      inherit inputs;
+  outputs = {self, ...} @ bclInputs: let
+    bclSnowfallLib = bclInputs.snowfall-lib.mkLib {
+      inputs = bclInputs;
       src = ./.;
 
       snowfall = {
@@ -15,10 +15,10 @@
       };
     };
 
-    flake = lib.mkFlake {
+    bclFlake = bclSnowfallLib.mkFlake {
       systems = {
         modules = {
-          nixos = with inputs; [
+          nixos = with bclInputs; [
             sops-nix.nixosModules.sops
             disko.nixosModules.disko
             impermanence.nixosModules.impermanence
@@ -27,7 +27,7 @@
         };
         hosts = {
           iso = {
-            modules = with inputs; [
+            modules = with bclInputs; [
               "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
               "${nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
             ];
@@ -35,20 +35,39 @@
         };
       };
     };
-  in
-    flake // {
-      bclModules = [
-        flake.nixosModules.global
-        flake.nixosModules.system
-        flake.nixosModules.roles
-        flake.nixosModules."parts/wm"
-        flake.nixosModules.hardware
 
-        inputs.sops-nix.nixosModules.sops
-        inputs.disko.nixosModules.disko
-        inputs.impermanence.nixosModules.impermanence
-        inputs.home-manager.nixosModules.home-manager
-      ];
+
+    bclModules = [
+        bclFlake.nixosModules.global
+        bclFlake.nixosModules.system
+        bclFlake.nixosModules.roles
+        bclFlake.nixosModules."parts/wm"
+        bclFlake.nixosModules.hardware
+
+        bclInputs.sops-nix.nixosModules.sops
+        bclInputs.disko.nixosModules.disko
+        bclInputs.impermanence.nixosModules.impermanence
+        bclInputs.home-manager.nixosModules.home-manager
+    ];
+
+    mkFlake = flake-and-lib-options @ {
+          inputs,
+          src,
+          ...
+        }: let
+          lib = bclInputs.snowfall-lib.mkLib {
+            inherit src;
+            inputs = bclInputs // inputs;
+            snowfall.namespace = "my";
+          };
+          flake-options = builtins.removeAttrs flake-and-lib-options ["inputs" "src"];
+        in
+          lib.mkFlake (flake-options // {
+            systems.modules.nixos = bclModules;
+          });
+  in
+    bclFlake // {
+      inherit mkFlake bclModules;
     };
 
   #################################

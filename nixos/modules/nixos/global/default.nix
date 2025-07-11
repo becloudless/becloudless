@@ -6,6 +6,7 @@ in {
     enable = lib.mkEnableOption "Enable the default settings?";
     networking.domain = lib.mkOption {
       type = lib.types.str;
+      default = "";
     };
     time.timeZone = lib.mkOption {
       type = lib.types.str;
@@ -46,7 +47,7 @@ in {
   ###################
 
   config = lib.mkIf cfg.enable {
-    networking.domain = cfg.networking.domain;
+    networking.domain = lib.mkIf (cfg.networking.domain != "") cfg.networking.domain;
     time.timeZone = cfg.time.timeZone;
     i18n.defaultLocale = cfg.i18n.defaultLocale;
   };
