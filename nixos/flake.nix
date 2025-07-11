@@ -35,9 +35,9 @@
         };
       };
     };
-  in
-    flake // {
-      bclModules = [
+
+
+    bclModules = [
         flake.nixosModules.global
         flake.nixosModules.system
         flake.nixosModules.roles
@@ -48,7 +48,24 @@
         inputs.disko.nixosModules.disko
         inputs.impermanence.nixosModules.impermanence
         inputs.home-manager.nixosModules.home-manager
-      ];
+    ];
+
+    mkFlake = flake-and-lib-options @ {
+          inputs,
+          src,
+          ...
+        }: let
+          lib = lib.mkLib {
+            inherit inputs src;
+            snowfall.namespace = "my";
+            systems.modules.nixos = bclModules;
+          };
+          flake-options = builtins.removeAttrs flake-and-lib-options ["inputs" "src"];
+        in
+          lib.mkFlake flake-options;
+  in
+    flake // {
+      inherit mkFlake bclModules;
     };
 
   #################################
