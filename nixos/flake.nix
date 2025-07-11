@@ -56,7 +56,7 @@
           ...
         }: let
           lib = bclInputs.snowfall-lib.mkLib {
-            inputs = inputs // bclInputs;
+            inputs = bclInputs // inputs;
             inherit src;
             snowfall.namespace = "my";
             systems.modules.nixos = bclModules;
