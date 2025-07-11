@@ -62,9 +62,7 @@
           };
           flake-options = builtins.removeAttrs flake-and-lib-options ["inputs" "src"];
         in
-          lib.mkFlake flake-options // {
-            systems.modules.nixos = bclModules;
-          };
+          lib.mkFlake flake-options;
   in
     bclFlake // {
       inherit mkFlake bclModules;
