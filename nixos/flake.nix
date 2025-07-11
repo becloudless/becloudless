@@ -64,10 +64,12 @@
         in
           lib.mkFlake (flake-options // {
             systems.modules.nixos = bclModules;
-          });
+          }) // {
+            isoConfigurations = bclFlake.isoConfigurations;
+          };
   in
     bclFlake // {
-      inherit mkFlake bclModules;
+      inherit mkFlake;
     };
 
   #################################
