@@ -16,7 +16,6 @@ in {
       type = lib.types.str;
       default = "en_US.UTF-8";
     };
-
 #    publicDomain = lib.mkOption {
 #
 #    };
