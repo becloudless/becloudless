@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 {
-  config = lib.mkIf (config.bcl.role.name == "laptop") {
+  config = lib.mkIf (config.bcl.role.name == "workstation") {
 #    bcl.disk.encrypted = true; # TODO this cannot work on one device
     bcl.boot.plymouth = true;
     bcl.boot.quiet = true;

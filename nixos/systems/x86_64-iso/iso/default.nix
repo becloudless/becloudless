@@ -6,6 +6,9 @@
     };
   };
 
+  environment.systemPackages = with pkgs; [
+    nixos-facter
+  ];
 
 #  users.users.nixos = {
 #    openssh.authorizedKeys.keys = [

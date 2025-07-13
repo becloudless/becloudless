@@ -16,10 +16,12 @@ import (
 	"strings"
 )
 
+const fileFacter = "facter.json"
+
 func InstallAnywhere(host string, user string, password []byte) error {
 	run, err := runner.NewSshRunner(host, user, password)
 	if err != nil {
-		return errs.WithE(err, "Failed to connect to host to install")
+		return errs.WithE(err, "Failed to connect to host to install, is the user set? did it required a password?")
 	}
 
 	//sudoRunner, err := runner.NewSudoRunner(run, password)
@@ -41,6 +43,7 @@ func InstallAnywhere(host string, user string, password []byte) error {
 	logs.Info("Looking for matching system")
 	localRunner := runner.NewLocalRunner()
 	systemName, err := findSystem(localRunner, info)
+	systemFolder := path.Join(bcl.BCL.Repository.Root, "nixos", "systems", "x86_64-linux", systemName)
 	if err != nil {
 		return errs.WithE(err, "Fail during process to find the system to install")
 	}
@@ -54,7 +57,6 @@ func InstallAnywhere(host string, user string, password []byte) error {
 	} else {
 		logs.WithField("name", systemName).Info("System found")
 		systemConfig = SystemConfig{Name: systemName}
-		systemFolder := path.Join(bcl.BCL.Repository.Root, "nixos", "systems", "x86_64-linux", systemName)
 		systemYamlFile := path.Join(systemFolder, "default.yaml")
 		file, err := os.ReadFile(systemYamlFile)
 		if err != nil {
@@ -66,16 +68,22 @@ func InstallAnywhere(host string, user string, password []byte) error {
 		//TODO use nix instead 	role=$(nix --extra-experimental-features "nix-command flakes" eval "$DIR/../nixos#nixosConfigurations.$hostname.config.system.nixos.tags" | sed 's/.*role-\([a-z0-9-]*\).*/\1/')
 	}
 
-	logs.WithField("system", systemName).Info("Starting installation")
+	//--generate-hardware-config nixos-facter
+	//--phases kexec
+
+	logs.WithField("system", systemName).Info("Run kexec phase")
 	if _, err := localRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
 		"nix-shell", "--extra-experimental-features", "nix-command flakes", "-p", "nixos-anywhere", "--run",
-		"nixos-anywhere --env-password --flake "+path.Join(bcl.BCL.Repository.Root, "nixos")+"#"+systemName+" "+user+"@"+host); err != nil {
-		return errs.WithE(err, "Installation failed")
+		"nixos-anywhere --generate-hardware-config nixos-facter "+path.Join(systemFolder, fileFacter)+" --phases kexec --env-password --flake "+path.Join(bcl.BCL.Repository.Root, "nixos")+"#"+systemName+" "+user+"@"+host); err != nil {
+		return errs.WithE(err, "kexec phase failed")
 	}
 
-	//if err := localRunner.ExecCmd("nix-shell", "--extra-experimental-features", "nix-command flakes", "-p", "nixos-anywhere", "--run", "nixos-anywhere --flake "+path.Join(bcl.BCL.Repository.Root, "nixos")+"#"+systemName+" "+user+"@"+host); err != nil {
-	//	return errs.WithE(err, "Installation failed")
-	//}
+	logs.WithField("system", systemName).Info("Run disco,install,reboot phases")
+	if _, err := localRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
+		"nix-shell", "--extra-experimental-features", "nix-command flakes", "-p", "nixos-anywhere", "--run",
+		"nixos-anywhere --phases disco,install,reboot --env-password --flake "+path.Join(bcl.BCL.Repository.Root, "nixos")+"#"+systemName+" "+user+"@"+host); err != nil {
+		return errs.WithE(err, "disco,install,reboot phase failed")
+	}
 
 	// ask cryptsetup passwprd
 	// extract ssh host key for role to prepared folder
