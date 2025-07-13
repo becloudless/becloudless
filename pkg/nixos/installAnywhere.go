@@ -146,6 +146,7 @@ func findSystem(localRunner *runner.LocalRunner, info SystemInfo) (string, error
 		ids, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes", "eval", path.Join(bcl.BCL.Repository.Root, "nixos")+"#nixosConfigurations."+confName+".config.environment.etc.\"ids.env\".text", "--raw")
 		if err != nil {
 			logs.WithField("system", confName).Warn("system config is probably broken")
+			continue
 		}
 		if ids == "uuid="+info.MotherboardUuid {
 			return confName, nil

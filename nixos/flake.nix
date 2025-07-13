@@ -64,10 +64,7 @@
         in
           lib.mkFlake (flake-options // {
             systems.modules.nixos = bclModules;
-          }) // {
-            isoConfigurations = bclFlake.isoConfigurations;
-            nixosConfigurations.dummy = bclFlake.nixosConfigurations.dummy; # dummy is useful to run nixos-anywhere before knowing the host
-          };
+          });
   in
     bclFlake // {
       inherit mkFlake;
