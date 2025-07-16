@@ -36,7 +36,7 @@ func NixosInstallCmd() *cobra.Command {
 			return nixos.InstallAnywhere(host, user, password)
 		},
 	}
-	cmd.Flags().StringVarP(&user, "user", "u", "install", "user for the connection")
+	cmd.Flags().StringVarP(&user, "user", "u", "nixos", "user for the connection")
 	cmd.Flags().BoolVarP(&askPassword, "ask-password", "P", false, "ask password")
 	return cmd
 }

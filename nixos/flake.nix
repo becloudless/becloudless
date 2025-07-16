@@ -44,6 +44,7 @@
         bclFlake.nixosModules."parts/wm"
         bclFlake.nixosModules.hardware
 
+        bclInputs.nixos-facter-modules.nixosModules.facter
         bclInputs.sops-nix.nixosModules.sops
         bclInputs.disko.nixosModules.disko
         bclInputs.impermanence.nixosModules.impermanence
@@ -80,6 +81,10 @@
     snowfall-lib = {
       url = "github:snowfallorg/lib";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    nixos-facter-modules = {
+      url = "github:nix-community/nixos-facter-modules";
     };
 
     disko = {
