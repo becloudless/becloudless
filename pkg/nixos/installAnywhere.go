@@ -77,12 +77,11 @@ func InstallAnywhere(host string, user string, password []byte) error {
 	}
 
 	logs.WithField("system", systemName).Info("Check if disk password is required")
-	ret, err := localRunner.Exec(nil, nil, nil, nil,
-		"nix", "--extra-experimental-features", "nix-command flakes", "eval", path.Join(bcl.BCL.Repository.Root, "nixos")+"#nixosConfigurations."+systemName+".config.filesystem.\"/nix\".device | grep -q /dev/mapper")
+	device, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes", "eval", path.Join(bcl.BCL.Repository.Root, "nixos")+"#nixosConfigurations."+systemName+".config.fileSystems.\"/nix\".device")
 	if err != nil {
 		return errs.WithE(err, "Failed to check if a password is required for the disk")
 	}
-	if ret == 0 {
+	if strings.Contains(device, "/dev/mapper") {
 		logs.Info("Password for disk encryption is required")
 	}
 

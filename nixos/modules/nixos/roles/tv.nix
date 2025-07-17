@@ -159,6 +159,7 @@
           ".local/share/Jellyfin Media Player"
           ".config/jellyfin.org"
         ];
+        system.stateVersion = "23.11"; # never touch that
       };
     };
   };
