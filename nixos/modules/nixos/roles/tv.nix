@@ -22,6 +22,10 @@
     ];
 
     home-manager.users.media = { lib, pkgs, ... }: {
+      home = {
+        stateVersion = "23.11"; # never touch that
+      };
+
       imports = [ (inputs.impermanence + "/home-manager.nix") ];
 
       home.file.".xprofile".text = ''
@@ -159,7 +163,6 @@
           ".local/share/Jellyfin Media Player"
           ".config/jellyfin.org"
         ];
-        stateVersion = "23.11"; # never touch that
       };
     };
   };
