@@ -17,5 +17,5 @@
 system <- a device
   role <- a kind of device (TV, servers, laptops, ...)
     group <- a set of devices installing the same thing, with same credentials
-      profile(s) <- set of setup for a role 
+    profile(s) <- set of setup for a role 
 global <- setup that apply to all devices

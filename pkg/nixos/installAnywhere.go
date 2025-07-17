@@ -43,21 +43,22 @@ func InstallAnywhere(host string, user string, password []byte) error {
 	logs.Info("Looking for matching system")
 	localRunner := runner.NewLocalRunner()
 	systemName, err := findSystem(localRunner, info)
-	systemFolder := path.Join(bcl.BCL.Repository.Root, "nixos", "systems", "x86_64-linux", systemName)
 	if err != nil {
 		return errs.WithE(err, "Fail during process to find the system to install")
 	}
 	var systemConfig SystemConfig
+	systemParentFolder := path.Join(bcl.BCL.Repository.Root, "nixos", "systems", "x86_64-linux")
 	if systemName == "" {
 		logs.Warn("Unkown system, creating")
 		systemConfig, err = createSystemConfig(err, info)
 		if err != nil {
 			return errs.WithE(err, "System creation failed")
 		}
+		systemName = systemConfig.Name
 	} else {
 		logs.WithField("name", systemName).Info("System found")
 		systemConfig = SystemConfig{Name: systemName}
-		systemYamlFile := path.Join(systemFolder, "default.yaml")
+		systemYamlFile := path.Join(systemParentFolder, systemName, "default.yaml")
 		file, err := os.ReadFile(systemYamlFile)
 		if err != nil {
 			return errs.WithE(err, "Failed to read system yaml file")
@@ -68,14 +69,21 @@ func InstallAnywhere(host string, user string, password []byte) error {
 		//TODO use nix instead 	role=$(nix --extra-experimental-features "nix-command flakes" eval "$DIR/../nixos#nixosConfigurations.$hostname.config.system.nixos.tags" | sed 's/.*role-\([a-z0-9-]*\).*/\1/')
 	}
 
-	//--generate-hardware-config nixos-facter
-	//--phases kexec
-
 	logs.WithField("system", systemName).Info("Run kexec phase")
 	if _, err := localRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
 		"nix-shell", "--extra-experimental-features", "nix-command flakes", "-p", "nixos-anywhere", "--run",
-		"nixos-anywhere --generate-hardware-config nixos-facter "+path.Join(systemFolder, fileFacter)+" --phases kexec --env-password --flake "+path.Join(bcl.BCL.Repository.Root, "nixos")+"#"+systemName+" "+user+"@"+host); err != nil {
+		"nixos-anywhere --generate-hardware-config nixos-facter "+path.Join(systemParentFolder, systemName, fileFacter)+" --phases kexec --env-password --flake "+path.Join(bcl.BCL.Repository.Root, "nixos")+"#"+systemName+" "+user+"@"+host); err != nil {
 		return errs.WithE(err, "kexec phase failed")
+	}
+
+	logs.WithField("system", systemName).Info("Check if disk password is required")
+	ret, err := localRunner.Exec(nil, nil, nil, nil,
+		"nix", "--extra-experimental-features", "nix-command flakes", "eval", path.Join(bcl.BCL.Repository.Root, "nixos")+"#nixosConfigurations."+systemName+".config.filesystem.\"/nix\".device | grep -q /dev/mapper")
+	if err != nil {
+		return errs.WithE(err, "Failed to check if a password is required for the disk")
+	}
+	if ret == 0 {
+		logs.Info("Password for disk encryption is required")
 	}
 
 	logs.WithField("system", systemName).Info("Run disko,install,reboot phases")
