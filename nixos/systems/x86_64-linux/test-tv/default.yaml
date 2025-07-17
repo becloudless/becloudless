@@ -1,0 +1,15 @@
+bcl:
+    global:
+        enable: true
+        networking:
+            domain: demo.example.local
+    system:
+        enable: true
+        hardware: nuc
+        role: laptop
+        ids: uuid=XXXXX
+        devices:
+            - /dev/disk/by-id/XXXXX
+
+    boot:
+        efi: false
