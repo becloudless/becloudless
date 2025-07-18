@@ -1,8 +1,4 @@
 bcl:
-    global:
-        enable: true
-        networking:
-            domain: demo.example.local
     system:
         enable: true
         role: tv

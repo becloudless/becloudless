@@ -32,6 +32,9 @@ in {
   config = lib.mkIf cfg.enable {
     environment.etc."ids.env".text = cfg.ids;
     bcl = {
+      global = {
+        enable = true;
+      };
       role = {
         enable = (cfg.role != "");
         name = cfg.role;
