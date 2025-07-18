@@ -1,11 +1,22 @@
 { inputs, config, lib, pkgs, ... }:
 {
+  options.bcl.tv = {
+    audioType = lib.mkOption {
+         type = lib.types.str;
+         default = "basic";
+      };
+    audioDevice = lib.mkOption {
+         type = lib.types.str;
+         default = "auto";
+      };
+  };
+
   config = lib.mkIf (config.bcl.role.name == "tv") {
     bcl.boot.quiet = true;
     bcl.sound.enable = true;
     bcl.wm = {
       name = "dwm";
-      user = "media";
+      user = "tv";
     };
     bcl.wifi.enable = true;
 
@@ -17,11 +28,17 @@
       pulseaudio
     ];
 
+    users.users.tv = {
+      isNormalUser = true;
+      group = "users";
+    };
+
+
     systemd.tmpfiles.rules = [
-      "d /nix/home/media 0700 media users"
+      "d /nix/home/tv 0700 tv users"
     ];
 
-    home-manager.users.media = { lib, pkgs, ... }: {
+    home-manager.users.tv = { lib, pkgs, ... }: {
       home = {
         stateVersion = "23.11"; # never touch that
       };
@@ -40,7 +57,7 @@
           xrandr -r 24
           # TODO this is a hack
           pactl set-sink-volume @DEFAULT_SINK@ 100%
-          pactl set-sink-volume alsa_output.pci-0000_00_0e.0.hdmi-stereo 100% # media-garage
+          pactl set-sink-volume alsa_output.pci-0000_00_0e.0.hdmi-stereo 100% # TODO
 
           bash -c "while ! ping -c 1 -W 1 192.168.40.12; do sleep 1; done; while true; do jellyfinmediaplayer; sleep 5; done" &
           bash -c "sleep 20; xdotool mousemove 100 100; xdotool click 1; amixer set Master 95%;" &
@@ -55,8 +72,8 @@
                 },
                 "audio": {
                     "channels": "2.0",
-                    "device": "${config.bcl.media.audioDevice}",
-                    "devicetype": "${config.bcl.media.audioType}",
+                    "device": "${config.bcl.tv.audioDevice}",
+                    "devicetype": "${config.bcl.tv.audioType}",
                     "exclusive": false,
                     "normalize": false,
                     "passthrough.ac3": false,
@@ -156,7 +173,7 @@
         }
       '';
 
-      home.persistence."/nix/home/media" = {
+      home.persistence."/nix/home/tv" = {
         allowOther = true;
         directories = [
           ".local/share/jellyfinmediaplayer"

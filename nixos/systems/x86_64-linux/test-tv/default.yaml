@@ -6,7 +6,7 @@ bcl:
     system:
         enable: true
         hardware: nuc
-        role: laptop
+        role: tv
         ids: uuid=XXXXX
         devices:
             - /dev/disk/by-id/XXXXX
