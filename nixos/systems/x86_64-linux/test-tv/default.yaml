@@ -5,7 +5,6 @@ bcl:
             domain: demo.example.local
     system:
         enable: true
-        hardware: nuc
         role: tv
         ids: uuid=XXXXX
         devices:

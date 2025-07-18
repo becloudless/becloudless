@@ -5,7 +5,6 @@ bcl:
             domain: demo.example.local
     system:
         enable: true
-        hardware: nuc
         role: workstation
         ids: uuid=c9b0fb14-1949-6949-9711-63409d2f9cfe
         devices:

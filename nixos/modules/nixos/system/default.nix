@@ -17,10 +17,6 @@ in {
       type = with lib.types; listOf str;
       default = [ ];
     };
-    hardware = lib.mkOption {
-      type = lib.types.str;
-      default = "";
-    };
     role = lib.mkOption {
       type = lib.types.str;
       default = "";
@@ -42,9 +38,6 @@ in {
       };
       boot = {
         enable = true;
-      };
-      hardware = {
-        device = cfg.hardware;
       };
       disk = {
         enable = true;
