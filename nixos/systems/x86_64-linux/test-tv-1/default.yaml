@@ -1,7 +1,7 @@
 bcl:
     system:
         enable: true
-        role: tv
+        group: test-tv
         ids: uuid=XXXXX
         devices:
             - /dev/disk/by-id/XXXXX

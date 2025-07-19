@@ -17,7 +17,7 @@ in {
       type = with lib.types; listOf str;
       default = [ ];
     };
-    role = lib.mkOption {
+    group = lib.mkOption {
       type = lib.types.str;
       default = "";
     };
@@ -35,9 +35,8 @@ in {
       global = {
         enable = true;
       };
-      role = {
-        enable = (cfg.role != "");
-        name = cfg.role;
+      group = {
+        name = cfg.group;
       };
       boot = {
         enable = true;

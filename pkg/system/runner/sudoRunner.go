@@ -1,23 +1,23 @@
 package runner
 
 import (
-	"bytes"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"io"
-	"os"
 	"strings"
 )
 
 type SudoRunner struct {
-	ParentRunner Runner
-	password     []byte
+	genericRunner
+	password []byte
 }
 
 func NewSudoRunner(parent Runner, password []byte) (*SudoRunner, error) {
 	run := SudoRunner{
-		ParentRunner: parent,
-		password:     password,
+		genericRunner: genericRunner{
+			parent: parent,
+		},
+		password: password,
 	}
 	_, err := parent.ExecCmdGetStdout("command", "-v", "sudo")
 	if err != nil {
@@ -41,22 +41,5 @@ func (r SudoRunner) Exec(stdin io.Reader, stdout io.Writer, stderr io.Writer, he
 	passwordReader := strings.NewReader(string(r.password) + "\n")
 	//-p ""
 	i := append([]string{"-S", head}, args...)
-	return r.ParentRunner.Exec(nil, passwordReader, stdout, stderr, "sudo", i...)
-}
-
-func (r SudoRunner) ExecCmd(head string, args ...string) error {
-	_, err := r.Exec(os.Stdin, os.Stdout, os.Stderr, head, args...)
-	return err
-}
-
-func (r SudoRunner) ExecCmdGetStdout(head string, args ...string) (string, error) {
-	var stdout bytes.Buffer
-	_, err := r.Exec(os.Stdin, &stdout, os.Stderr, head, args...)
-	return stdout.String(), err
-}
-
-func (r SudoRunner) ExecCmdGetStderr(head string, args ...string) (string, error) {
-	var stderr bytes.Buffer
-	_, err := r.Exec(os.Stdin, os.Stdout, &stderr, head, args...)
-	return stderr.String(), err
+	return r.parent.Exec(nil, passwordReader, stdout, stderr, "sudo", i...)
 }

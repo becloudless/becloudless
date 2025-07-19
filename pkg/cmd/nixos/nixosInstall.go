@@ -9,7 +9,7 @@ import (
 	"syscall"
 )
 
-func NixosInstallCmd() *cobra.Command {
+func nixosInstallCmd() *cobra.Command {
 	var host string
 	var user string
 	var askPassword bool

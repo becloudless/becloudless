@@ -11,9 +11,10 @@ func NixosCmd() *cobra.Command {
 		Short:   "Handle devices with Nix Operating System",
 	}
 	cmd.AddCommand(
-		NixosInstallCmd(),
-		NixosIsoCmd(),
-		NixosPrepareCmd(),
+		nixosInstallCmd(),
+		nixosIsoCmd(),
+		nixosPrepareCmd(),
+		nixosGroupCmd(),
 	)
 	return cmd
 }

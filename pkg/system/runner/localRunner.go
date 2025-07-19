@@ -12,6 +12,7 @@ import (
 )
 
 type LocalRunner struct {
+	genericRunner
 	sudoPassword *memguard.LockedBuffer
 }
 
@@ -46,24 +47,8 @@ func (r *LocalRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, st
 	return cmd.ProcessState.ExitCode(), err
 }
 
-func (r *LocalRunner) ExecCmd(head string, args ...string) error {
-	_, err := r.Exec(nil, os.Stdin, os.Stdout, os.Stderr, head, args...)
-	return err
-}
-
-func (r *LocalRunner) ExecCmdGetStdout(head string, args ...string) (string, error) {
-	var stdout bytes.Buffer
-	_, err := r.Exec(nil, os.Stdin, &stdout, os.Stderr, head, args...)
-	return stdout.String(), err
-}
-
-func (r *LocalRunner) ExecCmdGetStderr(head string, args ...string) (string, error) {
-	var stderr bytes.Buffer
-	_, err := r.Exec(nil, os.Stdin, &stderr, os.Stderr, head, args...)
-	return stderr.String(), err
-}
-
 // ////////////////////////////////
+// TODO rework
 
 func ExecCmdGetStdoutStderrExitCode(head string, parts ...string) (string, string, int, error) {
 	var stdout bytes.Buffer
