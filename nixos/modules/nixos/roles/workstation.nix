@@ -7,6 +7,7 @@
     bcl.boot.quiet = true;
     bcl.sound.enable = true;
     bcl.wifi.enable = true;
+    bcl.role.setAdminPassword = true;
     bcl.wm = {
       name = "gnome";
       user = "kwiskas";

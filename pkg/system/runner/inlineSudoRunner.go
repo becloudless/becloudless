@@ -9,16 +9,16 @@ import (
 
 type InlineSudoRunner struct {
 	genericRunner
+	parent   Runner
 	password []byte
 }
 
 func NewInlineSudoRunner(parent Runner, password []byte) (*InlineSudoRunner, error) {
-	run := InlineSudoRunner{
-		genericRunner: genericRunner{
-			parent: parent,
-		},
+	run := &InlineSudoRunner{
+		parent:   parent,
 		password: password,
 	}
+	run.Runner = run
 	_, err := parent.ExecCmdGetStdout("command", "-v", "sudo")
 	if err != nil {
 		return nil, errs.WithE(err, "Sudo is not available")
@@ -33,10 +33,10 @@ func NewInlineSudoRunner(parent Runner, password []byte) (*InlineSudoRunner, err
 			return nil, errs.WithE(err, "Sudo password is probably wrong")
 		}
 	}
-	return &run, nil
+	return run, nil
 }
 
-func (r InlineSudoRunner) Exec(stdin io.Reader, stdout io.Writer, stderr io.Writer, head string, args ...string) (int, error) {
+func (r InlineSudoRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, stderr io.Writer, head string, args ...string) (int, error) {
 	// TODO stdin is not used since replaced by the sudo password
 	var passwordReader io.Reader
 	if r.password != nil && len(r.password) > 0 {
@@ -44,5 +44,5 @@ func (r InlineSudoRunner) Exec(stdin io.Reader, stdout io.Writer, stderr io.Writ
 	} else {
 		passwordReader = strings.NewReader("\n")
 	}
-	return r.parent.Exec(nil, passwordReader, stdout, stderr, head, args...)
+	return r.parent.Exec(envs, passwordReader, stdout, stderr, head, args...)
 }

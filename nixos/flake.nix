@@ -39,10 +39,10 @@
 
     bclModules = [
         bclFlake.nixosModules.global
-        bclFlake.nixosModules.system
-        bclFlake.nixosModules.roles
+        bclFlake.nixosModules.group
         bclFlake.nixosModules."parts/wm"
-        bclFlake.nixosModules.hardware
+        bclFlake.nixosModules.roles
+        bclFlake.nixosModules.system
 
         bclInputs.nixos-facter-modules.nixosModules.facter
         bclInputs.sops-nix.nixosModules.sops

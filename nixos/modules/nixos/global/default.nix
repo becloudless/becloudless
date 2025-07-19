@@ -19,7 +19,7 @@ in {
       type = lib.types.path;
     };
     adminUser.sshPublicKey = lib.mkOption {
-      type = lib.types.path;
+      type = lib.types.str;
     };
 #    publicDomain = lib.mkOption {
 #
@@ -54,7 +54,7 @@ in {
     time.timeZone = cfg.timeZone;
     i18n.defaultLocale = cfg.locale;
 
-    users.users = {
+    users.users."${cfg.adminUser.login}" = {
       isNormalUser = true;
       group = "users";
       extraGroups = [ "wheel" ];

@@ -3,3 +3,6 @@ dist-tools
 
 
 nixos/result
+tests/*/assets
+tests/*/version
+tests/*/lock

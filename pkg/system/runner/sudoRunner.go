@@ -9,16 +9,16 @@ import (
 
 type SudoRunner struct {
 	genericRunner
+	parent   Runner
 	password []byte
 }
 
 func NewSudoRunner(parent Runner, password []byte) (*SudoRunner, error) {
-	run := SudoRunner{
-		genericRunner: genericRunner{
-			parent: parent,
-		},
+	run := &SudoRunner{
+		parent:   parent,
 		password: password,
 	}
+	run.Runner = run
 	_, err := parent.ExecCmdGetStdout("command", "-v", "sudo")
 	if err != nil {
 		return nil, errs.WithE(err, "Sudo is not available")
@@ -33,13 +33,13 @@ func NewSudoRunner(parent Runner, password []byte) (*SudoRunner, error) {
 			return nil, errs.WithE(err, "Sudo password is probably wrong")
 		}
 	}
-	return &run, nil
+	return run, nil
 }
 
-func (r SudoRunner) Exec(stdin io.Reader, stdout io.Writer, stderr io.Writer, head string, args ...string) (int, error) {
+func (r SudoRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, stderr io.Writer, head string, args ...string) (int, error) {
 	// TODO stdin is not used since replaced by the sudo password
 	passwordReader := strings.NewReader(string(r.password) + "\n")
 	//-p ""
 	i := append([]string{"-S", head}, args...)
-	return r.parent.Exec(nil, passwordReader, stdout, stderr, "sudo", i...)
+	return r.parent.Exec(envs, passwordReader, stdout, stderr, "sudo", i...)
 }

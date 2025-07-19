@@ -2,17 +2,12 @@ package runner
 
 import (
 	"bytes"
-	"io"
 	"os"
 	"strings"
 )
 
 type genericRunner struct {
-	parent Runner
-}
-
-func (r genericRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, stderr io.Writer, head string, args ...string) (int, error) {
-	return r.parent.Exec(envs, stdin, stdout, stderr, head, args...)
+	Runner
 }
 
 func (r genericRunner) ExecCmd(head string, args ...string) error {

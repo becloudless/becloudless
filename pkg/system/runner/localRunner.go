@@ -17,7 +17,9 @@ type LocalRunner struct {
 }
 
 func NewLocalRunner() *LocalRunner {
-	return &LocalRunner{}
+	l := &LocalRunner{}
+	l.Runner = l
+	return l
 }
 
 func (r *LocalRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, stderr io.Writer, head string, args ...string) (int, error) {

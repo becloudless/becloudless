@@ -6,16 +6,17 @@ import (
 
 type NixShellRunner struct {
 	genericRunner
+	parent   Runner
 	Packages []string
 }
 
 func NewNixShellRunner(parent Runner, packages ...string) *NixShellRunner {
-	return &NixShellRunner{
-		genericRunner: genericRunner{
-			parent: parent,
-		},
+	n := &NixShellRunner{
+		parent:   parent,
 		Packages: packages,
 	}
+	n.Runner = n
+	return n
 }
 
 func (r NixShellRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, stderr io.Writer, head string, args ...string) (int, error) {

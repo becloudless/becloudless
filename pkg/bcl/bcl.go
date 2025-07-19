@@ -17,7 +17,7 @@ var BCL Bcl
 
 const pathRepository = "repository"
 const PathSecrets = "secrets"
-const PathEd25519KeyFile = "ed25519.key"
+const PathEd25519KeyFile = "ed25519"
 
 func init() {
 	BCL.App.Name = "bcl"
@@ -56,8 +56,27 @@ func (bcl *Bcl) Init(home string) error {
 		return err
 	}
 
-	edKeyFile := path.Join(bcl.Home, PathSecrets, PathEd25519KeyFile)
-	if err := security.EnsureEd25519KeyFile(edKeyFile); err != nil {
+	secretFolder := path.Join(bcl.Home, PathSecrets)
+	// folder
+	if stat, err := os.Stat(secretFolder); os.IsNotExist(err) {
+		if err := os.MkdirAll(secretFolder, 0700); err != nil {
+			return errs.WithEF(err, data.WithField("folder", secretFolder), "Failed to create key folder")
+		}
+	} else if err != nil {
+		return errs.WithEF(err, data.WithField("folder", secretFolder), "Failed to read key folder")
+	} else {
+		if stat.Mode().Perm() != 0700 {
+			if err := os.Chmod(secretFolder, 0700); err != nil {
+				return errs.WithE(err, "Key folder have wrong mode (0700) and cannot be changed")
+			}
+			logs.WithField("folder", secretFolder).
+				WithField("expected", "0700").
+				WithField("current", stat.Mode().String()).
+				Warn("Key folder had wrong mode. It's fixed")
+		}
+	}
+
+	if err := security.EnsureEd25519KeyFile(path.Join(secretFolder, PathEd25519KeyFile)); err != nil {
 		return err
 	}
 

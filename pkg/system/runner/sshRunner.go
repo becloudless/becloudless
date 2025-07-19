@@ -63,9 +63,11 @@ func NewSshRunner(addr string, user string, password []byte) (*SshRunner, error)
 		return nil, errs.WithE(err, "Failed to connect to remote host")
 	}
 
-	return &SshRunner{
+	s := &SshRunner{
 		client: client,
-	}, nil
+	}
+	s.Runner = s
+	return s, nil
 }
 
 func (r *SshRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, stderr io.Writer, head string, args ...string) (int, error) {
