@@ -21,7 +21,7 @@ func CreateGroup(name string) error {
 		return errs.WithEF(err, data.WithField("dir", groupDir), "Failed to read directory")
 	}
 
-	if err := os.MkdirAll(groupDir, 0777); err != nil {
+	if err := os.MkdirAll(groupDir, 0755); err != nil {
 		return errs.WithE(err, "Failed to create group dir")
 	}
 
@@ -44,7 +44,7 @@ func CreateGroup(name string) error {
 	}
 
 	content := struct {
-		SshHostEd25519Key string `yaml:"ssh_Host_Ed25519_Key"`
+		SshHostEd25519Key string `yaml:"ssh_host_ed25519_key"`
 	}{
 		string(hostPriv),
 	}

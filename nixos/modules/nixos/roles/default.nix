@@ -10,7 +10,7 @@ in {
       type = lib.types.str;
       default = "";
     };
-    setN0radPassword = lib.mkEnableOption "Set password";
+    setAdminPassword = lib.mkEnableOption "Add the password to the user";
   };
 
   config = lib.mkIf cfg.enable {

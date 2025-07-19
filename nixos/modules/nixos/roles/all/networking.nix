@@ -1,7 +1,7 @@
 { config, lib, ... }:
 
 {
-  config = lib.mkIf config.bcl.role.enable {
+  config = lib.mkIf (config.bcl.role.name != "") {
     # networking.timeServers = [ "192.168.40.12" ];
 
     # networking.domain = "h.test.local";

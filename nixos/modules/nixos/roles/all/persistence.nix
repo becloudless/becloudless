@@ -1,7 +1,7 @@
 { config, lib, ... }:
 
 {
-  config = lib.mkIf config.bcl.role.enable {
+  config = lib.mkIf (config.bcl.role.name != "") {
     environment.persistence."/nix" = {
       hideMounts = true;
       directories = [

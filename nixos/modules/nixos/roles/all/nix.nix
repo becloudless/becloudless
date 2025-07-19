@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 {
-  config = lib.mkIf config.bcl.role.enable {
+  config = lib.mkIf (config.bcl.role.name != "") {
 
     nix.package = pkgs.nixVersions.nix_2_25; # need >=2.25 with flake path fix
 

@@ -4,17 +4,22 @@ let
 in {
   options.bcl.global = {
     enable = lib.mkEnableOption "Enable the default settings?";
-    networking.domain = lib.mkOption {
-      type = lib.types.str;
-      default = "";
-    };
-    time.timeZone = lib.mkOption {
+    timeZone = lib.mkOption {
       type = lib.types.str;
       default = "Europe/Paris";
     };
-    i18n.defaultLocale = lib.mkOption {
+    locale = lib.mkOption {
       type = lib.types.str;
       default = "en_US.UTF-8";
+    };
+    adminUser.login = lib.mkOption {
+      type = lib.types.str;
+    };
+    adminUser.passwordSecretFile = lib.mkOption {
+      type = lib.types.path;
+    };
+    adminUser.sshPublicKey = lib.mkOption {
+      type = lib.types.path;
     };
 #    publicDomain = lib.mkOption {
 #
@@ -46,8 +51,22 @@ in {
   ###################
 
   config = lib.mkIf cfg.enable {
-    networking.domain = lib.mkIf (cfg.networking.domain != "") cfg.networking.domain;
-    time.timeZone = cfg.time.timeZone;
-    i18n.defaultLocale = cfg.i18n.defaultLocale;
+    time.timeZone = cfg.timeZone;
+    i18n.defaultLocale = cfg.locale;
+
+    users.users = {
+      isNormalUser = true;
+      group = "users";
+      extraGroups = [ "wheel" ];
+      hashedPasswordFile = lib.mkIf config.bcl.role.setAdminPassword config.sops.secrets."adminPassword".path;
+      openssh.authorizedKeys.keys = [
+        cfg.adminUser.sshPublicKey
+      ];
+    };
+
+   sops.secrets."adminPassword" = lib.mkIf config.bcl.role.setAdminPassword {
+      neededForUsers = true;  # sops hook in the init process before creation of users
+      sopsFile = cfg.adminUser.passwordSecretFile;
+    };
   };
 }

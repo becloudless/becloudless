@@ -2,10 +2,9 @@
 
 {
   config = lib.mkIf (config.bcl.role.name == "workstation") {
-#    bcl.disk.encrypted = true; # TODO this cannot work on one device
+    bcl.disk.encrypted = true;
     bcl.boot.plymouth = true;
     bcl.boot.quiet = true;
-    bcl.role.setN0radPassword = true;
     bcl.sound.enable = true;
     bcl.wifi.enable = true;
     bcl.wm = {
