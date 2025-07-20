@@ -18,6 +18,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: prepare macos
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install go
+
       - name: test
         run: |
           ./test.sh
