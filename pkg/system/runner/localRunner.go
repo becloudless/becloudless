@@ -2,7 +2,6 @@ package runner
 
 import (
 	"bytes"
-	"github.com/awnumar/memguard"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"io"
@@ -13,7 +12,6 @@ import (
 
 type LocalRunner struct {
 	genericRunner
-	sudoPassword *memguard.LockedBuffer
 }
 
 func NewLocalRunner() *LocalRunner {

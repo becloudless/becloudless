@@ -1,10 +1,9 @@
 bcl:
+    boot:
+        efi: false
     system:
         enable: true
         group: test-workstation
         ids: uuid=c9b0fb14-1949-6949-9711-63409d2f9cfe
         devices:
             - /dev/disk/by-id/ata-VBOX_HARDDISK_VBeea22c18-af338798
-
-    boot:
-        efi: false

@@ -13,6 +13,10 @@ import (
 
 const sshHostSecretKeyName = "ssh_host_ed25519_key"
 
+type GroupSecretFile struct {
+	SshHostEd25519Key string `yaml:"ssh_host_ed25519_key"`
+}
+
 func CreateGroup(name string) error {
 	groupDir := path.Join(bcl.BCL.Repository.Root, "nixos", "modules", "nixos", "group", name)
 	if _, err := os.Stat(groupDir); err == nil {
@@ -43,10 +47,8 @@ func CreateGroup(name string) error {
 		return errs.WithE(err, "Failed to create group sops configuration file")
 	}
 
-	content := struct {
-		SshHostEd25519Key string `yaml:"ssh_host_ed25519_key"`
-	}{
-		string(hostPriv),
+	content := GroupSecretFile{
+		SshHostEd25519Key: string(hostPriv),
 	}
 	secretFile := path.Join(groupDir, "default.secrets.yaml")
 	if err = utils.YamlMarshalToFile(secretFile, content, 0600); err != nil {

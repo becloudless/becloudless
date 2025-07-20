@@ -2,6 +2,7 @@ package runner
 
 import (
 	"io"
+	"strings"
 )
 
 type NixShellRunner struct {
@@ -24,7 +25,6 @@ func (r NixShellRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, 
 	for _, pkg := range r.Packages {
 		newArgs = append(newArgs, "-p", pkg)
 	}
-	newArgs = append(newArgs, "--run", head)
-	newArgs = append(newArgs, args...)
+	newArgs = append(newArgs, "--run", head+" "+strings.Join(args, " ")) // TODO args are not quoted
 	return r.parent.Exec(envs, stdin, stdout, stderr, "nix-shell", newArgs...)
 }

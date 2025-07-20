@@ -1,19 +1,24 @@
 package nixos
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/becloudless/becloudless/pkg/bcl"
+	"github.com/becloudless/becloudless/pkg/security"
 	"github.com/becloudless/becloudless/pkg/system"
 	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/becloudless/becloudless/pkg/utils"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
+	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
 	"os"
 	"path"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 const fileFacter = "facter.json"
@@ -81,21 +86,95 @@ func InstallAnywhere(host string, user string, password []byte) error {
 	if err != nil {
 		return errs.WithE(err, "Failed to check if a password is required for the disk")
 	}
+	var diskPassword []byte
 	if strings.Contains(device, "/dev/mapper") {
-		logs.Info("Password for disk encryption is required")
+		pass, err := askDiskPassword()
+		if err != nil {
+			return errs.WithE(err, "asking disk password failed")
+		}
+		diskPassword = pass
 	}
+
+	temp, err := os.MkdirTemp(os.TempDir(), "bcl-install")
+	if err != nil {
+		return errs.WithE(err, "Failed to create temp directory")
+	}
+	defer os.RemoveAll(temp)
+
+	installDir := path.Join(temp, "install")
+	if err := os.MkdirAll(installDir, 0700); err != nil {
+		return errs.WithE(err, "Failed to create install temp directory")
+	}
+	diskPasswordFile := path.Join(installDir, "secret.key")
+	if err := os.WriteFile(diskPasswordFile, diskPassword, 0600); err != nil {
+		return errs.WithE(err, "Failed to write disk secret file")
+	}
+	defer os.Remove(diskPasswordFile)
+
+	groupName, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes", "eval", path.Join(bcl.BCL.Repository.Root, "nixos")+"#nixosConfigurations."+systemName+".config.bcl.group.name")
+	if err != nil {
+		return errs.WithE(err, "Failed to find group name of system")
+	}
+
+	sopsRunner := runner.NewNixShellRunner(localRunner, "sops")
+
+	_, privAgeKey, err := security.Ed25519PrivateKeyFileToPublicAndPrivateAgeKeys(path.Join(bcl.BCL.Home, "secrets", bcl.PathEd25519KeyFile))
+	if err != nil {
+		return errs.WithE(err, "Failed to load age key from ed25519 private key")
+	}
+
+	envs := []string{"SOPS_AGE_KEY=" + privAgeKey}
+	var stdout bytes.Buffer
+	if _, err := sopsRunner.Exec(&envs, os.Stdin, &stdout, os.Stderr, "sops", "-d", path.Join(bcl.BCL.Repository.Root, "nixos", "modules", "nixos", "group", groupName, "default.secrets.yaml")); err != nil {
+		return errs.WithE(err, "Failed to extract group secrets")
+	}
+
+	secretFile := GroupSecretFile{}
+	if err := yaml.Unmarshal(stdout.Bytes(), &secretFile); err != nil {
+		return errs.WithE(err, "Failed to unmarshal group secret file")
+	}
+
+	sshHostFolder := path.Join(temp, "fs", "nix", "etc", "ssh")
+	if err := os.MkdirAll(sshHostFolder, 0700); err != nil {
+		return errs.WithE(err, "Failed to create ssh host folder")
+	}
+
+	sshHostKeyFile := path.Join(sshHostFolder, "ssh_host_ed25519_key")
+	if err := os.WriteFile(sshHostKeyFile, []byte(secretFile.SshHostEd25519Key), 0600); err != nil {
+		return errs.WithE(err, "Failed to write temporary ssh host key file")
+	}
+	defer os.Remove(sshHostKeyFile)
 
 	logs.WithField("system", systemName).Info("Run disko,install,reboot phases")
 	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
-		"nixos-anywhere --phases disko,install,reboot --env-password --flake "+path.Join(bcl.BCL.Repository.Root, "nixos")+"#"+systemName+" "+user+"@"+host); err != nil {
+		"nixos-anywhere --phases disko,install,reboot --extra-files "+path.Join(temp, "fs")+" --disk-encryption-keys /root/secret.key "+path.Join(temp, "install", "secret.key")+" --env-password --flake "+path.Join(bcl.BCL.Repository.Root, "nixos")+"#"+systemName+" "+user+"@"+host); err != nil {
 		return errs.WithE(err, "disco,install,reboot phase failed")
 	}
 
-	// ask cryptsetup passwprd
-	// extract ssh host key for role to prepared folder
-	// trigger nixos-anywhere
-
 	return nil
+}
+
+func askDiskPassword() ([]byte, error) {
+	for {
+		fmt.Print("Password for disk encryption? ")
+		pass, err := term.ReadPassword(syscall.Stdin)
+		if err != nil {
+			return []byte{}, errs.WithE(err, "Failed to read password")
+		}
+		fmt.Println()
+
+		fmt.Print("Confirm? ")
+		pass2, err := term.ReadPassword(syscall.Stdin)
+		if err != nil {
+			return []byte{}, errs.WithE(err, "Failed to read password")
+		}
+		fmt.Println()
+
+		if bytes.Equal(pass, pass2) {
+			return pass, nil
+		}
+		fmt.Println("Password do not match. Try again")
+	}
 }
 
 func createSystemConfig(err error, info SystemInfo) (SystemConfig, error) {
