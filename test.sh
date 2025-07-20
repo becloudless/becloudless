@@ -45,9 +45,11 @@ clean_up () {
 }
 trap clean_up EXIT
 
+echo_brightred "## Install VM"
 sleep 20
 ./dist/bcl-*/bcl -H ./tests/basic nix install -L trace -p 10022 -i tests/basic/secrets/ed25519 127.0.0.1
 
+echo_brightred "## Checking result"
 sleep 30
 ssh -o StrictHostKeyChecking=no -i tests/basic/secrets/ed25519 -p 10022 toto@127.0.0.1 pidof jellyfinmediaplayer
 
