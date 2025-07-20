@@ -23,9 +23,11 @@ jobs:
         run: |
           brew install go
 
-      - name: prepare
-        run: |
-          sh <(curl -L https://nixos.org/nix/install) --yes
+
+      - uses: nixbuild/nix-quick-install-action@v31
+#      - name: prepare
+#        run: |
+#          sh <(curl -L https://nixos.org/nix/install) --yes
 
       - name: test
         run: |
