@@ -21,6 +21,7 @@ echo_brightred "## Building iso image"
 (cd tests/basic/repository/nixos && nix flake update && nix build .#isoConfigurations.iso)
 
 echo_brightred "## Creating test-tv disk image"
+mkdir -p ./tests/work
 qemu-img create -f qcow2 ./tests/work/test-tv.cow 8G
 
 echo_brightred "## Starting VM"
