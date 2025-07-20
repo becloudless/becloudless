@@ -22,7 +22,8 @@ type SshRunner struct {
 }
 
 func NewSshRunner(addr string, port int, user string, password []byte, identifyFile string) (*SshRunner, error) {
-	var privateKey ssh.Signer
+	var auths []ssh.AuthMethod
+
 	if identifyFile != "" {
 		content, err := os.ReadFile(identifyFile)
 		if err != nil {
@@ -32,35 +33,32 @@ func NewSshRunner(addr string, port int, user string, password []byte, identifyF
 		if err != nil {
 			return nil, errs.WithE(err, "Failed to read identify file")
 		}
-		privateKey = key
+		auths = append(auths, ssh.PublicKeys(key))
 	}
 
-	// ssh-agent(1) provides a UNIX socket at $SSH_AUTH_SOCK.
-	socket := os.Getenv("SSH_AUTH_SOCK")
-	conn, err := net.Dial("unix", socket)
-	if err != nil {
-		return nil, errs.WithE(err, "Failed to open SSH_AUTH_SOCK")
+	if socket := os.Getenv("SSH_AUTH_SOCK"); socket != "" {
+		conn, err := net.Dial("unix", socket)
+		if err != nil {
+			return nil, errs.WithE(err, "Failed to open SSH_AUTH_SOCK")
+		}
+		agentClient := agent.NewClient(conn)
+		auths = append(auths, ssh.PublicKeysCallback(agentClient.Signers))
 	}
 
-	agentClient := agent.NewClient(conn)
+	if len(password) > 0 {
+		auths = append(auths, ssh.PasswordCallback(func() (secret string, err error) {
+			if password == nil {
+				return "", err
+			}
+			return string(password), nil
+		}))
+	}
 
 	config := &ssh.ClientConfig{
-		User:    user,
-		Timeout: 5 * time.Second,
-		// https://github.com/golang/go/issues/19767
-		// as clientConfig is non-permissive by default
-		// you can set ssh.InsercureIgnoreHostKey to allow any host
+		User:            user,
+		Timeout:         5 * time.Second,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO should not always be insecure
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(privateKey),
-			ssh.PublicKeysCallback(agentClient.Signers),
-			ssh.PasswordCallback(func() (secret string, err error) {
-				if password == nil {
-					return "", err
-				}
-				return string(password), nil
-			}),
-		},
+		Auth:            auths,
 	}
 
 	// Connect
