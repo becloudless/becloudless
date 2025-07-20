@@ -404,7 +404,7 @@
           "value": 133
         },
         "slot": {
-          "bus": 3,
+          "bus": 2,
           "number": 0
         },
         "base_class": {
@@ -432,11 +432,11 @@
           "name": "1.0",
           "value": 0
         },
-        "serial": "VBc9c9675f-494a6a9f",
+        "serial": "VBeea22c18-af338798",
         "model": "VBOX HARDDISK",
         "sysfs_id": "/class/block/sda",
-        "sysfs_bus_id": "3:0:0:0",
-        "sysfs_device_link": "/devices/pci0000:00/0000:00:0d.0/ata4/host3/target3:0:0/3:0:0:0",
+        "sysfs_bus_id": "2:0:0:0",
+        "sysfs_device_link": "/devices/pci0000:00/0000:00:0d.0/ata3/host2/target2:0:0/2:0:0:0",
         "unix_device_name": "/dev/sda",
         "unix_device_number": {
           "type": 98,
@@ -446,16 +446,16 @@
         },
         "unix_device_names": [
           "/dev/disk/by-diskseq/11",
-          "/dev/disk/by-id/ata-VBOX_HARDDISK_VBc9c9675f-494a6a9f",
-          "/dev/disk/by-path/pci-0000:00:0d.0-ata-2",
-          "/dev/disk/by-path/pci-0000:00:0d.0-ata-2.0",
+          "/dev/disk/by-id/ata-VBOX_HARDDISK_VBeea22c18-af338798",
+          "/dev/disk/by-path/pci-0000:00:0d.0-ata-1",
+          "/dev/disk/by-path/pci-0000:00:0d.0-ata-1.0",
           "/dev/sda"
         ],
         "rom_id": "0x80",
         "resources": [
           {
             "type": "disk_geo",
-            "cylinders": 1726,
+            "cylinders": 3263,
             "heads": 255,
             "sectors": 63,
             "size": 0,
@@ -464,7 +464,7 @@
           {
             "type": "size",
             "unit": "sectors",
-            "value_1": 27738320,
+            "value_1": 52428800,
             "value_2": 512
           }
         ],
@@ -614,7 +614,7 @@
     ],
     "hub": [
       {
-        "index": 18,
+        "index": 19,
         "attached_to": 13,
         "class_list": [
           "usb",
@@ -697,7 +697,7 @@
         "module_alias": "usb:v1D6Bp0002d0606dc09dsc00dp00ic09isc00ip00in00"
       },
       {
-        "index": 19,
+        "index": 20,
         "attached_to": 12,
         "class_list": [
           "usb",
@@ -802,16 +802,139 @@
           {
             "type": "mem",
             "base": 0,
-            "range": 1035460608,
+            "range": 4112224256,
             "enabled": true,
             "access": "read_write",
             "prefetch": "unknown"
           },
           {
             "type": "phys_mem",
-            "range": 1006632960
+            "range": 4026531840
           }
         ]
+      }
+    ],
+    "mouse": [
+      {
+        "index": 18,
+        "attached_to": 20,
+        "class_list": [
+          "mouse",
+          "usb"
+        ],
+        "bus_type": {
+          "hex": "0086",
+          "name": "USB",
+          "value": 134
+        },
+        "slot": {
+          "bus": 0,
+          "number": 0
+        },
+        "base_class": {
+          "hex": "0105",
+          "name": "Mouse",
+          "value": 261
+        },
+        "sub_class": {
+          "hex": "0003",
+          "name": "USB Mouse",
+          "value": 3
+        },
+        "vendor": {
+          "hex": "80ee",
+          "name": "VirtualBox",
+          "value": 33006
+        },
+        "device": {
+          "hex": "0021",
+          "name": "USB Tablet",
+          "value": 33
+        },
+        "revision": {
+          "hex": "0000",
+          "name": "1.00",
+          "value": 0
+        },
+        "compat_vendor": "Unknown",
+        "compat_device": "Generic USB Mouse",
+        "model": "VirtualBox USB Tablet",
+        "sysfs_id": "/devices/pci0000:00/0000:00:06.0/usb2/2-1/2-1:1.0",
+        "sysfs_bus_id": "2-1:1.0",
+        "unix_device_name": "/dev/input/mice",
+        "unix_device_number": {
+          "type": 99,
+          "major": 13,
+          "minor": 63,
+          "range": 1
+        },
+        "unix_device_names": [
+          "/dev/input/mice"
+        ],
+        "unix_device_name2": "/dev/input/mouse0",
+        "unix_device_number2": {
+          "type": 99,
+          "major": 13,
+          "minor": 32,
+          "range": 1
+        },
+        "resources": [
+          {
+            "type": "baud",
+            "speed": 12000000,
+            "bits": 0,
+            "stop_bits": 0,
+            "parity": 0,
+            "handshake": 0
+          }
+        ],
+        "detail": {
+          "device_class": {
+            "hex": "0000",
+            "name": "per_interface",
+            "value": 0
+          },
+          "device_subclass": {
+            "hex": "0000",
+            "name": "per_interface",
+            "value": 0
+          },
+          "device_protocol": 0,
+          "interface_class": {
+            "hex": "0003",
+            "name": "hid",
+            "value": 3
+          },
+          "interface_subclass": {
+            "hex": "0000",
+            "name": "per_interface",
+            "value": 0
+          },
+          "interface_protocol": 0,
+          "interface_number": 0,
+          "interface_alternate_setting": 0
+        },
+        "hotplug": "usb",
+        "driver": "usbhid",
+        "driver_module": "usbhid",
+        "drivers": [
+          "usbhid"
+        ],
+        "driver_modules": [
+          "usbhid"
+        ],
+        "driver_info": {
+          "type": "mouse",
+          "db_entry_0": [
+            "explorerps/2",
+            "exps2"
+          ],
+          "xf86": "explorerps/2",
+          "gpm": "exps2",
+          "buttons": -1,
+          "wheels": -1
+        },
+        "module_alias": "usb:v80EEp0021d0100dc00dsc00dp00ic03isc00ip00in00"
       }
     ],
     "network_controller": [
@@ -937,7 +1060,30 @@
     ],
     "network_interface": [
       {
-        "index": 20,
+        "index": 21,
+        "attached_to": 0,
+        "class_list": [
+          "network_interface"
+        ],
+        "base_class": {
+          "hex": "0107",
+          "name": "Network Interface",
+          "value": 263
+        },
+        "sub_class": {
+          "hex": "0000",
+          "name": "Loopback",
+          "value": 0
+        },
+        "model": "Loopback network interface",
+        "sysfs_id": "/class/net/lo",
+        "unix_device_name": "lo",
+        "unix_device_names": [
+          "lo"
+        ]
+      },
+      {
+        "index": 22,
         "attached_to": 10,
         "class_list": [
           "network_interface"
@@ -976,29 +1122,6 @@
         ],
         "driver_modules": [
           "e1000"
-        ]
-      },
-      {
-        "index": 21,
-        "attached_to": 0,
-        "class_list": [
-          "network_interface"
-        ],
-        "base_class": {
-          "hex": "0107",
-          "name": "Network Interface",
-          "value": 263
-        },
-        "sub_class": {
-          "hex": "0000",
-          "name": "Loopback",
-          "value": 0
-        },
-        "model": "Loopback network interface",
-        "sysfs_id": "/class/net/lo",
-        "unix_device_name": "lo",
-        "unix_device_names": [
-          "lo"
         ]
       }
     ],
