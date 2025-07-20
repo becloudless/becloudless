@@ -125,7 +125,7 @@ func prepareHostSshKey(temp string, systemName string) error {
 	}
 
 	sshHostFolder := path.Join(temp, "fs", "nix", "etc", "ssh")
-	if err := os.MkdirAll(sshHostFolder, 0700); err != nil {
+	if err := os.MkdirAll(sshHostFolder, 0755); err != nil {
 		return errs.WithE(err, "Failed to create ssh host folder")
 	}
 

@@ -5,7 +5,6 @@ let
 in {
 
   options.bcl.role = {
-    enable = lib.mkEnableOption "Enable";
     name = lib.mkOption {
       type = lib.types.str;
       default = "";
@@ -13,9 +12,9 @@ in {
     setAdminPassword = lib.mkEnableOption "Add the password to the user";
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf (cfg.name != "") {
     system.nixos.tags = ["role-${cfg.name}"];
-    system.nixos.versionSuffix = "-${builtins.substring 0 8 (toString inputs.self.lastModifiedDate)}.${revision}";
+    system.nixos.versionSuffix = "-${builtins.substring 0 8 (toString inputs.self.lastModifiedDate)}.${toString revision}";
     # system.nixos.label =
 
     environment.etc."nixos/current".source = inputs.self.outPath;
