@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -20,14 +21,19 @@ type SshRunner struct {
 	sudoPassword *memguard.LockedBuffer
 }
 
-func NewSshRunner(addr string, user string, password []byte) (*SshRunner, error) {
-	// privateKey could be read from a file, or retrieved from another storage
-	// source, such as the Secret Service / GNOME Keyring
-	//key, err := ssh.ParsePrivateKey([]byte(privateKey))
-	//if err != nil {
-	//	return "", err
-	//}
-	// Authentication
+func NewSshRunner(addr string, port int, user string, password []byte, identifyFile string) (*SshRunner, error) {
+	var privateKey ssh.Signer
+	if identifyFile != "" {
+		content, err := os.ReadFile(identifyFile)
+		if err != nil {
+			return nil, errs.WithE(err, "Failed to read identify file")
+		}
+		key, err := ssh.ParsePrivateKey(content)
+		if err != nil {
+			return nil, errs.WithE(err, "Failed to read identify file")
+		}
+		privateKey = key
+	}
 
 	// ssh-agent(1) provides a UNIX socket at $SSH_AUTH_SOCK.
 	socket := os.Getenv("SSH_AUTH_SOCK")
@@ -46,7 +52,7 @@ func NewSshRunner(addr string, user string, password []byte) (*SshRunner, error)
 		// you can set ssh.InsercureIgnoreHostKey to allow any host
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO should not always be insecure
 		Auth: []ssh.AuthMethod{
-			//ssh.PublicKeys(key),
+			ssh.PublicKeys(privateKey),
 			ssh.PublicKeysCallback(agentClient.Signers),
 			ssh.PasswordCallback(func() (secret string, err error) {
 				if password == nil {
@@ -58,7 +64,7 @@ func NewSshRunner(addr string, user string, password []byte) (*SshRunner, error)
 	}
 
 	// Connect
-	client, err := ssh.Dial("tcp", net.JoinHostPort(addr, "22"), config)
+	client, err := ssh.Dial("tcp", net.JoinHostPort(addr, strconv.Itoa(port)), config)
 	if err != nil {
 		return nil, errs.WithE(err, "Failed to connect to remote host")
 	}

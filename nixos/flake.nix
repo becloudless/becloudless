@@ -65,7 +65,16 @@
         in
           lib.mkFlake (flake-options // {
             systems.modules.nixos = bclModules;
-          }) // {isoConfigurations = bclFlake.isoConfigurations;};
+            systems.hosts = {
+              iso = {
+                modules = with bclInputs; [
+                  "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
+                  "${nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
+                ];
+              };
+            };
+
+          }); #// {isoConfigurations = bclFlake.isoConfigurations;};
   in
     bclFlake // {
       inherit mkFlake;

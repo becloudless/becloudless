@@ -20,8 +20,8 @@ import (
 
 const fileFacter = "facter.json"
 
-func InstallAnywhere(host string, user string, password []byte) error {
-	run, err := runner.NewSshRunner(host, user, password)
+func InstallAnywhere(host string, port int, user string, password []byte, identifyFile string) error {
+	run, err := runner.NewSshRunner(host, port, user, password, identifyFile)
 	if err != nil {
 		return errs.WithE(err, "Failed to connect to host to install, is the user set? did it required a password?")
 	}
@@ -74,7 +74,7 @@ func InstallAnywhere(host string, user string, password []byte) error {
 	anywhereRunner := runner.NewNixShellRunner(localRunner, "nixos-anywhere")
 	logs.WithField("system", systemName).Info("Run kexec phase")
 	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
-		"nixos-anywhere --generate-hardware-config nixos-facter "+path.Join(systemParentFolder, systemName, fileFacter)+" --phases kexec --env-password --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
+		"nixos-anywhere -p "+strconv.Itoa(port)+" -i "+identifyFile+" --generate-hardware-config nixos-facter "+path.Join(systemParentFolder, systemName, fileFacter)+" --phases kexec --env-password --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
 		return errs.WithE(err, "kexec phase failed")
 	}
 
@@ -93,7 +93,7 @@ func InstallAnywhere(host string, user string, password []byte) error {
 
 	logs.WithField("system", systemName).Info("Run disko,install,reboot phases")
 	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
-		"nixos-anywhere --phases disko,install,reboot --extra-files "+path.Join(temp, "fs")+" --disk-encryption-keys /root/secret.key "+path.Join(temp, "install", "secret.key")+" --env-password --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
+		"nixos-anywhere --phases disko,install,reboot -p "+strconv.Itoa(port)+" -i "+identifyFile+" --extra-files "+path.Join(temp, "fs")+" --disk-encryption-keys /root/secret.key "+path.Join(temp, "install", "secret.key")+" --env-password --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
 		return errs.WithE(err, "disco,install,reboot phase failed")
 	}
 	return nil

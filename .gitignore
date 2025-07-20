@@ -1,8 +1,11 @@
 dist
 dist-tools
 
-
 nixos/result
+
+tests/*/nixos/result
+tests/*/nixos/flake.lock
 tests/*/assets
 tests/*/version
 tests/*/lock
+tests/work
