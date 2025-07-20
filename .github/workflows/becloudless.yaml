@@ -26,6 +26,12 @@ jobs:
         run: |
           brew install go
 
+      - name: prepare ubuntu
+        if: matrix.os == 'macos-latest'
+        run: |
+          apt update
+          apt install qemu-system -y
+
       # https://github.com/marketplace/actions/nix-quick-install
       # https://github.com/marketplace/actions/install-nix
       - uses: nixbuild/nix-quick-install-action@v31
