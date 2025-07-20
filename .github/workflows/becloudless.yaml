@@ -32,12 +32,16 @@ jobs:
           sudo apt update
           sudo apt install qemu-system qemu-utils -y
 
-      # https://github.com/marketplace/actions/nix-quick-install
-      # https://github.com/marketplace/actions/install-nix
-      - uses: nixbuild/nix-quick-install-action@v31
-#      - name: prepare
-#        run: |
-#          sh <(curl -L https://nixos.org/nix/install) --yes
+#      # https://github.com/marketplace/actions/nix-quick-install
+#      # https://github.com/marketplace/actions/install-nix
+#      - uses: nixbuild/nix-quick-install-action@v31
+##      - name: prepare
+##        run: |
+##          sh <(curl -L https://nixos.org/nix/install) --yes
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
 
       - name: test
         run: |
