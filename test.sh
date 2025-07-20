@@ -13,6 +13,10 @@ echo_blue() { echo_stderr "\033[0;34m$*\033[0m";}
 echo_brightred "## Building bcl"
 ./gomake build
 
+
+echo_brightred "## Prepare host"
+./dist/bcl-linux-amd64/bcl -H ./tests/basic nixos prepare
+
 echo_brightred "## Building iso image"
 (cd tests/basic/repository/nixos && nix flake update && nix build .#isoConfigurations.iso)
 
