@@ -29,8 +29,8 @@ jobs:
       - name: prepare ubuntu
         if: matrix.os == 'ubuntu-latest'
         run: |
-          apt update
-          apt install qemu-system qemu-utils -y
+          sudo apt update
+          sudo apt install qemu-system qemu-utils -y
 
       # https://github.com/marketplace/actions/nix-quick-install
       # https://github.com/marketplace/actions/install-nix
