@@ -36,8 +36,8 @@ qemu-system-x86_64 \
 	-cdrom ./tests/basic/repository/nixos/result/iso/bcl.iso \
 	-pidfile ./tests/work/test-tv.pid \
 	-daemonize \
+	-nographic \
 	./tests/work/test-tv.cow
-#-nographic
 #	-drive file=./tests/work/test-tv.cow,if=virtio,format=raw,cache=none,aio=native \
 
 clean_up () {
