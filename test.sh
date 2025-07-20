@@ -15,7 +15,7 @@ echo_brightred "## Building bcl"
 
 
 echo_brightred "## Prepare host"
-./dist/bcl-linux-amd64/bcl -H ./tests/basic nixos prepare
+./dist/bcl-*/bcl -H ./tests/basic nixos prepare
 
 echo_brightred "## Building iso image"
 (cd tests/basic/repository/nixos && nix flake update && nix build .#isoConfigurations.iso)
@@ -45,7 +45,7 @@ clean_up () {
 trap clean_up EXIT
 
 sleep 20
-./dist/bcl-linux-amd64/bcl -H ./tests/basic nix install -L trace -p 10022 -i tests/basic/secrets/ed25519 127.0.0.1
+./dist/bcl-*/bcl -H ./tests/basic nix install -L trace -p 10022 -i tests/basic/secrets/ed25519 127.0.0.1
 
 sleep 30
 ssh -o StrictHostKeyChecking=no -i tests/basic/secrets/ed25519 -p 10022 toto@127.0.0.1 pidof jellyfinmediaplayer
