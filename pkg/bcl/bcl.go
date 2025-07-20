@@ -10,6 +10,7 @@ import (
 	"github.com/n0rad/go-erlog/logs"
 	"os"
 	"path"
+	"strings"
 )
 
 // BCL is the global app instance
@@ -83,6 +84,14 @@ func (bcl *Bcl) Init(home string) error {
 	//TODO commit?
 
 	return nil
+}
+
+func (bcl *Bcl) GetNixosDir() string {
+	nixosPath := path.Join(bcl.Repository.Root, "nixos")
+	if nixosPath[0] != '/' && !strings.HasPrefix(nixosPath, "./") {
+		nixosPath = "./" + nixosPath
+	}
+	return nixosPath
 }
 
 func (bcl *Bcl) ensureNixos() error {
