@@ -1168,7 +1168,7 @@
     "chassis": {
       "handle": 768,
       "manufacturer": "QEMU",
-      "version": "pc-i440fx-9.1",
+      "version": "pc-i440fx-9.2",
       "chassis_type": {
         "hex": "0001",
         "name": "Other",
@@ -1269,7 +1269,7 @@
         },
         "socket_populated": true,
         "manufacturer": "QEMU",
-        "version": "pc-i440fx-9.1",
+        "version": "pc-i440fx-9.2",
         "part": "",
         "processor_type": {
           "hex": "0003",
@@ -1297,7 +1297,7 @@
       "handle": 256,
       "manufacturer": "QEMU",
       "product": "Standard PC (i440FX + PIIX, 1996)",
-      "version": "pc-i440fx-9.1",
+      "version": "pc-i440fx-9.2",
       "wake_up": {
         "hex": "0006",
         "name": "Power Switch",

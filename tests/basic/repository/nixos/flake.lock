@@ -13,15 +13,14 @@
         "yaml": "yaml"
       },
       "locked": {
-        "lastModified": 1,
-        "narHash": "sha256-UDMYp0qTscMNw14D3nz827fvYMC/WfB4CIOqLeLgvug=",
         "path": "../../../../nixos",
         "type": "path"
       },
       "original": {
         "path": "../../../../nixos",
         "type": "path"
-      }
+      },
+      "parent": []
     },
     "disko": {
       "inputs": {
