@@ -48,4 +48,5 @@ jobs:
 
       - name: test
         run: |
+          nix run --refresh github:nix-community/nixos-anywhere
           bash -x ./test.sh
