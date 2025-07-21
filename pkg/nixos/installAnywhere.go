@@ -74,7 +74,7 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 	anywhereRunner := runner.NewNixShellRunner(localRunner, "nixos-anywhere")
 	logs.WithField("system", systemName).Info("Run kexec phase")
 	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
-		"nixos-anywhere -p "+strconv.Itoa(port)+" -i "+identifyFile+" --generate-hardware-config nixos-facter "+path.Join(systemParentFolder, systemName, fileFacter)+" --phases kexec --env-password --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
+		"nixos-anywhere --debug -p "+strconv.Itoa(port)+" -i "+identifyFile+" --generate-hardware-config nixos-facter "+path.Join(systemParentFolder, systemName, fileFacter)+" --phases kexec --env-password --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
 		return errs.WithE(err, "kexec phase failed")
 	}
 
@@ -93,7 +93,7 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 
 	logs.WithField("system", systemName).Info("Run disko,install,reboot phases")
 	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
-		"nixos-anywhere --phases disko,install,reboot -p "+strconv.Itoa(port)+" -i "+identifyFile+" --extra-files "+path.Join(temp, "fs")+" --disk-encryption-keys /root/secret.key "+path.Join(temp, "install", "secret.key")+" --env-password --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
+		"nixos-anywhere --debug --phases disko,install,reboot -p "+strconv.Itoa(port)+" -i "+identifyFile+" --extra-files "+path.Join(temp, "fs")+" --disk-encryption-keys /root/secret.key "+path.Join(temp, "install", "secret.key")+" --env-password --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
 		return errs.WithE(err, "disco,install,reboot phase failed")
 	}
 	return nil
