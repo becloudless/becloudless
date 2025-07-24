@@ -25,6 +25,6 @@ func (r NixShellRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, 
 	for _, pkg := range r.Packages {
 		newArgs = append(newArgs, "-p", pkg)
 	}
-	newArgs = append(newArgs, "--run", "bash -x "+head+" "+strings.Join(args, " ")) // TODO args are not quoted
+	newArgs = append(newArgs, "--run", head+" "+strings.Join(args, " ")) // TODO args are not quoted
 	return r.parent.Exec(envs, stdin, stdout, stderr, "nix-shell", newArgs...)
 }
