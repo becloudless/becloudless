@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+set -x
 
 DEBUG="${DEBUG:=false}"
 
@@ -12,7 +13,7 @@ echo_purple() { echo_stderr "\033[0;35m$*\033[0m";}
 echo_blue() { echo_stderr "\033[0;34m$*\033[0m";}
 
 
-nix run --refresh github:nix-community/nixos-anywhere || true
+nix run --refresh github:n0rad/nixos-anywhere || true
 
 echo_brightred "## Building bcl"
 ./gomake build
