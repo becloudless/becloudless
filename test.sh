@@ -68,3 +68,5 @@ echo_green "## EVERYTHING IS OK"
 
 # kill in advance https://unix.stackexchange.com/questions/668024/run-foreground-process-until-background-process-exited-in-shell
 $DEBUG && sleep infinity
+
+exit 0
