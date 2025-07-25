@@ -62,7 +62,9 @@ $DEBUG && bclDebug="-L debug"
 
 echo_brightred "## Checking result"
 sleep 60
-ssh -o StrictHostKeyChecking=no -i tests/basic/secrets/ed25519 -p 10022 toto@127.0.0.1 pidof jellyfinmediaplayer
+#ssh -o StrictHostKeyChecking=no -i tests/basic/secrets/ed25519 -p 10022 toto@127.0.0.1 pidof jellyfinmediaplayer
+ssh -o StrictHostKeyChecking=no -i tests/basic/secrets/ed25519 -p 10022 toto@127.0.0.1 ps aux
+ssh -o StrictHostKeyChecking=no -i tests/basic/secrets/ed25519 -p 10022 toto@127.0.0.1 journalctl -xe
 
 echo_green "## EVERYTHING IS OK"
 
