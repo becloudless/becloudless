@@ -9,10 +9,12 @@ import (
 	"syscall"
 )
 
-func NixosInstallCmd() *cobra.Command {
+func nixosInstallCmd() *cobra.Command {
 	var host string
+	var port int
 	var user string
 	var askPassword bool
+	var identifyFile string
 	cmd := &cobra.Command{
 		Use:   "install [HOST_IP]",
 		Short: "Install remote device",
@@ -33,10 +35,12 @@ func NixosInstallCmd() *cobra.Command {
 				password = pass
 			}
 
-			return nixos.InstallAnywhere(host, user, password)
+			return nixos.InstallAnywhere(host, port, user, password, identifyFile)
 		},
 	}
-	cmd.Flags().StringVarP(&user, "user", "u", "install", "user for the connection")
+	cmd.Flags().StringVarP(&user, "user", "u", "nixos", "user for the connection")
+	cmd.Flags().StringVarP(&identifyFile, "identify", "i", "", "ssh private key file")
 	cmd.Flags().BoolVarP(&askPassword, "ask-password", "P", false, "ask password")
+	cmd.Flags().IntVarP(&port, "port", "p", 22, "port")
 	return cmd
 }

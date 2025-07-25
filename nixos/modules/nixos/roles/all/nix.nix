@@ -1,9 +1,9 @@
 { config, lib, pkgs, ... }:
 
 {
-  config = lib.mkIf config.bcl.role.enable {
+  config = lib.mkIf (config.bcl.role.name != "") {
 
-    nix.package = pkgs.nixVersions.nix_2_25; # need >=2.25 with flake path fix
+    nix.package = pkgs.nixVersions.nix_2_25; # TODO remove with 25.05. Need >=2.25 with flake path fix
 
     services.getty.helpLine = lib.mkForce "" ;
     services.getty.greetingLine = ''<<< bcl ${config.system.nixos.label} (\m) - \l >>>'';

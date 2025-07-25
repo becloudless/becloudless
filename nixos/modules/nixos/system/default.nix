@@ -17,11 +17,7 @@ in {
       type = with lib.types; listOf str;
       default = [ ];
     };
-    hardware = lib.mkOption {
-      type = lib.types.str;
-      default = "";
-    };
-    role = lib.mkOption {
+    group = lib.mkOption {
       type = lib.types.str;
       default = "";
     };
@@ -29,6 +25,7 @@ in {
 
   ###################
 
+  # TODO move that somewhere else
   imports = lib.filter
               (n: !lib.strings.hasSuffix "default.nix" n && lib.strings.hasSuffix ".nix" n)
               (lib.filesystem.listFilesRecursive ../.);
@@ -36,15 +33,14 @@ in {
   config = lib.mkIf cfg.enable {
     environment.etc."ids.env".text = cfg.ids;
     bcl = {
-      role = {
-        enable = (cfg.role != "");
-        name = cfg.role;
+      global = {
+        enable = true;
+      };
+      group = {
+        name = cfg.group;
       };
       boot = {
         enable = true;
-      };
-      hardware = {
-        device = cfg.hardware;
       };
       disk = {
         enable = true;

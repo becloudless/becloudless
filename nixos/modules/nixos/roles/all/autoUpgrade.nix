@@ -2,7 +2,7 @@
 
 {
 
-  config = lib.mkIf config.bcl.role.enable {
+  config = lib.mkIf (config.bcl.role.name != "") {
 
     environment.systemPackages = with pkgs; [
       git

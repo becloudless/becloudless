@@ -39,11 +39,12 @@
 
     bclModules = [
         bclFlake.nixosModules.global
-        bclFlake.nixosModules.system
-        bclFlake.nixosModules.roles
+        bclFlake.nixosModules.group
         bclFlake.nixosModules."parts/wm"
-        bclFlake.nixosModules.hardware
+        bclFlake.nixosModules.roles
+        bclFlake.nixosModules.system
 
+        bclInputs.nixos-facter-modules.nixosModules.facter
         bclInputs.sops-nix.nixosModules.sops
         bclInputs.disko.nixosModules.disko
         bclInputs.impermanence.nixosModules.impermanence
@@ -64,10 +65,19 @@
         in
           lib.mkFlake (flake-options // {
             systems.modules.nixos = bclModules;
-          });
+            systems.hosts = {
+              iso = {
+                modules = with bclInputs; [
+                  "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
+                  "${nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
+                ];
+              };
+            };
+
+          }); #// {isoConfigurations = bclFlake.isoConfigurations;};
   in
     bclFlake // {
-      inherit mkFlake bclModules;
+      inherit mkFlake;
     };
 
   #################################
@@ -80,6 +90,10 @@
     snowfall-lib = {
       url = "github:snowfallorg/lib";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    nixos-facter-modules = {
+      url = "github:nix-community/nixos-facter-modules";
     };
 
     disko = {

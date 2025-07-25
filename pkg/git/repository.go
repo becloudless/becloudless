@@ -29,7 +29,7 @@ func InitRepository(path string) (*Repository, error) {
 
 func OpenRepository(path string) (*Repository, error) {
 	field := data.WithField("path", path)
-	repo, err := git.PlainOpen(path)
+	repo, err := git.PlainOpenWithOptions(path, &git.PlainOpenOptions{DetectDotGit: true})
 	if err != nil {
 		return nil, errs.WithEF(err, field, "Failed to open git repository")
 	}

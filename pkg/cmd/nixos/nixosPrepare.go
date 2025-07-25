@@ -10,7 +10,7 @@ import (
 	"syscall"
 )
 
-func NixosPrepareCmd() *cobra.Command {
+func nixosPrepareCmd() *cobra.Command {
 	var askPassword bool
 	cmd := &cobra.Command{
 		Use:   "prepare",

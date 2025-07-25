@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Configure global info that will apply to all systems",
+  "additionalProperties": false,
+  "properties": {
+    "timeZone": {
+      "type": "string",
+      "default": "Europe/Paris"
+    },
+    "locale": {
+      "type": "string",
+      "default": "en_US.UTF-8"
+    },
+    "adminUser": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "login": {
+          "type": "string"
+        },
+        "passwordSecretFile": {
+          "type": "string"
+        },
+        "sshPublicKey": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

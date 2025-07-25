@@ -2,7 +2,6 @@ package runner
 
 import (
 	"bytes"
-	"github.com/awnumar/memguard"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"io"
@@ -12,11 +11,13 @@ import (
 )
 
 type LocalRunner struct {
-	sudoPassword *memguard.LockedBuffer
+	genericRunner
 }
 
 func NewLocalRunner() *LocalRunner {
-	return &LocalRunner{}
+	l := &LocalRunner{}
+	l.Runner = l
+	return l
 }
 
 func (r *LocalRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, stderr io.Writer, head string, args ...string) (int, error) {
@@ -46,24 +47,8 @@ func (r *LocalRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, st
 	return cmd.ProcessState.ExitCode(), err
 }
 
-func (r *LocalRunner) ExecCmd(head string, args ...string) error {
-	_, err := r.Exec(nil, os.Stdin, os.Stdout, os.Stderr, head, args...)
-	return err
-}
-
-func (r *LocalRunner) ExecCmdGetStdout(head string, args ...string) (string, error) {
-	var stdout bytes.Buffer
-	_, err := r.Exec(nil, os.Stdin, &stdout, os.Stderr, head, args...)
-	return stdout.String(), err
-}
-
-func (r *LocalRunner) ExecCmdGetStderr(head string, args ...string) (string, error) {
-	var stderr bytes.Buffer
-	_, err := r.Exec(nil, os.Stdin, &stderr, os.Stderr, head, args...)
-	return stderr.String(), err
-}
-
 // ////////////////////////////////
+// TODO rework
 
 func ExecCmdGetStdoutStderrExitCode(head string, parts ...string) (string, string, int, error) {
 	var stdout bytes.Buffer

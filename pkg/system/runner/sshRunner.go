@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"bytes"
 	"github.com/awnumar/memguard"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
@@ -11,61 +10,68 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
 
 type SshRunner struct {
+	genericRunner
 	client       *ssh.Client
 	sudoPassword *memguard.LockedBuffer
 }
 
-func NewSshRunner(addr string, user string, password []byte) (*SshRunner, error) {
-	// privateKey could be read from a file, or retrieved from another storage
-	// source, such as the Secret Service / GNOME Keyring
-	//key, err := ssh.ParsePrivateKey([]byte(privateKey))
-	//if err != nil {
-	//	return "", err
-	//}
-	// Authentication
+func NewSshRunner(addr string, port int, user string, password []byte, identifyFile string) (*SshRunner, error) {
+	var auths []ssh.AuthMethod
 
-	// ssh-agent(1) provides a UNIX socket at $SSH_AUTH_SOCK.
-	socket := os.Getenv("SSH_AUTH_SOCK")
-	conn, err := net.Dial("unix", socket)
-	if err != nil {
-		return nil, errs.WithE(err, "Failed to open SSH_AUTH_SOCK")
+	if identifyFile != "" {
+		content, err := os.ReadFile(identifyFile)
+		if err != nil {
+			return nil, errs.WithE(err, "Failed to read identify file")
+		}
+		key, err := ssh.ParsePrivateKey(content)
+		if err != nil {
+			return nil, errs.WithE(err, "Failed to read identify file")
+		}
+		auths = append(auths, ssh.PublicKeys(key))
 	}
 
-	agentClient := agent.NewClient(conn)
+	if socket := os.Getenv("SSH_AUTH_SOCK"); socket != "" {
+		conn, err := net.Dial("unix", socket)
+		if err != nil {
+			return nil, errs.WithE(err, "Failed to open SSH_AUTH_SOCK")
+		}
+		agentClient := agent.NewClient(conn)
+		auths = append(auths, ssh.PublicKeysCallback(agentClient.Signers))
+	}
+
+	if len(password) > 0 {
+		auths = append(auths, ssh.PasswordCallback(func() (secret string, err error) {
+			if password == nil {
+				return "", err
+			}
+			return string(password), nil
+		}))
+	}
 
 	config := &ssh.ClientConfig{
-		User:    user,
-		Timeout: 5 * time.Second,
-		// https://github.com/golang/go/issues/19767
-		// as clientConfig is non-permissive by default
-		// you can set ssh.InsercureIgnoreHostKey to allow any host
+		User:            user,
+		Timeout:         5 * time.Second,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO should not always be insecure
-		Auth: []ssh.AuthMethod{
-			//ssh.PublicKeys(key),
-			ssh.PublicKeysCallback(agentClient.Signers),
-			ssh.PasswordCallback(func() (secret string, err error) {
-				if password == nil {
-					return "", err
-				}
-				return string(password), nil
-			}),
-		},
+		Auth:            auths,
 	}
 
 	// Connect
-	client, err := ssh.Dial("tcp", net.JoinHostPort(addr, "22"), config)
+	client, err := ssh.Dial("tcp", net.JoinHostPort(addr, strconv.Itoa(port)), config)
 	if err != nil {
 		return nil, errs.WithE(err, "Failed to connect to remote host")
 	}
 
-	return &SshRunner{
+	s := &SshRunner{
 		client: client,
-	}, nil
+	}
+	s.Runner = s
+	return s, nil
 }
 
 func (r *SshRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, stderr io.Writer, head string, args ...string) (int, error) {
@@ -109,21 +115,4 @@ func (r *SshRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, stde
 		return -1, errs.WithE(err, "Command failed")
 	}
 	return 0, nil
-}
-
-func (r *SshRunner) ExecCmd(head string, args ...string) error {
-	_, err := r.Exec(nil, os.Stdin, os.Stdout, os.Stderr, head, args...)
-	return err
-}
-
-func (r *SshRunner) ExecCmdGetStdout(head string, args ...string) (string, error) {
-	var stdout bytes.Buffer
-	_, err := r.Exec(nil, os.Stdin, &stdout, os.Stderr, head, args...)
-	return strings.TrimSpace(stdout.String()), err
-}
-
-func (r *SshRunner) ExecCmdGetStderr(head string, args ...string) (string, error) {
-	var stderr bytes.Buffer
-	_, err := r.Exec(nil, os.Stdin, os.Stdout, &stderr, head, args...)
-	return strings.TrimSpace(stderr.String()), err
 }

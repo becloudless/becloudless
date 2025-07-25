@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NixosIsoCmd() *cobra.Command {
+func nixosIsoCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "iso",
 		Short: "Build iso image to boot device to install",

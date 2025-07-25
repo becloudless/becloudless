@@ -1,8 +1,10 @@
 package nixos
 
 import (
+	"bytes"
 	"encoding/json"
 	"github.com/becloudless/becloudless/pkg/bcl"
+	"github.com/becloudless/becloudless/pkg/security"
 	"github.com/becloudless/becloudless/pkg/system"
 	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/becloudless/becloudless/pkg/utils"
@@ -16,10 +18,12 @@ import (
 	"strings"
 )
 
-func InstallAnywhere(host string, user string, password []byte) error {
-	run, err := runner.NewSshRunner(host, user, password)
+const fileFacter = "facter.json"
+
+func InstallAnywhere(host string, port int, user string, password []byte, identifyFile string) error {
+	run, err := runner.NewSshRunner(host, port, user, password, identifyFile)
 	if err != nil {
-		return errs.WithE(err, "Failed to connect to host to install")
+		return errs.WithE(err, "Failed to connect to host to install, is the user set? did it required a password?")
 	}
 
 	//sudoRunner, err := runner.NewSudoRunner(run, password)
@@ -45,17 +49,18 @@ func InstallAnywhere(host string, user string, password []byte) error {
 		return errs.WithE(err, "Fail during process to find the system to install")
 	}
 	var systemConfig SystemConfig
+	systemParentFolder := path.Join(bcl.BCL.GetNixosDir(), "systems", "x86_64-linux")
 	if systemName == "" {
 		logs.Warn("Unkown system, creating")
 		systemConfig, err = createSystemConfig(err, info)
 		if err != nil {
 			return errs.WithE(err, "System creation failed")
 		}
+		systemName = systemConfig.Name
 	} else {
 		logs.WithField("name", systemName).Info("System found")
 		systemConfig = SystemConfig{Name: systemName}
-		systemFolder := path.Join(bcl.BCL.Repository.Root, "nixos", "systems", "x86_64-linux", systemName)
-		systemYamlFile := path.Join(systemFolder, "default.yaml")
+		systemYamlFile := path.Join(systemParentFolder, systemName, "default.yaml")
 		file, err := os.ReadFile(systemYamlFile)
 		if err != nil {
 			return errs.WithE(err, "Failed to read system yaml file")
@@ -66,21 +71,95 @@ func InstallAnywhere(host string, user string, password []byte) error {
 		//TODO use nix instead 	role=$(nix --extra-experimental-features "nix-command flakes" eval "$DIR/../nixos#nixosConfigurations.$hostname.config.system.nixos.tags" | sed 's/.*role-\([a-z0-9-]*\).*/\1/')
 	}
 
-	logs.WithField("system", systemName).Info("Starting installation")
-	if _, err := localRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
-		"nix-shell", "--extra-experimental-features", "nix-command flakes", "-p", "nixos-anywhere", "--run",
-		"nixos-anywhere --env-password --flake "+path.Join(bcl.BCL.Repository.Root, "nixos")+"#"+systemName+" "+user+"@"+host); err != nil {
-		return errs.WithE(err, "Installation failed")
+	anywhereRunner := runner.NewNixShellRunner(localRunner, "nixos-anywhere")
+	logs.WithField("system", systemName).Info("Run kexec phase")
+	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
+		"bash -x nixos-anywhere --debug -p "+strconv.Itoa(port)+" -i "+identifyFile+" --generate-hardware-config nixos-facter "+path.Join(systemParentFolder, systemName, fileFacter)+" --phases kexec --env-password --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
+		return errs.WithE(err, "kexec phase failed")
 	}
 
-	//if err := localRunner.ExecCmd("nix-shell", "--extra-experimental-features", "nix-command flakes", "-p", "nixos-anywhere", "--run", "nixos-anywhere --flake "+path.Join(bcl.BCL.Repository.Root, "nixos")+"#"+systemName+" "+user+"@"+host); err != nil {
-	//	return errs.WithE(err, "Installation failed")
-	//}
+	temp, err := os.MkdirTemp(os.TempDir(), "bcl-install")
+	if err != nil {
+		return errs.WithE(err, "Failed to create temp directory")
+	}
+	defer os.RemoveAll(temp)
 
-	// ask cryptsetup passwprd
-	// extract ssh host key for role to prepared folder
-	// trigger nixos-anywhere
+	if err := prepareDiskPassword(temp, systemName); err != nil {
+		return errs.WithE(err, "Failed to prepare disk password")
+	}
+	if err := prepareHostSshKey(temp, systemName); err != nil {
+		return errs.WithE(err, "Failed to prepare disk password")
+	}
 
+	logs.WithField("system", systemName).Info("Run disko,install,reboot phases")
+	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
+		"bash -x nixos-anywhere --debug --phases disko,install,reboot -p "+strconv.Itoa(port)+" -i "+identifyFile+" --extra-files "+path.Join(temp, "fs")+" --disk-encryption-keys /root/secret.key "+path.Join(temp, "install", "secret.key")+" --env-password --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
+		return errs.WithE(err, "disco,install,reboot phase failed")
+	}
+	return nil
+}
+
+func prepareHostSshKey(temp string, systemName string) error {
+	localRunner := runner.NewLocalRunner()
+	groupName, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes", "eval", bcl.BCL.GetNixosDir()+"#nixosConfigurations."+systemName+".config.bcl.group.name")
+	if err != nil {
+		return errs.WithE(err, "Failed to find group name of system")
+	}
+
+	sopsRunner := runner.NewNixShellRunner(localRunner, "sops")
+
+	_, privAgeKey, err := security.Ed25519PrivateKeyFileToPublicAndPrivateAgeKeys(path.Join(bcl.BCL.Home, "secrets", bcl.PathEd25519KeyFile))
+	if err != nil {
+		return errs.WithE(err, "Failed to load age key from ed25519 private key")
+	}
+
+	envs := []string{"SOPS_AGE_KEY=" + privAgeKey}
+	var stdout bytes.Buffer
+	if _, err := sopsRunner.Exec(&envs, os.Stdin, &stdout, os.Stderr, "sops", "-d", path.Join(bcl.BCL.GetNixosDir(), "modules", "nixos", "group", groupName, "default.secrets.yaml")); err != nil {
+		return errs.WithE(err, "Failed to extract group secrets")
+	}
+
+	secretFile := GroupSecretFile{}
+	if err := yaml.Unmarshal(stdout.Bytes(), &secretFile); err != nil {
+		return errs.WithE(err, "Failed to unmarshal group secret file")
+	}
+
+	sshHostFolder := path.Join(temp, "fs", "nix", "etc", "ssh")
+	if err := os.MkdirAll(sshHostFolder, 0755); err != nil {
+		return errs.WithE(err, "Failed to create ssh host folder")
+	}
+
+	sshHostKeyFile := path.Join(sshHostFolder, "ssh_host_ed25519_key")
+	if err := os.WriteFile(sshHostKeyFile, []byte(secretFile.SshHostEd25519Key), 0600); err != nil {
+		return errs.WithE(err, "Failed to write temporary ssh host key file")
+	}
+	return nil
+}
+
+func prepareDiskPassword(temp string, systemName string) error {
+	localRunner := runner.NewLocalRunner()
+	logs.WithField("system", systemName).Info("Check if disk password is required")
+	device, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes", "eval", bcl.BCL.GetNixosDir()+"#nixosConfigurations."+systemName+".config.fileSystems.\"/nix\".device")
+	if err != nil {
+		return errs.WithE(err, "Failed to check if a password is required for the disk")
+	}
+	var diskPassword []byte
+	if strings.Contains(device, "/dev/mapper") {
+		pass, err := utils.AskPassword("Disk encryption password?", "Password do not match")
+		if err != nil {
+			return errs.WithE(err, "asking disk password failed")
+		}
+		diskPassword = pass
+	}
+
+	installDir := path.Join(temp, "install")
+	if err := os.MkdirAll(installDir, 0700); err != nil {
+		return errs.WithE(err, "Failed to create install temp directory")
+	}
+	diskPasswordFile := path.Join(installDir, "secret.key")
+	if err := os.WriteFile(diskPasswordFile, diskPassword, 0600); err != nil {
+		return errs.WithE(err, "Failed to write disk secret file")
+	}
 	return nil
 }
 
@@ -90,7 +169,7 @@ func createSystemConfig(err error, info SystemInfo) (SystemConfig, error) {
 		return config, errs.WithE(err, "Failed to create new host")
 	}
 
-	systemFolder := path.Join(bcl.BCL.Repository.Root, "nixos", "systems", "x86_64-linux", config.Name)
+	systemFolder := path.Join(bcl.BCL.GetNixosDir(), "systems", "x86_64-linux", config.Name)
 	if err := os.MkdirAll(systemFolder, 0755); err != nil {
 		return config, errs.WithE(err, "Failed to create git system folder")
 	}
@@ -121,7 +200,7 @@ func createSystemConfig(err error, info SystemInfo) (SystemConfig, error) {
 
 func findSystem(localRunner *runner.LocalRunner, info SystemInfo) (string, error) {
 	flakeShow, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes",
-		"flake", "show", path.Join(bcl.BCL.Repository.Root, "nixos"), "--json", "--all-systems")
+		"flake", "show", bcl.BCL.GetNixosDir(), "--json", "--all-systems")
 	if err != nil {
 		return "", errs.WithE(err, "Listing hosts declared in nix failed")
 	}
@@ -135,9 +214,10 @@ func findSystem(localRunner *runner.LocalRunner, info SystemInfo) (string, error
 	}
 
 	for confName, _ := range flake.NixosConfigurations {
-		ids, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes", "eval", path.Join(bcl.BCL.Repository.Root, "nixos")+"#nixosConfigurations."+confName+".config.environment.etc.\"ids.env\".text", "--raw")
+		ids, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes", "eval", bcl.BCL.GetNixosDir()+"#nixosConfigurations."+confName+".config.environment.etc.\"ids.env\".text", "--raw")
 		if err != nil {
 			logs.WithField("system", confName).Warn("system config is probably broken")
+			continue
 		}
 		if ids == "uuid="+info.MotherboardUuid {
 			return confName, nil
