@@ -59,7 +59,9 @@
           pactl set-sink-volume @DEFAULT_SINK@ 100%
           pactl set-sink-volume alsa_output.pci-0000_00_0e.0.hdmi-stereo 100% # TODO
 
-          bash -c "while ! ping -c 1 -W 1 192.168.40.12; do sleep 1; done; while true; do jellyfinmediaplayer; sleep 5; done" &
+          # TODO wait for network
+          # while ! ping -c 1 -W 1 192.168.40.12; do sleep 1; done;
+          bash -c "while true; do jellyfinmediaplayer; sleep 5; done" &
           bash -c "sleep 20; xdotool mousemove 100 100; xdotool click 1; amixer set Master 95%;" &
         fi
       '';
