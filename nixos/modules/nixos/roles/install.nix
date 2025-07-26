@@ -5,6 +5,10 @@
       nixos-facter
     ];
 
+    users.users.nixos.openssh.authorizedKeys.keys = [
+      config.bcl.global.adminUser.sshPublicKey
+    ];
+
     services.getty.helpLine = lib.mkForce "";
     programs.bash.interactiveShellInit = ''
       echo ">> Waiting for network to be ready..."
