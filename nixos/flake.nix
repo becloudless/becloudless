@@ -65,6 +65,14 @@
         in
           lib.mkFlake (flake-options // {
             systems.modules.nixos = bclModules;
+            systems.hosts = {
+              iso = {
+                modules = with bclInputs; [
+                  "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
+                  "${nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
+                ];
+              };
+            };
           });
   in
     bclFlake // {
