@@ -1,0 +1,5 @@
+bcl:
+    global:
+        enable: true
+    role:
+        name: install

@@ -73,8 +73,7 @@
                 ];
               };
             };
-
-          }); #// {isoConfigurations = bclFlake.isoConfigurations;};
+          });
   in
     bclFlake // {
       inherit mkFlake;
