@@ -4,21 +4,20 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Helper function to create a temporary Dockerfile with given content
 func createTempDockerfile(t *testing.T, content string) string {
 	tempDir, err := os.MkdirTemp("", "dockerfile_test")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
+	require.NoError(t, err, "Failed to create temp dir")
 	t.Cleanup(func() { _ = os.RemoveAll(tempDir) })
 
 	dockerfilePath := filepath.Join(tempDir, "Dockerfile")
 	err = os.WriteFile(dockerfilePath, []byte(content), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test Dockerfile: %v", err)
-	}
+	require.NoError(t, err, "Failed to create test Dockerfile")
 	return dockerfilePath
 }
 
@@ -30,12 +29,8 @@ RUN echo "Hello World"`
 	dockerfilePath := createTempDockerfile(t, content)
 	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
 
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if platform != "linux/amd64" {
-		t.Errorf("Expected platform %q, got %q", "linux/amd64", platform)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, "linux/amd64", platform)
 }
 
 func TestExtractPlatformFromDockerfile_CaseInsensitivePlatformLabel(t *testing.T) {
@@ -46,12 +41,8 @@ RUN echo "Hello World"`
 	dockerfilePath := createTempDockerfile(t, content)
 	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
 
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if platform != "linux/arm64" {
-		t.Errorf("Expected platform %q, got %q", "linux/arm64", platform)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, "linux/arm64", platform)
 }
 
 func TestExtractPlatformFromDockerfile_MixedCasePlatformLabel(t *testing.T) {
@@ -62,12 +53,8 @@ RUN echo "Hello World"`
 	dockerfilePath := createTempDockerfile(t, content)
 	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
 
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if platform != "linux/arm/v7" {
-		t.Errorf("Expected platform %q, got %q", "linux/arm/v7", platform)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, "linux/arm/v7", platform)
 }
 
 func TestExtractPlatformFromDockerfile_MultipleLabelsIncludingPlatform(t *testing.T) {
@@ -80,12 +67,8 @@ RUN echo "Hello World"`
 	dockerfilePath := createTempDockerfile(t, content)
 	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
 
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if platform != "linux/amd64" {
-		t.Errorf("Expected platform %q, got %q", "linux/amd64", platform)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, "linux/amd64", platform)
 }
 
 func TestExtractPlatformFromDockerfile_MultipleLabelsOnSameLineIncludingPlatform(t *testing.T) {
@@ -96,12 +79,8 @@ RUN echo "Hello World"`
 	dockerfilePath := createTempDockerfile(t, content)
 	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
 
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if platform != "linux/s390x" {
-		t.Errorf("Expected platform %q, got %q", "linux/s390x", platform)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, "linux/s390x", platform)
 }
 
 func TestExtractPlatformFromDockerfile_WithoutPlatformLabel(t *testing.T) {
@@ -113,12 +92,8 @@ RUN echo "Hello World"`
 	dockerfilePath := createTempDockerfile(t, content)
 	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
 
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if platform != "" {
-		t.Errorf("Expected platform %q, got %q", "", platform)
-	}
+	assert.NoError(t, err)
+	assert.Empty(t, platform)
 }
 
 func TestExtractPlatformFromDockerfile_NoLabels(t *testing.T) {
@@ -128,12 +103,8 @@ RUN echo "Hello World"`
 	dockerfilePath := createTempDockerfile(t, content)
 	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
 
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if platform != "" {
-		t.Errorf("Expected platform %q, got %q", "", platform)
-	}
+	assert.NoError(t, err)
+	assert.Empty(t, platform)
 }
 
 func TestExtractPlatformFromDockerfile_PlatformLabelInMultiStageBuild(t *testing.T) {
@@ -147,12 +118,8 @@ COPY --from=builder /app /app`
 	dockerfilePath := createTempDockerfile(t, content)
 	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
 
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if platform != "linux/amd64" {
-		t.Errorf("Expected platform %q, got %q", "linux/amd64", platform)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, "linux/amd64", platform)
 }
 
 func TestExtractPlatformFromDockerfile_PlatformLabelInSecondStage(t *testing.T) {
@@ -166,12 +133,8 @@ COPY --from=builder /app /app`
 	dockerfilePath := createTempDockerfile(t, content)
 	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
 
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if platform != "linux/arm64" {
-		t.Errorf("Expected platform %q, got %q", "linux/arm64", platform)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, "linux/arm64", platform)
 }
 
 func TestExtractPlatformFromDockerfile_PlatformLabelsInMultipleStagesFirstWins(t *testing.T) {
@@ -186,34 +149,22 @@ COPY --from=builder /app /app`
 	dockerfilePath := createTempDockerfile(t, content)
 	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
 
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	if platform != "linux/amd64" {
-		t.Errorf("Expected platform %q, got %q", "linux/amd64", platform)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, "linux/amd64", platform)
 }
 
 func TestExtractPlatformFromDockerfile_NonExistentFile(t *testing.T) {
 	platform, err := ExtractPlatformFromDockerfile("/nonexistent/path/Dockerfile")
 
-	if err == nil {
-		t.Errorf("Expected error but got none")
-	}
-	if platform != "" {
-		t.Errorf("Expected empty platform for error case, got %q", platform)
-	}
+	assert.Error(t, err)
+	assert.Empty(t, platform)
 }
 
 func TestExtractPlatformFromDockerfile_EmptyFilepath(t *testing.T) {
 	platform, err := ExtractPlatformFromDockerfile("")
 
-	if err == nil {
-		t.Errorf("Expected error but got none")
-	}
-	if platform != "" {
-		t.Errorf("Expected empty platform for error case, got %q", platform)
-	}
+	assert.Error(t, err)
+	assert.Empty(t, platform)
 }
 
 func TestExtractPlatformFromDockerfile_InvalidDockerfileSyntax(t *testing.T) {
@@ -223,12 +174,8 @@ LABEL platform=linux/amd64`
 	dockerfilePath := createTempDockerfile(t, content)
 	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
 
-	if err == nil {
-		t.Errorf("Expected error but got none")
-	}
-	if platform != "" {
-		t.Errorf("Expected empty platform for error case, got %q", platform)
-	}
+	assert.Error(t, err)
+	assert.Empty(t, platform)
 }
 
 func TestExtractPlatformFromDockerfile_EmptyFile(t *testing.T) {
@@ -237,10 +184,6 @@ func TestExtractPlatformFromDockerfile_EmptyFile(t *testing.T) {
 	dockerfilePath := createTempDockerfile(t, content)
 	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
 
-	if err == nil {
-		t.Errorf("Expected error but got none")
-	}
-	if platform != "" {
-		t.Errorf("Expected empty platform for error case, got %q", platform)
-	}
+	assert.Error(t, err)
+	assert.Empty(t, platform)
 }
