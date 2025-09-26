@@ -1,5 +1,6 @@
 dist
 dist-tools
+becloudless
 
 nixos/result
 
@@ -8,4 +9,5 @@ tests/*/nixos/flake.lock
 tests/*/assets
 tests/*/version
 tests/*/lock
-tests/work
+tests/work/
+tests/new/

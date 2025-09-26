@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/becloudless/becloudless/pkg/bcl"
+	"github.com/becloudless/becloudless/pkg/cmd/docker"
 	"github.com/becloudless/becloudless/pkg/cmd/nixos"
 	"github.com/becloudless/becloudless/pkg/cmd/version"
 	"github.com/n0rad/go-erlog/logs"
@@ -31,6 +32,7 @@ func RootCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(
+		docker.DockerCmd(),
 		version.VersionCmd(),
 		nixos.NixosCmd(),
 		WebCmd(),
