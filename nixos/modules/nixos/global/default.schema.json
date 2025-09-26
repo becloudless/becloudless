@@ -1,7 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "global",
   "title": "Configure global info that will apply to all systems",
   "additionalProperties": false,
+  "type": "object",
   "properties": {
     "timeZone": {
       "type": "string",
@@ -24,7 +26,8 @@
         "sshPublicKey": {
           "type": "string"
         }
-      }
+      },
+      "required": ["login", "passwordSecretFile"]
     }
   }
 }

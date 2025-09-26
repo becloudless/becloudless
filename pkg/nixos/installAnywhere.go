@@ -20,7 +20,7 @@ import (
 
 const fileFacter = "facter.json"
 
-func InstallAnywhere(host string, port int, user string, password []byte, identifyFile string) error {
+func InstallAnywhere(host string, port int, user string, password []byte, identifyFile string, diskPassword string) error {
 	run, err := runner.NewSshRunner(host, port, user, password, identifyFile)
 	if err != nil {
 		return errs.WithE(err, "Failed to connect to host to install, is the user set? did it required a password?")
@@ -84,10 +84,10 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 	}
 	defer os.RemoveAll(temp)
 
-	if err := prepareDiskPassword(temp, systemName); err != nil {
+	if err := prepareDiskPassword(temp, systemName, diskPassword); err != nil {
 		return errs.WithE(err, "Failed to prepare disk password")
 	}
-	if err := prepareHostSshKey(temp, systemName); err != nil {
+	if err := prepareHostSshKeys(temp, systemName); err != nil {
 		return errs.WithE(err, "Failed to prepare disk password")
 	}
 
@@ -99,7 +99,7 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 	return nil
 }
 
-func prepareHostSshKey(temp string, systemName string) error {
+func prepareHostSshKeys(temp string, systemName string) error {
 	localRunner := runner.NewLocalRunner()
 	groupName, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes", "eval", bcl.BCL.GetNixosDir()+"#nixosConfigurations."+systemName+".config.bcl.group.name")
 	if err != nil {
@@ -133,23 +133,30 @@ func prepareHostSshKey(temp string, systemName string) error {
 	if err := os.WriteFile(sshHostKeyFile, []byte(secretFile.SshHostEd25519Key), 0600); err != nil {
 		return errs.WithE(err, "Failed to write temporary ssh host key file")
 	}
+
+	initrdSshHostKeyFile := path.Join(sshHostFolder, "initrd_ssh_host_ed25519_key")
+	if err := os.WriteFile(initrdSshHostKeyFile, []byte(secretFile.InitrdSshHostEd25519Key), 0600); err != nil {
+		return errs.WithE(err, "Failed to write temporary initrd ssh host key file")
+	}
+
 	return nil
 }
 
-func prepareDiskPassword(temp string, systemName string) error {
+func prepareDiskPassword(temp string, systemName string, diskPassword string) error {
 	localRunner := runner.NewLocalRunner()
 	logs.WithField("system", systemName).Info("Check if disk password is required")
 	device, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes", "eval", bcl.BCL.GetNixosDir()+"#nixosConfigurations."+systemName+".config.fileSystems.\"/nix\".device")
 	if err != nil {
 		return errs.WithE(err, "Failed to check if a password is required for the disk")
 	}
-	var diskPassword []byte
 	if strings.Contains(device, "/dev/mapper") {
-		pass, err := utils.AskPassword("Disk encryption password?", "Password do not match")
-		if err != nil {
-			return errs.WithE(err, "asking disk password failed")
+		if diskPassword == "" {
+			pass, err := utils.AskPassword("Disk encryption password?", "Password do not match")
+			if err != nil {
+				return errs.WithE(err, "asking disk password failed")
+			}
+			diskPassword = string(pass)
 		}
-		diskPassword = pass
 	}
 
 	installDir := path.Join(temp, "install")
@@ -157,7 +164,7 @@ func prepareDiskPassword(temp string, systemName string) error {
 		return errs.WithE(err, "Failed to create install temp directory")
 	}
 	diskPasswordFile := path.Join(installDir, "secret.key")
-	if err := os.WriteFile(diskPasswordFile, diskPassword, 0600); err != nil {
+	if err := os.WriteFile(diskPasswordFile, []byte(diskPassword), 0600); err != nil {
 		return errs.WithE(err, "Failed to write disk secret file")
 	}
 	return nil
