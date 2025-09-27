@@ -15,7 +15,7 @@ var Assets embed.FS
 
 var Version = "0.0.0"
 
-//go:generate go-jsonschema -p schema --schema-root-type global=Global ./nixos/modules/nixos/global/default.schema.json -o dist/schema/something.go
+//go:generate ./dist-tools/go-jsonschema -p schema --schema-root-type global=Global ./nixos/modules/nixos/global/default.schema.json -o dist/schema/something.go
 func main() {
 	v, err := version.Parse(Version)
 	if err != nil {
