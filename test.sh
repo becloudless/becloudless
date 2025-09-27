@@ -14,7 +14,7 @@ echo_blue() { echo_stderr "\033[0;34m$*\033[0m";}
 
 
 clean_up () {
-	pkill -F ./tests/work/*.pid
+	[ -z "$(find ./tests/work -type f -name '*.pid')" ] || pkill -F ./tests/work/*.pid
 }
 trap clean_up EXIT
 
@@ -85,26 +85,26 @@ echo_brightred "## Prepare host"
 }
 
 ###
-rm -Rf ./tests/new && mkdir -p ./tests/new
+#rm -Rf ./tests/new && mkdir -p ./tests/new
 
-nix-shell -p expect --run expect <<EOF
-	spawn ./dist/bcl-linux-amd64/bcl -H ./tests/new nixos global edit
+#nix-shell -p expect --run expect <<EOF
+#	spawn ./dist/bcl-linux-amd64/bcl -H ./tests/new nixos global edit
+#
+#	expect "locale"
+#	send "mylocale\r\r" # locale
+#	send "mytimezone\r\r" # timezone
+#	interact
+#
+#	# Use the correct prompt
+#  #set prompt ":|#|\\\$|>"
+#  #interact -o -nobuffer -re $prompt return
+#  #interact -o -nobuffer -re $prompt return
+#EOF
 
-	expect "locale"
-	send "mylocale\r\r" # locale
-	send "mytimezone\r\r" # timezone
-	interact
+#./dist/bcl-*/bcl -H ./tests/new nixos prepare
+#./dist/bcl-*/bcl -H ./tests/new nixos groups create something
 
-	# Use the correct prompt
-  #set prompt ":|#|\\\$|>"
-  #interact -o -nobuffer -re $prompt return
-  #interact -o -nobuffer -re $prompt return
-EOF
-
-./dist/bcl-*/bcl -H ./tests/new nixos prepare
-./dist/bcl-*/bcl -H ./tests/new nixos groups create something
-
-exit 0
+#exit 0
 
 ###
 validate-test-workstation() {

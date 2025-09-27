@@ -17,7 +17,8 @@ import (
 
 func DockerCmd() *cobra.Command {
 	cmd := cobra.Command{
-		Use: "docker",
+		Use:     "docker",
+		Aliases: []string{"dk"},
 	}
 	cmd.AddCommand(
 		BuildCmd(),
@@ -44,11 +45,6 @@ func validatePrerequisites() error {
 	// Check if docker buildx is available
 	if err := exec.Command("docker", "buildx", "version").Run(); err != nil {
 		return errs.WithE(err, "docker buildx is not available")
-	}
-
-	// Check if git is available
-	if err := exec.Command("git", "--version").Run(); err != nil {
-		return errs.WithE(err, "git is not available")
 	}
 
 	return nil
