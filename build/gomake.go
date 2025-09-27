@@ -11,6 +11,10 @@ func main() {
 		WithName("bcl").
 		WithStep(&gomake.StepBuild{
 			PreBuildHook: func(build gomake.StepBuild) error {
+				if err := gomake.EnsureTool("go-jsonschema", "github.com/atombender/go-jsonschema"); err != nil {
+					return err
+				}
+
 				return gomake.ExecShell("go generate ./...")
 			},
 		}).

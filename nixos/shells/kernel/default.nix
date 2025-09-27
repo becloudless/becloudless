@@ -14,7 +14,7 @@ mkShell {
     ];
 
     overlays = [
-      nixos-anywhere
+      pkgs.nixos-anywhere
     ];
 
     shellHook = ''

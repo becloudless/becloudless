@@ -14,7 +14,8 @@ import (
 const sshHostSecretKeyName = "ssh_host_ed25519_key"
 
 type GroupSecretFile struct {
-	SshHostEd25519Key string `yaml:"ssh_host_ed25519_key"`
+	SshHostEd25519Key       string `yaml:"ssh_host_ed25519_key"`
+	InitrdSshHostEd25519Key string `yaml:"initrd_ssh_host_ed25519_key"`
 }
 
 func CreateGroup(name string) error {

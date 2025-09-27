@@ -6,6 +6,7 @@ import (
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
+	"os"
 	"syscall"
 )
 
@@ -15,6 +16,9 @@ func nixosInstallCmd() *cobra.Command {
 	var user string
 	var askPassword bool
 	var identifyFile string
+	var diskPassword string
+	var diskPasswordFile string
+
 	cmd := &cobra.Command{
 		Use:   "install [HOST_IP]",
 		Short: "Install remote device",
@@ -35,11 +39,21 @@ func nixosInstallCmd() *cobra.Command {
 				password = pass
 			}
 
-			return nixos.InstallAnywhere(host, port, user, password, identifyFile)
+			if diskPasswordFile != "" {
+				content, err := os.ReadFile(diskPasswordFile)
+				if err != nil {
+					return errs.WithE(err, "Failed to read disk password file")
+				}
+				diskPassword = string(content)
+			}
+
+			return nixos.InstallAnywhere(host, port, user, password, identifyFile, diskPassword)
 		},
 	}
 	cmd.Flags().StringVarP(&user, "user", "u", "nixos", "user for the connection")
 	cmd.Flags().StringVarP(&identifyFile, "identify", "i", "", "ssh private key file")
+	cmd.Flags().StringVar(&diskPassword, "disk-password", "", "disk password")
+	cmd.Flags().StringVar(&diskPasswordFile, "disk-password-file", "", "disk password file")
 	cmd.Flags().BoolVarP(&askPassword, "ask-password", "P", false, "ask password")
 	cmd.Flags().IntVarP(&port, "port", "p", 22, "port")
 	return cmd
