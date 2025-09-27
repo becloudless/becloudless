@@ -10,6 +10,7 @@ func BuildCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "build",
+		Args:  cobra.ExactArgs(0),
 		Short: "Build a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return dockerBuildx(config)
