@@ -8,4 +8,5 @@ import (
 	_ "github.com/go-bindata/go-bindata/v3/go-bindata"
 	_ "github.com/gordonklaus/ineffassign"
 	_ "golang.org/x/lint/golint"
+	_ "https://github.com/omissis/go-jsonschema"
 )
