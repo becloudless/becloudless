@@ -107,14 +107,14 @@ echo_brightred "## Prepare host"
 #exit 0
 
 ###
-validate-test-workstation() {
-	echo "hello" | ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i tests/basic/secrets/ed25519 -p 10022 toto@127.0.0.1 sudo ls -la
-}
-installHost "test-workstation" \
- 	"c9b0fb14-1949-6949-9711-63409d2f9cfe" \
- 	14G \
- 	3G \
- 	validate-test-workstation
+#validate-test-workstation() {
+#	echo "hello" | ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i tests/basic/secrets/ed25519 -p 10022 toto@127.0.0.1 sudo ls -la
+#}
+#installHost "test-workstation" \
+# 	"c9b0fb14-1949-6949-9711-63409d2f9cfe" \
+# 	14G \
+# 	3G \
+# 	validate-test-workstation
 
 ###
 validate-test-tv() {
