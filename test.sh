@@ -87,7 +87,7 @@ echo_brightred "## Prepare host"
 ###
 rm -Rf ./tests/new && mkdir -p ./tests/new
 
-expect <<EOF
+nix-shell -p expect --run expect <<EOF
 	spawn ./dist/bcl-linux-amd64/bcl -H ./tests/new nixos global edit
 
 	expect "locale"
