@@ -13,7 +13,6 @@ in {
   };
 
   config = lib.mkIf (cfg.name != "") {
-    system.nixos.tags = ["role-${cfg.name}"];
     system.nixos.versionSuffix = "-${builtins.substring 0 8 (toString inputs.self.lastModifiedDate)}.${toString revision}";
     # system.nixos.label =
 
