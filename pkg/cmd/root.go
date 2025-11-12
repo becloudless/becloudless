@@ -7,6 +7,7 @@ import (
 	"github.com/becloudless/becloudless/pkg/bcl"
 	"github.com/becloudless/becloudless/pkg/cmd/docker"
 	"github.com/becloudless/becloudless/pkg/cmd/nixos"
+	"github.com/becloudless/becloudless/pkg/cmd/utils"
 	"github.com/becloudless/becloudless/pkg/cmd/version"
 	"github.com/n0rad/go-erlog/logs"
 	"github.com/spf13/cobra"
@@ -36,6 +37,7 @@ func RootCmd() *cobra.Command {
 		docker.DockerCmd(),
 		version.VersionCmd(),
 		nixos.NixosCmd(),
+		utils.UtilsCmd(),
 		WebCmd(),
 	)
 

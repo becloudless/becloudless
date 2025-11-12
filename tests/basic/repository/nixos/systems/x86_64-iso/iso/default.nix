@@ -6,12 +6,19 @@
     };
   };
 
-  users.users.nixos.openssh.authorizedKeys.keys = lib.mkIf (config.bcl.global.admin != null) (
-    lib.mapAttrsToList (_: u: u.sshPublicKey)
-      (lib.filterAttrs (_: u: u.sshPublicKey != null) config.bcl.global.admin.users)
-  );
+  users.users.nixos.openssh.authorizedKeys.keys = [
+    config.bcl.global.adminUser.sshPublicKey
+  ];
 
-  environment.systemPackages = with pkgs; [ nixos-facter ];
+
+  environment.systemPackages = with pkgs; [
+    nixos-facter
+  ];
+
+#  environment.etc."ssh/ssh_host_ed25519_key" = {
+#    mode = "0600";
+#    source = "${/tmp/install-ssh_host_ed25519_key}";
+#  };
 
   services.getty.helpLine = lib.mkForce "";
   programs.bash.interactiveShellInit = ''
@@ -29,11 +36,13 @@
         var=$((var + 1))
     done
 
+
     echo ">>"
     echo ">> Run  'bcl nixos install $(ip addr show $(ip route | awk '/default/ { print $5 }') | grep "inet" | head -n 1 | awk '/inet/ {print $2}' | cut -d'/' -f1)'  on another device where bcl is available, to install this device"
     echo ">>"
   '';
 
+  # faster compression
   isoImage.squashfsCompression = "gzip -Xcompression-level 1";
   isoImage.volumeID = lib.mkForce "bcl-iso";
   isoImage.isoName = lib.mkForce "bcl.iso";
