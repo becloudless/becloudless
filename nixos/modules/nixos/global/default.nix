@@ -13,7 +13,7 @@ in {
           passwordSecretFile = lib.mkOption {
             type = lib.types.nullOr lib.types.path;
             default = null;
-            description = "SOPS file containing the shared password for all admin users.";
+            description = "SOPS file containing the password entries users.<name>.password for each admin user.";
           };
           users = lib.mkOption {
             type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
@@ -46,24 +46,33 @@ in {
     let
       setAdminPasswordFlag = (config.bcl.role or { setAdminPassword = false; }).setAdminPassword;
       adminPasswordFile = if cfg.admin != null && cfg.admin.passwordSecretFile != null then cfg.admin.passwordSecretFile else null;
+      # Build user attribute set with optional hashedPasswordFile referencing per-user secret
       admins = lib.optionalAttrs (cfg.admin != null) (lib.mapAttrs (name: userCfg: (
         let pk = userCfg.sshPublicKey; in {
           isNormalUser = true;
           group = "users";
           extraGroups = userCfg.extraGroups;
           openssh.authorizedKeys.keys = lib.mkIf (pk != null) [ pk ];
-        } // lib.optionalAttrs setAdminPasswordFlag {
-          hashedPasswordFile = config.sops.secrets.adminPassword.path;
+        } // lib.optionalAttrs (setAdminPasswordFlag && adminPasswordFile != null) {
+          hashedPasswordFile = config.sops.secrets."users.${name}.password".path;
         }
       )) cfg.admin.users);
+      # Build secrets attrset for per-user passwords when enabled
+      adminPasswordSecrets = lib.optionalAttrs (setAdminPasswordFlag && adminPasswordFile != null && cfg.admin != null) (
+        lib.mapAttrs' (name: _: {
+          name = "users.${name}.password"; # matches key in SOPS YAML file
+          value = {
+            neededForUsers = true;
+            sopsFile = adminPasswordFile;
+          };
+        }) cfg.admin.users
+      );
     in {
       time.timeZone = cfg.timeZone;
       i18n.defaultLocale = cfg.locale;
       users.users = admins;
-      sops.secrets.adminPassword = lib.mkIf (setAdminPasswordFlag && adminPasswordFile != null) {
-        neededForUsers = true;
-        sopsFile = adminPasswordFile;
-      };
+      # Merge per-user secrets; no single shared adminPassword secret anymore
+      sops.secrets = adminPasswordSecrets;
     }
   );
 }
