@@ -3,6 +3,11 @@ package nixos
 import (
 	"bytes"
 	"encoding/json"
+	"os"
+	"path"
+	"strconv"
+	"strings"
+
 	"github.com/becloudless/becloudless/pkg/bcl"
 	"github.com/becloudless/becloudless/pkg/security"
 	"github.com/becloudless/becloudless/pkg/system"
@@ -12,10 +17,6 @@ import (
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"gopkg.in/yaml.v3"
-	"os"
-	"path"
-	"strconv"
-	"strings"
 )
 
 const fileFacter = "facter.json"
@@ -73,8 +74,9 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 
 	anywhereRunner := runner.NewNixShellRunner(localRunner, "nixos-anywhere")
 	logs.WithField("system", systemName).Info("Run kexec phase")
+	//-i "+identifyFile+" TODO
 	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
-		"bash -x nixos-anywhere --debug -p "+strconv.Itoa(port)+" -i "+identifyFile+" --generate-hardware-config nixos-facter "+path.Join(systemParentFolder, systemName, fileFacter)+" --phases kexec --env-password --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
+		"bash -x nixos-anywhere --debug -p "+strconv.Itoa(port)+" --generate-hardware-config nixos-facter "+path.Join(systemParentFolder, systemName, fileFacter)+" --phases kexec --env-password --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
 		return errs.WithE(err, "kexec phase failed")
 	}
 
@@ -93,7 +95,8 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 
 	logs.WithField("system", systemName).Info("Run disko,install,reboot phases")
 	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
-		"bash -x nixos-anywhere --debug --phases disko,install,reboot -p "+strconv.Itoa(port)+" -i "+identifyFile+" --extra-files "+path.Join(temp, "fs")+" --disk-encryption-keys /root/secret.key "+path.Join(temp, "install", "secret.key")+" --env-password --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
+		//-i "+identifyFile+" TODO
+		"bash -x nixos-anywhere --debug --phases disko,install,reboot -p "+strconv.Itoa(port)+"  --extra-files "+path.Join(temp, "fs")+" --disk-encryption-keys /root/secret.key "+path.Join(temp, "install", "secret.key")+" --env-password --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
 		return errs.WithE(err, "disco,install,reboot phase failed")
 	}
 	return nil
@@ -115,7 +118,7 @@ func prepareHostSshKeys(temp string, systemName string) error {
 
 	envs := []string{"SOPS_AGE_KEY=" + privAgeKey}
 	var stdout bytes.Buffer
-	if _, err := sopsRunner.Exec(&envs, os.Stdin, &stdout, os.Stderr, "sops", "-d", path.Join(bcl.BCL.GetNixosDir(), "modules", "nixos", "group", groupName, "default.secrets.yaml")); err != nil {
+	if _, err := sopsRunner.Exec(&envs, os.Stdin, &stdout, os.Stderr, "sops", "-d", path.Join(bcl.BCL.GetNixosDir(), "modules", "nixos", "groups", groupName, "default.secrets.yaml")); err != nil {
 		return errs.WithE(err, "Failed to extract group secrets")
 	}
 
@@ -226,7 +229,7 @@ func findSystem(localRunner *runner.LocalRunner, info SystemInfo) (string, error
 			logs.WithField("system", confName).Warn("system config is probably broken")
 			continue
 		}
-		if ids == "uuid="+info.MotherboardUuid {
+		if ids == "uuid="+info.MotherboardUuid { // TODO this is definitly wrong
 			return confName, nil
 		}
 	}

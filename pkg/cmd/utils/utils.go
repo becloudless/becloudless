@@ -6,8 +6,6 @@ func UtilsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "utils",
 	}
-	cmd.AddCommand(
-		utilsSsh2AgeCmd(),
-	)
+	cmd.AddCommand()
 	return cmd
 }

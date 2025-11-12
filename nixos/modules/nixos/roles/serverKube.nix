@@ -1,21 +1,24 @@
 { config, lib, pkgs, ... }:
 let
   srvNumber = lib.strings.toInt(builtins.substring ((builtins.stringLength config.networking.hostName) -1)  (-1) config.networking.hostName);
-  clusterNumber = 1; # TODO derive from config or hostname
+  clusterNumber = "1"; # TODO derive from config or hostname
   cfg = config.bcl.role.server;
 in
 {
-  options.bcl.role.server = {
-    cidr = lib.mkOption {
-      type = lib.types.str;
-      default = "192.168.41.20/22";
-    };
+  options.bcl.role.serverKube = {
+#    cidr = lib.mkOption {
+#      type = lib.types.str;
+#      default = "192.168.41.20/22";
+#    };
     secretFile = lib.mkOption { type = lib.types.path;};
   };
 
   ####################
 
-  config = lib.mkIf (config.bcl.role.name == "server-kube") {
+  config = lib.mkIf (config.bcl.role.name == "serverKube") {
+
+    bcl.role.setAdminPassword = true;
+
     environment.systemPackages = with pkgs; [
       kubernetes
       cni-plugins

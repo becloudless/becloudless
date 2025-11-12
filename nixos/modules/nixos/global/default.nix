@@ -6,6 +6,7 @@ in {
     enable = lib.mkEnableOption "Enable the default settings?";
     timeZone = lib.mkOption { type = lib.types.str; default = "Europe/Paris"; };
     locale = lib.mkOption { type = lib.types.str; default = "en_US.UTF-8"; };
+    domain = lib.mkOption { type = lib.types.str; description = "Domain name of the infrastructure."; };
     admin = lib.mkOption {
       type = lib.types.nullOr (lib.types.submodule ({ ... }: {
         options = {

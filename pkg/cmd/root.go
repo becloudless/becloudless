@@ -22,13 +22,12 @@ func RootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		Use:           filepath.Base(os.Args[0]),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if logLevel != "" {
-				if level, err := logs.ParseLevel(logLevel); err != nil {
-					logs.WithField("value", logLevel).Fatal("Unknown log level")
-				} else {
-					logs.SetLevel(level)
-				}
+			if level, err := logs.ParseLevel(logLevel); err != nil {
+				logs.WithField("value", logLevel).Fatal("Unknown log level") // TODO fatal
+			} else {
+				logs.SetLevel(level)
 			}
+
 			return bcl.BCL.Init(home)
 		},
 	}
@@ -44,7 +43,7 @@ func RootCmd() *cobra.Command {
 	// Unset the -h help, useful for 'host' arguments
 	cmd.PersistentFlags().BoolP("help", "", false, "help for this command")
 
-	cmd.PersistentFlags().StringVarP(&logLevel, "log-level", "L", "", "Set log level")
+	cmd.PersistentFlags().StringVarP(&logLevel, "log-level", "L", "info", "Set log level")
 	cmd.PersistentFlags().StringVarP(&home, "home", "H", bcl.BCL.App.DefaultHomeFolder(), "bcl home directory")
 	return cmd
 }

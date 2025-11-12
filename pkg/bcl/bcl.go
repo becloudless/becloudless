@@ -36,7 +36,8 @@ func (bcl *Bcl) Init(home string) error {
 		return err
 	}
 
-	repositoryPath := path.Join(bcl.Home, pathRepository)
+	repositoryPath := "/home/n0rad/Work/Perso/awired/infra/"
+	//repositoryPath := path.Join(bcl.Home, pathRepository)
 	if _, err := os.Stat(repositoryPath); os.IsNotExist(err) {
 		logs.WithField("path", repositoryPath).Warn("git repository does not exists, creating")
 		repository, err := git.InitRepository(repositoryPath)
