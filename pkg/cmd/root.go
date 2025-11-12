@@ -1,14 +1,15 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/becloudless/becloudless/pkg/bcl"
 	"github.com/becloudless/becloudless/pkg/cmd/docker"
 	"github.com/becloudless/becloudless/pkg/cmd/nixos"
 	"github.com/becloudless/becloudless/pkg/cmd/version"
 	"github.com/n0rad/go-erlog/logs"
 	"github.com/spf13/cobra"
-	"os"
-	"path/filepath"
 )
 
 func RootCmd() *cobra.Command {
@@ -21,11 +22,11 @@ func RootCmd() *cobra.Command {
 		Use:           filepath.Base(os.Args[0]),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if logLevel != "" {
-				level, err := logs.ParseLevel(logLevel)
-				if err != nil {
+				if level, err := logs.ParseLevel(logLevel); err != nil {
 					logs.WithField("value", logLevel).Fatal("Unknown log level")
+				} else {
+					logs.SetLevel(level)
 				}
-				logs.SetLevel(level)
 			}
 			return bcl.BCL.Init(home)
 		},

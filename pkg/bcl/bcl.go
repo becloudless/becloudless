@@ -1,16 +1,17 @@
 package bcl
 
 import (
-	"github.com/becloudless/becloudless/pkg/bcl/app"
-	"github.com/becloudless/becloudless/pkg/git"
-	"github.com/becloudless/becloudless/pkg/security"
-	"github.com/becloudless/becloudless/pkg/utils"
-	"github.com/n0rad/go-erlog/data"
-	"github.com/n0rad/go-erlog/errs"
-	"github.com/n0rad/go-erlog/logs"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/becloudless/becloudless/pkg/git"
+	"github.com/becloudless/becloudless/pkg/security"
+	"github.com/becloudless/becloudless/pkg/utils"
+	"github.com/n0rad/go-app"
+	"github.com/n0rad/go-erlog/data"
+	"github.com/n0rad/go-erlog/errs"
+	"github.com/n0rad/go-erlog/logs"
 )
 
 // BCL is the global app instance
@@ -25,13 +26,13 @@ func init() {
 }
 
 type Bcl struct {
-	Repository *git.Repository
 	app.App
+
+	Repository *git.Repository
 }
 
 func (bcl *Bcl) Init(home string) error {
-	bcl.Home = home
-	if err := bcl.PrepareHome(); err != nil {
+	if err := bcl.App.Init(home); err != nil {
 		return err
 	}
 

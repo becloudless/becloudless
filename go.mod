@@ -1,25 +1,23 @@
 module github.com/becloudless/becloudless
 
-go 1.23.6
+go 1.24.4
 
 require (
 	github.com/Mic92/ssh-to-age v0.0.0-20250714053852-8fc571fed193
 	github.com/atombender/go-jsonschema v0.20.0
 	github.com/awnumar/memguard v0.22.5
-	github.com/blang/semver/v4 v4.0.0
 	github.com/charmbracelet/huh v0.7.0
 	github.com/client9/misspell v0.3.4
 	github.com/fzipp/gocyclo v0.6.0
 	github.com/go-bindata/go-bindata/v3 v3.1.3
 	github.com/go-git/go-git/v6 v6.0.0-20250626203739-406bf25023a5
 	github.com/gordonklaus/ineffassign v0.1.0
-	github.com/juju/fslock v0.0.0-20160525022230-4d5c94c67b4b
-	github.com/mitchellh/go-homedir v1.1.0
 	github.com/moby/buildkit v0.24.0
+	github.com/n0rad/go-app v0.0.0-00010101000000-000000000000
 	github.com/n0rad/go-erlog v0.0.0-20240412093139-2d3c00f17991
 	github.com/n0rad/gomake v0.0.0-20240823070356-e5d952862596
 	github.com/spf13/cobra v1.9.1
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 	golang.org/x/crypto v0.40.0
 	golang.org/x/lint v0.0.0-20241112194109-818c5a804067
@@ -36,6 +34,7 @@ require (
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/awnumar/memcall v0.2.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
+	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/catppuccin/go v0.3.0 // indirect
 	github.com/charmbracelet/bubbles v0.21.0 // indirect
 	github.com/charmbracelet/bubbletea v1.3.4 // indirect
@@ -57,6 +56,7 @@ require (
 	github.com/go-git/gcfg/v2 v2.0.1 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
 	github.com/goccy/go-yaml v1.17.1 // indirect
+	github.com/gofrs/flock v0.13.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
@@ -69,6 +69,7 @@ require (
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
@@ -92,8 +93,10 @@ require (
 	golang.org/x/mod v0.25.0 // indirect
 	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/tools v0.34.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 )
+
+replace github.com/n0rad/go-app => ../../n0rad/go-app
