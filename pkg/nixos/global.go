@@ -26,13 +26,13 @@ func GlobalEdit(name string) error {
 	//}
 	//secretFile := path.Join(groupDir, "default.secrets.yaml")
 	//if err = utils.YamlMarshalToFile(secretFile, content, 0600); err != nil {
-	//	_ = os.Remove(secretFile)
+	//	_ = os.Unset(secretFile)
 	//	return errs.WithE(err, "Failed to create unencrypted secret file")
 	//}
 	//
 	//sopsRunner := runner.NewNixShellRunner(&runner.LocalRunner{}, "sops")
 	//if err = sopsRunner.ExecCmd("sops", "--config", path.Join(groupDir, security.SopsConfigFileName), "-i", "-e", secretFile); err != nil {
-	//	_ = os.Remove(secretFile)
+	//	_ = os.Unset(secretFile)
 	//	return errs.WithE(err, "Failed to encrypt secret file")
 	//}
 

@@ -4,69 +4,65 @@ let
 in {
   options.bcl.global = {
     enable = lib.mkEnableOption "Enable the default settings?";
-    timeZone = lib.mkOption {
-      type = lib.types.str;
-      default = "Europe/Paris";
+    timeZone = lib.mkOption { type = lib.types.str; default = "Europe/Paris"; };
+    locale = lib.mkOption { type = lib.types.str; default = "en_US.UTF-8"; };
+    admin = lib.mkOption {
+      type = lib.types.nullOr (lib.types.submodule ({ ... }: {
+        options = {
+          passwordSecretFile = lib.mkOption {
+            type = lib.types.nullOr lib.types.path;
+            default = null;
+            description = "SOPS file containing the shared password for all admin users.";
+          };
+          users = lib.mkOption {
+            type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
+              options = {
+                sshPublicKey = lib.mkOption {
+                  type = lib.types.nullOr lib.types.str;
+                  default = null;
+                  description = "SSH public key for admin user ${name}.";
+                };
+                extraGroups = lib.mkOption {
+                  type = lib.types.listOf lib.types.str;
+                  default = [ "wheel" ];
+                  description = "Additional groups for admin user ${name}.";
+                };
+              };
+            }));
+            default = {};
+            description = "Attribute set of admin users keyed by username.";
+          };
+        };
+      }));
+      default = null;
+      description = "Definition of multiple admin users.";
     };
-    locale = lib.mkOption {
-      type = lib.types.str;
-      default = "en_US.UTF-8";
-    };
-    adminUser.login = lib.mkOption {
-      type = lib.types.str;
-    };
-    adminUser.passwordSecretFile = lib.mkOption {
-      type = lib.types.path;
-    };
-    adminUser.sshPublicKey = lib.mkOption {
-      type = lib.types.str;
-    };
-#    publicDomain = lib.mkOption {
-#
-#    };
-#    users = lib.mkOption {
-#      # one admin is mandatory
-#
-#      # global Admin
-#      # keyboard layout
-#      # public key
-#      # password
-#    };
-#    networkRange = lib.mkOption {
-#
-#    };
-#    networkWifi = lib.mkOption {
-#      # name
-#      # secret key
-#    };
-#    defaultLanguage = lib.mkOption {
-#
-#    };
-#    defaultKeyboardLayout = lib.mkOption {
-#
-#    };
-
   };
 
   ###################
 
-  config = lib.mkIf cfg.enable {
-    time.timeZone = cfg.timeZone;
-    i18n.defaultLocale = cfg.locale;
-
-    users.users."${cfg.adminUser.login}" = {
-      isNormalUser = true;
-      group = "users";
-      extraGroups = [ "wheel" ];
-      hashedPasswordFile = lib.mkIf config.bcl.role.setAdminPassword config.sops.secrets."adminPassword".path;
-      openssh.authorizedKeys.keys = [
-        cfg.adminUser.sshPublicKey
-      ];
-    };
-
-   sops.secrets."adminPassword" = lib.mkIf config.bcl.role.setAdminPassword {
-      neededForUsers = true;  # sops hook in the init process before creation of users
-      sopsFile = cfg.adminUser.passwordSecretFile;
-    };
-  };
+  config = lib.mkIf cfg.enable (
+    let
+      setAdminPasswordFlag = (config.bcl.role or { setAdminPassword = false; }).setAdminPassword;
+      adminPasswordFile = if cfg.admin != null && cfg.admin.passwordSecretFile != null then cfg.admin.passwordSecretFile else null;
+      admins = lib.optionalAttrs (cfg.admin != null) (lib.mapAttrs (name: userCfg: (
+        let pk = userCfg.sshPublicKey; in {
+          isNormalUser = true;
+          group = "users";
+          extraGroups = userCfg.extraGroups;
+          openssh.authorizedKeys.keys = lib.mkIf (pk != null) [ pk ];
+        } // lib.optionalAttrs setAdminPasswordFlag {
+          hashedPasswordFile = config.sops.secrets.adminPassword.path;
+        }
+      )) cfg.admin.users);
+    in {
+      time.timeZone = cfg.timeZone;
+      i18n.defaultLocale = cfg.locale;
+      users.users = admins;
+      sops.secrets.adminPassword = lib.mkIf (setAdminPasswordFlag && adminPasswordFile != null) {
+        neededForUsers = true;
+        sopsFile = adminPasswordFile;
+      };
+    }
+  );
 }

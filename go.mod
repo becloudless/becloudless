@@ -4,6 +4,7 @@ go 1.23.6
 
 require (
 	github.com/Mic92/ssh-to-age v0.0.0-20250714053852-8fc571fed193
+	github.com/atombender/go-jsonschema v0.20.0
 	github.com/awnumar/memguard v0.22.5
 	github.com/blang/semver/v4 v4.0.0
 	github.com/charmbracelet/huh v0.7.0
@@ -32,7 +33,6 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
-	github.com/atombender/go-jsonschema v0.20.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/awnumar/memcall v0.2.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect

@@ -38,7 +38,7 @@ func RootCmd() *cobra.Command {
 		WebCmd(),
 	)
 
-	// Remove the -h help, useful for 'host' arguments
+	// Unset the -h help, useful for 'host' arguments
 	cmd.PersistentFlags().BoolP("help", "", false, "help for this command")
 
 	cmd.PersistentFlags().StringVarP(&logLevel, "log-level", "L", "", "Set log level")

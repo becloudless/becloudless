@@ -3,6 +3,7 @@ package docker
 import (
 	"fmt"
 	"github.com/becloudless/becloudless/pkg/docker"
+	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/becloudless/becloudless/pkg/version"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
@@ -28,6 +29,8 @@ func DockerCmd() *cobra.Command {
 }
 
 func AddBuildPushCommonFlags(cmd *cobra.Command, config *BuildConfig) {
+	cmd.Flags().BoolVar(&config.Git, "git", false, "Build from git status instead of path")
+	cmd.Flags().StringVar(&config.GitRef, "git-ref", "", "Specify a git ref (branch, tag, commit) to build from when --git is set")
 	cmd.Flags().StringVar(&config.Path, "path", ".", "Dockerfile or folder of dockerfile path")
 	cmd.Flags().StringVar(&config.Platforms, "platforms", "linux/amd64,linux/arm64", "Comma-separated list of target platforms (e.g., linux/amd64,linux/arm64). If not set, it will be auto-detected from the Dockerfile or default to linux/amd64,linux/arm64")
 	cmd.Flags().StringVar(&config.Registry, "registry", "gitea.cloudless.be", "Docker registry URL") // TODO
@@ -61,6 +64,8 @@ type BuildConfig struct {
 	Registry       string
 	Namespace      string
 	Platforms      string
+	Git            bool
+	GitRef         string
 }
 
 // dockerBuild uses cmd to trigger docker because we need buildx, and it's not simple to do it in pure go
@@ -111,16 +116,13 @@ func dockerBuildx(config BuildConfig) error {
 	args = append(args, "-t", fullImageName+":"+tag)
 	args = append(args, "-t", fullImageName+":latest")
 
-	// Add build args
 	args = append(args, "--build-arg=TAG="+tag)
 
-	// Add custom buildx flags
 	if config.BuildxFlags != "" {
 		flagArgs := strings.Fields(config.BuildxFlags)
 		args = append(args, flagArgs...)
 	}
 
-	// Add push or load flag
 	if config.Push {
 		args = append(args, "--push")
 	}
@@ -128,19 +130,13 @@ func dockerBuildx(config BuildConfig) error {
 		args = append(args, "--load")
 	}
 
-	// Add build context path
 	args = append(args, "-f", config.DockerfilePath)
 	args = append(args, config.BuildPath)
 
-	// Print the docker command for debugging
 	logs.WithField("args", strings.Join(args, " ")).Debug("Executing docker buildx command")
 
-	// Execute docker buildx command
-	cmd := exec.Command("docker", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	return cmd.Run()
+	localRunner := runner.NewLocalRunner()
+	return localRunner.ExecCmd("docker", args...)
 }
 
 func getFolderNameFromDockerfilePath(dockerfilePath string) (string, error) {

@@ -6,19 +6,12 @@
     };
   };
 
-  users.users.nixos.openssh.authorizedKeys.keys = [
-    config.bcl.global.adminUser.sshPublicKey
-  ];
+  users.users.nixos.openssh.authorizedKeys.keys = lib.mkIf (config.bcl.global.admin != null) (
+    lib.mapAttrsToList (_: u: u.sshPublicKey)
+      (lib.filterAttrs (_: u: u.sshPublicKey != null) config.bcl.global.admin.users)
+  );
 
-
-  environment.systemPackages = with pkgs; [
-    nixos-facter
-  ];
-
-#  environment.etc."ssh/ssh_host_ed25519_key" = {
-#    mode = "0600";
-#    source = "${/tmp/install-ssh_host_ed25519_key}";
-#  };
+  environment.systemPackages = with pkgs; [ nixos-facter ];
 
   services.getty.helpLine = lib.mkForce "";
   programs.bash.interactiveShellInit = ''
@@ -41,9 +34,7 @@
     echo ">>"
   '';
 
-  # faster compression
   isoImage.squashfsCompression = "gzip -Xcompression-level 1";
-
   isoImage.volumeID = lib.mkForce "bcl-iso";
   isoImage.isoName = lib.mkForce "bcl.iso";
 }
