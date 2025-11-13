@@ -6,6 +6,7 @@ let
 in
 {
   options.bcl.role.serverKube = {
+    clusterName = lib.mkOption {type = lib.types.str;};
 #    cidr = lib.mkOption {
 #      type = lib.types.str;
 #      default = "192.168.41.20/22";
@@ -231,8 +232,8 @@ in
             advertise-address: 192.168.41.${toString clusterNumber}${toString srvNumber}
             feature-gates: "SidecarContainers=true"
           certSANs:
-          - k${toString clusterNumber}.lmr.io
-          - k${toString clusterNumber}.h.lmr.io
+          - kube.${config.bcl.global.domain} # service name
+          - ${cfg.clusterName}.infra.${config.bcl.global.domain} # infra service name
           - 1.lmr.io
           - 2.lmr.io
           - 192.168.41.${toString clusterNumber}1
