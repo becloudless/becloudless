@@ -18,6 +18,7 @@ in
   config = lib.mkIf (config.bcl.role.name == "serverKube") {
 
     bcl.role.setAdminPassword = true;
+    security.sudo.wheelNeedsPassword = false;
 
     environment.systemPackages = with pkgs; [
       kubernetes
