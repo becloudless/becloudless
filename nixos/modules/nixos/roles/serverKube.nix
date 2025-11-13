@@ -179,11 +179,6 @@ in
     environment.etc."crictl.yaml".text = ''
       runtime-endpoint: "unix:///var/run/crio/crio.sock"
       image-endpoint: "unix:///var/run/crio/crio.sock"
-      cgroup-manager: systemd
-
-      timeout: 10
-      debug: true
-      pull-image-on-create: false
     '';
 
     # systemctl stop kubeadm kubelet
@@ -222,7 +217,8 @@ in
             peerCertSANs:
             - "192.168.41.${toString clusterNumber}${toString srvNumber}"
             extraArgs:
-              initial-cluster: srv${toString clusterNumber}1=https://192.168.41.${toString clusterNumber}1:2380,srv${toString clusterNumber}2=https://192.168.41.${toString clusterNumber}2:2380,srv${toString clusterNumber}5=https://192.168.41.${toString clusterNumber}5:2380,srv${toString clusterNumber}6=https://192.168.41.${toString clusterNumber}6:2380,srv${toString clusterNumber}7=https://192.168.41.${toString clusterNumber}7:2380
+              initial-cluster: srv${toString clusterNumber}1=https://192.168.41.${toString clusterNumber}1:2380
+              # TODO ,srv${toString clusterNumber}2=https://192.168.41.${toString clusterNumber}2:2380,srv${toString clusterNumber}5=https://192.168.41.${toString clusterNumber}5:2380,srv${toString clusterNumber}6=https://192.168.41.${toString clusterNumber}6:2380,srv${toString clusterNumber}7=https://192.168.41.${toString clusterNumber}7:2380
               initial-cluster-state: new
               name: srv${toString clusterNumber}${toString srvNumber}
               listen-peer-urls: https://192.168.41.${toString clusterNumber}${toString srvNumber}:2380
