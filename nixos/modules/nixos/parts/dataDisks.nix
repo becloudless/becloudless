@@ -22,16 +22,20 @@ let
   };
   mergerfsFileSystems = builtins.listToAttrs [
     (mkMergeData "audio")
-    (mkMergeData "video")
-    (mkMergeData "image")
+    (mkMergeData "videos")
+    (mkMergeData "images")
+    (mkMergeData "games")
+    (mkMergeData "software")
   ];
   mountMergerfsService = {
     systemd.services."mount-mergerfs" = {
       enable = true;
       script = ''
         systemctl start data-audio.mount
-        systemctl start data-video.mount
-        systemctl start data-image.mount
+        systemctl start data-videos.mount
+        systemctl start data-images.mount
+        systemctl start data-games.mount
+        systemctl start data-software.mount
       '';
       after = [ "fs-local.target" ];
       wantedBy = ["multi-user.target"];
