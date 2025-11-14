@@ -21,21 +21,21 @@ let
     };
   };
   mergerfsFileSystems = builtins.listToAttrs [
-    (mkMergeData "audio")
-    (mkMergeData "videos")
-    (mkMergeData "images")
-    (mkMergeData "games")
-    (mkMergeData "software")
+    (mkMergeData "Audio")
+    (mkMergeData "Videos")
+    (mkMergeData "Images")
+    (mkMergeData "Games")
+    (mkMergeData "Software")
   ];
   mountMergerfsService = {
     systemd.services."mount-mergerfs" = {
       enable = true;
       script = ''
-        systemctl start data-audio.mount
-        systemctl start data-videos.mount
-        systemctl start data-images.mount
-        systemctl start data-games.mount
-        systemctl start data-software.mount
+        systemctl start data-Audio.mount
+        systemctl start data-Videos.mount
+        systemctl start data-Images.mount
+        systemctl start data-Games.mount
+        systemctl start data-Software.mount
       '';
       after = [ "fs-local.target" ];
       wantedBy = ["multi-user.target"];
