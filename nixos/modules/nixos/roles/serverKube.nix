@@ -17,7 +17,10 @@ in
 
   config = lib.mkIf (config.bcl.role.name == "serverKube") {
 
-    bcl.role.setAdminPassword = true;
+    bcl.disk.encrypted = true;
+    bcl.boot.ssh = true; # give password for disk encryption on boot
+
+    bcl.role.setAdminPassword = true; # being able to log in to console
     security.sudo.wheelNeedsPassword = false;
 
     environment.systemPackages = with pkgs; [
@@ -29,6 +32,18 @@ in
       k9s
       etcd
       ssh-to-age
+      mergerfs
+    ];
+
+    users.users.root.packages = with pkgs; [
+      (writeShellScriptBin "kube-reboot" ''
+        kubectl --kubeconfig=/etc/kubernetes/admin.conf drain ${config.networking.hostName} --timeout 200s --ignore-daemonsets --delete-emptydir-data || true
+        systemctl reboot
+      '')
+      (writeShellScriptBin "kube-poweroff" ''
+        kubectl --kubeconfig=/etc/kubernetes/admin.conf drain ${config.networking.hostName} --timeout 200s --ignore-daemonsets --delete-emptydir-data || true
+        systemctl poweroff
+      '')
     ];
 
     networking.nameservers = ["192.168.40.12"];
