@@ -166,8 +166,8 @@ in
     };
 
     networking.extraHosts = ''
-      127.0.0.1       srv${toString clusterNumber}${toString srvNumber}.h.lmr.io ${config.networking.hostName} localhost
-      127.0.0.1       k${toString clusterNumber}.lmr.io
+      127.0.0.1       srv${toString clusterNumber}${toString srvNumber}.h.${config.bcl.global.domain} ${config.networking.hostName} localhost
+      127.0.0.1       kube.${config.bcl.global.domain}
 
       192.168.41.${toString clusterNumber}1   srv${toString clusterNumber}1
       192.168.41.${toString clusterNumber}2   srv${toString clusterNumber}2
@@ -207,8 +207,8 @@ in
         apiVersion: kubeadm.k8s.io/v1beta3
         kind: ClusterConfiguration
         kubernetesVersion: stable
-        clusterName: lmr
-        controlPlaneEndpoint: k${toString clusterNumber}.lmr.io:8443
+        #clusterName: cluster
+        controlPlaneEndpoint: kube.${config.bcl.global.domain}:8443
         networking:
           serviceSubnet: 172.16.42.0/24
           podSubnet: 10.42.0.0/16
@@ -233,9 +233,6 @@ in
             feature-gates: "SidecarContainers=true"
           certSANs:
           - kube.${config.bcl.global.domain} # service name
-          - ${cfg.clusterName}.infra.${config.bcl.global.domain} # infra service name
-          - 1.lmr.io
-          - 2.lmr.io
           - 192.168.41.${toString clusterNumber}1
           - 192.168.41.${toString clusterNumber}2
           - 192.168.41.${toString clusterNumber}3
