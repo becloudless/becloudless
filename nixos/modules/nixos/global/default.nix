@@ -8,6 +8,15 @@ in {
     locale = lib.mkOption { type = lib.types.str; default = "en_US.UTF-8"; };
     name = lib.mkOption { type = lib.types.str; description = "Name of the whole infrastructure, a-zA-Z-. usually the domain without the TLD"; };
     domain = lib.mkOption { type = lib.types.str; description = "Domain name of the infrastructure"; };
+    git = lib.mkOption {
+      type = lib.types.nullOr (lib.types.submodule ({ ... }: {
+        options = {
+          publicKey = lib.mkOption { type = lib.types.str; description = "Git repo public key"; };
+        };
+      }));
+      default = null;
+      description = "Definition of multiple admin users.";
+    };
     admin = lib.mkOption {
       type = lib.types.nullOr (lib.types.submodule ({ ... }: {
         options = {
