@@ -2,7 +2,7 @@
 let
   srvNumber = lib.strings.toInt(builtins.substring ((builtins.stringLength config.networking.hostName) -1)  (-1) config.networking.hostName);
   clusterNumber = "1"; # TODO derive from config or hostname
-  cfg = config.bcl.role.server;
+  cfg = config.bcl.role.serverKube;
 in
 {
   options.bcl.role.serverKube = {
