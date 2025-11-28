@@ -248,7 +248,7 @@ in
             feature-gates: "SidecarContainers=true"
           certSANs:
           - kube.${config.bcl.global.domain} # service name
-          - kube.${clusterName}.i.${config.bcl.global.domain} # service name
+          - kube.${cfg.clusterName}.i.${config.bcl.global.domain} # service name
           - 192.168.41.${toString clusterNumber}1
           - 192.168.41.${toString clusterNumber}2
           - 192.168.41.${toString clusterNumber}3
