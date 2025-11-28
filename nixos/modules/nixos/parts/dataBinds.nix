@@ -16,6 +16,7 @@ in {
       scratch = "/disks/nvme1/scratch";
     };
     description = "Bind mount definitions mapping name -> source path. Each creates /data/{name} bound to the source path. Activated only when data disks are defined.";
+    default = {};
   };
 
   config = lib.mkIf (bindsCfg != {}) {
