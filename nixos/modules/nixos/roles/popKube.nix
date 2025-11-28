@@ -2,8 +2,8 @@
 
 {
   config = lib.mkIf (config.bcl.role.name == "popKube") {
-    lmr.disk.encrypted = true;
-    lmr.boot.ssh = true;
+    bcl.disk.encrypted = true;
+    bcl.boot.ssh = true;
 
     security.sudo.wheelNeedsPassword = false;
     systemd.network.enable = true;
