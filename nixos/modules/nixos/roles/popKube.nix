@@ -24,6 +24,7 @@
 
     networking.firewall.enable = false;
 
+    # nix-shell -p bash -p gitMinimal -p openssh -p openssl -p yq-go -p kubernetes-helm -p kubectl -p ssh-to-age -p sops -p gawk
     systemd.services."flux-bootstrap" = {
       path = with pkgs; [
         bash
@@ -69,7 +70,7 @@
     services.k3s = {
       enable = true;
       extraFlags = [
-        "--tls-san=${config.networking.hostName}.${config.bcl.global.domain},pop.${config.bcl.global.domain}"
+        "--tls-san=${config.networking.hostName}.${config.bcl.global.domain},pop.${config.bcl.global.domain},pop.i.${config.bcl.global.domain}"
       ];
     };
 
