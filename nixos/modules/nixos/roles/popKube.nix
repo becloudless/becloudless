@@ -1,6 +1,12 @@
 { inputs, config, lib, pkgs, ... }:
-
+let
+  cfg = config.bcl.role.popKube;
+in
 {
+  options.bcl.role.popKube = {
+    clusterName = lib.mkOption {type = lib.types.str;};
+  };
+
   config = lib.mkIf (config.bcl.role.name == "popKube") {
     bcl.disk.encrypted = true;
     bcl.boot.ssh = true;
@@ -70,7 +76,7 @@
     services.k3s = {
       enable = true;
       extraFlags = [
-        "--tls-san=${config.networking.hostName}.${config.bcl.global.domain},pop.${config.bcl.global.domain},pop.i.${config.bcl.global.domain}"
+        "--tls-san=${config.networking.hostName}.i.${config.bcl.global.domain},${cfg.clusterName}.i.${config.bcl.global.domain}"
       ];
     };
 
