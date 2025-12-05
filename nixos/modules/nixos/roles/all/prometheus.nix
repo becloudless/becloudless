@@ -37,7 +37,7 @@
 
     systemd.services."prometheus-pushprox-client" = {
       script = ''
-        username="${config.bcl.group.name}"
+        username="pushprox-${config.bcl.group.name}"
         password="$(cat ${config.sops.secrets."monitoring_password".path})"
         domain="pushprox.${config.bcl.global.domain}"
 
