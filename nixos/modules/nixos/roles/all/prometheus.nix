@@ -36,9 +36,13 @@
     };
 
     systemd.services."prometheus-pushprox-client" = {
-      serviceConfig = {
-#        ExecStart = "${pkgs.bcl.prometheus-pushprox}/bin/pushprox-client --proxy-url=https://prom:something@pushprox.bcl.io";
-      };
+      script = ''
+        username="${config.bcl.group.name}"
+        password="$(cat ${config.sops.secrets."monitoring_password".path})"
+        domain="pushprox.${config.bcl.global.domain}"
+
+        ${pkgs.bcl.prometheus-pushprox}/bin/pushprox-client --proxy-url="https://$username:$password@$domain"
+      '';
 
       after = [ "prometheus-node-exporter.service" ];
       requires = [ "prometheus-node-exporter.service" ];

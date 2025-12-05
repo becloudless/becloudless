@@ -11,7 +11,6 @@ in
 #      type = lib.types.str;
 #      default = "192.168.41.20/22";
 #    };
-    secretFile = lib.mkOption { type = lib.types.path;};
   };
 
   ####################

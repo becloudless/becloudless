@@ -6,43 +6,42 @@ in
   config = lib.mkIf (config.bcl.role.name == "serverKube") {
 
     sops.secrets."ca_crt" = {
-      sopsFile = config.bcl.role.serverKube.secretFile;
+      sopsFile = config.bcl.role.secretFile;
       mode = "0600";
     };
 
     sops.secrets."ca_key" = {
-      sopsFile = config.bcl.role.serverKube.secretFile;
+      sopsFile = config.bcl.role.secretFile;
       mode = "0600";
     };
 
-
     sops.secrets."sa_pub" = {
-      sopsFile = config.bcl.role.serverKube.secretFile;
+      sopsFile = config.bcl.role.secretFile;
       mode = "0600";
     };
 
     sops.secrets."sa_key" = {
-      sopsFile = config.bcl.role.serverKube.secretFile;
+      sopsFile = config.bcl.role.secretFile;
       mode = "0600";
     };
 
     sops.secrets."front_proxy_ca_crt" = {
-      sopsFile = config.bcl.role.serverKube.secretFile;
+      sopsFile = config.bcl.role.secretFile;
       mode = "0600";
     };
 
     sops.secrets."front_proxy_ca_key" = {
-      sopsFile = config.bcl.role.serverKube.secretFile;
+      sopsFile = config.bcl.role.secretFile;
       mode = "0600";
     };
 
     sops.secrets."etcd_ca_crt" = {
-      sopsFile = config.bcl.role.serverKube.secretFile;
+      sopsFile = config.bcl.role.secretFile;
       mode = "0600";
     };
 
     sops.secrets."etcd_ca_key" = {
-      sopsFile = config.bcl.role.serverKube.secretFile;
+      sopsFile = config.bcl.role.secretFile;
       mode = "0600";
     };
 
