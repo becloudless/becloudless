@@ -17,7 +17,7 @@ in {
     system.nixos.versionSuffix = "-${builtins.substring 0 8 (toString inputs.self.lastModifiedDate)}.${toString revision}";
     # system.nixos.label =
 
-    sops.secrets."monitoring_key" = {
+    sops.secrets."monitoring_password" = {
       sopsFile = config.bcl.role.secretFile;
       mode = "0600";
     };
