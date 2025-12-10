@@ -19,7 +19,7 @@ let
     value = {
       device = "/disks/*/${type}";
       fsType = "fuse.mergerfs";
-      options = [ "ro" "minfreespace=50G" "category.create=msplfs" "noauto" ];
+      options = [ "rw" "minfreespace=50G" "category.create=msplfs" "noauto" ];
     };
   };
   mergerfsFileSystems = builtins.listToAttrs [
