@@ -3,12 +3,29 @@
 package main
 
 import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/gomake"
 )
 
 func main() {
 	gomake.ProjectBuilder().
 		WithName("bcl").
+		WithVersionFunc(func() (string, error) {
+			now := time.Now()
+			gitHash, err := gomake.ExecGetStdout("git", "rev-parse", "--short", "HEAD")
+			if err != nil {
+				return "", errs.WithE(err, "Failed to get git commit hash")
+			}
+			hms := strings.TrimLeft(now.Format("1504"), "0")
+			if hms == "" {
+				hms = "0"
+			}
+			return fmt.Sprintf("%s.%s.%s-H%s", "0", now.Format("060102"), hms, gitHash), nil
+		}).
 		WithStep(&gomake.StepBuild{
 			PreBuildHook: func(build gomake.StepBuild) error {
 				if err := gomake.EnsureTool("go-jsonschema", "github.com/atombender/go-jsonschema"); err != nil {
