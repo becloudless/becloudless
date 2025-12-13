@@ -60,6 +60,15 @@ jobs:
         run: |
           bash -x ./test.sh
 
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+    permissions:
+      contents: write
+
+    steps:
       - name: Release
         if: github.ref == 'refs/heads/main'
         env:
