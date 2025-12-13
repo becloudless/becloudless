@@ -172,6 +172,8 @@ github.com/n0rad/gomake v0.0.0-20240823070356-e5d952862596 h1:W7lv1Xr2gtV2CXqZC/
 github.com/n0rad/gomake v0.0.0-20240823070356-e5d952862596/go.mod h1:/o+KqK4XMHC/iKubYAL+s5SISTghQsM65DCdTyjgrHU=
 github.com/n0rad/gomake v0.0.0-20251213114338-1d52671ebab6 h1:LHtHzYGbQsz/bm2eOrFijXG/5Ule7l/6JSpPeYie4O8=
 github.com/n0rad/gomake v0.0.0-20251213114338-1d52671ebab6/go.mod h1:bO2CekvbuQOl0rarQBVSVURcTdbYTcbO3S05lwHo+zo=
+github.com/n0rad/gomake v0.0.0-20251213122144-f655de36e24a h1:7XbZh+UcnUNFzIdxulK17qlJa6c0FUQopy5mKAhFHAw=
+github.com/n0rad/gomake v0.0.0-20251213122144-f655de36e24a/go.mod h1:bO2CekvbuQOl0rarQBVSVURcTdbYTcbO3S05lwHo+zo=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/gomega v1.4.2/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/onsi/gomega v1.34.1 h1:EUMJIKUjM8sKjYbtxQI9A4z2o+rruxnzNvpknOXie6k=

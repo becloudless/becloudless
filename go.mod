@@ -15,7 +15,7 @@ require (
 	github.com/moby/buildkit v0.24.0
 	github.com/n0rad/go-app v0.0.0-20251213104537-dec9f64dfa31
 	github.com/n0rad/go-erlog v0.0.0-20240412093139-2d3c00f17991
-	github.com/n0rad/gomake v0.0.0-20251213114338-1d52671ebab6
+	github.com/n0rad/gomake v0.0.0-20251213122144-f655de36e24a
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
