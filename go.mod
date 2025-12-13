@@ -11,12 +11,12 @@ require (
 	github.com/fzipp/gocyclo v0.6.0
 	github.com/go-bindata/go-bindata/v3 v3.1.3
 	github.com/go-git/go-git/v6 v6.0.0-20251212081956-e83cbb9651e8
-	github.com/gordonklaus/ineffassign v0.1.0
+	github.com/gordonklaus/ineffassign v0.2.0
 	github.com/moby/buildkit v0.24.0
 	github.com/n0rad/go-app v0.0.0-20251213104537-dec9f64dfa31
 	github.com/n0rad/go-erlog v0.0.0-20240412093139-2d3c00f17991
-	github.com/n0rad/gomake v0.0.0-20240823070356-e5d952862596
-	github.com/spf13/cobra v1.9.1
+	github.com/n0rad/gomake v0.0.0-20251213114338-1d52671ebab6
+	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 	golang.org/x/crypto v0.46.0
@@ -89,7 +89,7 @@ require (
 	github.com/sanity-io/litter v1.5.8 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/sosodev/duration v1.3.1 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/tonistiigi/go-csvvalue v0.0.0-20240814133006-030d3b2625d0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/exp v0.0.0-20251209150349-8475f28825e9 // indirect
