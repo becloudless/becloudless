@@ -19,7 +19,7 @@ func main() {
 			},
 		}).
 		WithStep(&gomake.StepRelease{
-			GithubRelease: false,
+			GithubRelease: true,
 			OsArchRelease: []string{"linux-amd64", "darwin-amd64", "linux-arm64", "darwin-arm64"},
 			PostReleaseHook: func(release gomake.StepRelease) error {
 				//release.Version
