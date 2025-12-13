@@ -2,6 +2,11 @@
   bcl.global = {
     enable = true;
     timeZone = "Europe/Berlin";
+    name = "bcl-test";
+    domain = "bcl.test";
+    git = {
+      publicKey = "ssh-rsa something";
+    };
     admin = {
       passwordSecretFile = ./default.secrets.yaml;
       users = {

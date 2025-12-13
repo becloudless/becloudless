@@ -2,6 +2,6 @@
 {
   config = lib.mkIf (config.bcl.group.name == "test-tv") {
     bcl.role.name = "tv";
-    bcl.group.secretFile = ./default.secrets.yaml;
+    bcl.role.secretFile = ./default.secrets.yaml;
   };
 }

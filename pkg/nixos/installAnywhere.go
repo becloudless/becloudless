@@ -78,10 +78,18 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 
 	anywhereRunner := runner.NewNixShellRunner(localRunner, "nixos-anywhere")
 	logs.WithField("system", systemName).Info("Run kexec phase")
-	//-i "+identifyFile+" TODO
-	//--env-password TODO
+
+	argId := ""
+	if identifyFile != "" {
+		argId = " -i " + identifyFile + " "
+	}
+	argEnvPass := ""
+	if len(password) > 0 {
+		argEnvPass = " --env-password "
+	}
+
 	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
-		"bash -x nixos-anywhere --debug -p "+strconv.Itoa(port)+" --generate-hardware-config nixos-facter "+path.Join(systemParentFolder, systemName, fileFacter)+" --phases kexec --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
+		"bash -x nixos-anywhere --debug -p "+strconv.Itoa(port)+argId+argEnvPass+" --generate-hardware-config nixos-facter "+path.Join(systemParentFolder, systemName, fileFacter)+" --phases kexec --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
 		return errs.WithE(err, "kexec phase failed")
 	}
 
@@ -100,9 +108,9 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 
 	logs.WithField("system", systemName).Info("Run disko,install,reboot phases")
 	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
-		//-i "+identifyFile+" TODO
+
 		// TODO ssh as root when kexec was neeeded
-		"bash -x nixos-anywhere --debug --phases disko,install,reboot -p "+strconv.Itoa(port)+"  --extra-files "+path.Join(temp, "fs")+" --disk-encryption-keys /root/secret.key "+path.Join(temp, "install", "secret.key")+" --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" root@"+host); err != nil {
+		"bash -x nixos-anywhere --debug --phases disko,install,reboot -p "+strconv.Itoa(port)+argId+argEnvPass+" --extra-files "+path.Join(temp, "fs")+" --disk-encryption-keys /root/secret.key "+path.Join(temp, "install", "secret.key")+" --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" root@"+host); err != nil {
 		return errs.WithE(err, "disco,install,reboot phase failed")
 	}
 	return nil
