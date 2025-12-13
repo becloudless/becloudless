@@ -10,12 +10,17 @@ in {
       default = "";
     };
     setAdminPassword = lib.mkEnableOption "Add the password to the user";
+    secretFile = lib.mkOption { type = lib.types.path;};
   };
 
   config = lib.mkIf (cfg.name != "") {
-    system.nixos.tags = ["role-${cfg.name}"];
     system.nixos.versionSuffix = "-${builtins.substring 0 8 (toString inputs.self.lastModifiedDate)}.${toString revision}";
     # system.nixos.label =
+
+    sops.secrets."monitoring_password" = {
+      sopsFile = config.bcl.role.secretFile;
+      mode = "0600";
+    };
 
     environment.etc."nixos/current".source = inputs.self.outPath;
 

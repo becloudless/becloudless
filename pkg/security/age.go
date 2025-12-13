@@ -1,10 +1,11 @@
 package security
 
 import (
+	"os"
+
 	"github.com/Mic92/ssh-to-age"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
-	"os"
 )
 
 func Ed25519PrivateKeyFileToPublicAndPrivateAgeKeys(file string) (string, string, error) {

@@ -13,6 +13,11 @@ in {
     quiet = lib.mkEnableOption "Stay quiet";
     plymouth = lib.mkEnableOption "Enable plymouth";
     ssh = lib.mkEnableOption "Enable";
+    initrdSSHPrivateKey = lib.mkOption {
+      type = lib.types.str;
+      description = ''Private key for initrd SSH server.'';
+#      default = lib.mkIf cfg.ssh "";
+    };
     efi = lib.mkOption {
        type = lib.types.bool;
        default = true;
@@ -78,7 +83,7 @@ in {
           enable = true;
           port = 22;
           authorizedKeys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILvM8t4hXJxjBzrUS5FhAQ/TD9TJscT7CyLKFSOjZjj4 id_ed25519" ];
-          hostKeys = [ "/nix/etc/ssh/initrd_ssh_host_ed25519_key" ];
+          hostKeys = [ "/etc/ssh/initrd_ssh_host_ed25519_key" ];
         };
         # postDeviceCommands = lib.mkAfter ''
         #   zfs rollback -r rpool/local/root@blank
@@ -91,16 +96,12 @@ in {
       };
     };
 
-    #    # This key is used only in initrd. nix-sops does not support secrets in initrd,
-    #    # and it have to be a dedicated key anyway since boot partition is not encrypted.
-    #    # Also this key have to be set at install because `ssh` setup is run before `environment`
-    #    environment.etc."ssh/initrd_ssh_host_ed25519_key" = {
-    #      mode = "0600";
-    #      text = ''
-    #          -----BEGIN OPENSSH PRIVATE KEY-----
-    #          SOMETHING
-    #          -----END OPENSSH PRIVATE KEY-----
-    #        '';
-    #    };
+    # This key is used only in initrd. nix-sops does not support secrets in initrd,
+    # and it have to be a dedicated key anyway since boot partition is not encrypted.
+    # Also this key have to be set at install because `ssh` setup is run before `environment`
+    environment.etc."ssh/initrd_ssh_host_ed25519_key" = lib.mkIf cfg.ssh {
+      mode = "0600";
+      text = cfg.initrdSSHPrivateKey;
+    };
   };
 }

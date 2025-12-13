@@ -1,11 +1,6 @@
 package runner
 
 import (
-	"github.com/awnumar/memguard"
-	"github.com/n0rad/go-erlog/data"
-	"github.com/n0rad/go-erlog/errs"
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
 	"io"
 	"net"
 	"os"
@@ -13,6 +8,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/awnumar/memguard"
+	"github.com/n0rad/go-erlog/data"
+	"github.com/n0rad/go-erlog/errs"
+	"github.com/n0rad/go-erlog/logs"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 )
 
 type SshRunner struct {
@@ -107,6 +109,9 @@ func (r *SshRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, stde
 	}
 
 	cmd := head + " " + strings.Join(args, " ")
+	if logs.IsTraceEnabled() {
+		logs.WithField("command", cmd).Debug("Running ssh external command")
+	}
 	if err = session.Run(cmd); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			code := exitError.ExitCode()

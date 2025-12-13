@@ -80,13 +80,16 @@ func (r Repository) HeadCommitHash(short bool) (string, error) {
 }
 
 func (r Repository) getShortHash(hash plumbing.Hash) string {
-	for i := 7; i < hash.Size(); i++ {
-		shortHash := hash.String()[0:i]
-		if !r.hasDuplicateShortHash(shortHash) {
-			return shortHash
-		}
-	}
-	return ""
+	return hash.String()[0:7]
+
+	// TODO this is slow
+	//for i := 7; i < hash.Size(); i++ {
+	//	shortHash := hash.String()[0:i]
+	//	if !r.hasDuplicateShortHash(shortHash) {
+	//		return shortHash
+	//	}
+	//}
+	//return ""
 }
 
 func (r Repository) hasDuplicateShortHash(shortHash string) bool {

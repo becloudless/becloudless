@@ -36,6 +36,7 @@
         var=$((var + 1))
     done
 
+
     echo ">>"
     echo ">> Run  'bcl nixos install $(ip addr show $(ip route | awk '/default/ { print $5 }') | grep "inet" | head -n 1 | awk '/inet/ {print $2}' | cut -d'/' -f1)'  on another device where bcl is available, to install this device"
     echo ">>"
@@ -43,7 +44,6 @@
 
   # faster compression
   isoImage.squashfsCompression = "gzip -Xcompression-level 1";
-
   isoImage.volumeID = lib.mkForce "bcl-iso";
   isoImage.isoName = lib.mkForce "bcl.iso";
 }

@@ -3,6 +3,11 @@ package nixos
 import (
 	"bytes"
 	"encoding/json"
+	"os"
+	"path"
+	"strconv"
+	"strings"
+
 	"github.com/becloudless/becloudless/pkg/bcl"
 	"github.com/becloudless/becloudless/pkg/security"
 	"github.com/becloudless/becloudless/pkg/system"
@@ -12,28 +17,28 @@ import (
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"gopkg.in/yaml.v3"
-	"os"
-	"path"
-	"strconv"
-	"strings"
 )
 
 const fileFacter = "facter.json"
 
 func InstallAnywhere(host string, port int, user string, password []byte, identifyFile string, diskPassword string) error {
-	run, err := runner.NewSshRunner(host, port, user, password, identifyFile)
+	sshRunner, err := runner.NewSshRunner(host, port, user, password, identifyFile)
 	if err != nil {
 		return errs.WithE(err, "Failed to connect to host to install, is the user set? did it required a password?")
 	}
 
-	//sudoRunner, err := runner.NewSudoRunner(run, password)
-	sudoRunner, err := runner.NewInlineSudoRunner(run, password)
-	if err != nil {
-		return errs.WithE(err, "Sudo cannot be run successfully on host to install")
+	var finalRunner runner.Runner = sshRunner
+	if user != "root" {
+		//sshSudoRunner, err := runner.NewSudoRunner(sshRunner, password)
+		sshSudoRunner, err := runner.NewInlineSudoRunner(sshRunner, password)
+		if err != nil {
+			return errs.WithE(err, "Sudo cannot be run successfully on host to install")
+		}
+		finalRunner = sshSudoRunner
 	}
 
 	sys := system.System{
-		SudoRunner: sudoRunner,
+		SudoRunner: finalRunner,
 	}
 
 	logs.Info("Extract system information from host to install")
@@ -73,8 +78,18 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 
 	anywhereRunner := runner.NewNixShellRunner(localRunner, "nixos-anywhere")
 	logs.WithField("system", systemName).Info("Run kexec phase")
+
+	argId := ""
+	if identifyFile != "" {
+		argId = " -i " + identifyFile + " "
+	}
+	argEnvPass := ""
+	if len(password) > 0 {
+		argEnvPass = " --env-password "
+	}
+
 	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
-		"bash -x nixos-anywhere --debug -p "+strconv.Itoa(port)+" -i "+identifyFile+" --generate-hardware-config nixos-facter "+path.Join(systemParentFolder, systemName, fileFacter)+" --phases kexec --env-password --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
+		"bash -x nixos-anywhere --debug -p "+strconv.Itoa(port)+argId+argEnvPass+" --generate-hardware-config nixos-facter "+path.Join(systemParentFolder, systemName, fileFacter)+" --phases kexec --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
 		return errs.WithE(err, "kexec phase failed")
 	}
 
@@ -93,7 +108,9 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 
 	logs.WithField("system", systemName).Info("Run disko,install,reboot phases")
 	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
-		"bash -x nixos-anywhere --debug --phases disko,install,reboot -p "+strconv.Itoa(port)+" -i "+identifyFile+" --extra-files "+path.Join(temp, "fs")+" --disk-encryption-keys /root/secret.key "+path.Join(temp, "install", "secret.key")+" --env-password --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
+
+		// TODO ssh as root when kexec was neeeded
+		"bash -x nixos-anywhere --debug --phases disko,install,reboot -p "+strconv.Itoa(port)+argId+argEnvPass+" --extra-files "+path.Join(temp, "fs")+" --disk-encryption-keys /root/secret.key "+path.Join(temp, "install", "secret.key")+" --flake "+bcl.BCL.GetNixosDir()+"#"+systemName+" root@"+host); err != nil {
 		return errs.WithE(err, "disco,install,reboot phase failed")
 	}
 	return nil
@@ -115,7 +132,7 @@ func prepareHostSshKeys(temp string, systemName string) error {
 
 	envs := []string{"SOPS_AGE_KEY=" + privAgeKey}
 	var stdout bytes.Buffer
-	if _, err := sopsRunner.Exec(&envs, os.Stdin, &stdout, os.Stderr, "sops", "-d", path.Join(bcl.BCL.GetNixosDir(), "modules", "nixos", "group", groupName, "default.secrets.yaml")); err != nil {
+	if _, err := sopsRunner.Exec(&envs, os.Stdin, &stdout, os.Stderr, "sops", "-d", path.Join(bcl.BCL.GetNixosDir(), "modules", "nixos", "groups", groupName, "default.secrets.yaml")); err != nil {
 		return errs.WithE(err, "Failed to extract group secrets")
 	}
 
@@ -226,7 +243,7 @@ func findSystem(localRunner *runner.LocalRunner, info SystemInfo) (string, error
 			logs.WithField("system", confName).Warn("system config is probably broken")
 			continue
 		}
-		if ids == "uuid="+info.MotherboardUuid {
+		if ids == "uuid="+info.MotherboardUuid { // TODO this is definitly wrong
 			return confName, nil
 		}
 	}
@@ -257,7 +274,7 @@ func ExtractSystemInfo(sys system.System) (SystemInfo, error) {
 
 	info := SystemInfo{}
 	res, err := sys.SudoRunner.ExecCmdGetStdout(`\
-		echo "` + motherboardUuid + `=$(sudo -S cat /sys/devices/virtual/dmi/id/product_uuid 2> /dev/null)" > /tmp/info
+		echo "` + motherboardUuid + `=$(command -v sudo > /dev/null && sudo cat /sys/devices/virtual/dmi/id/product_uuid 2> /dev/null || cat /sys/devices/virtual/dmi/id/product_uuid 2> /dev/null)" > /tmp/info
 		echo "` + cpuSerial + `=$(grep "Serial" /proc/cpuinfo | cut -f2 -d: | sed -e 's/^[[:space:]]*//')" >> /tmp/info
 		echo "` + netWorkMacs + `=$(find /sys/class/net/*/ -maxdepth 1 -type l -name device -exec sh -c "grep -q up \$(dirname {})/operstate && cat \$(dirname {})/address | tr '\n' ','" \;)" >> /tmp/info
 		echo "` + netWorkIps + `=$(ip -o addr show scope global | grep -E ": (wl|en|br)" | awk '{gsub(/\/.*/,"",$4); print $4}' | tr '\n' ',')" >> /tmp/info

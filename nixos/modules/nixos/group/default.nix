@@ -11,4 +11,9 @@ in
     };
     secretFile = lib.mkOption { type = lib.types.path;};
   };
+
+  config = lib.mkIf (cfg.name != "") {
+    system.nixos.tags = ["group-${cfg.name}"];
+  };
+
 }

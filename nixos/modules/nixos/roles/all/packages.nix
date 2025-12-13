@@ -6,7 +6,7 @@
       pciutils usbutils
       cryptsetup
       ethtool socat conntrack-tools iputils iproute2
-      htop iftop lsof dfc psmisc ncdu tree nmon
+      htop btop iftop lsof dfc psmisc ncdu tree nmon
       rsync tmux
       vim
     ];

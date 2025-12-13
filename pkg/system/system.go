@@ -5,5 +5,5 @@ import (
 )
 
 type System struct {
-	SudoRunner *runner.InlineSudoRunner
+	SudoRunner runner.Runner
 }
