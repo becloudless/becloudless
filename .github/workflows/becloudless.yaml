@@ -12,6 +12,9 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest ] #, macos-latest
+    permissions:
+      contents: write
+
 
     steps:
       - uses: actions/checkout@v4
@@ -59,19 +62,6 @@ jobs:
         if: steps.nixos_changes.outputs.changed == 'true'
         run: |
           bash -x ./test.sh
-
-  release:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ ubuntu-latest ]
-    permissions:
-      contents: write
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Release
         if: github.ref == 'refs/heads/main'
