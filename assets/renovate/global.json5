@@ -1,0 +1,60 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    ":automergeBranch",
+    ":disableRateLimiting",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":timezone(Europe/Paris)", // TODO
+    "customManagers:dockerfileVersions"
+  ],
+  suppressNotifications: [
+    "prEditedNotification",
+    "prIgnoreNotification",
+  ],
+
+  branchConcurrentLimit: 0,
+  platformAutomerge: true, // do not wait for next renovate run if the platform support automerge
+  minimumReleaseAge: "3 days",
+
+  flux: {
+    fileMatch: [".+\\.yaml$"]
+  },
+  "helm-values": {
+    fileMatch: [".+\\.yaml$"]
+  },
+  kubernetes: {
+    fileMatch: [".+\\.yaml$"]
+  },
+  nix: {
+    enabled: true
+  },
+
+  regexManagers: [
+    {
+      description: "Docker image and tag classic helm values declaration",
+      fileMatch: [".+\\.yaml$"],
+      matchStrings: [
+        "image:\\s+repository: (?<depName>.+?)\\s+tag: (?<currentValue>.+?)\\s"
+      ],
+      datasourceTemplate: "docker",
+      versioningTemplate: "docker"
+    }
+  ],
+
+  packageRules: [
+    {
+      matchPackagePatterns: ["mailu"],
+      groupName: "mailu"
+    },
+    {
+      matchPackagePatterns: ["intel-gpu"],
+      groupName: "intel-gpu"
+    },
+    {
+      matchUpdateTypes: ["minor", "patch", "pin", "digest"],
+      automerge: true
+    },
+  ],
+
+}
