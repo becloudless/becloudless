@@ -6,3 +6,11 @@ metadata:
 spec:
   interval: 1h
   url: https://coredns.github.io/helm
+
+
+# TODO boostrap cluster
+# hrPath=../../../../bcl/becloudless/kube/groups/global/kube-system/coredns/coredns.hr.yaml
+# helm repo add coredns https://coredns.github.io/helm
+# hrVersion=$(yq -r '.spec.chart.spec.version' $hrPath)
+# hrValues=$(yq '.spec.values' $hrPath)
+# echo $hrValues | helm upgrade --install coredns coredns/coredns --version $hrVersion --namespace kube-system -f -
