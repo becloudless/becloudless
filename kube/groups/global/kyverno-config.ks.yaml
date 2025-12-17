@@ -6,6 +6,7 @@ metadata:
   namespace: bcl
 spec:
   interval: 10m
+  timeout: 1m
   path: ./kube/apps/kyverno-config
   prune: true
   sourceRef:
