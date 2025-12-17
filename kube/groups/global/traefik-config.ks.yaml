@@ -12,3 +12,8 @@ spec:
     kind: GitRepository
     name: bcl
   wait: true
+  # TODO factorize patch?
+  postBuild:
+    substituteFrom:
+      - name: global-env
+        kind: ConfigMap
