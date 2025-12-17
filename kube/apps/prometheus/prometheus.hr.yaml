@@ -6,7 +6,7 @@ metadata:
   name: prometheus
   namespace: prometheus
 spec:
-  interval: 60m
+  interval: 10m
   chart:
     spec:
       chart: kube-prometheus-stack

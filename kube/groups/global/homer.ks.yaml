@@ -5,7 +5,7 @@ metadata:
   name: homer
   namespace: bcl
 spec:
-  interval: 1h
+  interval: 10m
   path: ./kube/apps/homer
   prune: true
   sourceRef:

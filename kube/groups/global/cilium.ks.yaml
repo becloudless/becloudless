@@ -5,7 +5,7 @@ metadata:
   name: cilium
   namespace: bcl
 spec:
-  interval: 1h
+  interval: 10m
   path: ./kube/apps/cilium
   prune: false # too dangerous to prune, would lose the network
   sourceRef:

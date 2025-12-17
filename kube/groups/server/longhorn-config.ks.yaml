@@ -5,7 +5,7 @@ metadata:
   name: longhorn-config
   namespace: bcl
 spec:
-  interval: 1h
+  interval: 10m
   path: ./kube/apps/longhorn-config
   prune: true
   sourceRef:

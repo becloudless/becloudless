@@ -5,7 +5,7 @@ metadata:
   name: bcl
   namespace: bcl
 spec:
-  interval: 1h
+  interval: 10m
   path: ./kube/apps/bcl
   prune: true
   sourceRef:

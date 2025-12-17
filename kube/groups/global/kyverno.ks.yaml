@@ -5,7 +5,7 @@ metadata:
   name: kyverno
   namespace: bcl
 spec:
-  interval: 1h
+  interval: 10m
   path: ./kube/apps/kyverno
   prune: false # too dangerous to prune, would lose admission webhook
   sourceRef:

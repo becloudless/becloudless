@@ -5,7 +5,7 @@ metadata:
   name: traefik-whoami
   namespace: traefik
 spec:
-  interval: 60m
+  interval: 10m
   timeout: 1m
   chart:
     spec:

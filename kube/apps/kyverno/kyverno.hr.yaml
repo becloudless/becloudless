@@ -4,7 +4,7 @@
    name: kyverno
    namespace: kyverno
  spec:
-   interval: 60m
+   interval: 10m
    chart:
      spec:
        chart: kyverno

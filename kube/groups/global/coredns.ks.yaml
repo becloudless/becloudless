@@ -5,7 +5,7 @@ metadata:
   name: coredns
   namespace: bcl
 spec:
-  interval: 1h
+  interval: 10m
   path: ./kube/apps/coredns
   prune: false  # too dangerous to prune, would lose dns
   sourceRef:

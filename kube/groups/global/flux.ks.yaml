@@ -5,7 +5,7 @@ metadata:
   name: flux
   namespace: bcl
 spec:
-  interval: 1h
+  interval: 10m
   path: ./kube/apps/flux
   prune: false # too dangerous to prune flux itself
   sourceRef:

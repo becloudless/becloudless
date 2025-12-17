@@ -12,7 +12,7 @@ spec:
         kind: HelmRepository
         name: metrics-server
   # move that to global
-  interval: 1h
+  interval: 10m
   upgrade:
     remediation:
       retries: 3

@@ -4,7 +4,7 @@ metadata:
   name: infra
   namespace: infra
 spec:
-  interval: 10m0s
+  interval: 10m
   path: ./kube/lar
   prune: false
   sourceRef:
