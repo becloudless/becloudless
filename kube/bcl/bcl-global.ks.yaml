@@ -11,7 +11,3 @@ spec:
   sourceRef:
     kind: GitRepository
     name: bcl
-  postBuild:
-    substituteFrom:
-      - name: global-env
-        kind: ConfigMap
