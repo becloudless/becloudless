@@ -23,7 +23,7 @@ spec:
       value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/run/wrappers/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin # TODO why it's working?
 
 
-    k8sServiceHost: kube.${BCL_GLOBAL_DOMAIN}
+    k8sServiceHost: kube.awired.net
     k8sServicePort: 8443
 
     kubeProxyReplacement: true
