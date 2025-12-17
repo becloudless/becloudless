@@ -1,0 +1,9 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: base
+  namespace: flux-system
+spec:
+  type: oci
+  url: oci://ghcr.io/n0rad
+  interval: 10m

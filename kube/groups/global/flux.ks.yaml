@@ -2,11 +2,11 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: cert-manager
+  name: flux
   namespace: bcl
 spec:
   interval: 1h
-  path: ./kube/apps/cert-manager
+  path: ./kube/apps/flux
   prune: true
   sourceRef:
     kind: GitRepository
