@@ -12,3 +12,4 @@ spec:
     kind: GitRepository
     name: bcl
   wait: true
+

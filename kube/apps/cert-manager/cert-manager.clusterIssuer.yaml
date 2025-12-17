@@ -4,7 +4,7 @@ metadata:
   name: letsencrypt-prod
 spec:
   acme:
-    email: admin@bcl.sh
+    email: ${admin_email}
     server: https://acme-v02.api.letsencrypt.org/directory
     privateKeySecretRef:
       name: letsencrypt-prod
@@ -20,7 +20,7 @@ metadata:
   name: letsencrypt-staging
 spec:
   acme:
-    email: admin@bcl.sh
+    email: ${admin_email}
     server: https://acme-staging-v02.api.letsencrypt.org/directory
     privateKeySecretRef:
       name: letsencrypt-staging
