@@ -1,0 +1,36 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: body-limit-10g
+  namespace: traefik
+spec:
+  buffering:
+    maxRequestBodyBytes: 10000000000 # 10G
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: body-limit-2g
+  namespace: traefik
+spec:
+  buffering:
+    maxRequestBodyBytes: 2000000000 # 2G
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: body-limit-50m
+  namespace: traefik
+spec:
+  buffering:
+    maxRequestBodyBytes: 50000000 # 50M
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: https-redirect
+  namespace: traefik
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
