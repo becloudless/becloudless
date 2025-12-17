@@ -12,7 +12,7 @@ spec:
       version: 1.250501.709-Heffe9b6
       sourceRef:
         kind: HelmRepository
-        name: bcl
+        name: base
         namespace: bcl
   rollback:
     cleanupOnFail: true
