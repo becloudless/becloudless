@@ -12,3 +12,7 @@ spec:
     kind: GitRepository
     name: bcl
   wait: true
+  postBuild:
+    substituteFrom:
+      - name: global-env
+        kind: ConfigMap
