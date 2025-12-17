@@ -1,0 +1,30 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: gitea-ssh
+  namespace: gitea
+spec:
+  entryPoints:
+    - websecure
+  routes:
+  - match: HostSNI(`ssh-gitea.${BCL_GLOBAL_DOMAIN}`)
+    services:
+    - name: gitea-ssh
+      port: 22
+  tls:
+    passthrough: false
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/tls-acme: "true"
+  name: gitea-ssh
+  namespace: gitea
+spec:
+  rules:
+  - host: ssh-gitea.${BCL_GLOBAL_DOMAIN}
+  tls:
+  - hosts:
+    - ssh-gitea.${BCL_GLOBAL_DOMAIN}
+    secretName: ssh-gitea

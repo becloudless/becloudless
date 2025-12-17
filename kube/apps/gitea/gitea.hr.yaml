@@ -1,0 +1,128 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: gitea
+  namespace: gitea
+spec:
+  interval: 60m
+  chart:
+    spec:
+      chart: gitea
+      version: 12.4.0
+      sourceRef:
+        kind: HelmRepository
+        name: gitea
+  upgrade:
+    remediation:
+      retries: 3
+  rollback:
+    cleanupOnFail: true
+  valuesFrom:
+    - kind: Secret
+      name: gitea-skr
+  values:
+    replicaCount: 1
+    gitea:
+      additionalConfigSources:
+        - secret:
+            secretName: gitea-conf
+      config:
+        APP_NAME: "${BCL_GLOBAL_NAME} gitea"
+        server:
+          ROOT_URL: "https://gitea.${BCL_GLOBAL_DOMAIN}"
+        actions:
+          ENABLED: true
+        service:
+          # delegate to OIDC
+          ENABLE_PASSWORD_SIGNIN_FORM: false
+          ENABLE_PASSKEY_AUTHENTICATION: false
+          DISABLE_REGISTRATION: false
+          ALLOW_ONLY_EXTERNAL_REGISTRATION: true
+          SHOW_REGISTRATION_BUTTON: false
+
+          ENABLE_NOTIFY_MAIL: true
+          DEFAULT_KEEP_EMAIL_PRIVATE: true
+          DEFAULT_USER_VISIBILITY: private
+        ui:
+          DEFAULT_THEME: gitea-dark
+          ISSUE_PAGING_NUM: 100
+        openid:
+          ENABLE_OPENID_SIGNIN: false
+          ENABLE_OPENID_SIGNUP: true
+          WHITELISTED_URIS: authelia.${BCL_GLOBAL_DOMAIN}
+        mailer:
+          ENABLED: true
+          FROM: gitea@${BCL_GLOBAL_DOMAIN}
+          PROTOCOL: smtps
+          SMTP_ADDR: mail.${BCL_GLOBAL_DOMAIN}
+          SMTP_PORT: 465
+          USER: gitea@${BCL_GLOBAL_DOMAIN}
+        # repository.upload:
+        #   FILE_MAX_SIZE: 2000
+        attachment:
+          MAX_SIZE: 2000
+        webhook:
+          ALLOWED_HOST_LIST: '*'
+      admin:
+        username: ''
+        password: ''
+        email: ''
+      metrics:
+        enabled: true
+        serviceMonitor:
+          enabled: true
+    memcached:
+      enabled: true
+    persistence:
+      enabled: true
+      create: true
+      accessModes:
+        - ReadWriteMany
+      volumeName: gitea-shared-storage
+    ingress:
+      enabled: true
+      hosts:
+      - host: gitea.${BCL_GLOBAL_DOMAIN}
+        paths:
+        - path: /
+          pathType: Prefix
+      tls:
+      - secretName: tls-gitea
+        hosts:
+        - gitea.${BCL_GLOBAL_DOMAIN}
+      annotations:
+        kubernetes.io/tls-acme: "true"
+        traefik.ingress.kubernetes.io/router.middlewares: traefik-body-limit-2g@kubernetescrd
+
+    redis-cluster:
+      enabled: true
+      cluster:
+        nodes: 1
+        replicas: 0
+
+    postgresql-ha:
+      enabled: false
+    postgresql:
+      enabled: true
+#      diagnosticMode:
+#        enabled: true
+      primary:
+        persistence:
+          volumeName: gitea-postgresql-0
+
+---
+# in cluster ssh access
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitea-in-cluster-ssh
+  namespace: gitea
+spec:
+  ports:
+  - name: ssh
+    port: 22
+    protocol: TCP
+    targetPort: ssh
+  selector:
+    app: gitea
+  type: ClusterIP
