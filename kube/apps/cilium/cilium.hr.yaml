@@ -1,0 +1,47 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cilium
+  namespace: kube-system
+spec:
+  interval: 60m
+  timeout: 2m
+  chart:
+    spec:
+      chart: cilium
+      version: 1.18.4
+      sourceRef:
+        kind: HelmRepository
+        name: cilium
+  install:
+    crds: CreateReplace
+  rollback:
+    cleanupOnFail: true
+  values:
+    extraEnv:
+    - name: PATH
+      value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/run/wrappers/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin # TODO why it's working?
+
+
+    k8sServiceHost: kube.awired.net # TODO receive it from nixos?
+    k8sServicePort: 8443
+
+    kubeProxyReplacement: true
+    extraArgs:
+      - --devices=br0
+      - --direct-routing-device=br0
+
+    operator:
+      replicas: 1
+
+    ipam:
+      mode: kubernetes
+    bgp:
+      enabled: true
+      announce:
+        loadbalancerIP: true
+
+    bgpControlPlane:
+      enabled: true
+    cni:
+      exclusive: false # let multus install
