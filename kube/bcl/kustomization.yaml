@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - bcl.ns.yaml
   - bcl.gitrepo.yaml
+  - bcl-global.ks.yaml
