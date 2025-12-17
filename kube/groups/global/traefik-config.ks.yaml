@@ -6,7 +6,7 @@ metadata:
   namespace: bcl
 spec:
   interval: 1h
-  path: ./kube/apps/traefik-traefik-config
+  path: ./kube/apps/traefik-config
   prune: true
   sourceRef:
     kind: GitRepository
