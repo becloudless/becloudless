@@ -7,7 +7,7 @@ metadata:
 spec:
   interval: 1h
   path: ./kube/apps/coredns
-  prune: true
+  prune: false  # too dangerous to prune, would lose dns
   sourceRef:
     kind: GitRepository
     name: bcl
