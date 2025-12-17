@@ -7,3 +7,11 @@ metadata:
 spec:
   url: https://helm.cilium.io
   interval: 10m
+
+
+# TODO boostrap cluster
+# hrPath=../../../../bcl/becloudless/kube/apps/cilium/cilium.hr.yaml
+# helm repo add cilium https://helm.cilium.io
+# hrVersion=$(yq -r '.spec.chart.spec.version' $hrPath)
+# hrValues=$(yq '.spec.values' $hrPath)
+# echo $hrValues | helm upgrade --install cilium cilium/cilium --version $hrVersion --namespace kube-system -f -
