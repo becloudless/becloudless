@@ -8,5 +8,5 @@ spec:
   interval: 1h
   ref:
     #    tag: v0.251216.1050-H2a464c6
-    branch: n0/kube-parts
+    branch: n0/kube-parts # TODO make it sync with current branch
   url: https://github.com/becloudless/becloudless.git
