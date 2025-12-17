@@ -62,13 +62,13 @@ spec:
         disable_startup_check: false # in case of emergency
         smtp:
           enabled: true
-          address: submissions://mail.awired.net:465
-          sender: 'Awired Authelia <authelia@awired.net>'
-#          identifier: authelia.awired.net
-          username: authelia@awired.net
+          address: submissions://mail.${BCL_GLOBAL_DOMAIN}:465
+          sender: '${BCL_GLOBAL_NAME} Authelia <authelia@${BCL_GLOBAL_DOMAIN}>'
+#          identifier: authelia.${BCL_GLOBAL_DOMAIN}
+          username: authelia@${BCL_GLOBAL_DOMAIN}
           password: {}
 #          tls:
-#            server_name: 'mail.awired.net'
+#            server_name: 'mail.${BCL_GLOBAL_DOMAIN}'
 
           
       authentication_backend:
@@ -76,8 +76,8 @@ spec:
           enabled: true
           implementation: lldap
           address: ldaps://lldap.lldap.svc.cluster.local:6360
-          base_dn: dc=awired,dc=net
-          user: 'UID=authelia,OU=people,DC=awired,DC=net'
+          base_dn: ${BCL_GLOBAL_LDAPDN}
+          user: 'UID=authelia,OU=people,${BCL_GLOBAL_LDAPDN}'
           password: {}
           tls:
             skip_verify: false
@@ -95,7 +95,7 @@ spec:
             value: authelia
             path: authelia
         cookies:
-          - domain: awired.net
+          - domain: ${BCL_GLOBAL_DOMAIN}
             subdomain: authelia
 
       password_policy:
@@ -104,46 +104,45 @@ spec:
           min_score: 4
 
       totp:
-        issuer: Awired Authelia
+        issuer: ${BCL_GLOBAL_NAME} Authelia
       webauthn:
-        display_name: Awired Authelia
+        display_name: ${BCL_GLOBAL_NAME} Authelia
 
       access_control:
         default_policy: deny
         rules:
           - domain:
-#              - authelia.awired.net
-#              - ssh-gitea.awired.net
-              - gitea.awired.net
-              - home.awired.net
-              - lldap.awired.net
-              - longhorn.awired.net
-              - mail.awired.net
-              - grafana.awired.net
-              - alertmanager.awired.net
-              - prometheus.awired.net
-              - fluxwebhook.awired.net
-              - rutorrent.awired.net
+#              - ssh-gitea.${BCL_GLOBAL_DOMAIN}
+              - gitea.${BCL_GLOBAL_DOMAIN}
+              - home.${BCL_GLOBAL_DOMAIN}
+              - lldap.${BCL_GLOBAL_DOMAIN}
+              - longhorn.${BCL_GLOBAL_DOMAIN}
+              - mail.${BCL_GLOBAL_DOMAIN}
+              - grafana.${BCL_GLOBAL_DOMAIN}
+              - alertmanager.${BCL_GLOBAL_DOMAIN}
+              - prometheus.${BCL_GLOBAL_DOMAIN}
+              - fluxwebhook.${BCL_GLOBAL_DOMAIN}
+              - rutorrent.${BCL_GLOBAL_DOMAIN}
             policy: two_factor
             subject:
               - [ 'group:role_admin' ]
           - domain:
-              - jellyfin.awired.net
+              - jellyfin.${BCL_GLOBAL_DOMAIN}
             policy: two_factor
             subject:
               - [ 'group:app_jellyfin' ]
           - domain:
-              - gitea.awired.net
+              - gitea.${BCL_GLOBAL_DOMAIN}
             policy: two_factor
             subject:
               - [ 'group:app_gitea' ]
           - domain:
-              - pushprox.awired.net
+              - pushprox.${BCL_GLOBAL_DOMAIN}
             policy: one_factor
             subject:
               - [ 'group:app_pushprox' ]
           - domain:
-              - whoami.awired.net
+              - whoami.${BCL_GLOBAL_DOMAIN}
             policy: one_factor
 
 
@@ -152,7 +151,7 @@ spec:
 # - Accounts are created on the fly by proxy_auth
 # - submissions are not authenticated against proxy_auth
 #          - domain:
-#              - mail.awired.net
+#              - mail.${BCL_GLOBAL_DOMAIN}
 #            policy: one_factor
 #            subject:
 #              - [ 'group:role_service', 'group:app_mailu' ]
@@ -188,7 +187,7 @@ spec:
               pkce_challenge_method: ''
               pre_configured_consent_duration: 1 year
               redirect_uris:
-                - 'https://gitea.awired.net/user/oauth2/authelia/callback'
+                - 'https://gitea.${BCL_GLOBAL_DOMAIN}/user/oauth2/authelia/callback'
               scopes:
                 - 'openid'
                 - 'email'
@@ -212,7 +211,7 @@ spec:
               pkce_challenge_method: 'S256'
               pre_configured_consent_duration: 1 year
               redirect_uris:
-                - 'https://grafana.awired.net/login/generic_oauth'
+                - 'https://grafana.${BCL_GLOBAL_DOMAIN}/login/generic_oauth'
               scopes:
                 - 'openid'
                 - 'profile'
@@ -236,7 +235,7 @@ spec:
               pkce_challenge_method: 'S256'
               pre_configured_consent_duration: 1 year
               redirect_uris:
-                - 'https://jellyfin.awired.net/sso/OID/redirect/authelia'
+                - 'https://jellyfin.${BCL_GLOBAL_DOMAIN}/sso/OID/redirect/authelia'
               scopes:
                 - 'openid'
                 - 'profile'
