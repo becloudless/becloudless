@@ -6,7 +6,7 @@ metadata:
   namespace: bcl
 spec:
   interval: 1h
-  path: ./kube/apps/longhorn/config
+  path: ./kube/apps/longhorn-config
   prune: true
   sourceRef:
     kind: GitRepository
