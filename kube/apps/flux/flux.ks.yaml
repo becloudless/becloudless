@@ -39,3 +39,12 @@ spec:
       - op: add
         path: /spec/template/spec/containers/0/args/-
         value: --helm-index-max-size=102428800
+
+  - target:
+      kind: Deployment
+      name: kustomize-controller
+      namespace: flux-system
+    patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --concurrent=10
