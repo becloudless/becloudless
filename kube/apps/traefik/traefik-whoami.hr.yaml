@@ -45,7 +45,7 @@ spec:
           traefik.ingress.kubernetes.io/router.middlewares: traefik-authelia@kubernetescrd
           kubernetes.io/tls-acme: "true"
         hosts:
-          - host: whoami.awired.net
+          - host: whoami.${BCL_GLOBAL_DOMAIN}
             paths:
               - path: /
                 service:
@@ -54,4 +54,4 @@ spec:
         tls:
           - secretName: tls-whoami
             hosts:
-              - whoami.awired.net
+              - whoami.${BCL_GLOBAL_DOMAIN}

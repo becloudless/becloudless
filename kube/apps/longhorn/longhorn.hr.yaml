@@ -34,7 +34,7 @@ spec:
 
     ingress:
       enabled: true
-      host: longhorn.awired.net
+      host: longhorn.${BCL_GLOBAL_DOMAIN}
       tls: true
       annotations:
         kubernetes.io/tls-acme: true

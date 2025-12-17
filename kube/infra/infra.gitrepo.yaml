@@ -10,4 +10,4 @@ spec:
     branch: main
   secretRef:
     name: infra
-  url: ssh://git@gitea-in-cluster-ssh.gitea/awired/infra.git
+  url: ssh://git@gitea-in-cluster-ssh.gitea/${BCL_GLOBAL_NAME}/infra.git

@@ -8,7 +8,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-  - match: HostSNI(`kube.awired.net`)
+  - match: HostSNI(`kube.${BCL_GLOBAL_DOMAIN}`)
     services:
     - name: kubernetes
       port: 443
