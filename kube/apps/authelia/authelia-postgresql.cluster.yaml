@@ -18,6 +18,7 @@ spec:
       barmanObjectStore:
         endpointURL: https://authelia-postgresql-backup.authelia.svc.cluster.local
         destinationPath: s3://authelia-postgresql-backup
+        serverName: authelia-postgresql
         endpointCA:
           name: authelia-postgresql-backup
           key: public.crt
