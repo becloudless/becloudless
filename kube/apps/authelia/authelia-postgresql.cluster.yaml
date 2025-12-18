@@ -10,26 +10,47 @@ spec:
     storageClass: longhorn-single-local-replica
     size: 4Gi
 
-  backup:
-    retentionPolicy: "60d"
-    barmanObjectStore:
-      destinationPath: s3://authelia-postgresql-backup
-      endpointURL: https://authelia-postgresql-backup.authelia.svc.cluster.local
-      endpointCA:
-        name: authelia-postgresql-backup
-        key: public.crt
-      s3Credentials:
-        accessKeyId:
+  bootstrap:
+    recovery:
+      source: origin
+  externalClusters:
+    - name: origin
+      barmanObjectStore:
+        endpointURL: https://authelia-postgresql-backup.authelia.svc.cluster.local
+        destinationPath: s3://authelia-postgresql-backup
+        endpointCA:
           name: authelia-postgresql-backup
-          key: MINIO_ROOT_USER
-        secretAccessKey:
-          name: authelia-postgresql-backup
-          key: MINIO_ROOT_PASSWORD
-      wal:
-        compression: gzip
-      data:
-        compression: gzip
-        jobs: 2
+          key: public.crt
+        s3Credentials:
+          accessKeyId:
+            name: authelia-postgresql-backup
+            key: MINIO_ROOT_USER
+          secretAccessKey:
+            name: authelia-postgresql-backup
+            key: MINIO_ROOT_PASSWORD
+        wal:
+          maxParallel: 8
+
+#  backup:
+#    retentionPolicy: "60d"
+#    barmanObjectStore:
+#      destinationPath: s3://authelia-postgresql-backup
+#      endpointURL: https://authelia-postgresql-backup.authelia.svc.cluster.local
+#      endpointCA:
+#        name: authelia-postgresql-backup
+#        key: public.crt
+#      s3Credentials:
+#        accessKeyId:
+#          name: authelia-postgresql-backup
+#          key: MINIO_ROOT_USER
+#        secretAccessKey:
+#          name: authelia-postgresql-backup
+#          key: MINIO_ROOT_PASSWORD
+#      wal:
+#        compression: gzip
+#      data:
+#        compression: gzip
+#        jobs: 2
 
 ---
 apiVersion: postgresql.cnpg.io/v1
