@@ -34,7 +34,7 @@ spec:
           ENABLED: true
         service:
           # delegate to OIDC
-          ENABLE_PASSWORD_SIGNIN_FORM: false
+          #ENABLE_PASSWORD_SIGNIN_FORM: false
           ENABLE_PASSKEY_AUTHENTICATION: false
           DISABLE_REGISTRATION: false
           ALLOW_ONLY_EXTERNAL_REGISTRATION: true
