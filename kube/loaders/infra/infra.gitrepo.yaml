@@ -1,0 +1,13 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: infra
+  namespace: infra
+spec:
+  interval: 10m
+  ref:
+    branch: main
+  secretRef:
+    name: infra
+  url: ssh://git@gitea-in-cluster-ssh.gitea/awired/infra.git

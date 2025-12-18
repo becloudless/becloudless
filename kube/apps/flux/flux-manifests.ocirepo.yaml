@@ -1,0 +1,30 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: flux-manifests
+  namespace: flux-system
+spec:
+  interval: 10m
+  url: oci://ghcr.io/fluxcd/flux-manifests
+  ref:
+    tag: v2.7.5
+
+
+
+#  fluxVersion=$(yq -r '.spec.ref.tag' ./flux-system/flux-manifests.ocirepo.yaml)
+#  tmpFolder=$(mktemp -d)
+#cat << EOF > $tmpFolder/kustomization.yaml
+#apiVersion: kustomize.config.k8s.io/v1beta1
+#kind: Kustomization
+#resources:
+#  - github.com/fluxcd/flux2/manifests/install?ref=$fluxVersion
+#EOF
+#  kubectl apply --server-side -k $tmpFolder
+#}
+
+# TODO boostrap cluster
+# hrPath=../../../../bcl/becloudless/kube/groups/global/kube-system/coredns/coredns.hr.yaml
+# helm repo add coredns https://coredns.github.io/helm
+# hrVersion=$(yq -r '.spec.chart.spec.version' $hrPath)
+# hrValues=$(yq '.spec.values' $hrPath)
+# echo $hrValues | helm upgrade --install coredns coredns/coredns --version $hrVersion --namespace kube-system -f -

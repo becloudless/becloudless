@@ -1,0 +1,365 @@
+
+
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: prometheus
+  namespace: prometheus
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: kube-prometheus-stack
+      version: 66.7.1
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus
+  install:
+    crds: CreateReplace
+  upgrade:
+    remediation:
+      retries: 3
+  rollback:
+    cleanupOnFail: true
+  values:
+    kubeProxy:
+      enabled: false
+    defaultRules:
+      rules:
+        kubeProxy: false
+
+    # additionalPrometheusRulesMap:
+    #   todo:
+    #     groups:
+    #     - name: business_hours.rules
+    #       rules:
+    #       - record: business_hours
+    #         expr: count(hour() < 17 > 7 and day_of_week() < 6 > 0) or vector(0)
+    alertmanager:
+      ingress:
+        enabled: true
+        annotations:
+          traefik.ingress.kubernetes.io/router.middlewares: traefik-authelia@kubernetescrd
+          kubernetes.io/tls-acme: "true"
+        hosts:
+          - alertmanager.${BCL_GLOBAL_DOMAIN}
+        tls:
+          - secretName: tls-alertmanager
+            hosts:
+              - alertmanager.${BCL_GLOBAL_DOMAIN}
+      alertmanagerSpec:
+        podAntiAffinity: hard
+        externalUrl: https://alertmanager.${BCL_GLOBAL_DOMAIN}
+        replicas: 1
+        storage:
+          volumeClaimTemplate:
+            spec:
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: alertmanager
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 1Gi
+      config:
+        global:
+          resolve_timeout: 5m
+        inhibit_rules:
+          # remove warning on critical
+          - equal: ['alertname', 'cluster', 'service']
+            source_match:
+              severity: critical
+            target_match:
+              severity: warning
+        route:
+          group_by:
+            - alertname
+            - severity
+            - job
+            - namespace
+            - kubernetes_cluster
+          group_interval: 1m
+          group_wait: 30s
+          receiver: pagerduty-global-receiver
+          repeat_interval: 4h
+          routes:
+            - match:
+                alertname: Watchdog
+              receiver: healthcheckio-receiver
+              repeat_interval: 1m
+              group_interval: 1m
+            # - match:
+            #     severity: warning
+            #   receiver: pagerduty-global-receiver
+            #   repeat_interval: 1m
+            #   group_interval: 1m
+            #   continue: true
+            # - match:
+            #     severity: critical
+            #   receiver: pagerduty-global-receiver
+            #   repeat_interval: 1m
+            #   group_interval: 1m
+            #   continue: true
+        receivers:
+        - name: healthcheckio-receiver
+          webhook_configs:
+          - send_resolved: false
+            url: https://hc-ping.com/4083db2e-4d1b-4024-944b-3d0c10ffd223
+        - name: pagerduty-global-receiver
+          pagerduty_configs:
+          # https://v2.developer.pagerduty.com/docs/send-an-event-events-api-v2
+          - routing_key: 'R03DITLI3SI4RI4VI5V91KBJ8BBZD3GA' #TODO is this a security hole
+            severity: '{{ or .GroupLabels.severity "warning"}}'
+            details:
+              env: 'lar'
+              severity: '{{ or .GroupLabels.severity "warning"}}'
+              job: '{{ .GroupLabels.job }}'
+              namespace: '{{ .GroupLabels.namespace }}'
+              daemonset: '{{ .GroupLabels.daemonset }}'
+              statefulset: '{{ .GroupLabels.statefulset }}'
+            links:
+            - href: '{{ or .CommonAnnotations.runbook_url "https://todo" }}'
+              text: runbook
+            - href: '{{ or .CommonAnnotations.grafana_url "https://todo" }}'
+              text: dashboard
+            images:
+            - src: '{{ or .CommonAnnotations.image_src "https://prometheus.io/assets/prometheus_logo_grey.svg"}}'
+              href: '{{ or .CommonAnnotations.image_url "https://prometheus.${BCL_GLOBAL_DOMAIN}"}}'
+
+      templateFiles:
+        pagerduty.tmpl: |
+          {{ define "pagerduty.default.description" }}
+              [{{ or .GroupLabels.kubernetes_cluster "Missing kubernetes_cluster label" }}]
+              {{ or .GroupLabels.alertname "Missing alertname label" }}: {{ if gt (len .CommonAnnotations.description ) 0 -}}
+              {{ .CommonAnnotations.description }}
+              {{ else }}
+              {{ range .Alerts }}{{ .Annotations.description }}-{{ end }}
+              {{ end }}
+          {{ end }}
+
+
+    grafana:
+      ingress:
+        enabled: true
+        annotations:
+          kubernetes.io/tls-acme: "true"
+        hosts:
+          - grafana.${BCL_GLOBAL_DOMAIN}
+        tls:
+          - secretName: tls-grafana
+            hosts:
+              - grafana.${BCL_GLOBAL_DOMAIN}
+
+      # persistence:
+      #   enabled: true
+      #   storageClassName: grafana
+
+      envFromSecret: grafana-envs
+      grafana.ini:
+        server:
+          root_url: https://grafana.${BCL_GLOBAL_DOMAIN}
+        auth:
+          disable_login_form: true
+        auth.generic_oauth:
+          enabled: true
+          name: Authelia
+          icon: signin
+          client_id: grafana
+          scopes: openid profile email groups
+          empty_scopes: false
+          auth_url: https://authelia.${BCL_GLOBAL_DOMAIN}/api/oidc/authorization
+          token_url: https://authelia.${BCL_GLOBAL_DOMAIN}/api/oidc/token
+          api_url: https://authelia.${BCL_GLOBAL_DOMAIN}/api/oidc/userinfo
+          login_attribute_path: preferred_username
+          groups_attribute_path: groups
+          name_attribute_path: name
+          use_pkce: true
+          role_attribute_path: contains(groups[*], 'admin') && 'Admin' || contains(groups[*], 'editor') && 'Editor' || 'Viewer'
+      plugins:
+        - grafana-piechart-panel
+        - grafana-clock-panel
+        - jdbranham-diagram-panel
+        - camptocamp-prometheus-alertmanager-datasource
+        - flant-statusmap-panel
+        - grafana-polystat-panel
+      dashboards:
+        hardware:
+          smart:
+            gnetId: 20204
+            datasource: Prometheus
+#          smart3:
+#            gnetId: 3992
+#            datasource: Prometheus
+#          smart2:
+#            gnetId: 10664
+#            datasource: Prometheus
+#          smart:
+#            gnetId: 10530
+#            datasource: Prometheus
+#          smart-error:
+#            gnetId: 10531
+#            datasource: Prometheus
+#          smart-data:
+#            gnetId: 13654
+#            datasource: Prometheus
+        network:
+          uptimerobot:
+            gnetId: 9955
+            datasource: Prometheus
+          speedtest:
+            gnetId: 12004
+            datasource: Prometheus
+          prometheus-blackbox:
+            gnetId: 12275
+            datasource: Prometheus
+          icmp:
+            gnetId: 12412
+            datasource: Prometheus
+          pdu:
+            gnetId: 14309
+            datasource: Prometheus
+          ups:
+            gnetId: 12340
+            datasource: Prometheus
+          mikrotik:
+            gnetId: 13679
+            datasource: Prometheus
+          unbound:
+            gnetId: 18077
+            datasource: Prometheus
+
+        default:
+          kubernetes:
+            gnetId: 6417
+            datasource: Prometheus
+          longhorn:
+            gnetId: 17626
+            datasource: Prometheus
+          prometheus-stats:
+            gnetId: 2
+            datasource: Prometheus
+      dashboardProviders:
+        dashboardproviders.yaml:
+          apiVersion: 1
+          providers:
+            - name: 'default'
+              orgId: 1
+              folder: 'default'
+              type: file
+              disableDeletion: false
+              editable: true
+              options:
+                path: /var/lib/grafana/dashboards/default
+            - name: 'network'
+              orgId: 1
+              folder: 'network'
+              type: file
+              disableDeletion: false
+              editable: true
+              options:
+                path: /var/lib/grafana/dashboards/network
+            - name: 'hardware'
+              orgId: 1
+              folder: 'hardware'
+              type: file
+              disableDeletion: false
+              editable: true
+              options:
+                path: /var/lib/grafana/dashboards/hardware
+      sidecar:
+        dashboards:
+          enabled: true
+          searchNamespace: ALL
+          provider:
+            allowUiUpdates: true
+            disableDelete: true
+            folder: dashboards
+            foldersFromFilesStructure: true
+    kubeEtcd:
+      service:
+        port: 2379
+        targetPort: 2379
+        selector:
+          component: etcd
+      serviceMonitor:
+        scheme: https
+        insecureSkipVerify: true
+        caFile: /etc/prometheus/secrets/etcd-certs/ca.crt
+        certFile: /etc/prometheus/secrets/etcd-certs/client.crt
+        keyFile: /etc/prometheus/secrets/etcd-certs/client.key
+    kubeControllerManager:
+      service:
+        port: 10257
+        targetPort: 10257
+        selector:
+          component: kube-controller-manager
+      serviceMonitor:
+        https: true
+        insecureSkipVerify: true
+    kubeScheduler:
+      service:
+        port: 10259
+        targetPort: 10259
+        selector:
+          component: kube-scheduler
+      serviceMonitor:
+        https: true
+        insecureSkipVerify: true
+    prometheus:
+      ingress:
+        enabled: true
+        annotations:
+          traefik.ingress.kubernetes.io/router.middlewares: traefik-authelia@kubernetescrd
+          kubernetes.io/tls-acme: "true"
+        hosts:
+          - prometheus.${BCL_GLOBAL_DOMAIN}
+        tls:
+          - secretName: tls-prometheus
+            hosts:
+              - prometheus.${BCL_GLOBAL_DOMAIN}
+      prometheusSpec:
+        podAntiAffinity: hard
+        replicas: 1
+        externalUrl: https://prometheus.${BCL_GLOBAL_DOMAIN}/
+        scrapeInterval: 30s
+        evaluationInterval: 30s
+        retentionSize: "20GB"
+        ruleSelectorNilUsesHelmValues: false
+        serviceMonitorSelectorNilUsesHelmValues: false #scrape all namespaces. Single prom install
+        podMonitorSelectorNilUsesHelmValues: false
+        # etcd certs
+#        secrets:
+#          - etcd-certs
+        replicaExternalLabelName: replica
+        # Remove replica label from alert
+        additionalAlertRelabelConfigs:
+          - action: labeldrop
+            regex: replica
+        additionalScrapeConfigs:
+          - job_name: 'node-exporter'
+            proxy_url: http://pushprox:8080/
+            static_configs:
+              - targets: ['awd-ovh-pop2:9100']
+#            dns_sd_configs:
+#              - names:
+#                  - '_obs._tcp.h.${BCL_GLOBAL_DOMAIN}.'
+
+        externalLabels:
+          kubernetes_cluster: lar
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: prometheus
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 50Gi
+    nodeExporter:
+      enabled: false
+    prometheusOperator:
+      kubeletService:
+        enabled: false

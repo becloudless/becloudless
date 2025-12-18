@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=https://github.com/n0rad/base-helm-chart/releases/download/base-1.250501.709-Heffe9b6/values-helmRelease.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: traefik-whoami
+  namespace: traefik
+spec:
+  interval: 10m
+  timeout: 1m
+  chart:
+    spec:
+      chart: base-template
+      version: 1.250501.709-Heffe9b6
+      sourceRef:
+        kind: HelmRepository
+        name: base
+        namespace: bcl
+  rollback:
+    cleanupOnFail: true
+  values:
+    mainWorkload:
+      container:
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+        image:
+          repository: traefik/whoami
+          tag: v1.11.0
+        args: ["--port=8080", "--verbose"]
+        probes:
+          liveness:
+            enabled: false
+          readiness:
+            enabled: false
+          startup:
+            enabled: false
+
+      service:
+        ports:
+          http:
+            port: 8080
+
+      ingress:
+        annotations:
+          traefik.ingress.kubernetes.io/router.middlewares: traefik-authelia@kubernetescrd
+          kubernetes.io/tls-acme: "true"
+        hosts:
+          - host: whoami.${BCL_GLOBAL_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  name: traefik-whoami
+                  port: 8080
+        tls:
+          - secretName: tls-whoami
+            hosts:
+              - whoami.${BCL_GLOBAL_DOMAIN}

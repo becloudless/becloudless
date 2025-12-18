@@ -1,0 +1,8 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: authelia-valkey
+  namespace: authelia
+spec:
+  url: https://valkey.io/valkey-helm/
+  interval: 10m

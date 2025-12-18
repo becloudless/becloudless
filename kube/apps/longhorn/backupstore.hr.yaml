@@ -1,0 +1,78 @@
+# yaml-language-server: $schema=https://github.com/n0rad/base-helm-chart/releases/download/base-1.250501.709-Heffe9b6/values-helmRelease.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: backupstore
+  namespace: longhorn-system
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: base-template
+      version: 1.250501.709-Heffe9b6
+      sourceRef:
+        kind: HelmRepository
+        name: base
+        namespace: bcl
+  rollback:
+    cleanupOnFail: true
+  values:
+    mainWorkload:
+      type: singleton
+      pod:
+        securityContext:
+          runAsNonRoot: false
+      container:
+        image:
+          repository: alpine
+          tag: 3.22.2
+        env:
+          CIFS_PASSWORD:
+            valueFrom:
+              secretKeyRef:
+                name: backupstore
+                key: CIFS_PASSWORD
+        command: [ sh ]
+        args:
+          - -e
+          - -c
+          - |
+            apk add samba
+            echo -e "$CIFS_PASSWORD\n$CIFS_PASSWORD\n" | passwd
+            echo -e "$CIFS_PASSWORD\n$CIFS_PASSWORD\n" | smbpasswd -a
+            CIFS_PASSWORD=""
+
+            cat <<EOT > /etc/samba/smb.conf
+            [global]
+            log file = /dev/stdout
+            log level = 1
+            server role = standalone server
+
+            [backupstore]
+            # This share requires authentication to access
+            path = /data
+            read only = no
+            inherit permissions = yes
+            EOT
+
+            /usr/sbin/smbd --no-process-group
+
+            sleep infinity
+            # smbclient -U longhorn //127.0.0.1/longhorn
+
+        securityContext:
+          privileged: true
+          allowPrivilegeEscalation: true
+          readOnlyRootFilesystem: false
+
+      service:
+        ports:
+          smb:
+            port: 445
+
+      volumes:
+        data:
+          type: hostPath
+          hostPath: /data/Backups
+          path: /data
+# TODO          hostPathType: DirectoryOrCreate

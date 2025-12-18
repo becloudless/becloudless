@@ -1,0 +1,70 @@
+# yaml-language-server: $schema=https://github.com/n0rad/base-helm-chart/releases/download/base-1.250501.709-Heffe9b6/values-helmRelease.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: authelia-postgresql-backup
+  namespace: authelia
+spec:
+  interval: 10m
+  timeout: 1m
+  chart:
+    spec:
+      chart: base-template
+      version: 1.250501.709-Heffe9b6
+      sourceRef:
+        kind: HelmRepository
+        name: base
+        namespace: bcl
+  rollback:
+    cleanupOnFail: true
+  values:
+    mainWorkload:
+      type: singleton
+      pod:
+        securityContext:
+          fsGroup: 1000
+      # TODO it look like static PVC provisioning makes longhorn not respect securityContext's fsgroup
+      initContainer:
+        securityContext:
+          runAsNonRoot: false
+        image:
+          repository: busybox
+          tag: latest
+        command: [ "sh", "-c", "chown 1000:1000 /storage" ]
+      container:
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+        image:
+          repository: minio/minio
+          tag: RELEASE.2025-09-07T16-13-09Z
+        command: ["minio", "server", "--certs-dir", /certs,  "/storage"]
+        envFrom:
+          - secretRef:
+              name: authelia-postgresql-backup
+
+      volumes:
+        storage:
+          type: persistentVolumeClaim
+        certs:
+          type: secret
+          name: authelia-postgresql-backup
+          readOnly: true
+
+      service:
+        ports:
+          http:
+            port: 443
+            targetPort: 9000
+
+
+    resources:
+      persistentVolumeClaims:
+        storage:
+          storageClass: authelia-postgresql-backup
+      persistentVolumes:
+        storage:
+          storageClassName: authelia-postgresql-backup
+          csi:
+            driver: driver.longhorn.io
+            volumeHandle: authelia-postgresql-backup

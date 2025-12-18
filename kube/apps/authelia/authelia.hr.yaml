@@ -1,0 +1,249 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: authelia
+  namespace: authelia
+spec:
+  interval: 10m
+  timeout: 1m
+  chart:
+    spec:
+      chart: authelia
+      version: 0.10.49
+      sourceRef:
+        kind: HelmRepository
+        name: authelia
+  rollback:
+    cleanupOnFail: true
+  values:
+    # https://github.com/authelia/chartrepo/blob/master/charts/authelia/values.yaml
+    ingress:
+      enabled: true
+      certManager: true
+      tls:
+        enabled: true
+
+    #################
+    pod:
+      kind: Deployment
+      env:
+        - name: TZ
+          value: Europe/Paris
+
+    secret:
+      existingSecret: authelia
+      additionalSecrets:
+        authelia-postgresql-app: {}
+        authelia-valkey: {}
+        authelia-oidc: {}
+
+    certificates:
+      existingSecret: authelia-certificates
+
+    configMap:
+      theme: dark
+
+      telemetry:
+        metrics:
+          enabled: true
+      storage:
+        postgres:
+          enabled: true
+          address: tcp://authelia-postgresql-rw
+          database: app
+          username: app
+          password:
+            secret_name: authelia-postgresql-app
+            value: password
+            path: password
+      notifier:
+        # filesystem:
+        #   enabled: true
+        disable_startup_check: false # in case of emergency
+        smtp:
+          enabled: true
+          address: submissions://mail.${BCL_GLOBAL_DOMAIN}:465
+          sender: '${BCL_GLOBAL_NAME} Authelia <authelia@${BCL_GLOBAL_DOMAIN}>'
+#          identifier: authelia.${BCL_GLOBAL_DOMAIN}
+          username: authelia@${BCL_GLOBAL_DOMAIN}
+          password: {}
+#          tls:
+#            server_name: 'mail.${BCL_GLOBAL_DOMAIN}'
+
+          
+      authentication_backend:
+        ldap:
+          enabled: true
+          implementation: lldap
+          address: ldaps://lldap.lldap.svc.cluster.local:6360
+          base_dn: ${BCL_GLOBAL_LDAPDN}
+          user: 'UID=authelia,OU=people,${BCL_GLOBAL_LDAPDN}'
+          password: {}
+          tls:
+            skip_verify: false
+            minimum_version: TLS1.2
+
+      session:
+        expiration: 16 hours # sessions expires every day
+        inactivity: 8 hours # destroy sessions if nothing is done
+        remember_me: -1      # always apply the same behavior
+        redis:
+          enabled: true
+          host: authelia-valkey
+          password:
+            secret_name: authelia-valkey
+            value: authelia
+            path: authelia
+        cookies:
+          - domain: ${BCL_GLOBAL_DOMAIN}
+            subdomain: authelia
+
+      password_policy:
+        zxcvbn:
+          enabled: true
+          min_score: 4
+
+      totp:
+        issuer: ${BCL_GLOBAL_NAME} Authelia
+      webauthn:
+        display_name: ${BCL_GLOBAL_NAME} Authelia
+
+      access_control:
+        default_policy: deny
+        rules:
+          - domain:
+#              - ssh-gitea.${BCL_GLOBAL_DOMAIN}
+              - gitea.${BCL_GLOBAL_DOMAIN}
+              - home.${BCL_GLOBAL_DOMAIN}
+              - lldap.${BCL_GLOBAL_DOMAIN}
+              - longhorn.${BCL_GLOBAL_DOMAIN}
+              - mail.${BCL_GLOBAL_DOMAIN}
+              - grafana.${BCL_GLOBAL_DOMAIN}
+              - alertmanager.${BCL_GLOBAL_DOMAIN}
+              - prometheus.${BCL_GLOBAL_DOMAIN}
+              - fluxwebhook.${BCL_GLOBAL_DOMAIN}
+              - rutorrent.${BCL_GLOBAL_DOMAIN}
+            policy: two_factor
+            subject:
+              - [ 'group:role_admin' ]
+          - domain:
+              - jellyfin.${BCL_GLOBAL_DOMAIN}
+            policy: two_factor
+            subject:
+              - [ 'group:app_jellyfin' ]
+          - domain:
+              - gitea.${BCL_GLOBAL_DOMAIN}
+            policy: two_factor
+            subject:
+              - [ 'group:app_gitea' ]
+          - domain:
+              - pushprox.${BCL_GLOBAL_DOMAIN}
+            policy: one_factor
+            subject:
+              - [ 'group:app_pushprox' ]
+          - domain:
+              - whoami.${BCL_GLOBAL_DOMAIN}
+            policy: one_factor
+
+
+# Allow service accounts to log to mailu with single factor. But useless because:
+# - SA do not log in to UI
+# - Accounts are created on the fly by proxy_auth
+# - submissions are not authenticated against proxy_auth
+#          - domain:
+#              - mail.${BCL_GLOBAL_DOMAIN}
+#            policy: one_factor
+#            subject:
+#              - [ 'group:role_service', 'group:app_mailu' ]
+
+      identity_providers:
+        oidc:
+          enabled: true
+          jwks:
+            - key_id: ''
+              algorithm: 'RS256'
+              use: 'sig'
+              key:
+                path: '/certificates/identity_providers.oidc.jwks_rsa.key'
+              certificate_chain:
+                path: '/certificates/identity_providers.oidc.jwks_rsa.crt'
+          claims_policies:
+            grafana:
+              id_token: [ 'email', 'name', 'groups', 'preferred_username' ]
+          ## See: https://www.authelia.com/c/oidc
+          # generate a client_id
+          # docker run --rm authelia/authelia:latest authelia crypto rand --length 72 --charset rfc3986
+          # generate a client_secret
+          # docker run --rm authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
+          clients:
+              # gitea admin auth add-oauth --provider=openidConnect --name=authelia --key=gitea --secret=insecure_secret --auto-discover-url=https://authelia.${BCL_GLOBAL_DOMAIN}/.well-known/openid-configuration --scopes='openid email profile'
+            - client_id: 'gitea'
+              client_name: 'Gitea'
+              client_secret:
+                path: '/secrets/authelia-oidc/oidc.client.gitea.value'
+              public: false
+              authorization_policy: 'two_factor'
+              require_pkce: false
+              pkce_challenge_method: ''
+              pre_configured_consent_duration: 1 year
+              redirect_uris:
+                - 'https://gitea.${BCL_GLOBAL_DOMAIN}/user/oauth2/authelia/callback'
+              scopes:
+                - 'openid'
+                - 'email'
+                - 'profile'
+              response_types:
+                - 'code'
+              grant_types:
+                - 'authorization_code'
+              access_token_signed_response_alg: 'none'
+              userinfo_signed_response_alg: 'none'
+              token_endpoint_auth_method: 'client_secret_basic'
+
+            - client_id: 'grafana'
+              client_name: 'Grafana'
+              client_secret:
+                path: '/secrets/authelia-oidc/oidc.client.grafana.value'
+              claims_policy: 'grafana'
+              public: false
+              authorization_policy: 'two_factor'
+              require_pkce: true
+              pkce_challenge_method: 'S256'
+              pre_configured_consent_duration: 1 year
+              redirect_uris:
+                - 'https://grafana.${BCL_GLOBAL_DOMAIN}/login/generic_oauth'
+              scopes:
+                - 'openid'
+                - 'profile'
+                - 'groups'
+                - 'email'
+              response_types:
+                - 'code'
+              grant_types:
+                - 'authorization_code'
+              access_token_signed_response_alg: 'none'
+              userinfo_signed_response_alg: 'none'
+              token_endpoint_auth_method: 'client_secret_basic'
+
+            - client_id: 'jellyfin'
+              client_name: 'Jellyfin'
+              client_secret:
+                path: '/secrets/authelia-oidc/oidc.client.jellyfin.value'
+              public: false
+              authorization_policy: 'two_factor'
+              require_pkce: true
+              pkce_challenge_method: 'S256'
+              pre_configured_consent_duration: 1 year
+              redirect_uris:
+                - 'https://jellyfin.${BCL_GLOBAL_DOMAIN}/sso/OID/redirect/authelia'
+              scopes:
+                - 'openid'
+                - 'profile'
+                - 'groups'
+              response_types:
+                - 'code'
+              grant_types:
+                - 'authorization_code'
+              access_token_signed_response_alg: 'none'
+              userinfo_signed_response_alg: 'none'
+              token_endpoint_auth_method: 'client_secret_post'

@@ -1,0 +1,41 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: longhorn
+  namespace: longhorn-system
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: longhorn
+      version: 1.10.1
+      sourceRef:
+        kind: HelmRepository
+        name: longhorn
+  install:
+    crds: CreateReplace
+  upgrade:
+    remediation:
+      retries: 3
+  rollback:
+    cleanupOnFail: true
+  values:
+    enablePSP: false
+
+    defaultSettings:
+      autoDeletePodWhenVolumeDetachedUnexpectedly: true
+      nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
+      nodeDrainPolicy: always-allow
+
+    defaultBackupStore:
+      backupTarget: cifs://backupstore/backupstore
+      backupTargetCredentialSecret: backupstore
+      pollInterval: 180
+
+    ingress:
+      enabled: true
+      host: longhorn.${BCL_GLOBAL_DOMAIN}
+      tls: true
+      annotations:
+        kubernetes.io/tls-acme: true
+        traefik.ingress.kubernetes.io/router.middlewares: traefik-authelia@kubernetescrd

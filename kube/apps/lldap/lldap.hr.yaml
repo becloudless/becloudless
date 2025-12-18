@@ -1,0 +1,152 @@
+# yaml-language-server: $schema=https://github.com/n0rad/base-helm-chart/releases/download/base-1.250501.709-Heffe9b6/values-helmRelease.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: lldap
+  namespace: lldap
+spec:
+  interval: 60m
+  timeout: 1m
+  chart:
+    spec:
+      chart: base-template
+      version: 1.250501.709-Heffe9b6
+      sourceRef:
+        kind: HelmRepository
+        name: base
+        namespace: bcl
+  rollback:
+    cleanupOnFail: true
+  values:
+    workloads:
+      cron:
+        type: CronJob
+        container:
+          env:
+            LLDAP_URL: http://lldap:17170
+            LLDAP_ADMIN_USERNAME:
+              secretKeyRef:
+                name: lldap
+                key: LLDAP_LDAP_USER_DN
+            LLDAP_ADMIN_PASSWORD:
+              secretKeyRef:
+                name: lldap
+                key: LLDAP_LDAP_USER_PASS
+            DO_CLEANUP: "true"
+          command: [ /usr/bin/env, bash ]
+          args: 
+            - -c
+            - |
+              mkdir /tmp/{groups,users,users-schema,groups-schema}
+              cp /data/users.json /tmp/users
+              cp /data/users-schema.json /tmp/users-schema
+              cp /data/groups.json /tmp/groups
+              cp /data/groups-schema.json /tmp/groups-schema
+              export USER_CONFIGS_DIR=/tmp/users
+              export USER_SCHEMAS_DIR=/tmp/users-schema
+              export GROUP_CONFIGS_DIR=/tmp/groups
+              export GROUP_SCHEMAS_DIR=/tmp/groups-schema
+              /app/bootstrap.sh
+        cronJob:
+          schedule: "*/5 * * * *"
+          concurrencyPolicy: Forbid
+          backoffLimit: 0
+        
+        volumes:
+          data:
+            type: secret
+            name: lldap-data
+
+    ##
+    mainWorkload:
+      container:
+        image:
+          repository: lldap/lldap
+          tag: "2025-11-20" # TODO renovate
+        envFrom:
+          - secretRef:
+              name: lldap
+        env:
+          TZ: europe/paris
+          PGUSER: app
+          PGDATABASE: app
+          PGHOST: lldap-postgresql-rw
+          PGSSLKEY: /dbcert/tls.key
+          PGSSLCERT: /dbcert/tls.crt
+          PGSSLROOTCERT: /dbca/ca.crt
+          PGSSLMODE: verify-full
+
+        # TODO this should be automatic, but there is a race condition in selecting the port
+        probes:
+          readiness:
+            type: HTTP
+            port: 17170
+          liveness:
+            type: HTTP
+            port: 17170
+          startup:
+            type: HTTP
+            port: 17170
+          
+      volumes:
+        dbcert:
+          type: secret
+          name: lldap-postgresql-app-cert
+        dbca:
+          type: secret
+          name: lldap-postgresql-ca
+        cert:
+          type: secret
+          name: lldap-cert
+        data:
+          type: configMap
+
+      service:
+        ports:
+          http:
+            port: 17170
+          ldaps:
+            port: 6360
+
+      ingress:
+        annotations:
+          traefik.ingress.kubernetes.io/router.middlewares: traefik-authelia@kubernetescrd
+          kubernetes.io/tls-acme: "true"
+        hosts:
+          - host: lldap.${BCL_GLOBAL_DOMAIN}
+            paths:
+              - path: /
+                service:
+                  name: lldap
+                  port: 17170
+        tls:
+          - secretName: tls-homer
+            hosts:
+              - lldap.${BCL_GLOBAL_DOMAIN}
+    resources:
+      configMaps:
+        data:
+          data:
+            # https://github.com/lldap/lldap/blob/main/lldap_config.docker_template.toml
+            lldap_config.toml: |
+              # verbose = false
+              http_url = "https://lldap.${BCL_GLOBAL_DOMAIN}"
+              database_url = "postgres://"
+              ldap_base_dn = "${BCL_GLOBAL_LDAPDN}"
+
+              [ldaps_options]
+              enabled=true
+              key_file="/cert/private.key"
+              cert_file="/cert/public.crt"
+
+    chartDefaults:
+      workload:
+        pod:
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+
+        container:
+          image:
+            repository: lldap/lldap
+            tag: "2025-11-20" # TODO renovate

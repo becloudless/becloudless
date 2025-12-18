@@ -1,0 +1,302 @@
+# yaml-language-server: $schema=https://github.com/n0rad/base-helm-chart/releases/download/base-1.250501.709-Heffe9b6/values-helmRelease.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: homer
+  namespace: homer
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: base-template
+      version: 1.250501.709-Heffe9b6
+      sourceRef:
+        kind: HelmRepository
+        name: base
+        namespace: bcl
+  rollback:
+    cleanupOnFail: true
+  values:
+    mainWorkload:
+      container:
+        image:
+          repository: b4bz/homer
+          tag: v25.10.1
+
+      service:
+        ports:
+          http:
+            port: 8080
+
+      ingress:
+          annotations:
+            traefik.ingress.kubernetes.io/router.middlewares: traefik-authelia@kubernetescrd
+            kubernetes.io/tls-acme: "true"
+          hosts:
+            - host: home.${BCL_GLOBAL_DOMAIN}
+              paths:
+                - path: /
+                  service:
+                    name: homer
+                    port: 8080
+          tls:
+            - secretName: tls-homer
+              hosts:
+                - home.${BCL_GLOBAL_DOMAIN}
+
+      volumes:
+        config:
+          type: configMap
+          path: /www/assets/config.yml
+          subPath: config.yml
+        css:
+          type: configMap
+          name_resource: config
+          path: /www/assets/custom.css
+          subPath: custom.css
+
+    resources:
+      configMaps:
+        config:
+          data:
+            custom.css: |
+              @charset "UTF-8";
+              /* raleway-regular - latin */
+              @font-face {
+                font-family: 'Raleway';
+                font-style: normal;
+                font-weight: 400;
+                src: url('./fonts/raleway-v22-latin-regular.eot'); /* IE9 Compat Modes */
+                src: local(''),
+                    url('./fonts/raleway-v22-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+                    url('./fonts/raleway-v22-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+                    url('./fonts/raleway-v22-latin-regular.woff') format('woff'), /* Modern Browsers */
+                    url('./fonts/raleway-v22-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+                    url('./fonts/raleway-v22-latin-regular.svg#Raleway') format('svg'); /* Legacy iOS */
+              }
+              
+              /* lato-regular - latin */
+              @font-face {
+                font-family: 'Lato';
+                font-style: normal;
+                font-weight: 400;
+                src: url('./fonts/lato-v20-latin-regular.eot'); /* IE9 Compat Modes */
+                src: local(''),
+                    url('./fonts/lato-v20-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+                    url('./fonts/lato-v20-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+                    url('./fonts/lato-v20-latin-regular.woff') format('woff'), /* Modern Browsers */
+                    url('./fonts/lato-v20-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+                    url('./fonts/lato-v20-latin-regular.svg#Lato') format('svg'); /* Legacy iOS */
+              }
+              
+              /* lato-700 - latin */
+              @font-face {
+                font-family: 'Lato';
+                font-style: normal;
+                font-weight: 700;
+                src: url('./fonts/lato-v20-latin-700.eot'); /* IE9 Compat Modes */
+                src: local(''),
+                    url('./fonts/lato-v20-latin-700.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+                    url('./fonts/lato-v20-latin-700.woff2') format('woff2'), /* Super Modern Browsers */
+                    url('./fonts/lato-v20-latin-700.woff') format('woff'), /* Modern Browsers */
+                    url('./fonts/lato-v20-latin-700.ttf') format('truetype'), /* Safari, Android, iOS */
+                    url('./fonts/lato-v20-latin-700.svg#Lato') format('svg'); /* Legacy iOS */
+              }
+              
+              /* lato-900 - latin */
+              @font-face {
+                font-family: 'Lato';
+                font-style: normal;
+                font-weight: 900;
+                src: url('./fonts/lato-v20-latin-900.eot'); /* IE9 Compat Modes */
+                src: local(''),
+                    url('./fonts/lato-v20-latin-900.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+                    url('./fonts/lato-v20-latin-900.woff2') format('woff2'), /* Super Modern Browsers */
+                    url('./fonts/lato-v20-latin-900.woff') format('woff'), /* Modern Browsers */
+                    url('./fonts/lato-v20-latin-900.ttf') format('truetype'), /* Safari, Android, iOS */
+                    url('./fonts/lato-v20-latin-900.svg#Lato') format('svg'); /* Legacy iOS */
+              }
+              
+              /* Sets the group title to be a bolder font */
+              .group-title {
+                font-family: Lato;
+                font-weight: 800;
+                text-shadow: 1px 1px 2px black;
+              }
+              
+              /* Changes the card title to be a bolder font */
+              .title {
+                font-weight: 700;
+              }
+              
+              /* Changes the subtitle to be a bolder font */
+              .subtitle {
+                font-weight: 500;
+              }
+              
+              /* Adds spacing to the bottom of cards */
+              body #app .card-content {
+                margin-bottom: 0.75rem;
+              }
+              
+              /*Adds more border radius to the cards */
+              body .layout-vertical .column div:first-of-type .card {
+                border-radius: 1rem;
+              }
+              body .layout-vertical .card {
+                border-radius: 1rem;
+              }
+              .card {
+                  border-radius: 1rem;
+              }
+              body .layout-vertical .column div:last-of-type .card { 
+                  border-radius: 1rem; 
+              }
+              
+              /* Changes Header Opacity */
+              body #bighead .first-line {
+                background-color: rgba(0, 0, 0, 0);
+              }
+              body #bighead .navbar {
+                background-color: rgba(0, 0, 0, 0);
+              }
+              
+              body .search-bar input {
+                  opacity: 80%;
+              }
+              
+              body #bighead .navbar a:focus, body #bighead .navbar a:hover {
+                background-color: rgba(0, 0, 0, 0);
+                color: var(--link-hover);
+              }
+
+            # https://github.com/bastienwirtz/homer/blob/main/docs/configuration.md
+            config.yml:
+              documentTitle: "${BCL_GLOBAL_DOMAIN} - Home"
+              logo: "assets/logo.png"
+              # Alternatively a fa icon can be provided:
+              icon: https://gitea.${BCL_GLOBAL_DOMAIN}/${BCL_GLOBAL_NAME}/${BCL_GLOBAL_DOMAIN}/src/branch/master/docs/logo/v2/favicon.ico
+              
+              header: false 
+              footer: false
+              
+              columns: "4" # "auto" or number (must be a factor of 12: 1, 2, 3, 4, 6, 12)
+              connectivityCheck: false # whether you want to display a message when the apps are not accessible anymore (VPN disconnected for example).
+              
+              # Optional: Proxy / hosting option
+              proxy:
+                useCredentials: false # send cookies & authorization headers when fetching service specific data. Set to `true` if you use an authentication proxy. Can be overrided on service level. 
+              
+              defaults:
+                layout: columns
+                colorTheme: dark
+              
+              # Optional theming
+              theme: default # 'default' or one of the themes available in 'src/assets/themes'.
+              
+              stylesheet:
+                - "assets/custom.css"
+              
+              # Here is the exhaustive list of customization parameters
+              # However all value are optional and will fallback to default if not set.
+              # if you want to change only some of the colors, feel free to remove all unused key.
+              colors:
+                light:
+                  highlight-primary: "#3367d6"
+                  highlight-secondary: "#4285f4"
+                  highlight-hover: "#5a95f5"
+                  background: "#f5f5f5"
+                  card-background: "#ffffff"
+                  text: "#363636"
+                  text-header: "#424242"
+                  text-title: "#303030"
+                  text-subtitle: "#424242"
+                  card-shadow: rgba(0, 0, 0, 0.1)
+                  link: "#3273dc"
+                  link-hover: "#363636"
+                  background-image: "assets/your/light/bg.png"
+
+                dark:
+                  highlight-primary: "#666"
+                  highlight-secondary: "#666"
+                  highlight-hover: "#666"
+                  background: "#12152B"
+                  card-background: "rgba(0, 0, 0, 0.7)"
+                  text: "#eaeaea"
+                  text-header: "#FFFFFF"
+                  text-title: "#fafafa"
+                  text-subtitle: "#8B8D9C"
+                  card-shadow: rgba(0, 0, 0, 0.5)
+                  link: "#c1c1c1"
+                  link-hover: "#fafafa"
+
+                  #                highlight-primary: "#3367d6"
+                  #                highlight-secondary: "#4285f4"
+                  #                highlight-hover: "#5a95f5"
+                  #                background: "#131313"
+                  #                card-background: "#2b2b2b"
+                  #                text: "#eaeaea"
+                  #                text-header: "#ffffff"
+                  #                text-title: "#fafafa"
+                  #                text-subtitle: "#f5f5f5"
+                  #                card-shadow: rgba(0, 0, 0, 0.4)
+                  #                link: "#3273dc"
+                  #                link-hover: "#ffdd57"
+                  background-image: "https://unsplash.com/photos/ESkw2ayO2As/download?ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzQ2MjE4MDQyfA&force=true"
+
+
+              # Services
+              # First level array represents a group.
+              # Leave only a "items" key if not using group (group name, icon & tagstyle are optional, section separation will not be displayed).
+              services:
+                - name: "Media"
+                  icon: "fas fa-heartbeat"
+                  items:
+                    - name: Jellyfin
+                      subtitle: Media player
+                      logo: https://static-00.iconduck.com/assets.00/jellyfin-icon-2048x2048-4rlr467k.png
+                      url: https://jellyfin.${BCL_GLOBAL_DOMAIN}
+
+                - name: "Applications"
+                  icon: "fas fa-heartbeat"
+                  items:
+                    - name: Gitea
+                      subtitle: Source code management
+                      logo: https://cdn.icon-icons.com/icons2/2407/PNG/512/gitea_icon_146173.png
+                      url: https://gitea.${BCL_GLOBAL_DOMAIN}/${BCL_GLOBAL_NAME}/infra
+                    - name: RuTorrent
+                      url: https://rutorrent.${BCL_GLOBAL_DOMAIN}
+
+                - name: "System"
+                  icon: "fas fa-code-branch"
+                  items:
+                    - name: Longhorm 
+                      logo: data:image/png;base64,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
+                      url: https://longhorn.${BCL_GLOBAL_DOMAIN}
+                    - name: Authelia
+                      url: https://authelia.${BCL_GLOBAL_DOMAIN}
+                    - name: Lldap
+                      url: https://lldap.${BCL_GLOBAL_DOMAIN}
+                    - name: WhoAmI
+                      url: https://whoami.${BCL_GLOBAL_DOMAIN}
+
+                - name: "Observability"
+                  icon: "fas fa-network-wired"
+                  items:
+                    - name: Grafana
+                      url: https://grafana.${BCL_GLOBAL_DOMAIN}
+                      logo: https://grafana.${BCL_GLOBAL_DOMAIN}/public/img/grafana_icon.svg
+
+                    - name: "Prometheus"
+                      logo: "https://prometheus.${BCL_GLOBAL_DOMAIN}/static/media/prometheus_logo_grey.3cf697e5443028ca5e5255b93c7906c5.svg"
+                      # subtitle: "Network-wide Ad Blocking" # optional, if no subtitle is defined, PiHole statistics will be shown
+                      tag: "other"
+                      url: "https://prometheus.${BCL_GLOBAL_DOMAIN}"
+                      type: "PiHole" # optional, loads a specific component that provides extra features. MUST MATCH a file name (without file extension) available in `src/components/services`
+                      target: "_blank" # optional html a tag target attribute
+                      # class: "green" # optional custom CSS class for card, useful with custom stylesheet
+                      # background: red # optional color for card to set color directly without custom stylesheet
+
+                    - name: AlertManager
+                      url: https://alertmanager.${BCL_GLOBAL_DOMAIN}
+                      logo: https://alertmanager.${BCL_GLOBAL_DOMAIN}/favicon.ico

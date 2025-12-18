@@ -4,12 +4,12 @@ metadata:
   name: coredns
   namespace: kube-system
 spec:
-  interval: 1h
+  interval: 10m
   url: https://coredns.github.io/helm
 
 
 # TODO boostrap cluster
-# hrPath=../../../../bcl/becloudless/kube/groups/global/kube-system/coredns/coredns.hr.yaml
+# hrPath=../../../../bcl/becloudless/kube/apps/coredns/coredns.hr.yaml
 # helm repo add coredns https://coredns.github.io/helm
 # hrVersion=$(yq -r '.spec.chart.spec.version' $hrPath)
 # hrValues=$(yq '.spec.values' $hrPath)
