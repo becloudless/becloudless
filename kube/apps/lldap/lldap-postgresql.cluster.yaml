@@ -1,0 +1,18 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: lldap-postgresql
+  namespace: lldap
+spec:
+  instances: 1
+
+  postgresql:
+    pg_hba:
+      - hostssl app all all cert
+
+  storage:
+    storageClass: longhorn-single-local-replica
+    size: 1Gi
+
+# TODO as code
+# kubectl cnpg certificate -n lldap lldap-postgresql-app-cert --cnpg-cluster lldap-postgresql --cnpg-user app

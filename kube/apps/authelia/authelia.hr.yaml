@@ -176,7 +176,7 @@ spec:
           # generate a client_secret
           # docker run --rm authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
           clients:
-              # gitea admin auth add-oauth --provider=openidConnect --name=authelia --key=gitea --secret=insecure_secret --auto-discover-url=https://authelia.awired.net/.well-known/openid-configuration --scopes='openid email profile'
+              # gitea admin auth add-oauth --provider=openidConnect --name=authelia --key=gitea --secret=insecure_secret --auto-discover-url=https://authelia.${BCL_GLOBAL_DOMAIN}/.well-known/openid-configuration --scopes='openid email profile'
             - client_id: 'gitea'
               client_name: 'Gitea'
               client_secret:
