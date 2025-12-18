@@ -62,7 +62,7 @@ spec:
       container:
         image:
           repository: lldap/lldap
-          tag: "2025-11-20"
+          tag: "2025-11-20" # TODO renovate
         envFrom:
           - secretRef:
               name: lldap
@@ -149,4 +149,4 @@ spec:
         container:
           image:
             repository: lldap/lldap
-            tag: "2025-11-20"
+            tag: "2025-11-20" # TODO renovate
