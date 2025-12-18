@@ -14,7 +14,7 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: base
-        namespace: flux-system
+        namespace: bcl
   rollback:
     cleanupOnFail: true
   values:
