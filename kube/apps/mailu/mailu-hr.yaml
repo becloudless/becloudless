@@ -1,0 +1,269 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: mailu
+  namespace: mailu
+spec:
+  interval: 60m
+  timeout: 1m
+  chart:
+    spec:
+      chart: mailu
+      version: 2.6.1
+      sourceRef:
+        kind: HelmRepository
+        name: mailu
+        namespace: mailu
+  rollback:
+    cleanupOnFail: true
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: mailu-front
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: mailu-front
+              spec:
+                template:
+                  spec:
+                    containers:
+                    - name: vpn
+                      image: gitea.lmr.io/lmr/alpine-wireguard:1.250323.1422-h9c5ad5b8
+                      securityContext:
+                        privileged: true
+                      command: [ sh, -x, -e, -c ]
+                      args:
+                      - |
+                        wg-quick down wg0 || true
+                        wg-quick up wg0
+                        KUBE_GATEWAY=$(/sbin/ip route | awk '/default/ { print $3 }')
+                        ip route add 172.16.42.0/24 via $KUBE_GATEWAY || true
+                        ip route add 10.42.0.0/16 via $KUBE_GATEWAY || true
+                        sleep infinity
+                      livenessProbe:
+                        exec:
+                          command: [ping, -c1, -W2, 10.0.0.1]
+                        initialDelaySeconds: 10
+                        periodSeconds: 10
+
+                      volumeMounts:
+                      - mountPath: /etc/wireguard
+                        name: conf
+                    volumes:
+                    - name: conf
+                      secret:
+                        secretName: mailu-front-vpn
+                        defaultMode: 0400
+
+          - target:
+              kind: Deployment
+              name: mailu-postfix
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: mailu-postfix
+              spec:
+                template:
+                  spec:
+                    containers:
+                    - name: vpn
+                      image: gitea.lmr.io/lmr/alpine-wireguard:1.250323.1422-h9c5ad5b8
+                      securityContext:
+                        privileged: true
+                      command: [ sh, -x, -e, -c ]
+                      args:
+                      - |
+                        wg-quick down wg0 || true
+                        wg-quick up wg0
+                        KUBE_GATEWAY=$(/sbin/ip route | awk '/default/ { print $3 }')
+                        ip route add 172.16.42.0/24 via $KUBE_GATEWAY || true
+                        ip route add 10.42.0.0/16 via $KUBE_GATEWAY || true
+                        sleep infinity
+                      livenessProbe:
+                        exec:
+                          command: [ping, -c1, -W2, 10.0.0.1]
+                        initialDelaySeconds: 10
+                        periodSeconds: 10
+                      volumeMounts:
+                      - mountPath: /etc/wireguard
+                        name: conf
+                    volumes:
+                    - name: conf
+                      secret:
+                        secretName: mailu-postfix-vpn
+                        defaultMode: 0400
+
+  values:
+    domain: ${BCL_GLOBAL_DOMAIN}
+    subnet: 10.42.0.0/16
+    hostnames:
+      - mail.${BCL_GLOBAL_DOMAIN}
+      - imap.${BCL_GLOBAL_DOMAIN}
+    timezone: "Europe/Paris"
+    sessionTimeout: 259201 # 3d
+    permanentSessionLifetime: 31536000 # 1y
+    existingSecret: mailu
+
+    persistence:
+      single_pvc: false
+
+    proxyAuth:
+      create: true
+      whitelist: 10.42.0.0/16 # TODO this is too wide, could it be restricted to traefik pods only ?
+
+    global:
+      database:
+        roundcube:
+          database: roundcube
+          existingSecret: mailu-roundcube
+          existingSecretPasswordKey: password
+
+    ingress:
+      annotations:
+        kubernetes.io/tls-acme: "true"
+        # cannot use authelia authentication while email is fallback and enroll factor
+        # traefik.ingress.kubernetes.io/router.middlewares: traefik-authelia@kubernetescrd
+      realIpFrom: 10.0.0.0/8
+      realIpHeader: ""
+      proxyProtocol:
+        pop3: true
+        pop3s: true
+        imap: true
+        imaps: true
+        smtp: true
+        smtps: true
+        submission: true
+        manageSieve: true
+
+    #########
+
+    front:
+      updateStrategy:
+        type: Recreate # TODO because we have only 1 server
+
+      externalService: # this is useless with the VPN, but required to have the proxyProtocol
+        enabled: true
+        type: LoadBalancer
+        externalTrafficPolicy: Cluster
+
+      service:
+        annotations:
+          # https://github.com/Mailu/helm-charts/issues/368#issuecomment-2847723427
+          traefik.ingress.kubernetes.io/service.serverstransport: mailu-mailu-web@kubernetescrd
+
+    mariadb:
+      enabled: true
+      auth:
+        existingSecret: mailu-mariadb
+      primary:
+        # workaround bug https://github.com/Mailu/helm-charts/issues/463#issuecomment-3406122198
+        extraEnvVars:
+          - name: ROUNDCUBE_DB_PW
+            valueFrom:
+              secretKeyRef:
+                name: '{{ include "mailu.database.roundcube.secretName" . }}'
+                key: '{{ include "mailu.database.roundcube.secretKey" . }}'
+          - name: ROUNDCUBE_DB_NAME
+            value: '{{ .Values.global.database.roundcube.database }}'
+          - name: ROUNDCUBE_DB_USER
+            value: '{{ .Values.global.database.roundcube.username }}'
+#        extraEnvVars: [] # TODO bug?
+        persistence:
+          enabled: true
+          storageClass: mailu-mysql
+
+
+    admin:
+      updateStrategy:
+        type: Recreate
+      persistence:
+        storageClass: mailu-admin
+
+    redis:
+      master:
+        persistence:
+          storageClass: mailu-redis
+
+    postfix:
+      updateStrategy:
+        type: Recreate
+      persistence:
+        storageClass: mailu-postfix
+
+    dovecot:
+      updateStrategy:
+        type: Recreate
+      persistence:
+        storageClass: mailu-dovecot
+      resources:
+        requests:
+          memory: 500Mi
+          cpu: 100m
+        limits:
+          memory: 1.5Gi
+          cpu: 2
+
+    rspamd:
+      updateStrategy:
+        type: Recreate
+      persistence:
+        storageClass: mailu-rspamd
+      resources:
+        requests:
+          cpu: 100m
+          memory: 100Mi
+        limits:
+          memory: 400M
+          cpu: 1
+
+    clamav:
+      persistence:
+        storageClass: mailu-clamav
+      resources:
+        requests:
+          memory: 1.5Gi
+          cpu: 100m
+        limits:
+          memory: 3Gi
+          cpu: 1
+
+    webmail:
+      updateStrategy:
+        type: Recreate
+      persistence:
+        storageClass: mailu-webmail
+      resources:
+        requests:
+          memory: 100Mi
+          cpu: 100m
+        limits:
+          memory: 200Mi
+          cpu: 1
+
+    webdav:
+      enabled: true
+      updateStrategy:
+        type: Recreate
+      persistence:
+        storageClass: mailu-webdav
+
+    fetchmail:
+      persistence:
+        storageClass: mailu-fetchmail
+
+---
+# https://github.com/Mailu/helm-charts/issues/368#issuecomment-2847723427
+# TODO something here should work: https://mailu.io/2024.06/reverse.html#traefik-as-reverse-proxy
+apiVersion: traefik.io/v1alpha1
+kind: ServersTransport
+metadata:
+  name: mailu-web
+  namespace: mailu
+spec:
+  serverName: mailu-front.mailu.svc.cluster.local
+  insecureSkipVerify: true
