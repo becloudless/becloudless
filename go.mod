@@ -3,7 +3,7 @@ module github.com/becloudless/becloudless
 go 1.24.4
 
 require (
-	github.com/Mic92/ssh-to-age v0.0.0-20250714053852-8fc571fed193
+	github.com/Mic92/ssh-to-age 58c160f0b0e5
 	github.com/atombender/go-jsonschema v0.20.0
 	github.com/awnumar/memguard v0.22.5
 	github.com/charmbracelet/huh v0.7.0
