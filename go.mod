@@ -5,7 +5,7 @@ go 1.24.4
 require (
 	github.com/Mic92/ssh-to-age v0.0.0-20250714053852-8fc571fed193
 	github.com/atombender/go-jsonschema v0.20.0
-	github.com/awnumar/memguard v0.22.5
+	github.com/awnumar/memguard v0.23.0
 	github.com/charmbracelet/huh v0.7.0
 	github.com/client9/misspell v0.3.4
 	github.com/fzipp/gocyclo v0.6.0
