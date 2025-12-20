@@ -13,7 +13,7 @@ require (
 	github.com/go-git/go-git/v6 v6.0.0-20251212081956-e83cbb9651e8
 	github.com/gordonklaus/ineffassign v0.2.0
 	github.com/moby/buildkit v0.24.0
-	github.com/n0rad/go-app v0.0.0-20251213104537-dec9f64dfa31
+	github.com/n0rad/go-app f539212ebe2e
 	github.com/n0rad/go-erlog v0.0.0-20240412093139-2d3c00f17991
 	github.com/n0rad/gomake v0.0.0-20251213124211-2e9c94b5dea0
 	github.com/spf13/cobra v1.10.2
