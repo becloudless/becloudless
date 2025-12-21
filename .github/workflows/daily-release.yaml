@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: daily-release
+
+on:
+  schedule:
+    - cron: "42 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release_if_changed:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Ensure main is up to date
+        run: |
+          git fetch --prune origin +refs/heads/main:refs/remotes/origin/main
+
+      - name: Check if main has new commits since latest release
+        id: changed
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Determine the most recent release tag (if any).
+          latest_tag=""
+          if git describe --tags --abbrev=0 >/dev/null 2>&1; then
+            latest_tag="$(git describe --tags --abbrev=0)"
+          fi
+
+          if [[ -z "${latest_tag}" ]]; then
+            echo "No tags found -> will create first release"
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          main_sha="$(git rev-parse origin/main)"
+          tag_sha="$(git rev-parse "${latest_tag}")"
+
+          if [[ "${main_sha}" != "${tag_sha}" ]]; then
+            echo "main has changes since ${latest_tag}"
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No changes on main since ${latest_tag}"
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Nix
+        if: steps.changed.outputs.should_release == 'true'
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-25.05
+
+      - name: Create release
+        if: steps.changed.outputs.should_release == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./gomake release -L debug
+
