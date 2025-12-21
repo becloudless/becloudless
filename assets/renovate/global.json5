@@ -19,6 +19,7 @@
   branchConcurrentLimit: 0,
   platformAutomerge: true, // do not wait for next renovate run if the platform support automerge
   minimumReleaseAge: "3 days",
+  labels: ["dependencies"],
 
   flux: {
     fileMatch: [".+\\.yaml$"]
