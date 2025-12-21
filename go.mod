@@ -12,7 +12,7 @@ require (
 	github.com/go-bindata/go-bindata/v3 v3.1.3
 	github.com/go-git/go-git/v6 v6.0.0-20251216093047-22c365fcee9c
 	github.com/gordonklaus/ineffassign v0.2.0
-	github.com/moby/buildkit v0.24.0
+	github.com/moby/buildkit v0.26.3
 	github.com/n0rad/go-app v0.0.0-20251213105115-f539212ebe2e
 	github.com/n0rad/go-erlog v0.0.0-20240412093139-2d3c00f17991
 	github.com/n0rad/gomake v0.0.0-20251213124211-2e9c94b5dea0
