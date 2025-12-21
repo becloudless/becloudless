@@ -1,0 +1,15 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  packageRules: [
+    {
+      description: "bump bcl version fast",
+      matchPackageNames: [
+        "becloudless/becloudless"
+      ],
+      minimumReleaseAge: "1 day",
+      ignoreUnstable: false, // renovate consider version as pre-release (and so unstable) as soon as there is something after the -
+      versioning: "semver", // default versioning for docker datasource is `docker`, that use `-.*` suffix for compatibility. We are doing semver
+    },
+  ],
+}
