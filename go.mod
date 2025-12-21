@@ -3,7 +3,7 @@ module github.com/becloudless/becloudless
 go 1.24.4
 
 require (
-	github.com/Mic92/ssh-to-age 58c160f0b0e5
+	github.com/Mic92/ssh-to-age v0.0.0-20251215041857-58c160f0b0e5
 	github.com/atombender/go-jsonschema v0.20.0
 	github.com/awnumar/memguard v0.23.0
 	github.com/charmbracelet/huh v0.7.0
@@ -13,7 +13,7 @@ require (
 	github.com/go-git/go-git/v6 v6.0.0-20251216093047-22c365fcee9c
 	github.com/gordonklaus/ineffassign v0.2.0
 	github.com/moby/buildkit v0.24.0
-	github.com/n0rad/go-app f539212ebe2e
+	github.com/n0rad/go-app v0.0.0-20251213105115-f539212ebe2e
 	github.com/n0rad/go-erlog v0.0.0-20240412093139-2d3c00f17991
 	github.com/n0rad/gomake v0.0.0-20251213124211-2e9c94b5dea0
 	github.com/spf13/cobra v1.10.2
@@ -32,7 +32,7 @@ require (
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
-	github.com/awnumar/memcall v0.2.0 // indirect
+	github.com/awnumar/memcall v0.4.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/catppuccin/go v0.3.0 // indirect

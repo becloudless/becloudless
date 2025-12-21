@@ -1,0 +1,23 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  postUpdateOptions: ["gomodTidy"],
+
+  regexManagers: [
+    {
+      fileMatch: [".*\\.go"],
+      versioningTemplate: "{{#if versioning}}{{{versioning}}}{{else}}semver-coerced{{/if}}",
+      matchStrings: [
+        'datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\sconst .*? = ".*?:(?<currentValue>[a-zA-Z0-9-.]*?)"\\s',
+      ],
+    },
+  ],
+
+  // Because of this https://docs.renovatebot.com/modules/versioning/#go-modules-directive-versioning
+  packageRules: [
+    {
+      matchDatasources: ["golang-version"],
+      rangeStrategy: "bump",
+    },
+  ],
+}
