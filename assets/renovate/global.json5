@@ -7,6 +7,7 @@
     ":semanticCommits",
     ":timezone(Europe/Paris)", // TODO
     "customManagers:dockerfileVersions",
+    "github>becloudless/becloudless//assets/renovate/presets/bcl.json5",
     "github>becloudless/becloudless//assets/renovate/presets/go.json5",
     "github>becloudless/becloudless//assets/renovate/presets/semanticCommits.json5",
   ],
