@@ -232,17 +232,37 @@ func getHelmRepositoryURL(helmRepositoryPath string) (string, string, error) {
 
 func bootstrapFlux(ctx Context) error {
 	// Read the embedded Flux Kustomization spec
-	fluxKsPath := filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/flux/flux.ks.yaml")
+	fluxKsPath := filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/flux/flux-manifests.ocirepo.yaml")
 	content, err := os.ReadFile(fluxKsPath)
 	if err != nil {
-		return errs.WithEF(err, data.WithField("path", fluxKsPath), "Failed to read flux Kustomization template")
+		return errs.WithEF(err, data.WithField("path", fluxKsPath), "Failed to read flux OCIRepository")
+	}
+
+	// Extract fluxVersion from OCIRepository spec.ref.tag
+	var fluxRepo struct {
+		Spec struct {
+			Ref struct {
+				Tag string `yaml:"tag"`
+			} `yaml:"ref"`
+		} `yaml:"spec"`
+	}
+	if err := yaml.Unmarshal(content, &fluxRepo); err != nil {
+		return errs.WithE(err, "Failed to parse flux OCIRepository")
+	}
+	fluxVersion := fluxRepo.Spec.Ref.Tag
+	if fluxVersion == "" {
+		return errs.With("Flux OCIRepository spec.ref.tag is empty")
+	}
+
+	// Read the embedded Flux Kustomization patches definition
+	fluxKsPatchesPath := filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/flux/flux.ks.yaml")
+	patchContent, err := os.ReadFile(fluxKsPatchesPath)
+	if err != nil {
+		return errs.WithEF(err, data.WithField("path", fluxKsPatchesPath), "Failed to read flux Kustomization template")
 	}
 
 	// Parse the Flux Kustomization so we can translate patches into kustomize format
 	var fluxKs struct {
-		Metadata struct {
-			Namespace string `yaml:"namespace"`
-		} `yaml:"metadata"`
 		Spec struct {
 			Patches []struct {
 				Target struct {
@@ -254,8 +274,8 @@ func bootstrapFlux(ctx Context) error {
 			} `yaml:"patches"`
 		} `yaml:"spec"`
 	}
-	if err := yaml.Unmarshal(content, &fluxKs); err != nil {
-		return errs.WithE(err, "Failed to parse flux Kustomization")
+	if err := yaml.Unmarshal(patchContent, &fluxKs); err != nil {
+		return errs.WithE(err, "Failed to parse flux Kustomization patches")
 	}
 
 	// Build a temporary directory for the generated kustomization
@@ -284,6 +304,10 @@ func bootstrapFlux(ctx Context) error {
 		APIVersion: "kustomize.config.k8s.io/v1beta1",
 		Kind:       "Kustomization",
 	}
+
+	// Add the core Flux manifests resource, using the version from the OCIRepository
+	kustomization.Resources = append(kustomization.Resources,
+		fmt.Sprintf("github.com/fluxcd/flux2/manifests/install?ref=%s", fluxVersion))
 
 	for i, p := range fluxKs.Spec.Patches {
 		patchFile := fmt.Sprintf("patch-%d.yaml", i)
@@ -315,7 +339,7 @@ func bootstrapFlux(ctx Context) error {
 		return errs.WithEF(err, data.WithField("path", kustomizationPath), "Failed to write generated kustomization")
 	}
 
-	logs.WithField("path", kustomizationPath).Info("Applying translated flux kustomization")
+	logs.WithField("path", kustomizationPath).Info("Applying translated flux kustomization with manifests resource")
 
 	cmd := exec.Command("kubectl", "apply", "-k", tmpDir)
 	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
