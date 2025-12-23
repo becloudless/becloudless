@@ -4,11 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/becloudless/becloudless/pkg/bcl"
-	"github.com/becloudless/becloudless/pkg/git"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
@@ -27,37 +27,40 @@ func Bootstrap() error {
 	if err != nil {
 		return errs.WithE(err, "Cannot find kube cluster context. Are you in a cluster folder?")
 	}
-	if ctx.KubeContext == "" {
+	if ctx.KubeConfig == "" {
 		return errs.With("Current directory is not in a kube/cluster folder")
 	}
 
-	repository, err := git.OpenRepository(".")
-	if err != nil {
-		return errs.WithE(err, "Failed to open git repository")
-	}
-	config, err := GetBclConfig(repository)
-	if err != nil {
-		return errs.WithE(err, "Failed to read BCL config")
-	}
-	envs := config.ToEnv()
+	//repository, err := git.OpenRepository(".")
+	//if err != nil {
+	//	return errs.WithE(err, "Failed to open git repository")
+	//}
+	//config, err := GetBclConfig(repository)
+	//if err != nil {
+	//	return errs.WithE(err, "Failed to read BCL config")
+	//}
+	//envs := config.ToEnv()
 
-	// cilium network
-	if err := installHelmRelease(ctx,
-		filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/cilium/cilium.helmrepo.yaml"),
-		filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/cilium/cilium.hr.yaml"),
-		envs); err != nil {
-		return errs.WithE(err, "Failed to install cilium")
-	}
-
-	// coredns dns
-	if err := installHelmRelease(ctx,
-		filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/coredns/coredns.ocirepo.yaml"),
-		filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/coredns/coredns.hr.yaml"),
-		envs); err != nil {
-		return errs.WithE(err, "Failed to install coredns")
-	}
+	//// cilium network
+	//if err := installHelmRelease(ctx,
+	//	filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/cilium/cilium.helmrepo.yaml"),
+	//	filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/cilium/cilium.hr.yaml"),
+	//	envs); err != nil {
+	//	return errs.WithE(err, "Failed to install cilium")
+	//}
+	//
+	//// coredns dns
+	//if err := installHelmRelease(ctx,
+	//	filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/coredns/coredns.ocirepo.yaml"),
+	//	filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/coredns/coredns.hr.yaml"),
+	//	envs); err != nil {
+	//	return errs.WithE(err, "Failed to install coredns")
+	//}
 
 	// flux
+	if err := bootstrapFlux(ctx); err != nil {
+		return errs.WithE(err, "Failed to bootstrap flux")
+	}
 
 	// flux sops key
 
@@ -95,7 +98,7 @@ func installHelmRelease(ctx Context, repoPath string, hrPath string, envs map[st
 	}
 
 	settings := cli.New()
-	settings.KubeConfig = ctx.KubeContext
+	settings.KubeConfig = ctx.KubeConfig
 
 	// repo
 	repoName, repoUrl, err := getHelmRepositoryURL(repoPath)
@@ -147,6 +150,7 @@ func installHelmRelease(ctx Context, repoPath string, hrPath string, envs map[st
 	}
 
 	chart, err := loader.Load(chartPath)
+	// chart, err := loader.LoadDir(chartPath)
 	if err != nil {
 		return errs.WithE(err, "Failed to load helm chart")
 	}
@@ -224,4 +228,101 @@ func getHelmRepositoryURL(helmRepositoryPath string) (string, string, error) {
 		return "", "", errs.WithEF(err, data.WithField("path", helmRepositoryPath), "Failed to parse Helm repository")
 	}
 	return helmRepo.Metadata.Name, helmRepo.Spec.Url, nil
+}
+
+func bootstrapFlux(ctx Context) error {
+	// Read the embedded Flux Kustomization spec
+	fluxKsPath := filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/flux/flux.ks.yaml")
+	content, err := os.ReadFile(fluxKsPath)
+	if err != nil {
+		return errs.WithEF(err, data.WithField("path", fluxKsPath), "Failed to read flux Kustomization template")
+	}
+
+	// Parse the Flux Kustomization so we can translate patches into kustomize format
+	var fluxKs struct {
+		Metadata struct {
+			Namespace string `yaml:"namespace"`
+		} `yaml:"metadata"`
+		Spec struct {
+			Patches []struct {
+				Target struct {
+					Kind      string `yaml:"kind"`
+					Name      string `yaml:"name"`
+					Namespace string `yaml:"namespace"`
+				} `yaml:"target"`
+				Patch string `yaml:"patch"`
+			} `yaml:"patches"`
+		} `yaml:"spec"`
+	}
+	if err := yaml.Unmarshal(content, &fluxKs); err != nil {
+		return errs.WithE(err, "Failed to parse flux Kustomization")
+	}
+
+	// Build a temporary directory for the generated kustomization
+	tmpDir, err := os.MkdirTemp("", "bcl-flux-")
+	if err != nil {
+		return errs.WithE(err, "Failed to create temp directory for flux kustomization")
+	}
+	//defer func() {
+	//	_ = os.RemoveAll(tmpDir)
+	//}()
+
+	// Write patches as separate files and build a kustomization.yaml that applies them
+	kustomization := struct {
+		APIVersion string   `yaml:"apiVersion"`
+		Kind       string   `yaml:"kind"`
+		Resources  []string `yaml:"resources,omitempty"`
+		Patches    []struct {
+			Path   string `yaml:"path"`
+			Target struct {
+				Kind      string `yaml:"kind,omitempty"`
+				Name      string `yaml:"name,omitempty"`
+				Namespace string `yaml:"namespace,omitempty"`
+			} `yaml:"target"`
+		} `yaml:"patches,omitempty"`
+	}{
+		APIVersion: "kustomize.config.k8s.io/v1beta1",
+		Kind:       "Kustomization",
+	}
+
+	for i, p := range fluxKs.Spec.Patches {
+		patchFile := fmt.Sprintf("patch-%d.yaml", i)
+		if err := os.WriteFile(filepath.Join(tmpDir, patchFile), []byte(p.Patch), 0o644); err != nil {
+			return errs.WithEF(err, data.WithField("path", patchFile), "Failed to write flux patch file")
+		}
+		entry := struct {
+			Path   string `yaml:"path"`
+			Target struct {
+				Kind      string `yaml:"kind,omitempty"`
+				Name      string `yaml:"name,omitempty"`
+				Namespace string `yaml:"namespace,omitempty"`
+			} `yaml:"target"`
+		}{}
+		entry.Path = patchFile
+		entry.Target.Kind = p.Target.Kind
+		entry.Target.Name = p.Target.Name
+		entry.Target.Namespace = p.Target.Namespace
+		kustomization.Patches = append(kustomization.Patches, entry)
+	}
+
+	kustomContent, err := yaml.Marshal(&kustomization)
+	if err != nil {
+		return errs.WithE(err, "Failed to marshal generated kustomization")
+	}
+
+	kustomizationPath := filepath.Join(tmpDir, "kustomization.yaml")
+	if err := os.WriteFile(kustomizationPath, kustomContent, 0o644); err != nil {
+		return errs.WithEF(err, data.WithField("path", kustomizationPath), "Failed to write generated kustomization")
+	}
+
+	logs.WithField("path", kustomizationPath).Info("Applying translated flux kustomization")
+
+	cmd := exec.Command("kubectl", "apply", "-k", tmpDir)
+	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return errs.WithEF(err, data.WithField("output", string(output)), "Failed to apply translated flux kustomization")
+	}
+
+	return nil
 }

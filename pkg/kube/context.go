@@ -13,7 +13,7 @@ type Context struct {
 	Cluster     string
 	ClusterPath string
 	Namespace   string
-	KubeContext string
+	KubeConfig  string
 }
 
 func (c Context) ToEnv() string {
@@ -23,7 +23,7 @@ func (c Context) ToEnv() string {
 	builder.WriteString(c.Cluster)
 	builder.WriteString("\n")
 
-	builder.WriteString("export FLUX_CLUSTER_ROOT=")
+	builder.WriteString("export KUBE_CLUSTER_ROOT=")
 	builder.WriteString(c.ClusterPath)
 	builder.WriteString("\n")
 
@@ -32,7 +32,7 @@ func (c Context) ToEnv() string {
 	builder.WriteString("\n")
 
 	builder.WriteString("export KUBECONFIG=")
-	builder.WriteString(c.KubeContext)
+	builder.WriteString(c.KubeConfig)
 	builder.WriteString("\n")
 
 	return builder.String()
@@ -62,7 +62,7 @@ func GetContext(path string) (Context, error) {
 	}
 	context.Cluster = innerPaths[2]
 	context.ClusterPath = filepath.Join(repository.Root, innerPaths[0], innerPaths[1], innerPaths[2])
-	context.KubeContext = filepath.Join(repository.Root, ".kube", context.Cluster+".config")
+	context.KubeConfig = filepath.Join(repository.Root, ".kube", context.Cluster+".config")
 	if len(innerPaths) > 3 {
 		context.Namespace = innerPaths[3]
 	}
