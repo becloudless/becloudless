@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/becloudless/becloudless/pkg/bcl"
+	"github.com/becloudless/becloudless/pkg/git"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
@@ -29,17 +31,29 @@ func Bootstrap() error {
 		return errs.With("Current directory is not in a kube/cluster folder")
 	}
 
+	repository, err := git.OpenRepository(".")
+	if err != nil {
+		return errs.WithE(err, "Failed to open git repository")
+	}
+	config, err := GetBclConfig(repository)
+	if err != nil {
+		return errs.WithE(err, "Failed to read BCL config")
+	}
+	envs := config.ToEnv()
+
 	// cilium network
 	if err := installHelmRelease(ctx,
 		filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/cilium/cilium.helmrepo.yaml"),
-		filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/cilium/cilium.hr.yaml")); err != nil {
+		filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/cilium/cilium.hr.yaml"),
+		envs); err != nil {
 		return errs.WithE(err, "Failed to install cilium")
 	}
 
 	// coredns dns
 	if err := installHelmRelease(ctx,
 		filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/coredns/coredns.ocirepo.yaml"),
-		filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/coredns/coredns.hr.yaml")); err != nil {
+		filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/coredns/coredns.hr.yaml"),
+		envs); err != nil {
 		return errs.WithE(err, "Failed to install coredns")
 	}
 
@@ -54,7 +68,7 @@ func Bootstrap() error {
 	return nil
 }
 
-func installHelmRelease(ctx Context, repoPath string, hrPath string) error {
+func installHelmRelease(ctx Context, repoPath string, hrPath string, envs map[string]string) error {
 	content, err := os.ReadFile(hrPath)
 	if err != nil {
 		return errs.WithEF(err, data.WithField("path", hrPath), "Failed to read HelmRelease file")
@@ -114,8 +128,12 @@ func installHelmRelease(ctx Context, repoPath string, hrPath string) error {
 		return errs.WithE(err, "Failed to build Helm values")
 	}
 
-	// Merge HR values into Helm values map
-	for k, v := range hr.Spec.Values {
+	processedValuesAny := substituteEnvInStructure(hr.Spec.Values, envs)
+	processedValues, ok := processedValuesAny.(map[string]any)
+	if !ok {
+		return errs.With("Processed values are not a map[string]any")
+	}
+	for k, v := range processedValues {
 		vals[k] = v
 	}
 
@@ -153,6 +171,37 @@ func installHelmRelease(ctx Context, repoPath string, hrPath string) error {
 	}
 
 	return nil
+}
+
+func substituteEnvInStructure(value any, envs map[string]string) any {
+	switch v := value.(type) {
+	case map[string]any:
+		res := make(map[string]any, len(v))
+		for k, val := range v {
+			res[k] = substituteEnvInStructure(val, envs)
+		}
+		return res
+	case []any:
+		res := make([]any, len(v))
+		for i, val := range v {
+			res[i] = substituteEnvInStructure(val, envs)
+		}
+		return res
+	case string:
+		res := v
+		for k, v2 := range envs {
+			if k == "" {
+				continue
+			}
+			placeholder := "${" + k + "}"
+			if strings.Contains(res, placeholder) {
+				res = strings.ReplaceAll(res, placeholder, v2)
+			}
+		}
+		return res
+	default:
+		return v
+	}
 }
 
 func getHelmRepositoryURL(helmRepositoryPath string) (string, string, error) {
