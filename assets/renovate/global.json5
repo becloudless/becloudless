@@ -10,6 +10,7 @@
     "github>becloudless/becloudless//assets/renovate/presets/bcl.json5",
     "github>becloudless/becloudless//assets/renovate/presets/go.json5",
     "github>becloudless/becloudless//assets/renovate/presets/semanticCommits.json5",
+    "github>becloudless/becloudless//assets/renovate/presets/groups.json5",
   ],
   suppressNotifications: [
     "prEditedNotification",
