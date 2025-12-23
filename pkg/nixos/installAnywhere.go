@@ -198,7 +198,7 @@ func createSystemConfig(err error, info SystemInfo) (SystemConfig, error) {
 		return config, errs.WithE(err, "Failed to create git system folder")
 	}
 
-	if err := utils.CopyFile(path.Join(bcl.BCL.AssetsPath, "repository", "nixos", "yamlSystem.nix"), path.Join(systemFolder, "default.nix")); err != nil {
+	if err := utils.CopyFile(path.Join(bcl.BCL.EmbeddedPath, "assets", "repository", "nixos", "yamlSystem.nix"), path.Join(systemFolder, "default.nix")); err != nil {
 		return config, errs.WithE(err, "Failed to copy system's default.nix")
 	}
 

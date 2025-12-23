@@ -2,7 +2,7 @@ package docker
 
 import "github.com/spf13/cobra"
 
-func PushCmd() *cobra.Command {
+func pushCmd() *cobra.Command {
 	config := BuildConfig{
 		Push:  true,
 		Cache: false,

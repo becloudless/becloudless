@@ -22,8 +22,8 @@ func DockerCmd() *cobra.Command {
 		Aliases: []string{"dk"},
 	}
 	cmd.AddCommand(
-		BuildCmd(),
-		PushCmd(),
+		buildCmd(),
+		pushCmd(),
 	)
 	return &cmd
 }

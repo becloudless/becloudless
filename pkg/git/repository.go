@@ -1,17 +1,42 @@
 package git
 
 import (
+	"os"
+	"strings"
+
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
-	"strings"
+	"github.com/n0rad/go-erlog/logs"
 )
 
 type Repository struct {
 	Root    string
 	Repo    *git.Repository
 	logData data.Fields
+}
+
+func CloneRepository(path string, url string) (*Repository, error) {
+	field := data.WithField("path", path).WithField("repo", url)
+
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return nil, errs.WithEF(err, data.WithField("path", path), "Failed to create folder to clone git repository")
+	}
+
+	logs.WithField("url", url).Info("Cloning repository...")
+	repo, err := git.PlainClone(path, &git.CloneOptions{
+		URL: url,
+	})
+	if err != nil {
+		return nil, errs.WithEF(err, field, "Failed to clone git repository")
+	}
+
+	return &Repository{
+		Root:    path,
+		Repo:    repo,
+		logData: field,
+	}, nil
 }
 
 func InitRepository(path string) (*Repository, error) {
@@ -34,8 +59,13 @@ func OpenRepository(path string) (*Repository, error) {
 		return nil, errs.WithEF(err, field, "Failed to open git repository")
 	}
 
+	wt, err := repo.Worktree()
+	if err != nil {
+		return nil, errs.WithE(err, "Failed to open git workree")
+	}
+
 	return &Repository{
-		path,
+		wt.Filesystem.Root(),
 		repo,
 		field,
 	}, nil
@@ -52,20 +82,6 @@ func (r Repository) AddAll() error {
 	return nil
 }
 
-//	func CloneRepository(path string, url string) (*Repository, error) {
-//		if err := os.MkdirAll(path, 0755); err != nil {
-//			return nil, errs.WithEF(err, data.WithField("path", path), "Failed to create folder to clone git repository")
-//		}
-//		logs.WithField("url", url).Info("Cloning repository...")
-//		if err := runner.ExecCmd("git", "clone", url, path); err != nil {
-//			return nil, errs.WithEF(err, data.WithField("path", path).WithField("repo", url), "Failed to clone git repository")
-//		}
-//		return &Repository{
-//			repoDir: path,
-//			logData: data.WithField("repo", path),
-//		}, nil
-//	}
-//
 // /////////////////////////
 func (r Repository) HeadCommitHash(short bool) (string, error) {
 	head, err := r.Repo.Head()
@@ -110,6 +126,18 @@ func (r Repository) hasDuplicateShortHash(shortHash string) bool {
 	return count > 1
 }
 
+// refs/tags/v42.42
+func (r Repository) Checkout(ref string) error {
+	wt, err := r.Repo.Worktree()
+	if err != nil {
+		return errs.WithEF(err, r.logData, "Cannot get repository worktree")
+	}
+	if err := wt.Checkout(&git.CheckoutOptions{Branch: plumbing.ReferenceName(ref)}); err != nil {
+		return errs.WithEF(err, r.logData.WithField("ref", ref), "Failed to checkout reference")
+	}
+	return nil
+}
+
 //
 //func (r Repository) HeadCommitHash(short bool) (string, error) {
 //	args := []string{"-C", r.repoDir, "rev-parse", "HEAD"}
@@ -123,12 +151,6 @@ func (r Repository) hasDuplicateShortHash(shortHash string) bool {
 //	return stdout, nil
 //}
 //
-//func (r Repository) Checkout(ref string) error {
-//	if err := runner.ExecCmd("git", "-C", r.repoDir, "checkout", "-q", ref); err != nil {
-//		return errs.WithEF(err, r.logData.WithField("path", r.repoDir).WithField("ref", ref), "Failed to checkout ref")
-//	}
-//	return nil
-//}
 //
 //func (r Repository) IsCommitHashExists(commitHash string) error {
 //	stdout, stderr, err := runner.ExecCmdGetStdoutAndStderr("git", "-C", r.repoDir, "cat-file", "-e", commitHash)

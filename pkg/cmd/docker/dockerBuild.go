@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func BuildCmd() *cobra.Command {
+func buildCmd() *cobra.Command {
 	config := BuildConfig{
 		Load: true,
 	}

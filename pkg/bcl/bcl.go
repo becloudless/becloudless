@@ -105,7 +105,7 @@ func (bcl *Bcl) ensureNixos() error {
 			return errs.WithE(err, "Failed to create nixos directory")
 		}
 
-		if err := utils.CopyFile(path.Join(bcl.AssetsPath, "repository", "nixos", "flake.nix"),
+		if err := utils.CopyFile(path.Join(bcl.EmbeddedPath, "repository", "nixos", "flake.nix"),
 			path.Join(bcl.Repository.Root, "nixos", "flake.nix")); err != nil {
 			return errs.WithE(err, "Failed to copy default flake.nix")
 		}
