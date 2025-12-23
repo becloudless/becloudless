@@ -1,0 +1,19 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  packageRules: [
+    {
+      matchPackagePatterns: ["mailu"],
+      groupName: "mailu"
+    },
+    {
+      matchPackagePatterns: ["intel-gpu"],
+      groupName: "intel-gpu"
+    },
+    {
+      matchPackageNames: ["becloudless/becloudless", "bcl"],
+      groupName: "becloudless"
+    }
+  ]
+
+}
