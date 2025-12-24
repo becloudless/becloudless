@@ -8,8 +8,8 @@ func KubeCmd() *cobra.Command {
 		Aliases: []string{"k"},
 	}
 	cmd.AddCommand(
-		bootstrap(),
-		context(),
+		kubeBootstrapCmd(),
+		kubeContextCmd(),
 	)
 	return &cmd
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func context() *cobra.Command {
+func kubeContextCmd() *cobra.Command {
 	cmd := cobra.Command{
 		Use:     "context",
 		Aliases: []string{"ctx"},

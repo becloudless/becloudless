@@ -11,6 +11,7 @@ spec:
 
 
 
+
 #  fluxVersion=$(yq -r '.spec.ref.tag' ./flux-system/flux-manifests.ocirepo.yaml)
 #  tmpFolder=$(mktemp -d)
 #cat << EOF > $tmpFolder/kustomization.yaml
