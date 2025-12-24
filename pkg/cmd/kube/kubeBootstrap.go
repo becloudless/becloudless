@@ -12,6 +12,7 @@ import (
 	"github.com/becloudless/becloudless/pkg/flux"
 	"github.com/becloudless/becloudless/pkg/git"
 	"github.com/becloudless/becloudless/pkg/kube"
+	"github.com/becloudless/becloudless/pkg/security"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
@@ -81,12 +82,87 @@ func Bootstrap() error {
 	}
 
 	// flux sops key
+	if err := ensureFluxSopsKey(ctx); err != nil {
+		return errs.WithE(err, "Failed to ensure flux sops key")
+	}
 
 	// git repo secret
 
 	// git repo
 
 	return nil
+}
+
+func ensureFluxSopsKey(context kube.Context) error {
+	// If secret already exists, do nothing
+	checkCmd := exec.Command("kubectl", "get", "secret", "sops-age", "-n", "infra")
+	checkCmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", context.KubeConfig))
+	if err := checkCmd.Run(); err == nil {
+		logs.Info("sops-age secret already exists, skipping creation")
+		return nil
+	}
+
+	key, err := resolveAgeIdentityKey(context)
+	if err != nil {
+		return err
+	}
+	secretYAML := fmt.Sprintf(`apiVersion: v1
+kind: Secret
+metadata:
+  name: sops-age
+  namespace: infra
+stringData:
+  age.agekey: %s
+`, key)
+
+	applyCmd := exec.Command("kubectl", "apply", "-f", "-")
+	applyCmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", context.KubeConfig))
+	applyCmd.Stdin = strings.NewReader(secretYAML)
+	output, err := applyCmd.CombinedOutput()
+	if err != nil {
+		return errs.WithEF(err, data.WithField("output", string(output)), "Failed to apply sops-age secret")
+	}
+
+	logs.Info("sops-age secret applied")
+	return nil
+}
+
+func resolveAgeIdentityKey(context kube.Context) (string, error) {
+	if os.Geteuid() == 0 {
+		// Running as root, assume bootstrap on host and use host ssh private key
+		privateKey, _, err := security.Ed25519PrivateKeyFileToPublicAndPrivateAgeKeys("/nix/etc/ssh/ssh_host_ed25519_key")
+		return privateKey, err
+	}
+
+	// Non-root: decrypt bcl/infra.secret.yaml, extract identity, convert to age.
+	sshPriv, err := readIdentitySSHPrivateKeyFromSopsSecret(filepath.Join(context.ClusterPath, "bcl/infra.secret.yaml"))
+	if err != nil {
+		return "", err
+	}
+	privateKey, _, err := security.Ed25519ToPublicAndPrivateAgeKeys(sshPriv)
+	return privateKey, err
+}
+
+func readIdentitySSHPrivateKeyFromSopsSecret(path string) ([]byte, error) {
+	plaintext, err := security.DecryptSopsYAML(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var doc struct {
+		StringData struct {
+			Identity   string `yaml:"identity"`
+			KnownHosts string `yaml:"known_hosts"`
+		} `yaml:"stringData"`
+	}
+	if err := yaml.Unmarshal(plaintext, &doc); err != nil {
+		return nil, errs.WithE(err, "Failed to parse decrypted yaml")
+	}
+
+	if doc.StringData.Identity == "" {
+		return nil, errs.WithF(data.WithField("path", path), "Missing .stringData.identity in decrypted secret")
+	}
+	return []byte(doc.StringData.Identity), nil
 }
 
 func applyFluxKustomizationWithKustomize(ctx kube.Context, resourcesPath string, objectRef flux.NamespacedObjectKindReference) error {
