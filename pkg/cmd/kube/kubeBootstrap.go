@@ -1,6 +1,7 @@
 package kube
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -82,26 +83,21 @@ func Bootstrap() error {
 	}
 
 	// flux sops key
-	if err := ensureFluxSopsKey(ctx); err != nil {
+	if err := applyFluxSopsKey(ctx); err != nil {
 		return errs.WithE(err, "Failed to ensure flux sops key")
 	}
 
 	// git repo secret
+	if err := applyFluxGitRepoSecret(ctx); err != nil {
+		return errs.WithE(err, "Failed to ensure git repo secret")
+	}
 
 	// git repo
 
 	return nil
 }
 
-func ensureFluxSopsKey(context kube.Context) error {
-	// If secret already exists, do nothing
-	checkCmd := exec.Command("kubectl", "get", "secret", "sops-age", "-n", "infra")
-	checkCmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", context.KubeConfig))
-	if err := checkCmd.Run(); err == nil {
-		logs.Info("sops-age secret already exists, skipping creation")
-		return nil
-	}
-
+func applyFluxSopsKey(context kube.Context) error {
 	key, err := resolveAgeIdentityKey(context)
 	if err != nil {
 		return err
@@ -216,7 +212,11 @@ func prepareAndApplyFluxKustomization(ctx kube.Context, ks flux.Kustomization, r
 	if err != nil {
 		return errs.WithE(err, "Failed to create temp directory for flux kustomization")
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			logs.WithField("dir", tmpDir).WithField("error", err.Error()).Info("Failed to remove temp dir")
+		}
+	}()
 
 	// Write patches as separate files and build a kustomization.yaml that applies them
 	kustomization := struct {
@@ -400,6 +400,24 @@ func prepareAndApplyFluxHelmRelease(ctx kube.Context, hr flux.HelmRelease, resou
 		}
 	}
 
+	return nil
+}
+
+func applyFluxGitRepoSecret(context kube.Context) error {
+	plaintext, err := security.DecryptSopsYAML(filepath.Join(context.ClusterPath, "bcl/infra.secret.yaml"))
+	if err != nil {
+		return err
+	}
+
+	applyCmd := exec.Command("kubectl", "apply", "-f", "-")
+	applyCmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", context.KubeConfig))
+	applyCmd.Stdin = bytes.NewReader(plaintext)
+	output, err := applyCmd.CombinedOutput()
+	if err != nil {
+		return errs.WithEF(err, data.WithField("output", string(output)), "Failed to apply decrypted infra secret")
+	}
+
+	logs.Info("infra git secret applied")
 	return nil
 }
 
