@@ -97,7 +97,10 @@ func Bootstrap() error {
 		return errs.WithE(err, "Failed to apply infra git repo")
 	}
 
-	// applying infra kustomization to bootstrap rest
+	// infra kustomization to bootstrap rest
+	if err := applyInfraKustomization(ctx); err != nil {
+		return errs.WithE(err, "Failed to apply infra kustomization")
+	}
 
 	return nil
 }
@@ -112,6 +115,21 @@ func applyInfraGitRepo(ctx kube.Context) error {
 	output, err := applyCmd.CombinedOutput()
 	if err != nil {
 		return errs.WithEF(err, data.WithField("output", string(output)).WithField("file", infraPath), "Failed to apply infra git repo manifest")
+	}
+
+	return nil
+}
+
+func applyInfraKustomization(ctx kube.Context) error {
+	infraKsPath := filepath.Join(ctx.ClusterPath, "infra/infra.kustomization.yaml")
+
+	logs.WithField("file", infraKsPath).Info("Applying infra kustomization")
+
+	applyCmd := exec.Command("kubectl", "apply", "-f", infraKsPath)
+	applyCmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
+	output, err := applyCmd.CombinedOutput()
+	if err != nil {
+		return errs.WithEF(err, data.WithField("output", string(output)).WithField("file", infraKsPath), "Failed to apply infra kustomization manifest")
 	}
 
 	return nil
