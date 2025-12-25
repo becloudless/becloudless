@@ -84,15 +84,35 @@ func Bootstrap() error {
 
 	// flux sops key
 	if err := applyFluxSopsKey(ctx); err != nil {
-		return errs.WithE(err, "Failed to ensure flux sops key")
+		return errs.WithE(err, "Failed to apply flux sops key")
 	}
 
 	// git repo secret
 	if err := applyFluxGitRepoSecret(ctx); err != nil {
-		return errs.WithE(err, "Failed to ensure git repo secret")
+		return errs.WithE(err, "Failed to apply git repo secret")
 	}
 
-	// git repo
+	// infra git repo
+	if err := applyInfraGitRepo(ctx); err != nil {
+		return errs.WithE(err, "Failed to apply infra git repo")
+	}
+
+	// applying infra kustomization to bootstrap rest
+
+	return nil
+}
+
+func applyInfraGitRepo(ctx kube.Context) error {
+	infraPath := filepath.Join(ctx.ClusterPath, "infra/infra.gitrepo.yaml")
+
+	logs.WithField("file", infraPath).Info("Applying infra git repo")
+
+	applyCmd := exec.Command("kubectl", "apply", "-f", infraPath)
+	applyCmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
+	output, err := applyCmd.CombinedOutput()
+	if err != nil {
+		return errs.WithEF(err, data.WithField("output", string(output)).WithField("file", infraPath), "Failed to apply infra git repo manifest")
+	}
 
 	return nil
 }
