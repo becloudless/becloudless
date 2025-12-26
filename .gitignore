@@ -1,6 +1,6 @@
 dist
 dist-tools
-becloudless
+./becloudless
 
 nixos/result
 
