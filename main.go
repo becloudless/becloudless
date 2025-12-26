@@ -10,14 +10,13 @@ import (
 	_ "github.com/n0rad/go-erlog/register"
 )
 
-//go:embed all:assets
-var Assets embed.FS
-
+//go:embed all:assets kube
+var Embedded embed.FS
 var Version = "0.0.0"
 
 //go:generate ./dist-tools/go-jsonschema -p schema --schema-root-type global=Global ./nixos/modules/nixos/global/default.schema.json -o dist/schema/something.go
 func main() {
-	bcl.BCL.Assets = &Assets
+	bcl.BCL.Embedded = &Embedded
 	bcl.BCL.Version = Version
 
 	if err := cmd.RootCmd().Execute(); err != nil {
