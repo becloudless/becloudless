@@ -61,20 +61,27 @@ func Bootstrap() error {
 	}
 	envs := config.ToEnv()
 
-	// cilium network
-	if err := applyFluxHelmReleaseWithHelm(ctx,
-		filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/cilium"),
-		flux.NamespacedObjectKindReference{Name: "cilium", Namespace: "kube-system"},
-		envs); err != nil {
-		return errs.WithE(err, "Failed to apply cilium")
+	k3sServingExists, err := secretExists(ctx, "kube-system", "k3s-serving")
+	if err != nil {
+		return errs.WithE(err, "Failed to check for existing k3s-serving secret")
 	}
 
-	// coredns dns
-	if err := applyFluxHelmReleaseWithHelm(ctx,
-		filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/coredns"),
-		flux.NamespacedObjectKindReference{Name: "coredns", Namespace: "kube-system"},
-		envs); err != nil {
-		return errs.WithE(err, "Failed to apply coredns")
+	if !k3sServingExists {
+		// cilium network
+		if err := applyFluxHelmReleaseWithHelm(ctx,
+			filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/cilium"),
+			flux.NamespacedObjectKindReference{Name: "cilium", Namespace: "kube-system"},
+			envs); err != nil {
+			return errs.WithE(err, "Failed to apply cilium")
+		}
+
+		// coredns dns
+		if err := applyFluxHelmReleaseWithHelm(ctx,
+			filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/coredns"),
+			flux.NamespacedObjectKindReference{Name: "coredns", Namespace: "kube-system"},
+			envs); err != nil {
+			return errs.WithE(err, "Failed to apply coredns")
+		}
 	}
 
 	// flux
@@ -82,13 +89,18 @@ func Bootstrap() error {
 		return errs.WithE(err, "Failed to bootstrap flux")
 	}
 
+	// bcl namespace
+	if err := applyBclNamespace(ctx); err != nil {
+		return errs.WithE(err, "Failed to ensure bcl namespace")
+	}
+
 	// flux sops key
-	if err := applyFluxSopsKey(ctx); err != nil {
+	if err := applyInfraFluxSopsKey(ctx); err != nil {
 		return errs.WithE(err, "Failed to apply flux sops key")
 	}
 
 	// git repo secret
-	if err := applyFluxGitRepoSecret(ctx); err != nil {
+	if err := applyInfraGitRepoSecret(ctx); err != nil {
 		return errs.WithE(err, "Failed to apply git repo secret")
 	}
 
@@ -105,9 +117,27 @@ func Bootstrap() error {
 	return nil
 }
 
-func applyInfraGitRepo(ctx kube.Context) error {
-	infraPath := filepath.Join(ctx.ClusterPath, "infra/infra.gitrepo.yaml")
+func applyBclNamespace(ctx kube.Context) error {
+	logs.Info("Applying bcl namespace")
 
+	nsYAML := `apiVersion: v1
+kind: Namespace
+metadata:
+  name: bcl
+`
+	cmd := exec.Command("kubectl", "apply", "-f", "-")
+	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
+	cmd.Stdin = strings.NewReader(nsYAML)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return errs.WithEF(err, data.WithField("output", string(output)), "Failed to apply bcl namespace")
+	}
+
+	return nil
+}
+
+func applyInfraGitRepo(ctx kube.Context) error {
+	infraPath := filepath.Join(ctx.ClusterPath, "bcl/infra.gitrepo.yaml")
 	logs.WithField("file", infraPath).Info("Applying infra git repo")
 
 	applyCmd := exec.Command("kubectl", "apply", "-f", infraPath)
@@ -121,8 +151,7 @@ func applyInfraGitRepo(ctx kube.Context) error {
 }
 
 func applyInfraKustomization(ctx kube.Context) error {
-	infraKsPath := filepath.Join(ctx.ClusterPath, "infra/infra.kustomization.yaml")
-
+	infraKsPath := filepath.Join(ctx.ClusterPath, "bcl/infra.ks.yaml")
 	logs.WithField("file", infraKsPath).Info("Applying infra kustomization")
 
 	applyCmd := exec.Command("kubectl", "apply", "-f", infraKsPath)
@@ -135,7 +164,9 @@ func applyInfraKustomization(ctx kube.Context) error {
 	return nil
 }
 
-func applyFluxSopsKey(context kube.Context) error {
+func applyInfraFluxSopsKey(context kube.Context) error {
+	logs.Info("Applying infra's flux sops key")
+
 	key, err := resolveAgeIdentityKey(context)
 	if err != nil {
 		return err
@@ -144,7 +175,7 @@ func applyFluxSopsKey(context kube.Context) error {
 kind: Secret
 metadata:
   name: sops-age
-  namespace: infra
+  namespace: bcl
 stringData:
   age.agekey: %s
 `, key)
@@ -157,19 +188,18 @@ stringData:
 		return errs.WithEF(err, data.WithField("output", string(output)), "Failed to apply sops-age secret")
 	}
 
-	logs.Info("sops-age secret applied")
 	return nil
 }
 
 func resolveAgeIdentityKey(context kube.Context) (string, error) {
 	if os.Geteuid() == 0 {
 		// Running as root, assume bootstrap on host and use host ssh private key
-		privateKey, _, err := security.Ed25519PrivateKeyFileToPublicAndPrivateAgeKeys("/nix/etc/ssh/ssh_host_ed25519_key")
+		_, privateKey, err := security.Ed25519PrivateKeyFileToPublicAndPrivateAgeKeys("/nix/etc/ssh/ssh_host_ed25519_key")
 		return privateKey, err
 	}
 
 	// Non-root: decrypt bcl/infra.secret.yaml, extract identity, convert to age.
-	sshPriv, err := readIdentitySSHPrivateKeyFromSopsSecret(filepath.Join(context.ClusterPath, "bcl/infra.secret.yaml"))
+	sshPriv, err := readIdentitySSHPrivateKeyFromSopsSecret(context, filepath.Join(context.ClusterPath, "bcl/infra.secret.yaml"))
 	if err != nil {
 		return "", err
 	}
@@ -177,8 +207,17 @@ func resolveAgeIdentityKey(context kube.Context) (string, error) {
 	return privateKey, err
 }
 
-func readIdentitySSHPrivateKeyFromSopsSecret(path string) ([]byte, error) {
-	plaintext, err := security.DecryptSopsYAML(path)
+func readIdentitySSHPrivateKeyFromSopsSecret(context kube.Context, path string) ([]byte, error) {
+	ageKey := ""
+	if os.Geteuid() == 0 {
+		_, privateKey, err := security.Ed25519PrivateKeyFileToPublicAndPrivateAgeKeys("/nix/etc/ssh/ssh_host_ed25519_key")
+		if err != nil {
+			return nil, errs.WithE(err, "Failed to read host ed25519 private key")
+		}
+		ageKey = privateKey
+	}
+
+	plaintext, err := security.DecryptSopsYAMLWithAgeKey(path, ageKey)
 	if err != nil {
 		return nil, err
 	}
@@ -441,10 +480,22 @@ func prepareAndApplyFluxHelmRelease(ctx kube.Context, hr flux.HelmRelease, resou
 	return nil
 }
 
-func applyFluxGitRepoSecret(context kube.Context) error {
-	plaintext, err := security.DecryptSopsYAML(filepath.Join(context.ClusterPath, "bcl/infra.secret.yaml"))
+func applyInfraGitRepoSecret(context kube.Context) error {
+	path := filepath.Join(context.ClusterPath, "bcl/infra.secret.yaml")
+	logs.WithField("path", path).Info("Applying infra git secret")
+
+	ageKey := ""
+	if os.Geteuid() == 0 {
+		_, privateKey, err := security.Ed25519PrivateKeyFileToPublicAndPrivateAgeKeys("/nix/etc/ssh/ssh_host_ed25519_key")
+		if err != nil {
+			return errs.WithE(err, "Failed to read host ed25519 private key")
+		}
+		ageKey = privateKey
+	}
+
+	plaintext, err := security.DecryptSopsYAMLWithAgeKey(path, ageKey)
 	if err != nil {
-		return err
+		return errs.WithEF(err, data.WithField("path", path), "Failed to decrypt infra secret")
 	}
 
 	applyCmd := exec.Command("kubectl", "apply", "-f", "-")
@@ -488,4 +539,19 @@ func substituteEnvInStructure(value any, envs map[string]string) any {
 	default:
 		return v
 	}
+}
+
+func secretExists(ctx kube.Context, namespace, name string) (bool, error) {
+	cmd := exec.Command("kubectl", "get", "secret", name, "-n", namespace)
+	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
+	if err := cmd.Run(); err != nil {
+		// If kubectl returns a non-zero exit code, the secret probably does not exist.
+		// Distinguish between "NotFound" and other errors by inspecting the error type.
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }

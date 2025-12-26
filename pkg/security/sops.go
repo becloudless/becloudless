@@ -3,6 +3,7 @@ package security
 import (
 	"os"
 
+	"github.com/getsops/sops/v3/cmd/sops/formats"
 	"github.com/getsops/sops/v3/decrypt"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
@@ -23,17 +24,21 @@ type KeyGroup struct {
 	Age []string `yaml:"age"`
 }
 
-// DecryptSopsYAML decrypts a SOPS-encrypted YAML document (".sops" section) using
-// the same key sources as the sops CLI (age, pgp, kms, etc.), but in-process.
-func DecryptSopsYAML(path string) ([]byte, error) {
+func DecryptSopsYAMLWithAgeKey(path string, ageKey string) ([]byte, error) {
+	if ageKey != "" {
+		if err := os.Setenv("SOPS_AGE_KEY", ageKey); err != nil {
+			return nil, errs.WithE(err, "Failed to set SOPS_AGE_KEY environment variable")
+		}
+		defer os.Setenv("SOPS_AGE_KEY", "")
+	}
 	ciphertext, err := os.ReadFile(path)
 	if err != nil {
 		return nil, errs.WithEF(err, data.WithField("path", path), "Failed to read sops secret file")
 	}
 
-	plaintext, err := decrypt.Data(ciphertext, "yaml")
+	plaintext, err := decrypt.DataWithFormat(ciphertext, formats.Yaml)
 	if err != nil {
-		return nil, errs.WithE(err, "Failed to decrypt SOPS YAML")
+		return nil, errs.WithEF(err, data.WithField("path", path), "Failed to decrypt SOPS YAML")
 	}
 	return plaintext, nil
 }

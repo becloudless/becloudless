@@ -1,6 +1,7 @@
 package kube
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -63,6 +64,19 @@ func GetContext(path string) (Context, error) {
 	context.Cluster = innerPaths[2]
 	context.ClusterPath = filepath.Join(repository.Root, innerPaths[0], innerPaths[1], innerPaths[2])
 	context.KubeConfig = filepath.Join(repository.Root, ".kube", context.Cluster+".config")
+	if _, err := os.Stat(context.KubeConfig); os.Geteuid() == 0 && os.IsNotExist(err) {
+		// assuming we are on a kube node
+		context.KubeConfig = "/etc/kubernetes/admin.conf"
+		if _, err2 := os.Stat(context.KubeConfig); os.IsNotExist(err2) {
+			context.KubeConfig = "/etc/rancher/k3s/k3s.yaml"
+			if _, err3 := os.Stat(context.KubeConfig); os.IsNotExist(err3) {
+				return context, errs.WithE(err, "Failed to find a kubeconfig file").WithErrs(err2, err3)
+			}
+		}
+	}
+	if _, err := os.Stat(context.KubeConfig); os.IsNotExist(err) {
+	}
+
 	if len(innerPaths) > 3 {
 		context.Namespace = innerPaths[3]
 	}
