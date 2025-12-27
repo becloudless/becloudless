@@ -33,7 +33,7 @@ type Bcl struct {
 }
 
 func (bcl *Bcl) Init(home string) error {
-	if err := bcl.App.Init(home); err != nil {
+	if err := bcl.App.Init(home, bcl); err != nil {
 		return err
 	}
 
