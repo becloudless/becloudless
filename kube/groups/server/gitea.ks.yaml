@@ -8,7 +8,7 @@ spec:
   interval: 10m
   timeout: 1m
   path: ./kube/apps/gitea
-  prune: true
+  prune: false # could be hosting the repo itself
   sourceRef:
     kind: GitRepository
     name: bcl

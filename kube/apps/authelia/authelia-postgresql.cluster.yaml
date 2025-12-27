@@ -13,6 +13,8 @@ spec:
 #  bootstrap:
 #    recovery:
 #      source: origin
+#      recoveryTarget:
+#        targetTime: "2025-12-15 13:39:18.89106+00"
 #  externalClusters:
 #    - name: origin
 #      barmanObjectStore:
