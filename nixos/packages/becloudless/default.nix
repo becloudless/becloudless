@@ -1,29 +1,29 @@
-{ lib, stdenv, fetchurl, fetchFromGitHub, nixosTests, darwin }:
+{ lib, stdenv, fetchFromGitHub, buildGoModule, nixosTests, darwin }:
 
-stdenv.mkDerivation rec {
+buildGoModule rec {
   pname = "becloudless";
-  version = "0.251226.2334-H2ad555e";
-  rev = "v${version}";
+  version = "0.251227.1733-H004d016";
 
-  src = fetchurl {
-    url = "https://github.com/becloudless/becloudless/releases/download/${rev}/bcl-linux-amd64.tar.gz";
-    hash = "sha256-itsjTYA3p59x6r+HEwul+lENhrC88iWQ5xRh3DPSVk4=";
+  src = fetchFromGitHub {
+    rev = "r${rev}";
+    owner = "becloudless";
+    repo = "becloudless";
+    hash = "sha256-KwEXA0TOFfOYrhYlfWEC2KeFw+I52DG2GbDLegZif1E=";
   };
 
-  buildPhase = "";
-
-  installPhase = ''
-    mkdir -p $out/bin
-    tar -xzf $src
-    cp bcl $out/bin/bcl
+  buildPhase = ''
+    ./gomake build
   '';
 
+  installPhase = ''
+    # Allow go to download the requested toolchain version
+    export GOTOOLCHAIN="auto"
   meta = with lib; {
     description = "Tooling to manage whole infrastructure easily";
     mainProgram = "bcl";
     homepage = "https://github.com/becloudless/becloudless";
     changelog = "https://github.com/becloudless/becloudless/releases/tag/v${version}";
-    license = licenses.asl20;
+    license = licenses.asl20; # TODO
     maintainers = with maintainers; [ n0rad ];
   };
 }
