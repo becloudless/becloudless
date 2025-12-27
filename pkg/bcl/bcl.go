@@ -27,32 +27,34 @@ func init() {
 
 type Bcl struct {
 	app.App
+	Repository string `yaml:"repository,omitempty"`
 
-	Repository *git.Repository
+	Repo *git.Repository
 }
 
 func (bcl *Bcl) Init(home string) error {
-	if err := bcl.App.Init(home); err != nil {
+	if err := bcl.App.Init(home, bcl); err != nil {
 		return err
 	}
 
-	//repositoryPath := path.Join(bcl.Home, pathRepository)
-	repositoryPath := "/home/n0rad/Work/Perso/awired/infra"
-	if _, err := os.Stat(repositoryPath); os.IsNotExist(err) {
-		logs.WithField("path", repositoryPath).Warn("git repository does not exists, creating")
-		repository, err := git.InitRepository(repositoryPath)
+	if bcl.Repository == "" {
+		bcl.Repository = path.Join(bcl.Home, pathRepository)
+	}
+	if _, err := os.Stat(bcl.Repository); os.IsNotExist(err) {
+		logs.WithField("path", bcl.Repository).Warn("git repository does not exists, creating")
+		repository, err := git.InitRepository(bcl.Repository)
 		if err != nil {
 			return errs.WithE(err, "Failed to init git repository")
 		}
-		bcl.Repository = repository
+		bcl.Repo = repository
 	} else if err != nil {
-		return errs.WithEF(err, data.WithField("path", repositoryPath), "Failed to read git repository")
+		return errs.WithEF(err, data.WithField("path", bcl.Repository), "Failed to read git repository")
 	} else {
-		repository, err := git.OpenRepository(repositoryPath)
+		repository, err := git.OpenRepository(bcl.Repository)
 		if err != nil {
-			return errs.WithEF(err, data.WithField("path", repositoryPath), "Failed to open git repository")
+			return errs.WithEF(err, data.WithField("path", bcl.Repository), "Failed to open git repository")
 		}
-		bcl.Repository = repository
+		bcl.Repo = repository
 	}
 
 	if err := bcl.ensureNixos(); err != nil {
@@ -89,7 +91,7 @@ func (bcl *Bcl) Init(home string) error {
 }
 
 func (bcl *Bcl) GetNixosDir() string {
-	nixosPath := path.Join(bcl.Repository.Root, "nixos")
+	nixosPath := path.Join(bcl.Repo.Root, "nixos")
 	if nixosPath[0] != '/' && !strings.HasPrefix(nixosPath, "./") {
 		nixosPath = "./" + nixosPath
 	}
@@ -97,7 +99,7 @@ func (bcl *Bcl) GetNixosDir() string {
 }
 
 func (bcl *Bcl) ensureNixos() error {
-	flakePath := path.Join(bcl.Repository.Root, "nixos", "flake.nix")
+	flakePath := path.Join(bcl.Repo.Root, "nixos", "flake.nix")
 	if _, err := os.Stat(flakePath); os.IsNotExist(err) {
 		logs.WithE(err).WithField("path", flakePath).Warn("flake does not exists, creating")
 
@@ -106,11 +108,11 @@ func (bcl *Bcl) ensureNixos() error {
 		}
 
 		if err := utils.CopyFile(path.Join(bcl.EmbeddedPath, "assets", "repository", "nixos", "flake.nix"),
-			path.Join(bcl.Repository.Root, "nixos", "flake.nix")); err != nil {
+			path.Join(bcl.Repo.Root, "nixos", "flake.nix")); err != nil {
 			return errs.WithE(err, "Failed to copy default flake.nix")
 		}
 
-		if err := bcl.Repository.AddAll(); err != nil {
+		if err := bcl.Repo.AddAll(); err != nil {
 			return errs.WithE(err, "Failed to add new files to git")
 		}
 	}

@@ -9,12 +9,12 @@ require (
 	github.com/charmbracelet/huh v0.8.0
 	github.com/client9/misspell v0.3.4
 	github.com/fzipp/gocyclo v0.6.0
-	github.com/getsops/sops/v3 v3.10.0
+	github.com/getsops/sops/v3 v3.11.0
 	github.com/go-bindata/go-bindata/v3 v3.1.3
-	github.com/go-git/go-git/v6 v6.0.0-20251216093047-22c365fcee9c
+	github.com/go-git/go-git/v6 v6.0.0-20251224103503-78aff6aa5ea9
 	github.com/gordonklaus/ineffassign v0.2.0
 	github.com/moby/buildkit v0.26.3
-	github.com/n0rad/go-app v0.0.0-20251222014408-1394401cebc6
+	github.com/n0rad/go-app v0.0.0-20251227083853-8f6c92fbfd4e
 	github.com/n0rad/go-erlog v0.0.0-20240412093139-2d3c00f17991
 	github.com/n0rad/gomake v0.0.0-20251213124211-2e9c94b5dea0
 	github.com/spf13/cobra v1.10.2
@@ -98,7 +98,7 @@ require (
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
 	github.com/charmbracelet/x/exp/strings v0.0.0-20240722160745-212f7b056ed0 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
-	github.com/cloudflare/circl v1.6.1 // indirect
+	github.com/cloudflare/circl v1.6.2 // indirect
 	github.com/cncf/xds/go v0.0.0-20250501225837-2ac532fd4443 // indirect
 	github.com/containerd/containerd v1.7.29 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
@@ -273,3 +273,7 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+//replace (
+//	github.com/n0rad/go-app => ../../n0rad/go-app
+//)

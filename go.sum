@@ -190,6 +190,8 @@ github.com/client9/misspell v0.3.4 h1:ta993UF76GwbvJcIo3Y68y/M3WxlpEHPWIGDkJYwzJ
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cloudflare/circl v1.6.1 h1:zqIqSPIndyBh1bjLVVDHMPpVKqp8Su/V+6MeDzzQBQ0=
 github.com/cloudflare/circl v1.6.1/go.mod h1:uddAzsPgqdMAYatqJ0lsjX1oECcQLIlRpzZh3pJrofs=
+github.com/cloudflare/circl v1.6.2 h1:hL7VBpHHKzrV5WTfHCaBsgx/HGbBYlgrwvNXEVDYYsQ=
+github.com/cloudflare/circl v1.6.2/go.mod h1:2eXP6Qfat4O/Yhh8BznvKnJ+uzEoTQ6jVKJRn81BiS4=
 github.com/cncf/xds/go v0.0.0-20250501225837-2ac532fd4443 h1:aQ3y1lwWyqYPiWZThqv1aFbZMiM9vblcSArJRf2Irls=
 github.com/cncf/xds/go v0.0.0-20250501225837-2ac532fd4443/go.mod h1:W+zGtBO5Y1IgJhy4+A9GOqVhqLpfZi+vwmdNXUehLA8=
 github.com/containerd/containerd v1.7.29 h1:90fWABQsaN9mJhGkoVnuzEY+o1XDPbg9BTC9QTAHnuE=
@@ -294,8 +296,11 @@ github.com/go-git/go-billy/v6 v6.0.0-20251217170237-e9738f50a3cd h1:Gd/f9cGi/3h1
 github.com/go-git/go-billy/v6 v6.0.0-20251217170237-e9738f50a3cd/go.mod h1:d3XQcsHu1idnquxt48kAv+h+1MUiYKLH/e7LAzjP+pI=
 github.com/go-git/go-git-fixtures/v5 v5.1.2-0.20251205091929-ed656e84d025 h1:24Uc4y1yxMe8V30NhshaDdCaTOw97BWVhVGH/m1+udM=
 github.com/go-git/go-git-fixtures/v5 v5.1.2-0.20251205091929-ed656e84d025/go.mod h1:T6lRF5ejdxaYZLVaCTuTG1+ZSvwI/c2oeiTgBWORJ8Q=
+github.com/go-git/go-git-fixtures/v5 v5.1.2-0.20251217095811-6900f24224b3 h1:2+1ySCKPEu78+LWKsMa5vu2iYJJUdv4+6lQCu8Qb+VY=
 github.com/go-git/go-git/v6 v6.0.0-20251216093047-22c365fcee9c h1:pR4UmnVFMjNw956fgu+JlSAvmx37qW4ttVF0cu7DL/Q=
 github.com/go-git/go-git/v6 v6.0.0-20251216093047-22c365fcee9c/go.mod h1:EPzgAjDnw+TaCt1w/JUmj+SXwWHUae3c078ixiZQ10Y=
+github.com/go-git/go-git/v6 v6.0.0-20251224103503-78aff6aa5ea9 h1:cDz7iq3eC2Z6Ar7uXu+kVn462YN9oeZf6PdKBLdraYE=
+github.com/go-git/go-git/v6 v6.0.0-20251224103503-78aff6aa5ea9/go.mod h1:6/GwPRGuHWD9vPvvAJv1xb8RIHkKSMTT0GI9JhBo8Sw=
 github.com/go-gorp/gorp/v3 v3.1.0 h1:ItKF/Vbuj31dmV4jxA1qblpSwkl9g1typ24xoe70IGs=
 github.com/go-gorp/gorp/v3 v3.1.0/go.mod h1:dLEjIyyRNiXvNZ8PSmzpt1GsWAUK8kjVhEpjH8TixEw=
 github.com/go-jose/go-jose/v4 v4.1.2 h1:TK/7NqRQZfgAh+Td8AlsrvtPoUyiHh0LqVvokh+1vHI=
@@ -503,6 +508,8 @@ github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f h1:y5//uYreIhSUg3J
 github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f/go.mod h1:ZdcZmHo+o7JKHSa8/e818NopupXU1YMK5fe1lsApnBw=
 github.com/n0rad/go-app v0.0.0-20251222014408-1394401cebc6 h1:OzcLNxfsG/1Bu4RgOSdCBr2wiRYKtrdtew227EnalFw=
 github.com/n0rad/go-app v0.0.0-20251222014408-1394401cebc6/go.mod h1:bcSIvHDaTeBhjKQvwFFBH4WMLHBMKJKx6gZSnltNbzg=
+github.com/n0rad/go-app v0.0.0-20251227083853-8f6c92fbfd4e h1:0Fr2P/J1+hBQNebN/npTkX7L70ilUqUPaUoSXYrsh78=
+github.com/n0rad/go-app v0.0.0-20251227083853-8f6c92fbfd4e/go.mod h1:bcSIvHDaTeBhjKQvwFFBH4WMLHBMKJKx6gZSnltNbzg=
 github.com/n0rad/go-erlog v0.0.0-20240412093139-2d3c00f17991 h1:yC4wiErn3Mqcdx3AZitM8Upy2+V1WKpuOe/AkBo0OdI=
 github.com/n0rad/go-erlog v0.0.0-20240412093139-2d3c00f17991/go.mod h1:ot3GFY/7ozYdDxiwrbZrLEr1/DnLxOFo3+/FxoDZjxk=
 github.com/n0rad/gomake v0.0.0-20251213124211-2e9c94b5dea0 h1:l3FHw2LvJK217RU4DMxYORKjdGwSgul+kCm6/3uXyqU=

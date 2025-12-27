@@ -1,14 +1,15 @@
 package nixos
 
 import (
+	"os"
+	"path"
+
 	"github.com/becloudless/becloudless/pkg/bcl"
 	"github.com/becloudless/becloudless/pkg/security"
 	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/becloudless/becloudless/pkg/utils"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
-	"os"
-	"path"
 )
 
 const sshHostSecretKeyName = "ssh_host_ed25519_key"
@@ -19,7 +20,7 @@ type GroupSecretFile struct {
 }
 
 func CreateGroup(name string) error {
-	groupDir := path.Join(bcl.BCL.Repository.Root, "nixos", "modules", "nixos", "group", name)
+	groupDir := path.Join(bcl.BCL.Repo.Root, "nixos", "modules", "nixos", "group", name)
 	if _, err := os.Stat(groupDir); err == nil {
 		return errs.WithEF(err, data.WithField("group", name), "Group already exists")
 	} else if !os.IsNotExist(err) {
