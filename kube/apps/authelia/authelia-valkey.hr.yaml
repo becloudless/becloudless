@@ -24,6 +24,8 @@ spec:
     auth:
       enabled: true
       aclUsers:
+        default:
+          permissions: "~* -@all"
         authelia:
           permissions: "~* &* +@all"
       usersExistingSecret: authelia-valkey

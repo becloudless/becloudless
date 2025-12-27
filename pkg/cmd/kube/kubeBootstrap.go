@@ -203,7 +203,7 @@ func resolveAgeIdentityKey(context kube.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	privateKey, _, err := security.Ed25519ToPublicAndPrivateAgeKeys(sshPriv)
+	_, privateKey, err := security.Ed25519ToPublicAndPrivateAgeKeys(sshPriv)
 	return privateKey, err
 }
 
