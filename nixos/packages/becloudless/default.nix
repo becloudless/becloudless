@@ -1,26 +1,21 @@
-{ lib, stdenv, buildGoModule, fetchFromGitHub, nixosTests, darwin }:
+{ lib, stdenv, fetchurl, fetchFromGitHub, nixosTests, darwin }:
 
-buildGoModule rec {
+stdenv.mkDerivation rec {
   pname = "becloudless";
   version = "0.251226.2334-H2ad555e";
   rev = "v${version}";
 
-  src = fetchFromGitHub {
-    inherit rev;
-    owner = "becloudless";
-    repo = "becloudless";
-    hash = "sha256-2tA7mz7cqG9tfpVH/M4wKFmb5PNaIpHZcWWJIUk3zwY";
+  src = fetchurl {
+    url = "https://github.com/becloudless/becloudless/releases/download/${rev}/bcl-linux-amd64.tar.gz";
+    hash = "sha256-itsjTYA3p59x6r+HEwul+lENhrC88iWQ5xRh3DPSVk4=";
   };
 
-  vendorHash = "";
-
-  buildPhase = ''
-    ./gomake build
-  '';
+  buildPhase = "";
 
   installPhase = ''
     mkdir -p $out/bin
-    cp dist/bcl-linux-amd64/bcl $out/bin/bcl
+    tar -xzf $src
+    cp bcl $out/bin/bcl
   '';
 
   meta = with lib; {
@@ -28,8 +23,7 @@ buildGoModule rec {
     mainProgram = "bcl";
     homepage = "https://github.com/becloudless/becloudless";
     changelog = "https://github.com/becloudless/becloudless/releases/tag/v${version}";
-    license = licenses.asl20; # TODO
+    license = licenses.asl20;
     maintainers = with maintainers; [ n0rad ];
   };
-
 }
