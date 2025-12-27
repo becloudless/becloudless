@@ -12,7 +12,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: infra
-    namespace: infra
+    namespace: bcl
   wait: true
   postBuild:
     substituteFrom:
