@@ -9,7 +9,7 @@ require (
 	github.com/charmbracelet/huh v0.8.0
 	github.com/client9/misspell v0.3.4
 	github.com/fzipp/gocyclo v0.6.0
-	github.com/getsops/sops/v3 v3.10.0
+	github.com/getsops/sops/v3 v3.11.0
 	github.com/go-bindata/go-bindata/v3 v3.1.3
 	github.com/go-git/go-git/v6 v6.0.0-20251216093047-22c365fcee9c
 	github.com/gordonklaus/ineffassign v0.2.0
