@@ -216,7 +216,7 @@ func createSystemConfig(err error, info SystemInfo) (SystemConfig, error) {
 		return config, errs.WithE(err, "Failed to write system configuration to file")
 	}
 
-	if err := bcl.BCL.Repository.AddAll(); err != nil {
+	if err := bcl.BCL.Repo.AddAll(); err != nil {
 		return config, errs.WithE(err, "Failed to add new system to git repository")
 	}
 	return config, nil
