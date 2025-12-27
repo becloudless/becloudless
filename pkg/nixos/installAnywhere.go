@@ -111,11 +111,17 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 		return errs.WithE(err, "Failed to prepare disk password")
 	}
 
+	installUser := "root"
+	if info.IsInstaller {
+		// was already running installer. No kexec was run
+		installUser = user
+	}
+
 	logs.WithField("system", systemName).Info("Run disko,install,reboot phases")
 	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
 
 		// TODO ssh as root when kexec was neeeded
-		"bash -x nixos-anywhere --debug --phases disko,install,reboot -p "+strconv.Itoa(port)+argId+argEnvPass+" --extra-files "+path.Join(temp, "fs")+" --disk-encryption-keys /root/secret.key "+path.Join(temp, "install", "secret.key")+" --flake "+infra.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
+		"bash -x nixos-anywhere --debug --phases disko,install,reboot -p "+strconv.Itoa(port)+argId+argEnvPass+" --extra-files "+path.Join(temp, "fs")+" --disk-encryption-keys /root/secret.key "+path.Join(temp, "install", "secret.key")+" --flake "+infra.GetNixosDir()+"#"+systemName+" "+installUser+"@"+host); err != nil {
 		return errs.WithE(err, "disco,install,reboot phase failed")
 	}
 	return nil
@@ -263,6 +269,7 @@ type SystemInfo struct {
 	Disks           []string
 	EFI             bool
 	Memory          int
+	IsInstaller     bool
 }
 
 const motherboardUuid = "motherboardUuid"
@@ -272,6 +279,7 @@ const netWorkIps = "netWorkIps"
 const disks = "disks"
 const efi = "efi"
 const memory = "memory"
+const isInstaller = "isInstaller"
 
 func ExtractSystemInfo(sys system.System) (SystemInfo, error) {
 	// TODO available memory
@@ -285,7 +293,8 @@ func ExtractSystemInfo(sys system.System) (SystemInfo, error) {
 		echo "` + netWorkIps + `=$(ip -o addr show scope global | grep -E ": (wl|en|br)" | awk '{gsub(/\/.*/,"",$4); print $4}' | tr '\n' ',')" >> /tmp/info
 		echo "` + disks + `=$(find /dev/disk/by-id/ -lname '*sd*' -o  -lname '*nvme*' -o -lname '*vd*' -o -lname '*scsi*' | grep -E -v -- "-part?" | grep '/ata\|/nvme\|usb\|/scsi'| tr '\n' ',')" >> /tmp/info
 		echo "[ -d /sys/firmware/efi ] && ` + efi + `=true || ` + efi + `=false" >> /tmp/info
-		echo "` + memory + `=$( cat /proc/meminfo | grep MemTotal: | awk '{ print $2; }')" >> /tmp/info
+		echo "` + memory + `=$(cat /proc/meminfo | grep MemTotal: | awk '{ print $2; }')" >> /tmp/info
+		echo "` + isInstaller + `=$(if grep -Eq 'VARIANT_ID="?installer"?' /etc/os-release; then echo "true"; else echo "false"; fi)" >> /tmp/info
 		cat /tmp/info
 		rm /tmp/info
 	`)
@@ -329,6 +338,10 @@ func ExtractSystemInfo(sys system.System) (SystemInfo, error) {
 		case efi:
 			if keyValue[1] == "true" {
 				info.EFI = true
+			}
+		case isInstaller:
+			if keyValue[1] == "true" {
+				info.IsInstaller = true
 			}
 		case memory:
 			mem, err := strconv.Atoi(keyValue[1])
