@@ -90,6 +90,7 @@ spec:
         redis:
           enabled: true
           host: authelia-valkey
+          username: authelia
           password:
             secret_name: authelia-valkey
             value: authelia
