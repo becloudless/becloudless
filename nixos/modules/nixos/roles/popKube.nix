@@ -31,18 +31,14 @@ in
     networking.firewall.enable = false;
 
     # nix-shell -p bash -p gitMinimal -p openssh -p openssl -p yq-go -p kubernetes-helm -p kubectl -p ssh-to-age -p sops -p gawk
-    systemd.services."flux-bootstrap" = {
+    systemd.services."kube-bootstrap" = {
       path = with pkgs; [
         bash
         gitMinimal
         openssh
         openssl
-        yq-go
-        kubernetes-helm
         kubectl
-        ssh-to-age
-        sops
-        gawk
+        bcl.becloudless
       ];
       serviceConfig = {
         Type = "oneshot";
@@ -56,9 +52,8 @@ in
         else
           git -C infra pull
         fi
-        cd infra/kube/pop
-        sleep 30
-        bash -x ../../bin/kube-bootstrap.sh
+        cd infra/kube/clusters/${cfg.clusterName}
+        bcl kube bootstrap
       '';
       after = [ "k3s.service" ];
       wants = [ "k3s.service" ];
