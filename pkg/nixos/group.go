@@ -19,8 +19,8 @@ type GroupSecretFile struct {
 	InitrdSshHostEd25519Key string `yaml:"initrd_ssh_host_ed25519_key"`
 }
 
-func CreateGroup(name string) error {
-	groupDir := path.Join(bcl.BCL.Repo.Root, "nixos", "modules", "nixos", "group", name)
+func CreateGroup(repo *bcl.Infra, name string) error {
+	groupDir := path.Join(repo.Git.Root, "nixos", "modules", "nixos", "group", name)
 	if _, err := os.Stat(groupDir); err == nil {
 		return errs.WithEF(err, data.WithField("group", name), "Group already exists")
 	} else if !os.IsNotExist(err) {

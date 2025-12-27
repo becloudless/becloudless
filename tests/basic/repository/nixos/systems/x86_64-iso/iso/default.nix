@@ -7,7 +7,7 @@
   };
 
   users.users.nixos.openssh.authorizedKeys.keys = [
-    config.bcl.global.adminUser.sshPublicKey
+    config.bcl.global.admin.users.toto.sshPublicKey
   ];
 
 

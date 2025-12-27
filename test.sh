@@ -26,8 +26,8 @@ installHost() {
 	validation=$5
 
 	echo_brightred "## Creating $host disk image"
-	mkdir -p ./tests/work
-	qemu-img create -f qcow2 "./tests/work/$host.cow" $diskSize
+	mkdir -p ../../work
+	qemu-img create -f qcow2 "../..//work/$host.cow" $diskSize
 
 	echo_brightred "## Starting VM"
 	display="-display none"
@@ -40,12 +40,12 @@ installHost() {
 		-enable-kvm \
 		-net nic \
 		-net user,hostfwd=tcp::10022-:22 \
-		-cdrom ./tests/basic/repository/nixos/result/iso/bcl.iso \
-		-pidfile ./tests/work/$host.pid \
+		-cdrom ./nixos/result/iso/bcl.iso \
+		-pidfile ../../work/$host.pid \
 		-daemonize \
 		$display \
-		./tests/work/$host.cow
-	#	-drive file=./tests/work/test-tv.cow,if=virtio,format=raw,cache=none,aio=native \
+		../../work/$host.cow
+	#	-drive file=../..//work/test-tv.cow,if=virtio,format=raw,cache=none,aio=native \
 
 	$DEBUG && {
 		read -p "Waiting after cd boot in debug. Enter to continue"
@@ -55,7 +55,8 @@ installHost() {
 	sleep 20
 	bclDebug=""
 	$DEBUG && bclDebug="-L debug"
-	./dist/bcl-*/bcl $bclDebug -H ./tests/basic nix install --disk-password=qw -L trace -p 10022 -i tests/basic/secrets/ed25519 127.0.0.1
+	pwd
+	../../../dist/bcl-*/bcl $bclDebug -H ../ nix install --disk-password=qw -L trace -p 10022 -i ../secrets/ed25519 127.0.0.1
 
 	$DEBUG && {
 		read -p "Waiting after install in debug. Enter to continue"
@@ -73,7 +74,7 @@ installHost() {
 echo_brightred "## Building bcl"
 ./gomake build
 
-echo_brightred "## check flake"
+echo_brightred "## Check flake"
 (cd tests/basic/repository/nixos && nix flake update && nix flake check)
 
 echo_brightred "## Prepare host"
@@ -118,13 +119,14 @@ echo_brightred "## Prepare host"
 
 ###
 validate-test-tv() {
-	ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i tests/basic/secrets/ed25519 -p 10022 toto@127.0.0.1 pidof jellyfinmediaplayer
+	ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ../secrets/ed25519 -p 10022 toto@127.0.0.1 pidof jellyfinmediaplayer
 }
-installHost "test-tv" \
+
+(cd ./tests/basic/repository && installHost "test-tv" \
 	"7d5e9855-0cba-4c41-b45e-cdff7a9514d9" \
 	8G \
 	3G \
-	validate-test-tv
+	validate-test-tv)
 
 
 
