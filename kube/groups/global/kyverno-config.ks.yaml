@@ -13,6 +13,8 @@ spec:
     kind: GitRepository
     name: bcl
   wait: true
+  dependsOn:
+    - name: kyverno
   postBuild:
     substituteFrom:
       - name: global-env
