@@ -4,14 +4,16 @@
   outputs = {self, ...} @ bclInputs: let
     bclSnowfallLib = bclInputs.snowfall-lib.mkLib {
       inputs = bclInputs;
-      src = ./.;
+      src = ../.;
 
+      # Tell snowfall that the layout (systems, overlays, ...) lives under nixos/
       snowfall = {
         meta = {
           name = "bcl";
           title = "bcl Config";
         };
         namespace = "bcl";
+        root = ./.;
       };
     };
 
@@ -91,7 +93,7 @@
 
   inputs = {
     nixpkgs = {
-      url = "github:NixOS/nixpkgs/nixos-24.11";
+      url = "github:NixOS/nixpkgs/nixos-25.11";
     };
 
     snowfall-lib = {
@@ -109,7 +111,7 @@
     };
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-24.11";
+      url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
