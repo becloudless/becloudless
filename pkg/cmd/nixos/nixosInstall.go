@@ -2,12 +2,13 @@ package nixos
 
 import (
 	"fmt"
+	"os"
+	"syscall"
+
 	"github.com/becloudless/becloudless/pkg/nixos"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
-	"os"
-	"syscall"
 )
 
 func nixosInstallCmd() *cobra.Command {
@@ -50,7 +51,7 @@ func nixosInstallCmd() *cobra.Command {
 			return nixos.InstallAnywhere(host, port, user, password, identifyFile, diskPassword)
 		},
 	}
-	cmd.Flags().StringVarP(&user, "user", "u", "nixos", "user for the connection")
+	cmd.Flags().StringVarP(&user, "user", "u", os.Getenv("USER"), "user for the connection")
 	cmd.Flags().StringVarP(&identifyFile, "identify", "i", "", "ssh private key file")
 	cmd.Flags().StringVar(&diskPassword, "disk-password", "", "disk password")
 	cmd.Flags().StringVar(&diskPasswordFile, "disk-password-file", "", "disk password file")
