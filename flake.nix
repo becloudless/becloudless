@@ -1,10 +1,12 @@
 {
   description = "bcl infra";
 
-  outputs = {self, ...} @ bclInputs: let
+  outputs = {self, nixpkgs, snowfall-lib, ...} @ bclInputs: let
+    systems = [ "x86_64-linux" "aarch64-linux" ];
+
     bclSnowfallLib = bclInputs.snowfall-lib.mkLib {
       inputs = bclInputs;
-      src = ../.;
+      src = ./.;
 
       # Tell snowfall that the layout (systems, overlays, ...) lives under nixos/
       snowfall = {
@@ -13,7 +15,8 @@
           title = "bcl Config";
         };
         namespace = "bcl";
-        root = ./.;
+        src = ./.;
+        root = ./nixos;
       };
     };
 
@@ -84,10 +87,43 @@
             ];
 
           }); #// {isoConfigurations = bclFlake.isoConfigurations;};
-  in
-    bclFlake // {
-      inherit mkFlake;
-    };
+  in {
+    # expose snowfall-managed infra
+        inherit (bclFlake) nixosConfigurations nixosModules overlays;
+
+        # plain Go binary, built from repo root, no snowfall sandbox issues
+        packages = builtins.listToAttrs (map (system: {
+          name = system;
+          value = let
+            pkgs = import nixpkgs { inherit system; };
+          in {
+            becloudless = pkgs.buildGoModule {
+              pname = "becloudless";
+              version = "0.251229.930-H3353b5e";
+              src = ./.;
+              vendorHash = "sha256-SHmayPjxikbyIsdiqFAmOoIA94DLWOrgUt0SrnQndXA";
+
+              preBuild = ''
+                mkdir -p dist-tools
+                go build -o ./dist-tools/go-jsonschema github.com/atombender/go-jsonschema
+                go generate ./...
+              '';
+
+              buildPhase = ''
+                #ls
+            #    export HOME=$PWD
+                ./gomake build
+              '';
+
+              installPhase = ''
+                mkdir -p $out/bin
+                cp dist/bcl-linux-amd64/bcl $out/bin/bcl
+              '';
+
+            };
+          };
+        }) systems);
+      };
 
   #################################
 
