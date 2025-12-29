@@ -1,4 +1,4 @@
-{ lib, buildGo124Module, fetchFromGitHub }:
+{ lib, buildGo124Module, fetchFromGitHub, git }:
 
 buildGo124Module rec {
   pname = "becloudless";
@@ -8,12 +8,26 @@ buildGo124Module rec {
     owner = "becloudless";
     repo = "becloudless";
     rev = "v${version}";
-    hash = "";
+    hash = "sha256-2tA7mz7cqG9tfpVH/M4wKFmb5PNaIpHZcWWJIUk3zwY=";
   };
 
-  vendorHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+  vendorHash = "sha256-iDofwnMmUGOy0CzrtIH7rwJRiHp+3Pqlshq5k1VqTcE=";
+
+  nativeBuildInputs = [ git ];
+
+  preBuild = ''
+    export HOME=$PWD
+    git config --global user.email "you@example.com"
+    git config --global user.name "Your Name"
+    git config --global init.defaultBranch main
+    git init .
+    git add .
+    git commit -m "init" || true
+    ./gomake build
+  '';
 
   buildPhase = ''
+    ls
 #    export HOME=$PWD
     ./gomake build
   '';
