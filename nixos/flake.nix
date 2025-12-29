@@ -8,15 +8,12 @@
       inputs = bclInputs;
       src = ./.;
 
-      # Tell snowfall that the layout (systems, overlays, ...) lives under nixos/
       snowfall = {
         meta = {
           name = "bcl";
           title = "bcl Config";
         };
         namespace = "bcl";
-        src = ./.;
-        root = ./nixos;
       };
     };
 
@@ -99,20 +96,22 @@
           in {
             becloudless = pkgs.buildGoModule {
               pname = "becloudless";
-              version = "0.251229.930-H3353b5e";
-              src = ./.;
+              version = "0.0.0";
+              src = ./..;
+#              vendorHash = "";
               vendorHash = "sha256-9d6nVbunYwO24ddymwlZlzmI4697KbtwIyX7GsEQIb0";
 
               nativeBuildInputs = [ pkgs.git ];
 
               preBuild = ''
+                echo "Pre build"
                 mkdir -p dist-tools
                 go build -o ./dist-tools/go-jsonschema github.com/atombender/go-jsonschema
                 go generate ./...
               '';
 
               buildPhase = ''
-                #ls
+                echo "Build"
                 export HOME=$PWD
                 git config --global user.email "you@example.com"
                 git config --global user.name "Your Name"
