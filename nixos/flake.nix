@@ -2,25 +2,6 @@
   description = "bcl infra";
 
   outputs = {self, ...} @ bclInputs: let
-    # Helper to build the Go binary from the git repo root
-    goPackageForRepoRoot = system: let
-      pkgs = import bclInputs.nixpkgs {
-        inherit system;
-      };
-    in
-      pkgs.buildGoModule {
-        pname = "becloudless";
-        version = "0.0.0";
-
-        # The git repo root is two levels up from this flake.nix
-        src = pkgs.lib.cleanSource ../../..;
-
-        vendorHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-
-        # If module path differs, adjust or set GO111MODULE env, etc.
-        CGO_ENABLED = 0;
-      };
-
     bclSnowfallLib = bclInputs.snowfall-lib.mkLib {
       inputs = bclInputs;
       src = ./.;
@@ -55,10 +36,48 @@
       };
       outputs-builder = channels: {
         packages = {
-          # channels is already the pkgs set for a given system; use its system attr
-          default = goPackageForRepoRoot channels.nixpkgs.system;
+          becloudless = channels.nixpkgs.buildGo124Module {
+            pname = "becloudless";
+            version = "0.0.1";
+            src = ../.;
+            vendorHash = "sha256-9d6nVbunYwO24ddymwlZlzmI4697KbtwIyX7GsEQIb0=";
+
+            nativeBuildInputs = [ channels.nixpkgs.pkgs.git ];
+
+            preBuild = ''
+              echo "Pre build"
+              mkdir -p dist-tools
+              go build -o ./dist-tools/go-jsonschema github.com/atombender/go-jsonschema
+              go generate ./...
+            '';
+
+            # TODO this results with a fake version suffix
+            buildPhase = ''
+              echo "Build"
+              export HOME=$PWD
+              git config --global user.email "you@example.com"
+              git config --global user.name "Your Name"
+              git config --global init.defaultBranch main
+              git init .
+              git add .
+              git commit -m "init" || true
+
+              ./gomake build
+            '';
+
+            installPhase = ''
+              mkdir -p $out/bin
+              cp dist/bcl-linux-amd64/bcl $out/bin/bcl
+            '';
+          };
         };
       };
+
+      overlays = [
+        (final: prev: {
+          bcl = (bclFlake.packages.${final.system} or {}); # expose `becloudless` package under `bcl` namespace
+        })
+      ];
     };
 
 
@@ -102,9 +121,7 @@
             # Ensure downstream flakes see the bcl package namespace under pkgs.bcl
             overlays = [
               (final: prev: {
-                bcl = (self.packages.${final.system} or {}) // {
-                  becloudless = goPackageForRepoRoot final.system;
-                };
+                bcl = self.packages.${final.system} or {};
               })
             ];
 
@@ -118,7 +135,7 @@
 
   inputs = {
     nixpkgs = {
-      url = "github:NixOS/nixpkgs/nixos-24.11";
+      url = "github:NixOS/nixpkgs/nixos-25.11";
     };
 
     snowfall-lib = {
@@ -136,7 +153,7 @@
     };
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-24.11";
+      url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
