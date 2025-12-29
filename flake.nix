@@ -101,7 +101,9 @@
               pname = "becloudless";
               version = "0.251229.930-H3353b5e";
               src = ./.;
-              vendorHash = "sha256-SHmayPjxikbyIsdiqFAmOoIA94DLWOrgUt0SrnQndXA";
+              vendorHash = "sha256-9d6nVbunYwO24ddymwlZlzmI4697KbtwIyX7GsEQIb0";
+
+              nativeBuildInputs = [ pkgs.git ];
 
               preBuild = ''
                 mkdir -p dist-tools
@@ -111,7 +113,15 @@
 
               buildPhase = ''
                 #ls
-            #    export HOME=$PWD
+                export HOME=$PWD
+                git config --global user.email "you@example.com"
+                git config --global user.name "Your Name"
+                git config --global init.defaultBranch main
+                git init .
+                git add .
+                git commit -m "init" || true
+
+
                 ./gomake build
               '';
 
