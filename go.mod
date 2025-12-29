@@ -15,7 +15,7 @@ require (
 	github.com/gordonklaus/ineffassign v0.2.0
 	github.com/moby/buildkit v0.26.3
 	github.com/n0rad/go-app v0.0.0-20251227083853-8f6c92fbfd4e
-	github.com/n0rad/go-erlog v0.0.0-20240412093139-2d3c00f17991
+	github.com/n0rad/go-erlog v0.0.0-20251227192249-cb1b877cb897
 	github.com/n0rad/gomake v0.0.0-20251213124211-2e9c94b5dea0
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
