@@ -2,6 +2,25 @@
   description = "bcl infra";
 
   outputs = {self, ...} @ bclInputs: let
+    # Helper to build the Go binary from the git repo root
+    goPackageForRepoRoot = system: let
+      pkgs = import bclInputs.nixpkgs {
+        inherit system;
+      };
+    in
+      pkgs.buildGoModule {
+        pname = "becloudless";
+        version = "0.0.0";
+
+        # The git repo root is two levels up from this flake.nix
+        src = pkgs.lib.cleanSource ../../..;
+
+        vendorHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
+        # If module path differs, adjust or set GO111MODULE env, etc.
+        CGO_ENABLED = 0;
+      };
+
     bclSnowfallLib = bclInputs.snowfall-lib.mkLib {
       inputs = bclInputs;
       src = ./.;
@@ -14,29 +33,6 @@
         namespace = "bcl";
       };
     };
-
-    # Build the Go module at the git repo root (../.. from this flake)
-    # and expose it as a package under pkgs.bcl.becloudless
-    goPackageForRepoRoot = system: let
-      pkgs = bclInputs.nixpkgs.legacyPackages.${system};
-    in
-      pkgs.buildGoModule {
-        pname = "becloudless";
-        version = "0.0.1";
-
-        src = pkgs.lib.cleanSource (pkgs.lib.sourceByRegex ../.. [
-          "^becloudless(/.*)?$"
-          "^go\.mod$"
-          "^go\.sum$"
-        ]);
-
-        # If the Go module lives in ../../becloudless/, adjust modRoot
-        modRoot = "becloudless";
-
-        vendorHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-
-        CGO_ENABLED = 0;
-      };
 
     bclFlake = bclSnowfallLib.mkFlake {
       systems = {
@@ -59,6 +55,8 @@
       };
       outputs-builder = channels: {
         packages = {
+          # channels is already the pkgs set for a given system; use its system attr
+          default = goPackageForRepoRoot channels.nixpkgs.system;
         };
       };
     };
