@@ -2,16 +2,16 @@
 
 buildGo124Module rec {
   pname = "becloudless";
-  version = "0.251226.2334-H2ad555e";
+  version = "0.251229.930-H3353b5e";
 
   src = fetchFromGitHub {
     owner = "becloudless";
     repo = "becloudless";
     rev = "v${version}";
-    hash = "sha256-2tA7mz7cqG9tfpVH/M4wKFmb5PNaIpHZcWWJIUk3zwY=";
+    hash = "sha256-v6N4Co3KlfiI9aFDPygsIU/nEiKnRuIGK+zqdvqdTxQ=";
   };
 
-  vendorHash = "sha256-iDofwnMmUGOy0CzrtIH7rwJRiHp+3Pqlshq5k1VqTcE=";
+  vendorHash = "sha256-9d6nVbunYwO24ddymwlZlzmI4697KbtwIyX7GsEQIb0=";
 
   nativeBuildInputs = [ git ];
 
