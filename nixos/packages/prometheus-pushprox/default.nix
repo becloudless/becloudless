@@ -14,7 +14,7 @@ buildGoModule rec {
 
   vendorHash = "sha256-K98Ay3H7/RAoKxB5A1h6C2XZqKNXJYvlwqrY2AEKLLs=";
 
-  CGO_ENABLED = 0;
+  env.CGO_ENABLED = "0";
 
   installPhase = ''
     mkdir -p $out/bin

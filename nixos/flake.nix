@@ -34,6 +34,50 @@
           };
         };
       };
+      outputs-builder = channels: {
+        packages = {
+          becloudless = channels.nixpkgs.buildGo124Module {
+            pname = "becloudless";
+            version = "0.0.1";
+            src = ../.;
+            vendorHash = "sha256-9d6nVbunYwO24ddymwlZlzmI4697KbtwIyX7GsEQIb0=";
+
+            nativeBuildInputs = [ channels.nixpkgs.pkgs.git ];
+
+            preBuild = ''
+              echo "Pre build"
+              mkdir -p dist-tools
+              go build -o ./dist-tools/go-jsonschema github.com/atombender/go-jsonschema
+              go generate ./...
+            '';
+
+            # TODO this results with a fake version suffix
+            buildPhase = ''
+              echo "Build"
+              export HOME=$PWD
+              git config --global user.email "you@example.com"
+              git config --global user.name "Your Name"
+              git config --global init.defaultBranch main
+              git init .
+              git add .
+              git commit -m "init" || true
+
+              ./gomake build
+            '';
+
+            installPhase = ''
+              mkdir -p $out/bin
+              cp dist/bcl-linux-amd64/bcl $out/bin/bcl
+            '';
+          };
+        };
+      };
+
+      overlays = [
+        (final: prev: {
+          bcl = (bclFlake.packages.${final.system} or {}); # expose `becloudless` package under `bcl` namespace
+        })
+      ];
     };
 
 
@@ -91,7 +135,7 @@
 
   inputs = {
     nixpkgs = {
-      url = "github:NixOS/nixpkgs/nixos-24.11";
+      url = "github:NixOS/nixpkgs/nixos-25.11";
     };
 
     snowfall-lib = {
@@ -109,7 +153,7 @@
     };
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-24.11";
+      url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
