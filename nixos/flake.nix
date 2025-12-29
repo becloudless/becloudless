@@ -15,6 +15,29 @@
       };
     };
 
+    # Build the Go module at the git repo root (../.. from this flake)
+    # and expose it as a package under pkgs.bcl.becloudless
+    goPackageForRepoRoot = system: let
+      pkgs = bclInputs.nixpkgs.legacyPackages.${system};
+    in
+      pkgs.buildGoModule {
+        pname = "becloudless";
+        version = "0.0.1";
+
+        src = pkgs.lib.cleanSource (pkgs.lib.sourceByRegex ../.. [
+          "^becloudless(/.*)?$"
+          "^go\.mod$"
+          "^go\.sum$"
+        ]);
+
+        # If the Go module lives in ../../becloudless/, adjust modRoot
+        modRoot = "becloudless";
+
+        vendorHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
+        CGO_ENABLED = 0;
+      };
+
     bclFlake = bclSnowfallLib.mkFlake {
       systems = {
         modules = {
@@ -32,6 +55,10 @@
               "${nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
             ];
           };
+        };
+      };
+      outputs-builder = channels: {
+        packages = {
         };
       };
     };
@@ -77,7 +104,9 @@
             # Ensure downstream flakes see the bcl package namespace under pkgs.bcl
             overlays = [
               (final: prev: {
-                bcl = self.packages.${final.system} or {};
+                bcl = (self.packages.${final.system} or {}) // {
+                  becloudless = goPackageForRepoRoot final.system;
+                };
               })
             ];
 
