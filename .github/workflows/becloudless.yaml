@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # whole repo
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -52,7 +52,9 @@ jobs:
       - name: Check for changes in nixos or pkg
         id: changes
         run: |
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -Eq '^(nixos/|pkg/)'; then
+          set -x 
+          mainHash=$(git rev-parse origin/main)          
+          if git diff --name-only $mainHash ${{ github.sha }} | grep -Eq '^(nixos/|pkg/|tests/)'; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "changed=false" >> $GITHUB_OUTPUT

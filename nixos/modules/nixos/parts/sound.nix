@@ -7,7 +7,7 @@ in
   options.bcl.sound.enable = lib.mkEnableOption "Enable";
 
   config = lib.mkIf cfg.enable {
-    hardware.pulseaudio.enable = false;
+    services.pulseaudio.enable = false;
     security.rtkit.enable = true;
     services.pipewire = {
       enable = true;

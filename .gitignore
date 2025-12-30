@@ -6,8 +6,9 @@ nixos/result
 
 tests/*/nixos/result
 tests/*/nixos/flake.lock
-tests/*/assets
+tests/*/embedded
 tests/*/version
 tests/*/lock
+tests/basic/repository/nixos/result
 tests/work/
 tests/new/
