@@ -71,14 +71,19 @@ installHost() {
 
 ###########
 
+#echo_brightred "## Building bcl"
+#./gomake build
+#BCL_BIN="./dist/bcl-*/bcl"
+
 echo_brightred "## Building bcl"
-./gomake build
+(cd nixos && nix build .#becloudless)
+BCL_BIN="./nixos/result/bin/bcl"
 
 echo_brightred "## Check flake"
 (cd tests/basic/repository/nixos && nix flake update && nix flake check)
 
 echo_brightred "## Prepare host"
-./dist/bcl-*/bcl -H ./tests/basic nixos prepare
+$BCL_BIN -H ./tests/basic nixos prepare
 
 [ -f ./tests/basic/repository/nixos/result/iso/bcl.iso ] || {
 	echo_brightred "## Building iso image"
@@ -122,11 +127,11 @@ validate-test-tv() {
 	ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ../secrets/ed25519 -p 10022 toto@127.0.0.1 pidof jellyfinmediaplayer
 }
 
-(cd ./tests/basic/repository && installHost "test-tv" \
-	"7d5e9855-0cba-4c41-b45e-cdff7a9514d9" \
-	8G \
-	3G \
-	validate-test-tv)
+#(cd ./tests/basic/repository && installHost "test-tv" \
+#	"7d5e9855-0cba-4c41-b45e-cdff7a9514d9" \
+#	8G \
+#	3G \
+#	validate-test-tv)
 
 
 

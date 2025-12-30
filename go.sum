@@ -499,8 +499,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f h1:y5//uYreIhSUg3J1GEMiLbxo1LJaP8RfCpH6pymGZus=
 github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f/go.mod h1:ZdcZmHo+o7JKHSa8/e818NopupXU1YMK5fe1lsApnBw=
-github.com/n0rad/go-app v0.0.0-20251227083853-8f6c92fbfd4e h1:0Fr2P/J1+hBQNebN/npTkX7L70ilUqUPaUoSXYrsh78=
-github.com/n0rad/go-app v0.0.0-20251227083853-8f6c92fbfd4e/go.mod h1:bcSIvHDaTeBhjKQvwFFBH4WMLHBMKJKx6gZSnltNbzg=
+github.com/n0rad/go-app v0.0.0-20251227182329-c1d5e61b7561 h1:fdtVDfkGDNaGHKJygMURlsqmvfkGeLdkYh9LtUlzNLo=
+github.com/n0rad/go-app v0.0.0-20251227182329-c1d5e61b7561/go.mod h1:Fl+iFjoLVhMADu6Cai/PLcCxyyh5jJ7PDLYZyHWvamY=
 github.com/n0rad/go-erlog v0.0.0-20251227192249-cb1b877cb897 h1:KgfRWP/5D/AN1gA3/HgPU5i66QL/UECl0pom5u6nDrA=
 github.com/n0rad/go-erlog v0.0.0-20251227192249-cb1b877cb897/go.mod h1:ot3GFY/7ozYdDxiwrbZrLEr1/DnLxOFo3+/FxoDZjxk=
 github.com/n0rad/gomake v0.0.0-20251213124211-2e9c94b5dea0 h1:l3FHw2LvJK217RU4DMxYORKjdGwSgul+kCm6/3uXyqU=

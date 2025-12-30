@@ -4,9 +4,9 @@ dist-tools
 
 nixos/result
 
-tests/*/nixos/result
-tests/*/nixos/flake.lock
-tests/*/assets
+tests/basic/embedded
+tests/basic/repository/nixos/result
+tests/basic/repository/nixos/flake.lock
 tests/*/version
 tests/*/lock
 tests/work/
