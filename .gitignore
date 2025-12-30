@@ -9,5 +9,6 @@ tests/basic/repository/nixos/result
 tests/basic/repository/nixos/flake.lock
 tests/*/version
 tests/*/lock
+tests/basic/repository/nixos/result
 tests/work/
 tests/new/

@@ -36,6 +36,7 @@
       };
       outputs-builder = channels: {
         packages = {
+          # this package must be declared out of snowfall because it refuse to go outside nixos/ folder
           becloudless = channels.nixpkgs.buildGo124Module {
             pname = "becloudless";
             version = "0.0.1";
