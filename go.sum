@@ -507,6 +507,8 @@ github.com/n0rad/gomake v0.0.0-20251213124211-2e9c94b5dea0 h1:l3FHw2LvJK217RU4DM
 github.com/n0rad/gomake v0.0.0-20251213124211-2e9c94b5dea0/go.mod h1:aW2XZvKayoCWP5PoXpTkTpZ3Dyt2ZLcxBY/DUe5+vfg=
 github.com/n0rad/gomake v0.0.0-20260101014643-37eb0b5d31c5 h1:DWYZOzn/kFh60M88Et0NQvqZi5a2588pXjZ+E5SdEJA=
 github.com/n0rad/gomake v0.0.0-20260101014643-37eb0b5d31c5/go.mod h1:aW2XZvKayoCWP5PoXpTkTpZ3Dyt2ZLcxBY/DUe5+vfg=
+github.com/n0rad/gomake v0.0.0-20260101021215-b1fbaa4961d5 h1:FQh/RomtsQq75Yh80gioPPBMJfOs+AZvsn6P+M92UJM=
+github.com/n0rad/gomake v0.0.0-20260101021215-b1fbaa4961d5/go.mod h1:aW2XZvKayoCWP5PoXpTkTpZ3Dyt2ZLcxBY/DUe5+vfg=
 github.com/onsi/ginkgo v1.6.0 h1:Ix8l273rp3QzYgXSR+c8d1fTG7UPgYkOSELPhiY/YGw=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo/v2 v2.21.0 h1:7rg/4f3rB88pb5obDgNZrNHrQ4e6WpjonchcpuBRnZM=

@@ -46,10 +46,7 @@
             nativeBuildInputs = [ channels.nixpkgs.pkgs.git ];
 
             preBuild = ''
-              echo "Pre build"
-              mkdir -p dist-tools
-              go build -o ./dist-tools/go-jsonschema github.com/atombender/go-jsonschema
-              go generate ./...
+              ./gomake build -p
             '';
 
             # TODO this results with a fake version suffix
