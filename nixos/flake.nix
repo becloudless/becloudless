@@ -38,7 +38,7 @@
         packages = {
           # this package must be declared out of snowfall because it refuse to go outside nixos/ folder
           becloudless = let
-            projectGit = fetchGit ../.;
+            theRev = self.rev;
           in channels.nixpkgs.buildGo124Module {
             pname = "becloudless";
             version = "0.0.1";
@@ -48,7 +48,7 @@
             nativeBuildInputs = [ channels.nixpkgs.pkgs.git ];
 
             preBuild = ''
-              echo "Pre build ${projectGit.shortRev}"
+              echo "Pre build ${theRev}"
               ./gomake build -p
             '';
 
