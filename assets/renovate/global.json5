@@ -18,7 +18,8 @@
   ],
 
   branchConcurrentLimit: 0,
-  platformAutomerge: true, // do not wait for next renovate run if the platform support automerge
+  // TODO platform automerge requires to put some mandatory checks, else it will be merged, even if the CI is red
+  //platformAutomerge: true, // do not wait for next renovate run if the platform support automerge
   minimumReleaseAge: "3 days",
   labels: ["dependencies"],
 
