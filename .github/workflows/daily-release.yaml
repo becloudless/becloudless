@@ -68,5 +68,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ./gomake release -L debug
-
+          ./gomake release -c -L debug
