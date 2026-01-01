@@ -3,7 +3,7 @@ module github.com/becloudless/becloudless
 go 1.24.4
 
 require (
-	github.com/Mic92/ssh-to-age a8d2bffa321d
+	github.com/Mic92/ssh-to-age v0.0.0-20251229041432-a8d2bffa321d
 	github.com/atombender/go-jsonschema v0.20.0
 	github.com/awnumar/memguard v0.23.0
 	github.com/charmbracelet/huh v0.8.0
@@ -39,8 +39,9 @@ require (
 	cloud.google.com/go/monitoring v1.24.2 // indirect
 	cloud.google.com/go/storage v1.57.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
-	filippo.io/age v1.2.1 // indirect
+	filippo.io/age v1.3.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
+	filippo.io/hpke v0.4.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.19.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.12.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.2 // indirect

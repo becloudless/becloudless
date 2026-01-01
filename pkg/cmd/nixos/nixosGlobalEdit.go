@@ -2,7 +2,7 @@ package nixos
 
 import (
 	"fmt"
-	"github.com/becloudless/becloudless/dist/schema"
+	"github.com/becloudless/becloudless/pkg/generated/schema"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 	"reflect"
