@@ -37,19 +37,19 @@
       outputs-builder = channels: {
         packages = {
           # this package must be declared out of snowfall because it refuse to go outside nixos/ folder
-          becloudless = channels.nixpkgs.buildGo124Module {
+          becloudless = let
+            projectGit = fetchGit ../.;
+          in channels.nixpkgs.buildGo124Module {
             pname = "becloudless";
             version = "0.0.1";
             src = ../.;
-            vendorHash = "sha256-/BhJK7RrBYQyw70buf6vP5fCIq6aUk2uyCq+lBYElLQ=";
+            vendorHash = "";
 
             nativeBuildInputs = [ channels.nixpkgs.pkgs.git ];
 
             preBuild = ''
-              echo "Pre build"
-              mkdir -p dist-tools
-              go build -o ./dist-tools/go-jsonschema github.com/atombender/go-jsonschema
-              go generate ./...
+              echo "Pre build ${projectGit.shortRev}"
+              ./gomake build -p
             '';
 
             # TODO this results with a fake version suffix
