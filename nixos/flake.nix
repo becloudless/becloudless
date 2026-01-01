@@ -2,6 +2,8 @@
   description = "bcl infra";
 
   outputs = {self, ...} @ bclInputs: let
+    revision = self.rev or "dirty";
+
     bclSnowfallLib = bclInputs.snowfall-lib.mkLib {
       inputs = bclInputs;
       src = ./.;
@@ -38,32 +40,25 @@
         packages = {
           # this package must be declared out of snowfall because it refuse to go outside nixos/ folder
           becloudless = let
-            theRev = self.rev;
           in channels.nixpkgs.buildGo124Module {
             pname = "becloudless";
             version = "0.0.1";
             src = ../.;
-            vendorHash = "";
+            vendorHash = "sha256-0aoeim4axVhGUOJgx1Bjb0PoQ8FMK8P1XBuFm9dSxek=";
 
             nativeBuildInputs = [ channels.nixpkgs.pkgs.git ];
 
             preBuild = ''
-              echo "Pre build ${theRev}"
+              echo "Pre build"
               ./gomake build -p
             '';
 
             # TODO this results with a fake version suffix
             buildPhase = ''
               echo "Build"
-              export HOME=$PWD
-              git config --global user.email "you@example.com"
-              git config --global user.name "Your Name"
-              git config --global init.defaultBranch main
-              git init .
-              git add .
-              git commit -m "init" || true
-
-              ./gomake build
+              #export HOME=$PWD
+              VERSION=$(./gomake version -H ${revision})
+              ./gomake build -v $VERSION
             '';
 
             installPhase = ''
