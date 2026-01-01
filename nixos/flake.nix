@@ -53,12 +53,9 @@
               ./gomake build -p
             '';
 
-            # TODO this results with a fake version suffix
             buildPhase = ''
               echo "Build"
-              #export HOME=$PWD
-              VERSION=$(./gomake version -H ${revision})
-              ./gomake build -v $VERSION
+              ./gomake build -v "$(./gomake version -H ${revision})"
             '';
 
             installPhase = ''
