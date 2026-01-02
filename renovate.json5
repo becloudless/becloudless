@@ -3,24 +3,6 @@
   extends: [
     "github>becloudless/becloudless//assets/renovate/global.json5",
   ],
-  packageRules: [
-    // When Renovate updates Go modules in this repo, also run nix-update
-    {
-      matchManagers: ["gomod"],
-      matchPaths: ["."],
-      postUpgradeTasks: {
-        // Run from repo root; nixos/flake.nix defines the becloudless package
-        commands: [
-          "nix-update becloudless --flake nixos#becloudless"
-        ],
-        fileFilters: [
-          "nixos/flake.nix",
-          "nixos/flake.lock"
-        ],
-        executionMode: "update",
-      },
-    },
-  ],
   "lockFileMaintenance": {
     "enabled": true,
     "extends": ["schedule:weekly"]
