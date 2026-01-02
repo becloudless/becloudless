@@ -6,12 +6,14 @@ on:
     paths:
       - "go.mod"
       - "go.sum"
+
+permissions:
+  contents: write
+
 jobs:
   update-vendor-hash:
     if: github.event.pull_request.head.repo.fork == false
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
 
     steps:
       - uses: actions/checkout@v6
@@ -38,6 +40,7 @@ jobs:
 
       - uses: iarekylew00t/verified-bot-commit@v2.1.1
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           message: "Auto Update Vendor Hash"
           files: |
             nixos/flake.nix
