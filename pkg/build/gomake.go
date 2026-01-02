@@ -62,7 +62,7 @@ func versionHash(hash string) (string, error) {
 	if hms == "" {
 		hms = "0"
 	}
-	return fmt.Sprintf("%s.%s.%s-H%s", "0", now.Format("060102"), hms, hash), nil
+	return fmt.Sprintf("%s.%s.%s-H%.8s", "0", now.Format("060102"), hms, hash), nil
 }
 
 func main() {
