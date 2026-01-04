@@ -419,8 +419,6 @@ github.com/kisielk/errcheck v1.2.0/go.mod h1:/BMXB+zMLi60iA8Vv6Ksmxu/1UDYcXs4uQL
 github.com/kisielk/errcheck v1.5.0 h1:e8esj/e4R+SAOwFwN+n3zr0nYeCyeweozKfO23MvHzY=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
-github.com/klauspost/compress v1.18.1 h1:bcSGx7UbpBqMChDtsF28Lw6v/G94LPrrbMbdC3JH2co=
-github.com/klauspost/compress v1.18.1/go.mod h1:ZQFFVG+MdnR0P+l6wpXgIL4NTtwiKIdBnrBd8Nrxr+0=
 github.com/klauspost/compress v1.18.2 h1:iiPHWW0YrcFgpBYhsA6D1+fqHssJscY/Tm/y2Uqnapk=
 github.com/klauspost/compress v1.18.2/go.mod h1:R0h/fSBs8DE4ENlcrlib3PsXS61voFxhIs2DeRhCvJ4=
 github.com/klauspost/cpuid/v2 v2.3.0 h1:S4CRMLnYUhGeDFDqkGriYKdfoFlDnMtqTiI/sFzhA9Y=
@@ -507,8 +505,8 @@ github.com/n0rad/go-app v0.0.0-20251227182329-c1d5e61b7561 h1:fdtVDfkGDNaGHKJygM
 github.com/n0rad/go-app v0.0.0-20251227182329-c1d5e61b7561/go.mod h1:Fl+iFjoLVhMADu6Cai/PLcCxyyh5jJ7PDLYZyHWvamY=
 github.com/n0rad/go-erlog v0.0.0-20251227192249-cb1b877cb897 h1:KgfRWP/5D/AN1gA3/HgPU5i66QL/UECl0pom5u6nDrA=
 github.com/n0rad/go-erlog v0.0.0-20251227192249-cb1b877cb897/go.mod h1:ot3GFY/7ozYdDxiwrbZrLEr1/DnLxOFo3+/FxoDZjxk=
-github.com/n0rad/gomake v0.0.0-20260101184609-bd73a8d31674 h1:CvfKj+opBWjXH6bJrzs2Sep0ooPG/124GR2lwFljCsY=
-github.com/n0rad/gomake v0.0.0-20260101184609-bd73a8d31674/go.mod h1:aW2XZvKayoCWP5PoXpTkTpZ3Dyt2ZLcxBY/DUe5+vfg=
+github.com/n0rad/gomake v0.0.0-20260101184640-3f85ce82fb8e h1:C5xWd2oqdShJvjQxHKo/JNaKmnr3GMTXuRNbH30xg2M=
+github.com/n0rad/gomake v0.0.0-20260101184640-3f85ce82fb8e/go.mod h1:aW2XZvKayoCWP5PoXpTkTpZ3Dyt2ZLcxBY/DUe5+vfg=
 github.com/onsi/ginkgo v1.6.0 h1:Ix8l273rp3QzYgXSR+c8d1fTG7UPgYkOSELPhiY/YGw=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo/v2 v2.21.0 h1:7rg/4f3rB88pb5obDgNZrNHrQ4e6WpjonchcpuBRnZM=
