@@ -16,7 +16,19 @@ jobs:
       contents: write
 
     steps:
+      - name: Create GitHub App Token
+        uses: actions/create-github-app-token@v2
+        id: github-app-token
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ steps.github-app-token.outputs.token }} # Use the App token to checkout
 
       - uses: cachix/install-nix-action@v31
         with:
@@ -40,6 +52,8 @@ jobs:
 
       - uses: iarekylew00t/verified-bot-commit@v2.1.1
         with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ steps.github-app-token.outputs.token }} # Use the App token to commit changes
           message: "Auto Update Vendor Hash"
           files: |
             nixos/flake.nix
