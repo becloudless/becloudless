@@ -1,15 +1,15 @@
 # gomake build
-./dist
-./dist-tools
+dist
+dist-tools
 
 # manual go build
 ./becloudless
 
 # nixos build
-./nixos/result
+nixos/result
 
 # Generated go source files
-./pkg/generated
+pkg/generated
 
 tests/basic/embedded
 tests/basic/repository/nixos/result
