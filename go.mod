@@ -16,7 +16,7 @@ require (
 	github.com/moby/buildkit v0.26.3
 	github.com/n0rad/go-app v0.0.0-20251227182329-c1d5e61b7561
 	github.com/n0rad/go-erlog v0.0.0-20251227192249-cb1b877cb897
-	github.com/n0rad/gomake v0.0.0-20260101184640-3f85ce82fb8e
+	github.com/n0rad/gomake v0.0.0-20260105145040-7210f7f1961f
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
@@ -142,6 +142,8 @@ require (
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
+	github.com/google/go-github/v63 v63.0.0 // indirect
+	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -240,7 +242,7 @@ require (
 	golang.org/x/exp v0.0.0-20251209150349-8475f28825e9 // indirect
 	golang.org/x/mod v0.31.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
-	golang.org/x/oauth2 v0.31.0 // indirect
+	golang.org/x/oauth2 v0.34.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
@@ -275,4 +277,4 @@ require (
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
-//replace github.com/n0rad/go-app => ../../n0rad/go-app
+//replace github.com/n0rad/gomake => ../../n0rad/gomake
