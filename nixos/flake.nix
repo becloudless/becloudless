@@ -96,7 +96,7 @@
           lib = bclInputs.snowfall-lib.mkLib {
             inherit src;
             inputs = bclInputs // inputs;
-            snowfall.namespace = "my";
+            snowfall.namespace = "infra";
           };
           flake-options = builtins.removeAttrs flake-and-lib-options ["inputs" "src"];
         in
