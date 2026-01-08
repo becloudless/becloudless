@@ -175,8 +175,7 @@
         }
       '';
 
-      home.persistence."/nix/home/tv" = {
-        allowOther = true;
+      home.persistence."/nix" = {
         directories = [
           ".local/share/jellyfinmediaplayer"
           ".local/share/Jellyfin Media Player"
