@@ -14,5 +14,39 @@ spec:
     storageClass: longhorn-single-local-replica
     size: 1Gi
 
+  backup:
+    retentionPolicy: "60d"
+    barmanObjectStore:
+      destinationPath: s3://lldap-postgresql-backup
+      endpointURL: https://lldap-postgresql-backup.lldap.svc.cluster.local
+      endpointCA:
+        name: lldap-postgresql-backup
+        key: public.crt
+      s3Credentials:
+        accessKeyId:
+          name: lldap-postgresql-backup
+          key: MINIO_ROOT_USER
+        secretAccessKey:
+          name: lldap-postgresql-backup
+          key: MINIO_ROOT_PASSWORD
+      wal:
+        compression: gzip
+      data:
+        compression: gzip
+        jobs: 2
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: lldap-postgresql
+  namespace: lldap
+spec:
+  schedule: "0 4 * * *"
+  backupOwnerReference: self
+  immediate: true
+  cluster:
+    name: lldap-postgresql
+
 # TODO as code
 # kubectl cnpg certificate -n lldap lldap-postgresql-app-cert --cnpg-cluster lldap-postgresql --cnpg-user app
