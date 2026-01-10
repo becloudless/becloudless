@@ -66,7 +66,13 @@
         fi
       '';
 
-      home.file.".local/share/jellyfinmediaplayer/jellyfinmediaplayer.conf".text = ''
+      home.file.".local/share/jellyfin-desktop/profiles.json".text = ''
+        {
+            "defaultProfile": "b6a136dc17a44b32a63eed3507a6f2d0"
+        }
+      '';
+
+      home.file.".local/share/jellyfin-desktop/profiles/b6a136dc17a44b32a63eed3507a6f2d0/jellyfinmediaplayer.conf".text = ''
         {
             "sections": {
                 "appleremote": {
@@ -77,7 +83,7 @@
                     "device": "${config.bcl.tv.audioDevice}",
                     "devicetype": "${config.bcl.tv.audioType}",
                     "exclusive": false,
-                    "normalize": false,
+                    "normalize": true,
                     "passthrough.ac3": false,
                     "passthrough.dts": false,
                     "passthrough.dts-hd": false,
@@ -94,15 +100,16 @@
                     "verbose_logging": false
                 },
                 "main": {
+                    "allowBrowserZoom": true,
                     "alwaysOnTop": false,
-                    "autodetectCertBundle": false,
-                    "checkForUpdates": false,
+                    "autodetectCertBundle": true,
+                    "checkForUpdates": true,
                     "disablemouse": false,
                     "enableInputRepeat": true,
+                    "enableMPV": true,
                     "enableWindowsMediaIntegration": true,
                     "enableWindowsTaskbarIntegration": true,
                     "forceAlwaysFS": false,
-                    "forceExternalWebclient": false,
                     "forceFSScreen": "",
                     "fullscreen": false,
                     "hdmi_poweron": false,
@@ -114,7 +121,7 @@
                     "showPowerOptions": true,
                     "useOpenGL": false,
                     "useSystemVideoCodecs": false,
-                    "userWebClient": "https://jellyfin.bcl.io",
+                    "userWebClient": "https://jellyfin.awired.net",
                     "webMode": "desktop"
                 },
                 "other": {
@@ -123,9 +130,6 @@
                 "path": {
                     "startupurl_desktop": "bundled",
                     "startupurl_extension": "bundled"
-                },
-                "plugins": {
-                    "skipintro": false
                 },
                 "subtitles": {
                     "ass_scale_border_and_shadow": true,
@@ -143,7 +147,7 @@
                     "lircd_enabled": false,
                     "smbd_enabled": false,
                     "sshd_enabled": false,
-                    "systemname": "JellyfinMediaPlayer"
+                    "systemname": "JellyfinDesktop"
                 },
                 "video": {
                     "allow_transcode_to_hevc": false,
@@ -153,33 +157,31 @@
                     "audio_delay.25hz": 0,
                     "audio_delay.50hz": 0,
                     "audio_delay.normal": 0,
-                    "cache": 500,
+                    "cache": 75,
                     "debug.force_vo": "",
                     "default_playback_speed": 1,
                     "deinterlace": false,
-                    "force_transcode_4k": true,
-                    "force_transcode_av1": true,
+                    "force_transcode_4k": false,
+                    "force_transcode_av1": false,
                     "force_transcode_dovi": true,
-                    "force_transcode_hdr": true,
-                    "force_transcode_hevc": true,
-                    "force_transcode_hi10p": true,
-                    "hardwareDecoding": "enabled",
+                    "force_transcode_hdr": false,
+                    "force_transcode_hevc": false,
+                    "force_transcode_hi10p": false,
+                    "hardwareDecoding": "copy",
                     "prefer_transcode_to_h265": false,
-                    "refreshrate.auto_switch": true,
+                    "refreshrate.auto_switch": false,
                     "refreshrate.avoid_25hz_30hz": true,
                     "refreshrate.delay": 3,
                     "sync_mode": "audio"
                 }
             },
-            "version": 6
+            "version": 7
         }
       '';
 
       home.persistence."/nix" = {
         directories = [
-          ".local/share/jellyfinmediaplayer"
-          ".local/share/Jellyfin Media Player"
-          ".config/jellyfin.org"
+          ".local/share/jellyfin-desktop"
         ];
       };
     };
