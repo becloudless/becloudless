@@ -8,6 +8,11 @@ in {
     locale = lib.mkOption { type = lib.types.str; default = "en_US.UTF-8"; };
     name = lib.mkOption { type = lib.types.str; description = "Name of the whole infrastructure, a-zA-Z-. usually the domain without the TLD"; };
     domain = lib.mkOption { type = lib.types.str; description = "Domain name of the infrastructure"; };
+    secretFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = "SOPS file containing secrets";
+    };
     git = lib.mkOption {
       type = lib.types.nullOr (lib.types.submodule ({ ... }: {
         options = {
@@ -20,11 +25,6 @@ in {
     admin = lib.mkOption {
       type = lib.types.nullOr (lib.types.submodule ({ ... }: {
         options = {
-          passwordSecretFile = lib.mkOption {
-            type = lib.types.nullOr lib.types.path;
-            default = null;
-            description = "SOPS file containing the password entries users.<name>.password for each admin user.";
-          };
           users = lib.mkOption {
             type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
               options = {
@@ -55,7 +55,7 @@ in {
   config = lib.mkIf cfg.enable (
     let
       setAdminPasswordFlag = (config.bcl.role or { setAdminPassword = false; }).setAdminPassword;
-      adminPasswordFile = if cfg.admin != null && cfg.admin.passwordSecretFile != null then cfg.admin.passwordSecretFile else null;
+      adminPasswordFile = cfg.secretFile;
     in {
       time.timeZone = cfg.timeZone;
       i18n.defaultLocale = cfg.locale;
