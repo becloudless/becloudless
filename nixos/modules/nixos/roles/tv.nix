@@ -72,7 +72,7 @@
         }
       '';
 
-      home.file.".local/share/jellyfin-desktop/profiles/b6a136dc17a44b32a63eed3507a6f2d0/jellyfinmediaplayer.conf".text = ''
+      home.file.".local/share/jellyfin-desktop/profiles/b6a136dc17a44b32a63eed3507a6f2d0/jellyfin-desktop.conf".text = ''
         {
             "sections": {
                 "appleremote": {
