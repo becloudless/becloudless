@@ -56,8 +56,10 @@ in {
     let
       setAdminPasswordFlag = (config.bcl.role or { setAdminPassword = false; }).setAdminPassword;
       adminPasswordFile = if cfg.admin != null && cfg.admin.passwordSecretFile != null then cfg.admin.passwordSecretFile else null;
-      # Build user attribute set with optional hashedPasswordFile referencing per-user secret
-      admins = lib.optionalAttrs (cfg.admin != null) (lib.mapAttrs (name: userCfg: (
+    in {
+      time.timeZone = cfg.timeZone;
+      i18n.defaultLocale = cfg.locale;
+      users.users = lib.optionalAttrs (cfg.admin != null) (lib.mapAttrs (name: userCfg: (
         let pk = userCfg.sshPublicKey; in {
           isNormalUser = true;
           group = "users";
@@ -67,8 +69,8 @@ in {
           hashedPasswordFile = config.sops.secrets."users.${name}.password".path;
         }
       )) cfg.admin.users);
-      # Build secrets attrset for per-user passwords when enabled
-      adminPasswordSecrets = lib.optionalAttrs (setAdminPasswordFlag && adminPasswordFile != null && cfg.admin != null) (
+      # Merge per-user secrets; no single shared adminPassword secret anymore
+      sops.secrets = lib.optionalAttrs (setAdminPasswordFlag && adminPasswordFile != null && cfg.admin != null) (
         lib.mapAttrs' (name: _: {
           name = "users.${name}.password"; # matches key in SOPS YAML file
           value = {
@@ -77,12 +79,6 @@ in {
           };
         }) cfg.admin.users
       );
-    in {
-      time.timeZone = cfg.timeZone;
-      i18n.defaultLocale = cfg.locale;
-      users.users = admins;
-      # Merge per-user secrets; no single shared adminPassword secret anymore
-      sops.secrets = adminPasswordSecrets;
     }
   );
 }
