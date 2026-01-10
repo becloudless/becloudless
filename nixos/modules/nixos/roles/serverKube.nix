@@ -205,6 +205,7 @@ in
         apiVersion: kubelet.config.k8s.io/v1beta1
         kind: KubeletConfiguration
         cgroupDriver: systemd
+        failSwapOn: false
         evictionHard:
           imagefs.available: 1%
           memory.available: 100Mi
