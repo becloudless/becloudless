@@ -28,22 +28,6 @@
             home-manager.nixosModules.home-manager
           ];
         };
-#        hosts = {
-#          iso = {
-#            modules = with bclInputs; [
-#              "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
-#              "${nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
-#              {
-#                isoImage.squashfsCompression = "gzip -Xcompression-level 1";
-#                isoImage.volumeID = lib.mkForce "bcl-iso";
-#                image.baseName = lib.mkForce "bcl";
-#                environment.systemPackages = [
-#                  (import nixpkgs { system = "x86_64-linux"; }).nixos-facter
-#                ];
-#              }
-#            ];
-#          };
-#        };
       };
       outputs-builder = channels: {
         packages = {
@@ -120,9 +104,6 @@
                     isoImage.squashfsCompression = "gzip -Xcompression-level 1";
                     isoImage.volumeID = lib.mkForce "bcl-iso";
                     image.baseName = lib.mkForce "bcl";
-                    environment.systemPackages = [
-                      (import nixpkgs { system = "x86_64-linux"; }).nixos-facter
-                    ];
                   }
                 ];
               };
@@ -135,7 +116,7 @@
               })
             ];
 
-          }); #// {isoConfigurations = bclFlake.isoConfigurations;};
+          });
   in
     bclFlake // {
       inherit mkFlake;
