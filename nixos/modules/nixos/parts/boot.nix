@@ -54,7 +54,7 @@ in {
         else
         [];
       loader = {
-        timeout = if cfg.quiet then 0 else 1;
+        timeout = lib.mkForce (if cfg.quiet then 0 else 1);
         systemd-boot = lib.mkIf (cfg.efi && (builtins.length config.bcl.disk.devices) == 1) {
           enable = true;
           configurationLimit = 10;

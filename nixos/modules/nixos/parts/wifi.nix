@@ -1,58 +1,59 @@
 { config, lib, ... }: let
   cfg = config.bcl.wifi;
   global = config.bcl.global;
-  inherit (lib) mkIf mkEnableOption;
-
-  # helper to build one template for one SSID
-  mkWifiTemplate = ssid: {
-    content = ''
-      [connection]
-      id=${ssid}
-      type=wifi
-
-      [wifi]
-      mode=infrastructure
-      ssid=${ssid}
-
-      [wifi-security]
-      key-mgmt=wpa-psk
-      psk={{ .network.wifi.${ssid} }}
-
-      [ipv4]
-      method=auto
-
-      [ipv6]
-      addr-gen-mode=default
-      method=auto
-    '';
-    path = "/etc/NetworkManager/system-connections/${ssid}.nmconnection";
-  };
+  inherit (lib) mkIf mkEnableOption mkOption types mapAttrs';
 
 in {
   options.bcl.wifi = {
-    enable = mkEnableOption "Enable the default settings?";
-    ssids = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [];
-      description = "List of WiFi SSIDs for which to generate NetworkManager connections";
-    };
+    enable = mkEnableOption "Enable wifi management via NetworkManager";
   };
 
   config = mkIf cfg.enable {
     networking.wireless.enable = false;
     networking.networkmanager.enable = true;
 
-    # Expose `network.wifi` subtree from the SOPS file so templates can use
-    # `{{ .network.wifi.<SSID> }}` as the PSK.
-    sops = mkIf (global.secretFile != null) {
-      defaultSopsFile = global.secretFile;
+    # Declare SOPS secrets for wifi passwords if a global secretFile is provided
+    sops.secrets = mkIf (global.secretFile != null && (global.networking.wireless or {} != {})) (
+      (config.sops.secrets or {}) //
+      mapAttrs' (ssid: _: {
+        name = "networking.wireless.${ssid}.password";
+        value = {
+          sopsFile = global.secretFile;
+        };
+      }) global.networking.wireless
+    );
 
-      secrets."network.wifi".sopsFile = global.secretFile;
+    # Generate NetworkManager connection profiles using sops.templates so the
+    # password comes from the decrypted SOPS secret
+    sops.templates = mkIf (global.secretFile != null && (global.networking.wireless or {} != {})) (
+      (config.sops.templates or {}) //
+      mapAttrs' (ssid: _: {
+        name = "NetworkManager/system-connections/${ssid}.nmconnection";
+        value = {
+          owner = "root";
+          group = "root";
+          mode = "0400";
+          content = ''
+[connection]
+id=${ssid}
+type=wifi
 
-      templates = lib.listToAttrs (map (ssid: {
-        name = "wifi-${ssid}";
-        value = mkWifiTemplate ssid;
-      }) cfg.ssids);
-    };
+[wifi]
+mode=infrastructure
+ssid=${ssid}
+
+[wifi-security]
+key-mgmt=wpa-psk
+psk={{ ."networking.wireless.${ssid}.password" }}
+
+[ipv4]
+method=auto
+
+[ipv6]
+method=auto
+'';
+        };
+      }) global.networking.wireless
+    );
   };
 }

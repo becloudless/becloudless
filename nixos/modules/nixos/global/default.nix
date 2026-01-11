@@ -48,6 +48,30 @@ in {
       default = null;
       description = "Definition of multiple admin users.";
     };
+    networking = lib.mkOption {
+      type = lib.types.submodule ({ ... }: {
+        options.wireless = lib.mkOption {
+          type = lib.types.attrsOf (lib.types.submodule ({ ... }: {
+            options = {
+#              password = lib.mkOption {
+#                type = lib.types.nullOr lib.types.str;
+#                default = null;
+#                description = "WiFi password (if needed).";
+#              };
+#              hidden = lib.mkOption {
+#                type = lib.types.bool;
+#                default = false;
+#                description = "Whether the network is hidden.";
+#              };
+            };
+          }));
+          default = {};
+          description = "WiFi networks keyed by SSID.";
+        };
+      });
+      default = {};
+      description = "Networking-related global configuration.";
+    };
   };
 
   ###################
