@@ -1,23 +1,6 @@
 {config, lib, ...}:
 let
   cfg = config.bcl.global;
-  # Helper to turn an attrset of { ssid = "psk"; } into NM connection definitions
-  wifiFromSecrets = secrets:
-    lib.mapAttrsToList (ssid: psk: {
-      name = "wifi-${ssid}";
-      value = {
-        connection.type = "802-11-wireless";
-        connection.id = ssid;
-        "802-11-wireless" = {
-          inherit ssid;
-          mode = "infrastructure";
-        };
-        "802-11-wireless-security" = {
-          key-mgmt = "wpa-psk";
-          inherit psk;
-        };
-      };
-    }) secrets;
 in {
   options.bcl.global = {
     enable = lib.mkEnableOption "Enable the default settings?";
@@ -72,7 +55,6 @@ in {
   config = lib.mkIf cfg.enable (
     let
       setAdminPasswordFlag = (config.bcl.role or { setAdminPassword = false; }).setAdminPassword;
-      wifiSecrets = config.sops.secrets."network.wifi" or null;
     in {
       time.timeZone = cfg.timeZone;
       i18n.defaultLocale = cfg.locale;
@@ -95,14 +77,7 @@ in {
             sopsFile = cfg.secretFile;
           };
         }) cfg.admin.users
-      ) // lib.optionalAttrs (cfg.secretFile != null) {
-        "network.wifi" = {
-          sopsFile = cfg.secretFile;
-        };
-      };
-
-      networking.networkmanager.enable = true;
-      networking.networkmanager.connectionConfig = lib.mkIf (wifiSecrets != null) (wifiFromSecrets (import wifiSecrets.path));
+      );
     }
   );
 }

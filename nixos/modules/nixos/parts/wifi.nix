@@ -9,10 +9,29 @@ in {
     networking.wireless.enable = false;
     networking.networkmanager.enable = true;
 
-#    sops.secrets."networking.networkmanager.profiles.bcl" = {
-#      sopsFile = ../secrets.yaml;
-#      path = "/etc/NetworkManager/system-connections/bcl.nmconnection";
-#    };
+    # TODO use sops to write NetworkManager connections files
+    sops.templates."wifi-SSID" = {
+      content = ''
+        [connection]
+        id=SSID
+        type=wifi
 
+        [wifi]
+        mode=infrastructure
+        ssid=SSID
+
+        [wifi-security]
+        key-mgmt=wpa-psk
+        psk=PASSWORD
+
+        [ipv4]
+        method=auto
+
+        [ipv6]
+        addr-gen-mode=default
+        method=auto
+      '';
+      path = "/etc/NetworkManager/system-connections/SSID.nmconnection";
+    };
   };
 }
