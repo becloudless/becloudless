@@ -1,62 +1,58 @@
 { config, lib, ... }: let
   cfg = config.bcl.wifi;
   global = config.bcl.global;
-  inherit (lib) mkIf mkEnableOption mapAttrsToList concatStringsSep optionalAttrs;
+  inherit (lib) mkIf mkEnableOption;
 
-  # Render one NetworkManager connection file from an SSID and password
-  mkWifiTemplate = ssid: password: {
-    name = "wifi-${ssid}";
-    value = {
-      content = ''
-        [connection]
-        id=${ssid}
-        type=wifi
+  # helper to build one template for one SSID
+  mkWifiTemplate = ssid: {
+    content = ''
+      [connection]
+      id=${ssid}
+      type=wifi
 
-        [wifi]
-        mode=infrastructure
-        ssid=${ssid}
+      [wifi]
+      mode=infrastructure
+      ssid=${ssid}
 
-        [wifi-security]
-        key-mgmt=wpa-psk
-        psk=${password}
+      [wifi-security]
+      key-mgmt=wpa-psk
+      psk={{ .network.wifi.${ssid} }}
 
-        [ipv4]
-        method=auto
+      [ipv4]
+      method=auto
 
-        [ipv6]
-        addr-gen-mode=default
-        method=auto
-      '';
-      path = "/etc/NetworkManager/system-connections/${ssid}.nmconnection";
-    };
+      [ipv6]
+      addr-gen-mode=default
+      method=auto
+    '';
+    path = "/etc/NetworkManager/system-connections/${ssid}.nmconnection";
   };
 
 in {
   options.bcl.wifi = {
     enable = mkEnableOption "Enable the default settings?";
+    ssids = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [];
+      description = "List of WiFi SSIDs for which to generate NetworkManager connections";
+    };
   };
 
   config = mkIf cfg.enable {
     networking.wireless.enable = false;
     networking.networkmanager.enable = true;
 
-    # Generate one sops template per SSID defined in the SOPS secrets file
-    # at bcl.global.secretFile, under `network.wifi.<SSID>`.
+    # Expose `network.wifi` subtree from the SOPS file so templates can use
+    # `{{ .network.wifi.<SSID> }}` as the PSK.
     sops = mkIf (global.secretFile != null) {
       defaultSopsFile = global.secretFile;
 
-      # secrets used only as interpolation sources for templates
-      secrets = optionalAttrs (config ? sops && config.sops ? secrets) config.sops.secrets // {
-        "network.wifi".sopsFile = global.secretFile;
-      };
+      secrets."network.wifi".sopsFile = global.secretFile;
 
-      templates = let
-        wifiSecrets = (config.sops.secrets."network.wifi" or {});
-      in
-        (config.sops.templates or {}) //
-        builtins.listToAttrs (
-          mapAttrsToList (ssid: _: mkWifiTemplate ssid "${config.sops.placeholder?network.wifi.${ssid}}") wifiSecrets
-        );
+      templates = lib.listToAttrs (map (ssid: {
+        name = "wifi-${ssid}";
+        value = mkWifiTemplate ssid;
+      }) cfg.ssids);
     };
   };
 }
