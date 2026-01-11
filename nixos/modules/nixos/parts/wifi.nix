@@ -1,28 +1,24 @@
 { config, lib, ... }: let
   cfg = config.bcl.wifi;
-in {
-  options.bcl.wifi = {
-    enable = lib.mkEnableOption "Enable the default settings?";
-  };
+  global = config.bcl.global;
+  inherit (lib) mkIf mkEnableOption mapAttrsToList concatStringsSep optionalAttrs;
 
-  config = lib.mkIf cfg.enable {
-    networking.wireless.enable = false;
-    networking.networkmanager.enable = true;
-
-    # TODO use sops to write NetworkManager connections files
-    sops.templates."wifi-SSID" = {
+  # Render one NetworkManager connection file from an SSID and password
+  mkWifiTemplate = ssid: password: {
+    name = "wifi-${ssid}";
+    value = {
       content = ''
         [connection]
-        id=SSID
+        id=${ssid}
         type=wifi
 
         [wifi]
         mode=infrastructure
-        ssid=SSID
+        ssid=${ssid}
 
         [wifi-security]
         key-mgmt=wpa-psk
-        psk=PASSWORD
+        psk=${password}
 
         [ipv4]
         method=auto
@@ -31,7 +27,36 @@ in {
         addr-gen-mode=default
         method=auto
       '';
-      path = "/etc/NetworkManager/system-connections/SSID.nmconnection";
+      path = "/etc/NetworkManager/system-connections/${ssid}.nmconnection";
+    };
+  };
+
+in {
+  options.bcl.wifi = {
+    enable = mkEnableOption "Enable the default settings?";
+  };
+
+  config = mkIf cfg.enable {
+    networking.wireless.enable = false;
+    networking.networkmanager.enable = true;
+
+    # Generate one sops template per SSID defined in the SOPS secrets file
+    # at bcl.global.secretFile, under `network.wifi.<SSID>`.
+    sops = mkIf (global.secretFile != null) {
+      defaultSopsFile = global.secretFile;
+
+      # secrets used only as interpolation sources for templates
+      secrets = optionalAttrs (config ? sops && config.sops ? secrets) config.sops.secrets // {
+        "network.wifi".sopsFile = global.secretFile;
+      };
+
+      templates = let
+        wifiSecrets = (config.sops.secrets."network.wifi" or {});
+      in
+        (config.sops.templates or {}) //
+        builtins.listToAttrs (
+          mapAttrsToList (ssid: _: mkWifiTemplate ssid "${config.sops.placeholder?network.wifi.${ssid}}") wifiSecrets
+        );
     };
   };
 }
