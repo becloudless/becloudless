@@ -1,6 +1,23 @@
 {config, lib, ...}:
 let
   cfg = config.bcl.global;
+  # Helper to turn an attrset of { ssid = "psk"; } into NM connection definitions
+  wifiFromSecrets = secrets:
+    lib.mapAttrsToList (ssid: psk: {
+      name = "wifi-${ssid}";
+      value = {
+        connection.type = "802-11-wireless";
+        connection.id = ssid;
+        "802-11-wireless" = {
+          inherit ssid;
+          mode = "infrastructure";
+        };
+        "802-11-wireless-security" = {
+          key-mgmt = "wpa-psk";
+          inherit psk;
+        };
+      };
+    }) secrets;
 in {
   options.bcl.global = {
     enable = lib.mkEnableOption "Enable the default settings?";
@@ -55,7 +72,7 @@ in {
   config = lib.mkIf cfg.enable (
     let
       setAdminPasswordFlag = (config.bcl.role or { setAdminPassword = false; }).setAdminPassword;
-      adminPasswordFile = cfg.secretFile;
+      wifiSecrets = config.sops.secrets."network.wifi" or null;
     in {
       time.timeZone = cfg.timeZone;
       i18n.defaultLocale = cfg.locale;
@@ -65,20 +82,27 @@ in {
           group = "users";
           extraGroups = userCfg.extraGroups;
           openssh.authorizedKeys.keys = lib.mkIf (pk != null) [ pk ];
-        } // lib.optionalAttrs (setAdminPasswordFlag && adminPasswordFile != null) {
+        } // lib.optionalAttrs (setAdminPasswordFlag && cfg.secretFile != null) {
           hashedPasswordFile = config.sops.secrets."users.${name}.password".path;
         }
       )) cfg.admin.users);
       # Merge per-user secrets; no single shared adminPassword secret anymore
-      sops.secrets = lib.optionalAttrs (setAdminPasswordFlag && adminPasswordFile != null && cfg.admin != null) (
+      sops.secrets = lib.optionalAttrs (setAdminPasswordFlag && cfg.secretFile != null && cfg.admin != null) (
         lib.mapAttrs' (name: _: {
           name = "users.${name}.password"; # matches key in SOPS YAML file
           value = {
             neededForUsers = true;
-            sopsFile = adminPasswordFile;
+            sopsFile = cfg.secretFile;
           };
         }) cfg.admin.users
-      );
+      ) // lib.optionalAttrs (cfg.secretFile != null) {
+        "network.wifi" = {
+          sopsFile = cfg.secretFile;
+        };
+      };
+
+      networking.networkmanager.enable = true;
+      networking.networkmanager.connectionConfig = lib.mkIf (wifiSecrets != null) (wifiFromSecrets (import wifiSecrets.path));
     }
   );
 }
