@@ -17,11 +17,6 @@ in {
     system.nixos.versionSuffix = "-${builtins.substring 0 8 (toString inputs.self.lastModifiedDate)}.${toString revision}";
     # system.nixos.label =
 
-    sops.secrets."monitoring_password" = {
-      sopsFile = config.bcl.role.secretFile;
-      mode = "0600";
-    };
-
     environment.etc."nixos/current".source = inputs.self.outPath;
 
     system.stateVersion = "23.11"; # never touch that

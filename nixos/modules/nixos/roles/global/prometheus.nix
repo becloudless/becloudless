@@ -2,7 +2,13 @@
 
 {
 
-  config = lib.mkIf (config.bcl.role.name != "") {
+  config = lib.mkIf (config.bcl.role.name != "" && false) { # TODO
+
+    sops.secrets."monitoring_password" = {
+      sopsFile = config.bcl.role.secretFile;
+      mode = "0600";
+    };
+
 
     systemd.services."prometheus-node-exporter-nixos" = {
       path = with pkgs; [ jq ];

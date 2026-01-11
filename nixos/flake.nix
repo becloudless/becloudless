@@ -17,6 +17,7 @@
       };
     };
 
+    # TODO use mkFlake to build bclFlake?
     bclFlake = bclSnowfallLib.mkFlake {
       systems = {
         modules = {
@@ -27,14 +28,22 @@
             home-manager.nixosModules.home-manager
           ];
         };
-        hosts = {
-          iso = {
-            modules = with bclInputs; [
-              "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
-              "${nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
-            ];
-          };
-        };
+#        hosts = {
+#          iso = {
+#            modules = with bclInputs; [
+#              "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
+#              "${nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
+#              {
+#                isoImage.squashfsCompression = "gzip -Xcompression-level 1";
+#                isoImage.volumeID = lib.mkForce "bcl-iso";
+#                image.baseName = lib.mkForce "bcl";
+#                environment.systemPackages = [
+#                  (import nixpkgs { system = "x86_64-linux"; }).nixos-facter
+#                ];
+#              }
+#            ];
+#          };
+#        };
       };
       outputs-builder = channels: {
         packages = {
@@ -42,7 +51,7 @@
           becloudless = let
           in channels.nixpkgs.buildGo124Module {
             pname = "becloudless";
-            version = "0.0.1";
+            version = "0.0.1"; # TODO set the version
             src = ../.;
             vendorHash = "sha256-CFA9T/R4kJ8HSomb6Zfa5NuMZ6ESH4eLu3YKp9yBfcQ==";
 
@@ -107,6 +116,14 @@
                 modules = with bclInputs; [
                   "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
                   "${nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
+                  {
+                    isoImage.squashfsCompression = "gzip -Xcompression-level 1";
+                    isoImage.volumeID = lib.mkForce "bcl-iso";
+                    image.baseName = lib.mkForce "bcl";
+                    environment.systemPackages = [
+                      (import nixpkgs { system = "x86_64-linux"; }).nixos-facter
+                    ];
+                  }
                 ];
               };
             };
