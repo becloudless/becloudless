@@ -43,7 +43,7 @@ in {
 
             [wifi-security]
             key-mgmt=wpa-psk
-            psk={{ ."networking.wireless.${ssid}.password" }}
+            psk=${config.sops.placeholder."networking.wireless.${ssid}.password"}
 
             [ipv4]
             method=auto
