@@ -1,18 +1,28 @@
+
 keys:
   - &n0rad                  age1gzscll8gj2sefp37v50yt7ae8pjs28trf4aupekfz7zqvwn4xgqswtgg2f
   - &admin                  age1fc4whssgqcyua532zktqycxt35pvf20j7j95yquaj9qjpma0psqsjg5pwj
   - &group-test-tv          age16mst9mp7sq67n7gpdypjm7wkwlxtd34jghqyj42mynp66pjhsq5s6xdcv6
   - &group-test-workstaton  age10lqzqe44w00hmx3zv2ewjr9ad73ac2l6xjukkmw0n379cs9sxugsdtn9nq
+  - &install                age1m9zgn8x3wfxzsk03ucdgsj086f0z9vww67w8hu33ees2rnunxfusm0vsv0
 
 creation_rules:
 
   - path_regex: nixos/modules/nixos/global/default.secrets.yaml
     key_groups:
-      - age: [*admin, *n0rad, *group-test-workstaton, *group-test-tv]
+      - age: [*admin, *n0rad, *group-test-workstaton, *group-test-tv, *install]
+
+  - path_regex: nixos/modules/nixos/global/admins.secrets.yaml
+    key_groups:
+      - age: [*admin, *n0rad, *group-test-workstaton]
 
   - path_regex: nixos/modules/nixos/groups/test-workstation/default.secrets.yaml
     key_groups:
       - age: [*admin, *n0rad, *group-test-workstaton]
+
+  - path_regex: nixos/modules/nixos/groups/install/default.secrets.yaml
+    key_groups:
+      - age: [*admin, *n0rad, *install]
 
   - path_regex: nixos/modules/nixos/groups/test-tv/default.secrets.yaml
     key_groups:

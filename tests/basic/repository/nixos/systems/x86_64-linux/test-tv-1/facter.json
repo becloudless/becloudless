@@ -73,7 +73,6 @@
           "command": 259,
           "header_type": 0,
           "secondary_bus": 0,
-          "irq": 0,
           "prog_if": 0
         },
         "module_alias": "pci:v00008086d00007000sv00001AF4sd00001100bc06sc01i00"
@@ -133,7 +132,6 @@
           "command": 259,
           "header_type": 0,
           "secondary_bus": 0,
-          "irq": 0,
           "prog_if": 0
         },
         "module_alias": "pci:v00008086d00001237sv00001AF4sd00001100bc06sc00i00"
@@ -188,20 +186,11 @@
         "model": "Intel Bridge",
         "sysfs_id": "/devices/pci0000:00/0000:00:01.3",
         "sysfs_bus_id": "0000:00:01.3",
-        "resources": [
-          {
-            "type": "irq",
-            "base": 9,
-            "triggered": 0,
-            "enabled": true
-          }
-        ],
         "detail": {
           "function": 3,
           "command": 259,
           "header_type": 0,
           "secondary_bus": 0,
-          "irq": 9,
           "prog_if": 0
         },
         "driver": "piix4_smbus",
@@ -267,16 +256,8 @@
         "sysfs_id": "/class/block/sr0",
         "sysfs_bus_id": "1:0:0:0",
         "sysfs_device_link": "/devices/pci0000:00/0000:00:01.1/ata2/host1/target1:0:0/1:0:0:0",
-        "unix_device_name": "/dev/sr0",
-        "unix_device_number": {
-          "type": 98,
-          "major": 11,
-          "minor": 0,
-          "range": 1
-        },
         "unix_device_names": [
           "/dev/cdrom",
-          "/dev/disk/by-diskseq/10",
           "/dev/disk/by-id/ata-QEMU_DVD-ROM_QM00003",
           "/dev/disk/by-label/bcl-iso",
           "/dev/disk/by-path/pci-0000:00:01.1-ata-2",
@@ -286,12 +267,6 @@
           "/dev/sr0"
         ],
         "unix_device_name2": "/dev/sg1",
-        "unix_device_number2": {
-          "type": 99,
-          "major": 21,
-          "minor": 1,
-          "range": 1
-        },
         "driver": "ata_piix",
         "driver_module": "ata_piix",
         "drivers": [
@@ -308,6 +283,7 @@
       {
         "architecture": "x86_64",
         "vendor_name": "GenuineIntel",
+        "model_name": "QEMU Virtual CPU version 2.5+",
         "family": 15,
         "model": 107,
         "stepping": 1,
@@ -363,21 +339,26 @@
           "bhi",
           "its"
         ],
-        "bogo": 5222.4,
+        "power_management": [
+          ""
+        ],
+        "bogo": 5222,
         "cache": 16384,
         "units": 2,
+        "page_size": 4096,
         "physical_id": 0,
         "siblings": 2,
         "cores": 2,
-        "fpu": true,
-        "fpu_exception": true,
+        "fpu": false,
+        "fpu_exception": false,
         "cpuid_level": 13,
         "write_protect": false,
+        "tlb_size": 32766,
         "clflush_size": 64,
         "cache_alignment": 128,
         "address_sizes": {
-          "physical": 40,
-          "virtual": 48
+          "physical": "0x28",
+          "virtual": "0x30"
         }
       }
     ],
@@ -403,13 +384,6 @@
         "sysfs_id": "/class/block/fd0",
         "sysfs_bus_id": "floppy.0",
         "sysfs_device_link": "/devices/platform/floppy.0",
-        "unix_device_name": "/dev/fd0",
-        "unix_device_number": {
-          "type": 98,
-          "major": 2,
-          "minor": 0,
-          "range": 1
-        },
         "unix_device_names": [
           "/dev/fd0"
         ],
@@ -477,15 +451,7 @@
         "sysfs_id": "/class/block/sda",
         "sysfs_bus_id": "0:0:0:0",
         "sysfs_device_link": "/devices/pci0000:00/0000:00:01.1/ata1/host0/target0:0:0/0:0:0:0",
-        "unix_device_name": "/dev/sda",
-        "unix_device_number": {
-          "type": 98,
-          "major": 8,
-          "minor": 0,
-          "range": 16
-        },
         "unix_device_names": [
-          "/dev/disk/by-diskseq/11",
           "/dev/disk/by-id/ata-QEMU_HARDDISK_QM00001",
           "/dev/disk/by-path/pci-0000:00:01.1-ata-1",
           "/dev/disk/by-path/pci-0000:00:01.1-ata-1.0",
@@ -494,16 +460,16 @@
         "resources": [
           {
             "type": "disk_geo",
-            "cylinders": 1044,
+            "cylinders": 1697,
             "heads": 255,
             "sectors": 63,
-            "size": 0,
+            "size": "0x0",
             "geo_type": "logical"
           },
           {
             "type": "size",
             "unit": "sectors",
-            "value_1": 16777216,
+            "value_1": 27262976,
             "value_2": 512
           }
         ],
@@ -574,38 +540,11 @@
         "model": "VGA compatible controller",
         "sysfs_id": "/devices/pci0000:00/0000:00:02.0",
         "sysfs_bus_id": "0000:00:02.0",
-        "resources": [
-          {
-            "type": "mem",
-            "base": 4244635648,
-            "range": 16777216,
-            "enabled": true,
-            "access": "read_only",
-            "prefetch": "no"
-          },
-          {
-            "type": "mem",
-            "base": 4273930240,
-            "range": 4096,
-            "enabled": true,
-            "access": "read_write",
-            "prefetch": "no"
-          },
-          {
-            "type": "mem",
-            "base": 786432,
-            "range": 131072,
-            "enabled": false,
-            "access": "read_write",
-            "prefetch": "no"
-          }
-        ],
         "detail": {
           "function": 0,
           "command": 259,
           "header_type": 0,
           "secondary_bus": 0,
-          "irq": 0,
           "prog_if": 0
         },
         "driver": "bochs-drm",
@@ -638,14 +577,6 @@
         },
         "model": "Main Memory",
         "resources": [
-          {
-            "type": "mem",
-            "base": 0,
-            "range": 3122741248,
-            "enabled": true,
-            "access": "read_write",
-            "prefetch": "unknown"
-          },
           {
             "type": "phys_mem",
             "range": 3221225472
@@ -852,7 +783,6 @@
         "model": "Intel Ethernet controller",
         "sysfs_id": "/devices/pci0000:00/0000:00:03.0",
         "sysfs_bus_id": "0000:00:03.0",
-        "unix_device_name": "ens3",
         "unix_device_names": [
           "ens3"
         ],
@@ -869,28 +799,6 @@
             "access": "read_write"
           },
           {
-            "type": "irq",
-            "base": 11,
-            "triggered": 0,
-            "enabled": true
-          },
-          {
-            "type": "mem",
-            "base": 4273471488,
-            "range": 262144,
-            "enabled": false,
-            "access": "read_only",
-            "prefetch": "no"
-          },
-          {
-            "type": "mem",
-            "base": 4273733632,
-            "range": 131072,
-            "enabled": true,
-            "access": "read_write",
-            "prefetch": "no"
-          },
-          {
             "type": "phwaddr",
             "address": 53
           }
@@ -900,7 +808,6 @@
           "command": 263,
           "header_type": 0,
           "secondary_bus": 0,
-          "irq": 11,
           "prog_if": 0
         },
         "driver": "e1000",
@@ -949,7 +856,6 @@
         "model": "Ethernet network interface",
         "sysfs_id": "/class/net/ens3",
         "sysfs_device_link": "/devices/pci0000:00/0000:00:03.0",
-        "unix_device_name": "ens3",
         "unix_device_names": [
           "ens3"
         ],
@@ -990,7 +896,6 @@
         },
         "model": "Loopback network interface",
         "sysfs_id": "/class/net/lo",
-        "unix_device_name": "lo",
         "unix_device_names": [
           "lo"
         ]
@@ -1089,7 +994,6 @@
           "command": 263,
           "header_type": 0,
           "secondary_bus": 0,
-          "irq": 0,
           "prog_if": 128
         },
         "driver": "ata_piix",
@@ -1134,7 +1038,6 @@
           "value": 0
         },
         "model": "16550A",
-        "unix_device_name": "/dev/ttyS0",
         "unix_device_names": [
           "/dev/ttyS0"
         ],
@@ -1145,12 +1048,6 @@
             "range": 0,
             "enabled": true,
             "access": "read_write"
-          },
-          {
-            "type": "irq",
-            "base": 4,
-            "triggered": 0,
-            "enabled": true
           }
         ]
       }
@@ -1166,38 +1063,40 @@
       "start_address": "0xe8000",
       "rom_size": 65536
     },
-    "chassis": {
-      "handle": 768,
-      "manufacturer": "QEMU",
-      "version": "pc-i440fx-9.2",
-      "chassis_type": {
-        "hex": "0001",
-        "name": "Other",
-        "value": 1
-      },
-      "lock_present": false,
-      "bootup_state": {
-        "hex": "0003",
-        "name": "Safe",
-        "value": 3
-      },
-      "power_state": {
-        "hex": "0003",
-        "name": "Safe",
-        "value": 3
-      },
-      "thermal_state": {
-        "hex": "0003",
-        "name": "Safe",
-        "value": 3
-      },
-      "security_state": {
-        "hex": "0002",
-        "name": "Unknown",
-        "value": 2
-      },
-      "oem": "0x0"
-    },
+    "chassis": [
+      {
+        "handle": 768,
+        "manufacturer": "QEMU",
+        "version": "pc-i440fx-9.2",
+        "chassis_type": {
+          "hex": "0001",
+          "name": "Other",
+          "value": 1
+        },
+        "lock_present": false,
+        "bootup_state": {
+          "hex": "0003",
+          "name": "Safe",
+          "value": 3
+        },
+        "power_state": {
+          "hex": "0003",
+          "name": "Safe",
+          "value": 3
+        },
+        "thermal_state": {
+          "hex": "0003",
+          "name": "Safe",
+          "value": 3
+        },
+        "security_state": {
+          "hex": "0002",
+          "name": "Unknown",
+          "value": 2
+        },
+        "oem": "0x0"
+      }
+    ],
     "memory_array": [
       {
         "handle": 4096,
@@ -1216,7 +1115,7 @@
           "name": "Multi-bit",
           "value": 6
         },
-        "max_size": 3145728,
+        "max_size": "0x300000",
         "error_handle": 65534,
         "slots": 1
       }
@@ -1225,8 +1124,8 @@
       {
         "handle": 4864,
         "array_handle": 4096,
-        "start_address": 0,
-        "end_address": 3221225472,
+        "start_address": "0x0",
+        "end_address": "0xc0000000",
         "part_width": 1
       }
     ],
