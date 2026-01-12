@@ -13,7 +13,6 @@ import (
 	"github.com/becloudless/becloudless/pkg/system"
 	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/becloudless/becloudless/pkg/utils"
-	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"gopkg.in/yaml.v3"
@@ -58,28 +57,28 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 	if err != nil {
 		return errs.WithE(err, "Fail during process to find the system to install")
 	}
-	var systemConfig SystemConfig
-	systemParentFolder := path.Join(infra.GetNixosDir(), "systems", "x86_64-linux")
-	if systemName == "" {
-		logs.Warn("Unkown system, creating")
-		systemConfig, err = createSystemConfig(infra, err, info)
-		if err != nil {
-			return errs.WithE(err, "System creation failed")
-		}
-		systemName = systemConfig.Name
-	} else {
-		logs.WithField("name", systemName).Info("System found")
-		systemConfig = SystemConfig{Name: systemName}
-		systemYamlFile := path.Join(systemParentFolder, systemName, "default.yaml")
-		file, err := os.ReadFile(systemYamlFile)
-		if err != nil {
-			return errs.WithE(err, "Failed to read system yaml file")
-		}
-		if err := yaml.Unmarshal(file, &systemConfig); err != nil {
-			return errs.WithEF(err, data.WithField("file", systemYamlFile), "system yaml file looks broken")
-		}
-		//TODO use nix instead 	role=$(nix --extra-experimental-features "nix-command flakes" eval "$DIR/../nixos#nixosConfigurations.$hostname.config.system.nixos.tags" | sed 's/.*role-\([a-z0-9-]*\).*/\1/')
-	}
+	//var systemConfig SystemConfig
+	//systemParentFolder := path.Join(infra.GetNixosDir(), "systems", "x86_64-linux")
+	//if systemName == "" {
+	//	logs.Warn("Unkown system, creating")
+	//	systemConfig, err = createSystemConfig(infra, err, info)
+	//	if err != nil {
+	//		return errs.WithE(err, "System creation failed")
+	//	}
+	//	systemName = systemConfig.Name
+	//} else {
+	//	logs.WithField("name", systemName).Info("System found")
+	//	systemConfig = SystemConfig{Name: systemName}
+	//	systemYamlFile := path.Join(systemParentFolder, systemName, "default.yaml")
+	//	file, err := os.ReadFile(systemYamlFile)
+	//	if err != nil {
+	//		return errs.WithE(err, "Failed to read system yaml file")
+	//	}
+	//	if err := yaml.Unmarshal(file, &systemConfig); err != nil {
+	//		return errs.WithEF(err, data.WithField("file", systemYamlFile), "system yaml file looks broken")
+	//	}
+	//	//TODO use nix instead 	role=$(nix --extra-experimental-features "nix-command flakes" eval "$DIR/../nixos#nixosConfigurations.$hostname.config.system.nixos.tags" | sed 's/.*role-\([a-z0-9-]*\).*/\1/')
+	//}
 
 	anywhereRunner := runner.NewNixShellRunner(localRunner, "nixos-anywhere")
 	logs.WithField("system", systemName).Info("Run kexec phase")
@@ -94,7 +93,8 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 	}
 
 	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
-		"bash -x nixos-anywhere --debug -p "+strconv.Itoa(port)+argId+argEnvPass+" --generate-hardware-config nixos-facter "+path.Join(systemParentFolder, systemName, fileFacter)+" --phases kexec --flake "+infra.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
+		//--generate-hardware-config nixos-facter "+path.Join(systemParentFolder, systemName, fileFacter)+"
+		"bash -x nixos-anywhere --debug -p "+strconv.Itoa(port)+argId+argEnvPass+" --phases kexec --flake "+infra.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
 		return errs.WithE(err, "kexec phase failed")
 	}
 
@@ -257,102 +257,15 @@ func findSystem(repo *bcl.Infra, localRunner *runner.LocalRunner, info SystemInf
 			logs.WithField("system", confName).Warn("system config is probably broken")
 			continue
 		}
-		if ids == "uuid="+info.MotherboardUuid { // TODO this is definitly wrong
+
+		current, err := SystemInfoFromEnvVars(ids)
+		if err != nil {
+			return "", errs.WithE(err, "Failed to parse ids from system config")
+		}
+
+		if current.Matches(info) {
 			return confName, nil
 		}
 	}
 	return "", nil
-}
-
-type SystemInfo struct {
-	MotherboardUuid string
-	CpuSerial       string
-	NetworkMacs     []string
-	NetworkIps      []string
-	Disks           []string
-	EFI             bool
-	Memory          int
-	IsInstaller     bool
-}
-
-const motherboardUuid = "motherboardUuid"
-const cpuSerial = "cpuSerial"
-const netWorkMacs = "netWorkMacs"
-const netWorkIps = "netWorkIps"
-const disks = "disks"
-const efi = "efi"
-const memory = "memory"
-const isInstaller = "isInstaller"
-
-func ExtractSystemInfo(sys system.System) (SystemInfo, error) {
-	// TODO available memory
-	// TODO UEFI support
-
-	info := SystemInfo{}
-	res, err := sys.SudoRunner.ExecCmdGetStdout(`\
-		echo "` + motherboardUuid + `=$(command -v sudo > /dev/null && sudo cat /sys/devices/virtual/dmi/id/product_uuid 2> /dev/null || cat /sys/devices/virtual/dmi/id/product_uuid 2> /dev/null)" > /tmp/info
-		echo "` + cpuSerial + `=$(grep "Serial" /proc/cpuinfo | cut -f2 -d: | sed -e 's/^[[:space:]]*//')" >> /tmp/info
-		echo "` + netWorkMacs + `=$(find /sys/class/net/*/ -maxdepth 1 -type l -name device -exec sh -c "grep -q up \$(dirname {})/operstate && cat \$(dirname {})/address | tr '\n' ','" \;)" >> /tmp/info
-		echo "` + netWorkIps + `=$(ip -o addr show scope global | grep -E ": (wl|en|br)" | awk '{gsub(/\/.*/,"",$4); print $4}' | tr '\n' ',')" >> /tmp/info
-		echo "` + disks + `=$(find /dev/disk/by-id/ -lname '*sd*' -o  -lname '*nvme*' -o -lname '*vd*' -o -lname '*scsi*' | grep -E -v -- "-part?" | grep '/ata\|/nvme\|usb\|/scsi'| tr '\n' ',')" >> /tmp/info
-		echo "[ -d /sys/firmware/efi ] && ` + efi + `=true || ` + efi + `=false" >> /tmp/info
-		echo "` + memory + `=$(cat /proc/meminfo | grep MemTotal: | awk '{ print $2; }')" >> /tmp/info
-		echo "` + isInstaller + `=$(if grep -Eq 'VARIANT_ID="?installer"?' /etc/os-release; then echo "true"; else echo "false"; fi)" >> /tmp/info
-		cat /tmp/info
-		rm /tmp/info
-	`)
-	if err != nil {
-		return info, errs.WithE(err, "Failed")
-	}
-
-	keyValues := strings.Split(res, "\n")
-	for _, keyValueString := range keyValues {
-		if keyValueString == "" {
-			continue
-		}
-		if !strings.Contains(keyValueString, "=") {
-			return info, errs.WithF(data.WithField("content", keyValueString), "Received an envs without key=value")
-		}
-
-		keyValue := strings.SplitN(keyValueString, "=", 2)
-		switch keyValue[0] {
-		case motherboardUuid:
-			info.MotherboardUuid = keyValue[1]
-		case cpuSerial:
-			info.CpuSerial = keyValue[1]
-		case netWorkMacs:
-			for _, s := range strings.Split(keyValue[1], ",") {
-				if s != "" {
-					info.NetworkMacs = append(info.NetworkMacs, s)
-				}
-			}
-		case netWorkIps:
-			for _, s := range strings.Split(keyValue[1], ",") {
-				if s != "" {
-					info.NetworkIps = append(info.NetworkIps, s)
-				}
-			}
-		case disks:
-			for _, s := range strings.Split(keyValue[1], ",") {
-				if s != "" {
-					info.Disks = append(info.Disks, s)
-				}
-			}
-		case efi:
-			if keyValue[1] == "true" {
-				info.EFI = true
-			}
-		case isInstaller:
-			if keyValue[1] == "true" {
-				info.IsInstaller = true
-			}
-		case memory:
-			mem, err := strconv.Atoi(keyValue[1])
-			if err != nil {
-				return info, errs.WithEF(err, data.WithField("content", keyValue[1]), "Failed to parse memory size")
-			}
-			info.Memory = mem
-		}
-	}
-	return info, nil
 }
