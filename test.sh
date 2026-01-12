@@ -56,7 +56,7 @@ installHost() {
 	bclDebug=""
 	$DEBUG && bclDebug="-L debug"
 	pwd
-	../../../dist/bcl-*/bcl $bclDebug -H ../ nix install --user=nixos --disk-password=qw -L trace -p 10022 -i ../secrets/ed25519 127.0.0.1
+	$BCL_BIN $bclDebug -H ../ nix install --user=nixos --disk-password=qw -L trace -p 10022 -i ../secrets/ed25519 127.0.0.1
 
 	$DEBUG && {
 		read -p "Waiting after install in debug. Enter to continue"
@@ -77,7 +77,7 @@ installHost() {
 
 echo_brightred "## Building bcl"
 (cd nixos && nix build .#becloudless)
-BCL_BIN="./nixos/result/bin/bcl"
+BCL_BIN="$PWD/nixos/result/bin/bcl"
 
 echo_brightred "## Check flake"
 (cd tests/basic/repository/nixos && nix flake update && nix flake check)
@@ -133,7 +133,7 @@ validate-test-tv() {
 
 (cd ./tests/basic/repository && installHost "test-tv" \
 	"7d5e9855-0cba-4c41-b45e-cdff7a9514d9" \
-	8G \
+	13G \
 	3G \
 	validate-test-tv)
 

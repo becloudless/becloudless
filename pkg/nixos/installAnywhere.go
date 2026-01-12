@@ -129,10 +129,13 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 
 func prepareHostSshKeys(repo *bcl.Infra, temp string, systemName string) error {
 	localRunner := runner.NewLocalRunner()
+
 	groupName, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes", "eval", repo.GetNixosDir()+"#nixosConfigurations."+systemName+".config.bcl.group.name")
 	if err != nil {
 		return errs.WithE(err, "Failed to find group name of system")
 	}
+
+	logs.WithField("system", systemName).WithField("group", groupName).Info("Extracting host ssh key for group")
 
 	sopsRunner := runner.NewNixShellRunner(localRunner, "sops")
 

@@ -20,33 +20,30 @@ in {
         };
       }));
       default = null;
-      description = "Definition of multiple admin users.";
+      description = "Global git setup.";
     };
-    admin = lib.mkOption {
-      type = lib.types.nullOr (lib.types.submodule ({ ... }: {
+    adminsSecretFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = "Secret for admin passwords.";
+    };
+    admins = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
         options = {
-          users = lib.mkOption {
-            type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
-              options = {
-                sshPublicKey = lib.mkOption {
-                  type = lib.types.nullOr lib.types.str;
-                  default = null;
-                  description = "SSH public key for admin user ${name}.";
-                };
-                extraGroups = lib.mkOption {
-                  type = lib.types.listOf lib.types.str;
-                  default = [ "wheel" ];
-                  description = "Additional groups for admin user ${name}.";
-                };
-              };
-            }));
-            default = {};
-            description = "Attribute set of admin users keyed by username.";
+          sshPublicKey = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "SSH public key for admin user ${name}.";
+          };
+          extraGroups = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ "wheel" ];
+            description = "Additional groups for admin user ${name}.";
           };
         };
       }));
       default = null;
-      description = "Definition of multiple admin users.";
+      description = "Definition of admin users.";
     };
     networking = lib.mkOption {
       type = lib.types.submodule ({ ... }: {
@@ -82,25 +79,25 @@ in {
     in {
       time.timeZone = cfg.timeZone;
       i18n.defaultLocale = cfg.locale;
-      users.users = lib.optionalAttrs (cfg.admin != null) (lib.mapAttrs (name: userCfg: (
+      users.users = lib.optionalAttrs (cfg.admins != null) (lib.mapAttrs (name: userCfg: (
         let pk = userCfg.sshPublicKey; in {
           isNormalUser = true;
           group = "users";
           extraGroups = userCfg.extraGroups;
           openssh.authorizedKeys.keys = lib.mkIf (pk != null) [ pk ];
-        } // lib.optionalAttrs (setAdminPasswordFlag && cfg.secretFile != null) {
-          hashedPasswordFile = config.sops.secrets."users.${name}.password".path;
+        } // lib.optionalAttrs (setAdminPasswordFlag && cfg.adminsSecretFile != null) {
+          hashedPasswordFile = config.sops.secrets."admins.${name}.hashedPassword".path;
         }
-      )) cfg.admin.users);
-      # Merge per-user secrets; no single shared adminPassword secret anymore
-      sops.secrets = lib.optionalAttrs (setAdminPasswordFlag && cfg.secretFile != null && cfg.admin != null) (
+      )) cfg.admins);
+
+      sops.secrets = lib.optionalAttrs (setAdminPasswordFlag && cfg.adminsSecretFile != null && cfg.admins != null) (
         lib.mapAttrs' (name: _: {
-          name = "users.${name}.password"; # matches key in SOPS YAML file
+          name = "admins.${name}.hashedPassword";
           value = {
             neededForUsers = true;
-            sopsFile = cfg.secretFile;
+            sopsFile = cfg.adminsSecretFile;
           };
-        }) cfg.admin.users
+        }) cfg.admins
       );
     }
   );
