@@ -79,12 +79,6 @@ in
       KUBECONFIG= "/etc/rancher/k3s/k3s.yaml";
     };
 
-    boot.kernel.sysctl."vm.swappiness" = 10;
-    swapDevices = [{
-      device = "/nix/swapfile";
-      size = 5 * 1024;
-    }];
-
     environment.persistence."/nix" = {
       hideMounts = true;
       directories = [
