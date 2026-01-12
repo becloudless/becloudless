@@ -14,7 +14,6 @@ in {
 
     # Declare SOPS secrets for wifi passwords if a global secretFile is provided
     sops.secrets = mkIf (global.secretFile != null && (global.networking.wireless or {} != {})) (
-      (config.sops.secrets or {}) //
       mapAttrs' (ssid: _: {
         name = "networking.wireless.${ssid}.password";
         value = {
@@ -26,7 +25,6 @@ in {
     # Generate NetworkManager connection profiles using sops.templates so the
     # password comes from the decrypted SOPS secret
     sops.templates = mkIf (global.secretFile != null && (global.networking.wireless or {} != {})) (
-      (config.sops.templates or {}) //
       mapAttrs' (ssid: _: {
         name = "NetworkManager/system-connections/${ssid}.nmconnection";
         value = {

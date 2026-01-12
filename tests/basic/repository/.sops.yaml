@@ -10,7 +10,7 @@ creation_rules:
 
   - path_regex: nixos/modules/nixos/global/default.secrets.yaml
     key_groups:
-      - age: [*admin, *n0rad, *group-test-workstaton, *group-test-tv]
+      - age: [*admin, *n0rad, *group-test-workstaton, *group-test-tv, *install]
 
   - path_regex: nixos/modules/nixos/groups/test-workstation/default.secrets.yaml
     key_groups:
