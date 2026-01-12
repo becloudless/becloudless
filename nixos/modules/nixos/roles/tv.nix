@@ -9,6 +9,10 @@
          type = lib.types.str;
          default = "auto";
       };
+    jellyfinUrl = lib.mkOption {
+         type = lib.types.str;
+         default = "https://jellyfin.${config.bcl.global.domain}";
+      };
   };
 
   config = lib.mkIf (config.bcl.role.name == "tv") {
@@ -121,7 +125,7 @@
                     "showPowerOptions": true,
                     "useOpenGL": false,
                     "useSystemVideoCodecs": false,
-                    "userWebClient": "https://jellyfin.${config.bcl.global.domain}",
+                    "userWebClient": "${config.bcl.tv.jellyfinUrl}",
                     "webMode": "desktop"
                 },
                 "other": {
