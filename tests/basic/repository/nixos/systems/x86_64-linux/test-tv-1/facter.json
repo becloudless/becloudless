@@ -353,7 +353,7 @@
         "fpu_exception": false,
         "cpuid_level": 13,
         "write_protect": false,
-        "tlb_size": 32767,
+        "tlb_size": 32766,
         "clflush_size": 64,
         "cache_alignment": 128,
         "address_sizes": {
@@ -460,7 +460,7 @@
         "resources": [
           {
             "type": "disk_geo",
-            "cylinders": 1044,
+            "cylinders": 1697,
             "heads": 255,
             "sectors": 63,
             "size": "0x0",
@@ -469,7 +469,7 @@
           {
             "type": "size",
             "unit": "sectors",
-            "value_1": 16777216,
+            "value_1": 27262976,
             "value_2": 512
           }
         ],
