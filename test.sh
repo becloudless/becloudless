@@ -87,7 +87,11 @@ $BCL_BIN -H ./tests/basic nixos prepare
 
 [ -f ./tests/basic/repository/nixos/result/iso/bcl.iso ] || {
 	echo_brightred "## Building iso image"
-	(cd tests/basic/repository/nixos && nix build .#isoConfigurations.iso)
+	# TODO replace with bcl command
+	tmpKeyFile=/tmp/install-ssh_host_ed25519_key
+	export SOPS_AGE_KEY_FILE=./tests/basic/secrets/age
+	nix-shell -p sops -p yq --run "sops -d ./tests/basic/repository/nixos/modules/nixos/groups/install/default.secrets.yaml | yq -r .ssh_host_ed25519_key" > $tmpKeyFile
+	(cd tests/basic/repository/nixos && nix build .#isoConfigurations.iso --impure)
 }
 
 ###
@@ -124,14 +128,14 @@ $BCL_BIN -H ./tests/basic nixos prepare
 
 ###
 validate-test-tv() {
-	ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ../secrets/ed25519 -p 10022 toto@127.0.0.1 pidof jellyfinmediaplayer
+	ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ../secrets/ed25519 -p 10022 toto@127.0.0.1 pidof jellyfin-desktop
 }
 
-#(cd ./tests/basic/repository && installHost "test-tv" \
-#	"7d5e9855-0cba-4c41-b45e-cdff7a9514d9" \
-#	8G \
-#	3G \
-#	validate-test-tv)
+(cd ./tests/basic/repository && installHost "test-tv" \
+	"7d5e9855-0cba-4c41-b45e-cdff7a9514d9" \
+	8G \
+	3G \
+	validate-test-tv)
 
 
 
