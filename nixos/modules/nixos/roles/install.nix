@@ -24,5 +24,11 @@
       }
     ];
 
+
+    # give time to dhcp to get IP, so it will be display
+    services.getty.extraArgs = [ "--delay=5" ];
+    environment.etc."issue.d/ip.issue".text = "\\4\n";
+    networking.dhcpcd.runHook = "${pkgs.utillinux}/bin/agetty --reload";
+
   };
 }
