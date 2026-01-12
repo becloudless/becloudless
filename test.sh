@@ -87,7 +87,10 @@ $BCL_BIN -H ./tests/basic nixos prepare
 
 [ -f ./tests/basic/repository/nixos/result/iso/bcl.iso ] || {
 	echo_brightred "## Building iso image"
-	(cd tests/basic/repository/nixos && nix build .#isoConfigurations.iso)
+	# TODO replace with bcl command
+	tmpKeyFile=/tmp/install-ssh_host_ed25519_key
+	(cd tests/basic/repository/nixos && \
+		nix-shell -p sops -p yq --run "sops -d ./modules/nixos/groups/install/default.secrets.yaml | yq -r .ssh_host_ed25519_key" > $tmpKeyFile  && nix build .#isoConfigurations.iso --impure)
 }
 
 ###
