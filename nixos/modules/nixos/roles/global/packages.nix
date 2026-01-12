@@ -1,5 +1,7 @@
-{ config, lib, pkgs, ... }:
-
+{ inputs, config, lib, pkgs, ... }:
+let
+  unstable = inputs.nixpkgs-unstable.legacyPackages.${pkgs.system};
+in
 {
   config = lib.mkIf (config.bcl.role.name != "") {
     environment.systemPackages = with pkgs; [

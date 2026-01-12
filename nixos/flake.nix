@@ -129,6 +129,10 @@
       url = "github:NixOS/nixpkgs/nixos-25.11";
     };
 
+    nixpkgs-unstable = {
+      url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    };
+
     snowfall-lib = {
       url = "github:snowfallorg/lib";
       inputs.nixpkgs.follows = "nixpkgs";
