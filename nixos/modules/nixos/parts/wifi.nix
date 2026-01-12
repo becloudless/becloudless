@@ -31,25 +31,26 @@ in {
           owner = "root";
           group = "root";
           mode = "0400";
+          path = "/etc/NetworkManager/system-connections/${ssid}.nmconnection";
           content = ''
-[connection]
-id=${ssid}
-type=wifi
+            [connection]
+            id=${ssid}
+            type=wifi
 
-[wifi]
-mode=infrastructure
-ssid=${ssid}
+            [wifi]
+            mode=infrastructure
+            ssid=${ssid}
 
-[wifi-security]
-key-mgmt=wpa-psk
-psk={{ ."networking.wireless.${ssid}.password" }}
+            [wifi-security]
+            key-mgmt=wpa-psk
+            psk={{ ."networking.wireless.${ssid}.password" }}
 
-[ipv4]
-method=auto
+            [ipv4]
+            method=auto
 
-[ipv6]
-method=auto
-'';
+            [ipv6]
+            method=auto
+          '';
         };
       }) global.networking.wireless
     );
