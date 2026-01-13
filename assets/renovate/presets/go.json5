@@ -19,5 +19,11 @@
       matchDatasources: ["golang-version"],
       rangeStrategy: "bump",
     },
+    {
+      // Do not update gomod go version for compatibility. Update toolchain instead.
+      matchDepTypes: ["golang"],
+      matchDepNames: ["go"],
+      enabled: false
+    }
   ],
 }
