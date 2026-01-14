@@ -58,7 +58,6 @@
           xset s off      # disable xorg screensaver
           # xdotool mousemove 100 100 && xdotool click 1
 
-          xrandr -r 24
           # TODO this is a hack
           pactl set-sink-volume @DEFAULT_SINK@ 100%
           pactl set-sink-volume alsa_output.pci-0000_00_0e.0.hdmi-stereo 100% # TODO
@@ -115,7 +114,7 @@
                     "enableWindowsTaskbarIntegration": true,
                     "forceAlwaysFS": false,
                     "forceFSScreen": "",
-                    "fullscreen": false,
+                    "fullscreen": true,
                     "hdmi_poweron": false,
                     "ignoreSSLErrors": false,
                     "layout": "desktop",
