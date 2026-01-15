@@ -1,10 +1,11 @@
 package runner
 
 import (
-	"github.com/n0rad/go-erlog/data"
-	"github.com/n0rad/go-erlog/errs"
 	"io"
 	"strings"
+
+	"github.com/n0rad/go-erlog/data"
+	"github.com/n0rad/go-erlog/errs"
 )
 
 type SudoRunner struct {
@@ -19,7 +20,7 @@ func NewSudoRunner(parent Runner, password []byte) (*SudoRunner, error) {
 		password: password,
 	}
 	run.Runner = run
-	_, err := parent.ExecCmdGetStdout("command", "-v", "sudo")
+	_, err := parent.ExecCmdGetStdout("/bin/sh", "-c", "command -v sudo")
 	if err != nil {
 		return nil, errs.WithE(err, "Sudo is not available")
 	}
