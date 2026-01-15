@@ -19,10 +19,18 @@
       matchDatasources: ["golang-version"],
       rangeStrategy: "bump",
     },
+
     {
-      // Do not update gomod go version for compatibility. Update toolchain instead.
+      // Update go version with a long delay to ensure compatibility
       matchDepTypes: ["golang"],
       matchDepNames: ["go"],
+      minimumReleaseAge: "365 days",
+    },
+    {
+      // Do not update gomod go patch version for compatibility. Rely on toolchain version instead.
+      matchDepTypes: ["golang"],
+      matchDepNames: ["go"],
+      matchUpdateTypes: ["patch"],
       enabled: false
     }
   ],
