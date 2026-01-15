@@ -71,7 +71,7 @@
         bclFlake.nixosModules.global
         bclFlake.nixosModules.group
         bclFlake.nixosModules."parts/wm"
-        bclFlake.nixosModules.roles
+        bclFlake.nixosModules.role
         bclFlake.nixosModules.system
 
         bclInputs.nixos-facter-modules.nixosModules.facter
