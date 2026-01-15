@@ -1,0 +1,15 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  packageRules: [
+    {
+      description: "reduce renovate itself update pressure",
+      matchPackageNames: [
+        "renovate"
+      ],
+      schedule: [
+        "before 2am"
+      ]
+    },
+  ],
+}
