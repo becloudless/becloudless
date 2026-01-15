@@ -12,6 +12,8 @@
     "github>becloudless/becloudless//assets/renovate/presets/githubAction.json5",
     "github>becloudless/becloudless//assets/renovate/presets/semanticCommits.json5",
     "github>becloudless/becloudless//assets/renovate/presets/groups.json5",
+    "github>becloudless/becloudless//assets/renovate/presets/lockFileMaintenance.json5",
+    "github>becloudless/becloudless//assets/renovate/presets/renovate.json5",
   ],
   suppressNotifications: [
     "prEditedNotification",
