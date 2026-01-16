@@ -2,12 +2,14 @@ package runner
 
 import (
 	"bytes"
-	"github.com/n0rad/go-erlog/errs"
-	"github.com/n0rad/go-erlog/logs"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/becloudless/becloudless/pkg/utils"
+	"github.com/n0rad/go-erlog/errs"
+	"github.com/n0rad/go-erlog/logs"
 )
 
 type LocalRunner struct {
@@ -38,7 +40,7 @@ func (r *LocalRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, st
 		cmd.Stdin = os.Stdin
 	}
 	if logs.IsTraceEnabled() {
-		logs.WithField("command", strings.Join([]string{head, " ", strings.Join(args, " ")}, " ")).Debug("Running external command")
+		logs.WithField("command", strings.Join([]string{head, " ", strings.Join(utils.ShellQuoteArgs(args), " ")}, " ")).Debug("Running external command")
 	}
 	if err := cmd.Start(); err != nil {
 		return -1, errs.WithE(err, "Failed to start command")
