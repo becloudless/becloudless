@@ -21,7 +21,6 @@ import (
 type SshRunner struct {
 	genericRunner
 	client           *ssh.Client
-	sudoPassword     *memguarded.Service
 	connectionConfig *SshConnectionConfig
 }
 
