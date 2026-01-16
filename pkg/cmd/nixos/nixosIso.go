@@ -75,6 +75,10 @@ func nixosIsoCmd() *cobra.Command {
 				return nil
 			}
 
+			if _, err := os.Stat(device); err != nil {
+				return errs.WithEF(err, data.WithField("device", device), "Target device does not exist or is not accessible")
+			}
+
 			sudoRun, err := runner.NewSudoRunner(run, sudoPassword)
 			if err != nil {
 				return errs.WithE(err, "Failed to create sudo runner to write iso to device")
