@@ -1,9 +1,7 @@
 package nixos
 
 import (
-	"fmt"
 	"os"
-	"syscall"
 
 	"github.com/becloudless/becloudless/pkg/bcl"
 	"github.com/becloudless/becloudless/pkg/security"
@@ -11,8 +9,8 @@ import (
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
+	"github.com/n0rad/memguarded"
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
 )
 
@@ -23,8 +21,8 @@ const BuiltIsoFileNixosPath = "/result/iso/bcl.iso"
 func nixosIsoCmd() *cobra.Command {
 	var device string
 	var rebuild bool
-	var askPassword bool
 
+	sudoPassword := memguarded.NewService()
 	cmd := &cobra.Command{
 		Use:   "iso",
 		Short: "Build iso image to boot device to install",
@@ -36,19 +34,9 @@ func nixosIsoCmd() *cobra.Command {
 				return errs.WithE(err, "Failed to open current infra repository")
 			}
 
-			var password []byte
-			if device != "" && askPassword {
-				fmt.Print("Sudo password to write iso to device? ")
-				pass, err := term.ReadPassword(syscall.Stdin)
-				if err != nil {
-					return errs.WithE(err, "Failed to read password")
-				}
-				password = pass
-			}
-
 			isoPath := infra.GetNixosDir() + BuiltIsoFileNixosPath
 			_, err = os.Stat(isoPath)
-			if err == os.ErrNotExist || rebuild {
+			if err != nil || rebuild {
 
 				sopsFile := infra.GetNixosDir() + "/modules/nixos/groups/install/default.secrets.yaml"
 				logs.WithField("file", sopsFile).Info("Extracting install host key from group")
@@ -87,7 +75,7 @@ func nixosIsoCmd() *cobra.Command {
 				return nil
 			}
 
-			sudoRun, err := runner.NewSudoRunner(run, password)
+			sudoRun, err := runner.NewSudoRunner(run, sudoPassword)
 			if err != nil {
 				return errs.WithE(err, "Failed to create sudo runner to write iso to device")
 			}
@@ -104,7 +92,8 @@ func nixosIsoCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&device, "device", "d", "", "Target device to write the iso to")
 	cmd.Flags().BoolVarP(&rebuild, "rebuild", "r", false, "Rebuild iso even if file is already available")
-	cmd.Flags().BoolVarP(&askPassword, "ask-password", "P", false, "ask password")
+
+	withSudoPasswordFlag(cmd, sudoPassword)
 
 	return cmd
 }

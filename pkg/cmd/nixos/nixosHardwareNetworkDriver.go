@@ -6,15 +6,28 @@ import (
 )
 
 func nixosHardwareNetworkDriverCmd() *cobra.Command {
+
+	sshConfig := runner.SshConnectionConfig{}
+
 	cmd := &cobra.Command{
 		Use:   "network-driver",
 		Short: "find network driver of current system",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			run := runner.NewLocalRunner()
+			run := runner.Runner(runner.NewLocalRunner())
+			if sshConfig.Host != "" {
+				sshRun, err := runner.NewSshRunner(&sshConfig)
+				if err != nil {
+					return err
+				}
+				run = sshRun
+			}
 			nixRun := runner.NewNixShellRunner(run, "lshw")
 			shellNixRun := runner.NewShellRunner(nixRun)
 			return shellNixRun.ExecCmd("lshw -C network | grep -Poh 'driver=[[:alnum:]]+'")
 		},
 	}
+
+	withSSHRemoteFlags(cmd, &sshConfig)
+
 	return cmd
 }

@@ -2,17 +2,19 @@ package nixos
 
 import (
 	"archive/tar"
-	"github.com/becloudless/becloudless/pkg/system/runner"
-	"github.com/n0rad/go-erlog/data"
-	"github.com/n0rad/go-erlog/errs"
-	"github.com/n0rad/go-erlog/logs"
-	"github.com/xi2/xz"
 	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"path"
 	"runtime"
+
+	"github.com/becloudless/becloudless/pkg/system/runner"
+	"github.com/n0rad/go-erlog/data"
+	"github.com/n0rad/go-erlog/errs"
+	"github.com/n0rad/go-erlog/logs"
+	"github.com/n0rad/memguarded"
+	"github.com/xi2/xz"
 )
 
 // TODO renovate
@@ -26,7 +28,7 @@ func EnsureNixIsAvailable() error {
 	return nil
 }
 
-func InstallNixLocally(password []byte) error {
+func InstallNixLocally(sudoPassword *memguarded.Service) error {
 	arch := runtime.GOARCH
 	switch arch {
 	case "amd64":
@@ -67,10 +69,12 @@ func InstallNixLocally(password []byte) error {
 	}
 
 	localRun := runner.NewLocalRunner()
-	run, err := runner.NewInlineSudoRunner(localRun, password)
+	run, err := runner.NewSudoRunner(localRun, sudoPassword)
 	if err != nil {
 		return errs.WithE(err, "Failed to prepare sudo runner")
 	}
+	run.WithInline(true)
+
 	installPath := path.Join(temp, NixFoldername, "install")
 	logs.WithField("path", NixReleaseUrl).Info("Running nix install")
 	if err := run.ExecCmd("/bin/sh", installPath, "--yes"); err != nil {

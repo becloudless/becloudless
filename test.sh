@@ -56,7 +56,7 @@ installHost() {
 	bclDebug=""
 	$DEBUG && bclDebug="-L debug"
 	pwd
-	$BCL_BIN $bclDebug -H ../ nix install --user=nixos --disk-password=qw -L trace -p 10022 -i ../secrets/ed25519 127.0.0.1
+	$BCL_BIN $bclDebug -H ../ nix install --user=nixos --disk-password=qw -L trace -p 10022 -i ../secrets/ed25519 -h 127.0.0.1
 
 	$DEBUG && {
 		read -p "Waiting after install in debug. Enter to continue"
