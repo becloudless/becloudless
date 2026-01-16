@@ -54,9 +54,9 @@ installHost() {
 	echo_brightred "## Install VM"
 	sleep 20
 	bclDebug=""
-	$DEBUG && bclDebug="-L debug"
+	$DEBUG && bclDebug="-L trace"
 	pwd
-	$BCL_BIN $bclDebug -H ../ nix install --user=nixos --disk-password=qw -L trace -p 10022 -i ../secrets/ed25519 -h 127.0.0.1
+	$BCL_BIN $bclDebug -H ../ nix install --user=nixos --disk-password=qw -p 10022 -i ../secrets/ed25519 -h 127.0.0.1
 
 	$DEBUG && {
 		read -p "Waiting after install in debug. Enter to continue"
@@ -131,11 +131,11 @@ validate-test-tv() {
 	ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ../secrets/ed25519 -p 10022 toto@127.0.0.1 pidof jellyfin-desktop
 }
 
-#(cd ./tests/basic/repository && installHost "test-tv" \
-#	"7d5e9855-0cba-4c41-b45e-cdff7a9514d9" \
-#	13G \
-#	3G \
-#	validate-test-tv)
+(cd ./tests/basic/repository && installHost "test-tv" \
+	"7d5e9855-0cba-4c41-b45e-cdff7a9514d9" \
+	13G \
+	3G \
+	validate-test-tv)
 
 
 

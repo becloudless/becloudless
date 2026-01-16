@@ -39,7 +39,7 @@ func (r *LocalRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, st
 		cmd.Stdin = os.Stdin
 	}
 	if logs.IsTraceEnabled() {
-		logs.WithField("command", strings.Join([]string{head, " ", strings.Join(utils.ShellQuoteArgs(args), " ")}, " ")).Debug("Running external command")
+		logs.WithField("command", strings.Join([]string{head, " ", strings.Join(utils.ShellQuoteArgs(args), " ")}, " ")).Trace("Running external command")
 	}
 	if err := cmd.Start(); err != nil {
 		return -1, errs.WithE(err, "Failed to start command")

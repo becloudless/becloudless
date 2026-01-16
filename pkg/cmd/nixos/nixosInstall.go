@@ -20,9 +20,8 @@ func nixosInstallCmd() *cobra.Command {
 	sshConfig.Password = sudoPassword
 
 	cmd := &cobra.Command{
-		Use:   "install [HOST_IP]",
+		Use:   "install ...",
 		Short: "Install remote device",
-		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := nixos.EnsureNixIsAvailable(); err != nil {
 				return errs.WithE(err, "Nix is not available")
