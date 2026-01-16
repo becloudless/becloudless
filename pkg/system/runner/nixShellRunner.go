@@ -3,6 +3,8 @@ package runner
 import (
 	"io"
 	"strings"
+
+	"github.com/becloudless/becloudless/pkg/utils"
 )
 
 type NixShellRunner struct {
@@ -25,6 +27,7 @@ func (r NixShellRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, 
 	for _, pkg := range r.Packages {
 		newArgs = append(newArgs, "-p", pkg)
 	}
-	newArgs = append(newArgs, "--run", head+" "+strings.Join(args, " ")) // TODO args are not quoted
+
+	newArgs = append(newArgs, "--run", head+" "+strings.Join(utils.ShellQuoteArgs(args), " "))
 	return r.parent.Exec(envs, stdin, stdout, stderr, "nix-shell", newArgs...)
 }

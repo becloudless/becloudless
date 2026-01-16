@@ -2,12 +2,11 @@ module github.com/becloudless/becloudless
 
 go 1.24.3
 
-toolchain go1.25.5
+toolchain go1.24.4
 
 require (
 	github.com/Mic92/ssh-to-age v0.0.0-20251229041432-a8d2bffa321d
 	github.com/atombender/go-jsonschema v0.20.0
-	github.com/awnumar/memguard v0.23.0
 	github.com/charmbracelet/huh v0.8.0
 	github.com/client9/misspell v0.3.4
 	github.com/fzipp/gocyclo v0.6.0
@@ -17,8 +16,9 @@ require (
 	github.com/gordonklaus/ineffassign v0.2.0
 	github.com/moby/buildkit v0.26.3
 	github.com/n0rad/go-app v0.0.0-20251227182329-c1d5e61b7561
-	github.com/n0rad/go-erlog v0.0.0-20251227192249-cb1b877cb897
+	github.com/n0rad/go-erlog v0.0.0-20260115131226-fdddb793d4f1
 	github.com/n0rad/gomake v0.0.0-20260105145040-7210f7f1961f
+	github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260116182953-a1aa5fc448fe
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
@@ -65,7 +65,8 @@ require (
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
-	github.com/awnumar/memcall v0.4.0 // indirect
+	github.com/awnumar/memcall v0.5.0 // indirect
+	github.com/awnumar/memguard v0.23.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.39.2 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.1 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.31.11 // indirect
@@ -203,6 +204,7 @@ require (
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
+	github.com/oklog/run v1.2.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
@@ -229,6 +231,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
+	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/zeebo/errs v1.4.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/detectors/gcp v1.36.0 // indirect
@@ -242,14 +245,14 @@ require (
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp v0.0.0-20251209150349-8475f28825e9 // indirect
-	golang.org/x/mod v0.31.0 // indirect
-	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/mod v0.32.0 // indirect
+	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
-	golang.org/x/tools v0.40.0 // indirect
+	golang.org/x/tools v0.41.0 // indirect
 	google.golang.org/api v0.250.0 // indirect
 	google.golang.org/genproto v0.0.0-20250603155806-513f23925822 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250825161204-c5933d9347a5 // indirect
@@ -279,4 +282,4 @@ require (
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
-//replace github.com/n0rad/gomake => ../../n0rad/gomake
+//replace github.com/n0rad/memguarded => ../../n0rad/memguarded

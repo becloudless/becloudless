@@ -20,25 +20,24 @@ import (
 
 const fileFacter = "facter.json"
 
-func InstallAnywhere(host string, port int, user string, password []byte, identifyFile string, diskPassword string) error {
+func InstallAnywhere(sshConfig *runner.SshConnectionConfig, diskPassword string) error {
 	infra, err := bcl.FindInfraFromPath(".")
 	if err != nil {
 		return errs.WithE(err, "Failed to open current infra repository")
 	}
 
-	sshRunner, err := runner.NewSshRunner(host, port, user, password, identifyFile)
+	sshRunner, err := runner.NewSshRunner(sshConfig)
 	if err != nil {
 		return errs.WithE(err, "Failed to connect to host to install, is the user set? did it required a password?")
 	}
 
 	var finalRunner runner.Runner = sshRunner
-	if user != "root" {
-		//sshSudoRunner, err := runner.NewSudoRunner(sshRunner, password)
-		sshSudoRunner, err := runner.NewInlineSudoRunner(sshRunner, password)
+	if sshConfig.User != "root" {
+		sshSudoRunner, err := runner.NewSudoRunner(sshRunner, sshConfig.Password)
 		if err != nil {
 			return errs.WithE(err, "Sudo cannot be run successfully on host to install")
 		}
-		finalRunner = sshSudoRunner
+		finalRunner = sshSudoRunner.WithInline(true)
 	}
 
 	sys := system.System{
@@ -83,18 +82,35 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 	anywhereRunner := runner.NewNixShellRunner(localRunner, "nixos-anywhere")
 	logs.WithField("system", systemName).Info("Run kexec phase")
 
-	argId := ""
-	if identifyFile != "" {
-		argId = " -i " + identifyFile + " "
-	}
-	argEnvPass := ""
-	if len(password) > 0 {
-		argEnvPass = " --env-password "
+	nixosAnywhereArgs := []string{
+		"--debug",
+		"-p", strconv.Itoa(sshConfig.Port),
+		"-i", sshConfig.IdentifyFile,
+		"--env-password",
+		"--flake", infra.GetNixosDir() + "#" + systemName,
 	}
 
-	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
-		//--generate-hardware-config nixos-facter "+path.Join(systemParentFolder, systemName, fileFacter)+"
-		"bash -x nixos-anywhere --debug -p "+strconv.Itoa(port)+argId+argEnvPass+" --phases kexec --flake "+infra.GetNixosDir()+"#"+systemName+" "+user+"@"+host); err != nil {
+	if sshConfig.IdentifyFile != "" {
+		nixosAnywhereArgs = append(nixosAnywhereArgs, "-i", sshConfig.IdentifyFile)
+	}
+	if sshConfig.Password.IsSet() {
+		nixosAnywhereArgs = append(nixosAnywhereArgs, "--env-password")
+	}
+
+	sshPassword := ""
+	if sshConfig.Password.IsSet() {
+		openedPassword, err := sshConfig.Password.Get()
+		if err != nil {
+			return errs.WithE(err, "Failed to open ssh password enclave")
+		}
+		sshPassword = openedPassword.String()
+	}
+
+	// kexec
+	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + sshPassword}, nil, nil, nil, "nixos-anywhere", append(nixosAnywhereArgs,
+		"--phases", "kexec",
+		sshConfig.User+"@"+sshConfig.Host,
+	)...); err != nil {
 		return errs.WithE(err, "kexec phase failed")
 	}
 
@@ -114,14 +130,16 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 	installUser := "root"
 	if info.IsInstaller {
 		// was already running installer. No kexec was run
-		installUser = user
+		installUser = sshConfig.User
 	}
 
 	logs.WithField("system", systemName).Info("Run disko,install,reboot phases")
-	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + string(password)}, nil, nil, nil,
-
-		// TODO ssh as root when kexec was neeeded
-		"bash -x nixos-anywhere --debug --phases disko,install,reboot -p "+strconv.Itoa(port)+argId+argEnvPass+" --extra-files "+path.Join(temp, "fs")+" --disk-encryption-keys /root/secret.key "+path.Join(temp, "install", "secret.key")+" --flake "+infra.GetNixosDir()+"#"+systemName+" "+installUser+"@"+host); err != nil {
+	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + sshPassword}, nil, nil, nil, "nixos-anywhere", append(nixosAnywhereArgs,
+		"--phases", "disko,install,reboot",
+		"--extra-files", path.Join(temp, "fs"),
+		"--disk-encryption-keys", "/root/secret.key", path.Join(temp, "install", "secret.key"),
+		installUser+"@"+sshConfig.Host,
+	)...); err != nil {
 		return errs.WithE(err, "disco,install,reboot phase failed")
 	}
 	return nil
@@ -130,7 +148,11 @@ func InstallAnywhere(host string, port int, user string, password []byte, identi
 func prepareHostSshKeys(repo *bcl.Infra, temp string, systemName string) error {
 	localRunner := runner.NewLocalRunner()
 
-	groupName, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes", "eval", repo.GetNixosDir()+"#nixosConfigurations."+systemName+".config.bcl.group.name")
+	groupName, err := localRunner.ExecCmdGetStdout(
+		"nix",
+		"--extra-experimental-features", "nix-command flakes",
+		"eval", repo.GetNixosDir()+"#nixosConfigurations."+systemName+".config.bcl.group.name",
+		"--raw")
 	if err != nil {
 		return errs.WithE(err, "Failed to find group name of system")
 	}
@@ -176,7 +198,11 @@ func prepareHostSshKeys(repo *bcl.Infra, temp string, systemName string) error {
 func prepareDiskPassword(repo *bcl.Infra, temp string, systemName string, diskPassword string) error {
 	localRunner := runner.NewLocalRunner()
 	logs.WithField("system", systemName).Info("Check if disk password is required")
-	device, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes", "eval", repo.GetNixosDir()+"#nixosConfigurations."+systemName+".config.fileSystems.\"/nix\".device")
+	device, err := localRunner.ExecCmdGetStdout(
+		"nix",
+		"--extra-experimental-features", "nix-command flakes",
+		"eval", repo.GetNixosDir()+"#nixosConfigurations."+systemName+".config.fileSystems.\"/nix\".device",
+		"--raw")
 	if err != nil {
 		return errs.WithE(err, "Failed to check if a password is required for the disk")
 	}
@@ -237,8 +263,14 @@ func createSystemConfig(repo *bcl.Infra, err error, info SystemInfo) (SystemConf
 }
 
 func findSystem(repo *bcl.Infra, localRunner *runner.LocalRunner, info SystemInfo) (string, error) {
-	flakeShow, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes",
-		"flake", "show", repo.GetNixosDir(), "--json", "--all-systems")
+	flakeShow, err := localRunner.ExecCmdGetStdout(
+		"nix",
+		"--extra-experimental-features", "nix-command flakes",
+		"flake",
+		"show",
+		repo.GetNixosDir(),
+		"--json",
+		"--all-systems")
 	if err != nil {
 		return "", errs.WithE(err, "Listing hosts declared in nix failed")
 	}
@@ -252,7 +284,11 @@ func findSystem(repo *bcl.Infra, localRunner *runner.LocalRunner, info SystemInf
 	}
 
 	for confName, _ := range flake.NixosConfigurations {
-		ids, err := localRunner.ExecCmdGetStdout("nix", "--extra-experimental-features", "nix-command flakes", "eval", repo.GetNixosDir()+"#nixosConfigurations."+confName+".config.environment.etc.\"ids.env\".text", "--raw")
+		ids, err := localRunner.ExecCmdGetStdout(
+			"nix",
+			"--extra-experimental-features", "nix-command flakes",
+			"eval", repo.GetNixosDir()+"#nixosConfigurations."+confName+".config.environment.etc.\"ids.env\".text",
+			"--raw")
 		if err != nil {
 			logs.WithField("system", confName).Warn("system config is probably broken")
 			continue

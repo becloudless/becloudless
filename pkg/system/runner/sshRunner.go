@@ -9,25 +9,35 @@ import (
 	"strings"
 	"time"
 
-	"github.com/awnumar/memguard"
+	"github.com/becloudless/becloudless/pkg/utils"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
+	"github.com/n0rad/memguarded"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 )
 
 type SshRunner struct {
 	genericRunner
-	client       *ssh.Client
-	sudoPassword *memguard.LockedBuffer
+	client           *ssh.Client
+	connectionConfig *SshConnectionConfig
 }
 
-func NewSshRunner(addr string, port int, user string, password []byte, identifyFile string) (*SshRunner, error) {
+type SshConnectionConfig struct {
+	Host            string
+	Port            int
+	User            string
+	Password        *memguarded.Service
+	IdentifyFile    string
+	InsecureHostKey bool
+}
+
+func NewSshRunner(config *SshConnectionConfig) (*SshRunner, error) {
 	var auths []ssh.AuthMethod
 
-	if identifyFile != "" {
-		content, err := os.ReadFile(identifyFile)
+	if config.IdentifyFile != "" {
+		content, err := os.ReadFile(config.IdentifyFile)
 		if err != nil {
 			return nil, errs.WithE(err, "Failed to read identify file")
 		}
@@ -47,30 +57,43 @@ func NewSshRunner(addr string, port int, user string, password []byte, identifyF
 		auths = append(auths, ssh.PublicKeysCallback(agentClient.Signers))
 	}
 
-	if len(password) > 0 {
-		auths = append(auths, ssh.PasswordCallback(func() (secret string, err error) {
-			if password == nil {
-				return "", err
+	if config.Password.IsSet() {
+		auths = append(auths, ssh.PasswordCallback(func() (string, error) {
+			buff, err := config.Password.Get()
+			if err != nil {
+				return "", errs.WithE(err, "Failed to open ssh password enclave")
 			}
-			return string(password), nil
+			defer buff.Destroy()
+			return buff.String(), nil
 		}))
 	}
 
-	config := &ssh.ClientConfig{
-		User:            user,
+	hostKeyCallback := ssh.InsecureIgnoreHostKey()
+	if !config.InsecureHostKey {
+		hostKeyCallback = ssh.FixedHostKey(nil) // TODO: implement proper host key checking
+	}
+
+	clientConfig := &ssh.ClientConfig{
+		User:            config.User,
 		Timeout:         5 * time.Second,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO should not always be insecure
+		HostKeyCallback: hostKeyCallback,
 		Auth:            auths,
 	}
 
+	port := config.Port
+	if port == 0 {
+		port = 22
+	}
+
 	// Connect
-	client, err := ssh.Dial("tcp", net.JoinHostPort(addr, strconv.Itoa(port)), config)
+	client, err := ssh.Dial("tcp", net.JoinHostPort(config.Host, strconv.Itoa(config.Port)), clientConfig)
 	if err != nil {
 		return nil, errs.WithE(err, "Failed to connect to remote host")
 	}
 
 	s := &SshRunner{
-		client: client,
+		client:           client,
+		connectionConfig: config,
 	}
 	s.Runner = s
 	return s, nil
@@ -108,9 +131,9 @@ func (r *SshRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, stde
 		session.Stdin = os.Stdin
 	}
 
-	cmd := head + " " + strings.Join(args, " ")
+	cmd := head + " " + strings.Join(utils.ShellQuoteArgs(args), " ")
 	if logs.IsTraceEnabled() {
-		logs.WithField("command", cmd).Debug("Running ssh external command")
+		logs.WithField("command", cmd).WithField("host", r.connectionConfig.Host).Trace("Running ssh external command")
 	}
 	if err = session.Run(cmd); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
