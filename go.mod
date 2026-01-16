@@ -2,8 +2,6 @@ module github.com/becloudless/becloudless
 
 go 1.24.3
 
-toolchain go1.25.5
-
 require (
 	github.com/Mic92/ssh-to-age v0.0.0-20251229041432-a8d2bffa321d
 	github.com/atombender/go-jsonschema v0.20.0
