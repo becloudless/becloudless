@@ -1,10 +1,11 @@
 package runner
 
 import (
-	"github.com/n0rad/go-erlog/data"
-	"github.com/n0rad/go-erlog/errs"
 	"io"
 	"strings"
+
+	"github.com/n0rad/go-erlog/data"
+	"github.com/n0rad/go-erlog/errs"
 )
 
 type InlineSudoRunner struct {
@@ -20,12 +21,10 @@ func NewInlineSudoRunner(parent Runner, password []byte) (*InlineSudoRunner, err
 	}
 	run.Runner = run
 
-	// TODO 'command' is not available on ubuntu-latest
-	//exec.LookPath("sudo")
-	//_, err := parent.ExecCmdGetStdout("command", "-v", "sudo")
-	//if err != nil {
-	//	return nil, errs.WithE(err, "Sudo is not available")
-	//}
+	_, err := NewShellRunner(parent).ExecCmdGetStdout("command", "-v", "sudo")
+	if err != nil {
+		return nil, errs.WithE(err, "Sudo is not available")
+	}
 
 	if password == nil || len(password) == 0 {
 		if stderr, err := parent.ExecCmdGetStderr("sudo", "-n", "true"); err != nil {

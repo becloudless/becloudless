@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/awnumar/memguard"
+	"github.com/becloudless/becloudless/pkg/utils"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
@@ -108,9 +109,9 @@ func (r *SshRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, stde
 		session.Stdin = os.Stdin
 	}
 
-	cmd := head + " " + strings.Join(args, " ")
+	cmd := head + " " + strings.Join(utils.ShellQuoteArgs(args), " ")
 	if logs.IsTraceEnabled() {
-		logs.WithField("command", cmd).Debug("Running ssh external command")
+		logs.WithField("command", cmd).Trace("Running ssh external command")
 	}
 	if err = session.Run(cmd); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {

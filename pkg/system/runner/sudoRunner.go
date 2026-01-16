@@ -20,7 +20,8 @@ func NewSudoRunner(parent Runner, password []byte) (*SudoRunner, error) {
 		password: password,
 	}
 	run.Runner = run
-	_, err := parent.ExecCmdGetStdout("/bin/sh", "-c", "command -v sudo")
+
+	_, err := NewShellRunner(parent).ExecCmdGetStdout("command", "-v", "sudo")
 	if err != nil {
 		return nil, errs.WithE(err, "Sudo is not available")
 	}
