@@ -85,8 +85,6 @@ func InstallAnywhere(sshConfig *runner.SshConnectionConfig, diskPassword string)
 	nixosAnywhereArgs := []string{
 		"--debug",
 		"-p", strconv.Itoa(sshConfig.Port),
-		"-i", sshConfig.IdentifyFile,
-		"--env-password",
 		"--flake", infra.GetNixosDir() + "#" + systemName,
 	}
 
@@ -124,7 +122,7 @@ func InstallAnywhere(sshConfig *runner.SshConnectionConfig, diskPassword string)
 		return errs.WithE(err, "Failed to prepare disk password")
 	}
 	if err := prepareHostSshKeys(infra, temp, systemName); err != nil {
-		return errs.WithE(err, "Failed to prepare disk password")
+		return errs.WithE(err, "Failed to prepare ssh host key")
 	}
 
 	installUser := "root"

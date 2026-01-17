@@ -86,7 +86,7 @@ func NewSshRunner(config *SshConnectionConfig) (*SshRunner, error) {
 	}
 
 	// Connect
-	client, err := ssh.Dial("tcp", net.JoinHostPort(config.Host, strconv.Itoa(config.Port)), clientConfig)
+	client, err := ssh.Dial("tcp", net.JoinHostPort(config.Host, strconv.Itoa(port)), clientConfig)
 	if err != nil {
 		return nil, errs.WithE(err, "Failed to connect to remote host")
 	}
@@ -119,16 +119,19 @@ func (r *SshRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, stde
 		}
 	}
 	session.Stdout = stdout
-	session.Stderr = stderr
-	session.Stdin = stdin
 	if stderr == nil {
 		session.Stderr = os.Stderr
 	}
+	session.Stderr = stderr
 	if stdout == nil {
 		session.Stdout = os.Stdout
 	}
-	if stdin == nil {
-		session.Stdin = os.Stdin
+
+	if stdin != nil && stdin != os.Stdin {
+		session.Stdin = stdin
+	} else if stdin == os.Stdin {
+		// avoid using os.Stdin since it may corrupt the terminal state, leaving a pending read on stdin
+		logs.Trace("cannot use os.stdin for ssh runner, it may corrupt the terminal state")
 	}
 
 	cmd := head + " " + strings.Join(utils.ShellQuoteArgs(args), " ")

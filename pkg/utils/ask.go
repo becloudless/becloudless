@@ -3,9 +3,10 @@ package utils
 import (
 	"bytes"
 	"fmt"
+	"syscall"
+
 	"github.com/n0rad/go-erlog/errs"
 	"golang.org/x/term"
-	"syscall"
 )
 
 // AskPassword
@@ -30,7 +31,7 @@ func AskPassword(question string, confirmationMatchErrorMessage string) ([]byte,
 		}
 		fmt.Println()
 
-		if bytes.Equal(pass, pass2) {
+		if len(pass) > 0 && bytes.Equal(pass, pass2) {
 			return pass, nil
 		}
 		fmt.Println(confirmationMatchErrorMessage + ". Try again")
