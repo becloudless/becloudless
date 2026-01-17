@@ -4,8 +4,8 @@ name: Dockerfiles
 
 on:
   push:
-    paths:
-      - "dockerfiles/**"
+#    paths:
+#      - "dockerfiles/**"
 
 jobs:
   push:
