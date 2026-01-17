@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Dockerfiles
+
+on:
+  push:
+    paths:
+      - "dockerfiles/**"
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Create GitHub App Token
+        uses: actions/create-github-app-token@v2.2.1
+        id: github-app-token
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - uses: actions/checkout@v6.0.1
+        with:
+          fetch-depth: 0
+          token: ${{ steps.github-app-token.outputs.token }} # Use the App token to checkout
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3.7.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.12.0
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3.6.0
+        with:
+          username: ${{ secrets.BOT_APP_ID }}
+          password: ${{ steps.github-app-token.outputs.token }}
+
+      - name: Build/Push image
+        run: |
+          branch=${GITHUB_REF##*/}
+          if [ "$branch" == "master" ]; then
+            export PUSH=true
+            export CACHE=false
+          else
+            FIRST_COMMIT_IN_BRANCH=$(git log --pretty=format:%H origin/master.. | tail -1)
+            export COMMIT=$(git log -1 --pretty=format:%H ${FIRST_COMMIT_IN_BRANCH}^)
+          fi
+          # bash -x bin/build-from-git-changes.sh
+          go run ./
