@@ -44,13 +44,12 @@ jobs:
       - name: Build/Push image
         run: |
           branch=${GITHUB_REF##*/}
+          CMD="build"
           if [ "$branch" == "main" ]; then
-            export PUSH=true
-            export CACHE=false
+            CMD="PUSH"
           else
             FIRST_COMMIT_IN_BRANCH=$(git log --pretty=format:%H origin/main.. | tail -1)
-            export COMMIT=$(git log -1 --pretty=format:%H ${FIRST_COMMIT_IN_BRANCH}^)
           fi
           # bash -x bin/build-from-git-changes.sh
           ./gomake build
-          ./dist/x86_64-linux/bcl version
+          ./dist/bcl-linux-amd64/bcl docker $CMD --git --git-ref $FIRST_COMMIT_IN_BRANCH

@@ -1,6 +1,7 @@
 package git
 
 import (
+	"net/url"
 	"os"
 	"strings"
 
@@ -138,39 +139,97 @@ func (r Repository) Checkout(ref string) error {
 	return nil
 }
 
-//
-//func (r Repository) HeadCommitHash(short bool) (string, error) {
-//	args := []string{"-C", r.repoDir, "rev-parse", "HEAD"}
-//	if short {
-//		args = append(args, "--short")
+func (r Repository) GetRemoteOriginURL() (string, error) {
+	remote, err := r.Repo.Remote("origin")
+	if err != nil {
+		return "", errs.WithEF(err, r.logData.WithField("remote", "origin"), "Failed to get git remote")
+	}
+
+	cfg := remote.Config()
+	if cfg == nil || len(cfg.URLs) == 0 {
+		return "", errs.WithEF(nil, r.logData.WithField("remote", "origin"), "Git remote origin has no URL configured")
+	}
+	return cfg.URLs[0], nil
+}
+
+// parseGitRemote parses a git remote URL (HTTPS or SSH-like) and returns host, owner, repo.
+// Examples supported:
+//   - https://github.com/owner/repo.git
+//   - http://git.example.com/owner/repo
+//   - git@github.com:owner/repo.git
+//   - ssh://git@gitea.example.com/owner/repo.git
+func ParseGitUrl(gitUrl string) (host, owner, repo string, err error) {
+	// Try URL parse first (handles http/https/ssh://)
+	if strings.Contains(gitUrl, "://") {
+		u, e := url.Parse(gitUrl)
+		if e != nil {
+			return "", "", "", e
+		}
+
+		// u.Host may contain port; drop it
+		host = u.Host
+		if i := strings.Index(host, ":"); i >= 0 {
+			host = host[:i]
+		}
+
+		parts := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
+		if len(parts) < 2 {
+			return "", "", "", errs.WithF(data.WithField("url", gitUrl), "remote path does not contain owner/repo")
+		}
+		owner = parts[0]
+		repo = parts[1]
+		repo = strings.TrimSuffix(repo, ".git")
+		return host, owner, repo, nil
+	}
+
+	// SSH scp-like syntax: git@github.com:owner/repo.git
+	if i := strings.Index(gitUrl, "@"); i >= 0 {
+		rest := gitUrl[i+1:]
+		// rest is like: github.com:owner/repo.git
+		parts := strings.SplitN(rest, ":", 2)
+		if len(parts) != 2 {
+			return "", "", "", errs.WithF(data.WithField("url", gitUrl), "invalid scp-like git URL")
+		}
+		host = parts[0]
+		path := parts[1]
+
+		pathParts := strings.Split(path, "/")
+		if len(pathParts) < 2 {
+			return "", "", "", errs.WithF(data.WithField("url", gitUrl), "url path does not contain owner/repo")
+		}
+		owner = pathParts[0]
+		repo = pathParts[1]
+
+		repo = strings.TrimSuffix(repo, ".git")
+		return host, owner, repo, nil
+	}
+
+	return "", "", "", errs.WithF(data.WithField("url", gitUrl), "unsupported git URL format")
+}
+
+//	func (r Repository) HeadCommitHash(short bool) (string, error) {
+//		args := []string{"-C", r.repoDir, "rev-parse", "HEAD"}
+//		if short {
+//			args = append(args, "--short")
+//		}
+//		stdout, stderr, err := runner.ExecCmdGetStdoutAndStderr("git", args...)
+//		if err != nil {
+//			return "", errs.WithEF(err, data.WithField("stdout", stdout).WithField("stderr", stderr), "Failed to get git head commit hash")
+//		}
+//		return stdout, nil
 //	}
-//	stdout, stderr, err := runner.ExecCmdGetStdoutAndStderr("git", args...)
-//	if err != nil {
-//		return "", errs.WithEF(err, data.WithField("stdout", stdout).WithField("stderr", stderr), "Failed to get git head commit hash")
+//
+//	func (r Repository) IsCommitHashExists(commitHash string) error {
+//		stdout, stderr, err := runner.ExecCmdGetStdoutAndStderr("git", "-C", r.repoDir, "cat-file", "-e", commitHash)
+//		if err != nil {
+//			return errs.WithEF(err, r.logData.WithField("commit", commitHash).
+//				WithField("stdout", stdout).
+//				WithField("stderr", stderr), "Git hash not found")
+//		}
+//		return nil
 //	}
-//	return stdout, nil
-//}
 //
-//
-//func (r Repository) IsCommitHashExists(commitHash string) error {
-//	stdout, stderr, err := runner.ExecCmdGetStdoutAndStderr("git", "-C", r.repoDir, "cat-file", "-e", commitHash)
-//	if err != nil {
-//		return errs.WithEF(err, r.logData.WithField("commit", commitHash).
-//			WithField("stdout", stdout).
-//			WithField("stderr", stderr), "Git hash not found")
-//	}
-//	return nil
-//}
-//
-//func (r Repository) GetRemoteOriginURL() (string, error) {
-//	stdout, stderr, err := runner.ExecCmdGetStdoutAndStderr("git", "-C", r.repoDir, "config", "--get", "remote.origin.url")
-//	if err != nil {
-//		return "", errs.WithEF(err, r.logData.WithField("stderr", stderr), "Failed to get git remote url")
-//	}
-//	return stdout, nil
-//}
-//
-//func (r Repository) GetCurrentBranch() (string, error) {
+//	func (r Repository) GetCurrentBranch() (string, error) {
 //	stdout, stderr, err := runner.ExecCmdGetStdoutAndStderr("git", "-C", r.repoDir, "symbolic-ref", "--quiet", "HEAD")
 //	if err != nil {
 //		return "", errs.WithEF(err, r.logData.WithField("stderr", stderr), "Failed to get git current branch")
