@@ -18,6 +18,7 @@ const (
 	ChangeRenamed  ChangeType = "renamed"
 )
 
+// TODO handle the added then deleted case
 func (r Repository) GetFilesChangedInCurrentBranch() (map[string]ChangeType, error) {
 	headRef, err := r.Repo.Head()
 	if err != nil {
@@ -30,16 +31,16 @@ func (r Repository) GetFilesChangedInCurrentBranch() (map[string]ChangeType, err
 	}
 
 	branch := name.Short()
-	commits, err := r.GetCommitsInBranch(branch)
+	commitHashes, err := r.GetCommitsInBranch(branch)
 	if err != nil {
 		return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to get commits in branch")
 	}
 
 	changedFiles := make(map[string]ChangeType)
-	for _, commit := range commits {
-		files, err := r.GetFilesChangedInCommit(commit.Hash.String())
+	for _, hash := range commitHashes {
+		files, err := r.GetFilesChangedInCommit(hash)
 		if err != nil {
-			return nil, errs.WithEF(err, r.logData.WithField("commit", commit.Hash.String()), "Failed to get files changed in commit")
+			return nil, errs.WithEF(err, r.logData.WithField("commit", hash), "Failed to get files changed in commit")
 		}
 		for path, ct := range files {
 			changedFiles[path] = ct
@@ -121,7 +122,7 @@ func (r Repository) GetFilesChangedInCommit(commitHash string) (map[string]Chang
 	return files, nil
 }
 
-func (r Repository) GetCommitsInBranch(branch string) ([]*object.Commit, error) {
+func (r Repository) GetCommitsInBranch(branch string) ([]string, error) {
 	// Resolve the branch tip
 	refName := plumbing.NewBranchReferenceName(branch)
 	ref, err := r.Repo.Reference(refName, true)
@@ -170,7 +171,7 @@ func (r Repository) GetCommitsInBranch(branch string) ([]*object.Commit, error) 
 	}
 	defer logIter.Close()
 
-	var commits []*object.Commit
+	var commits []string
 	for {
 		c, err := logIter.Next()
 		if err != nil {
@@ -186,7 +187,7 @@ func (r Repository) GetCommitsInBranch(branch string) ([]*object.Commit, error) 
 			break
 		}
 
-		commits = append(commits, c)
+		commits = append(commits, c.Hash.String())
 	}
 
 	return commits, nil
