@@ -36,8 +36,6 @@ func AddBuildPushCommonFlags(cmd *cobra.Command, config *BuildConfig) {
 		logs.WithE(err).Warn("Failed to deduce current repository")
 	}
 
-	cmd.Flags().BoolVar(&config.Git, "git", false, "Build from git status instead of path")
-	cmd.Flags().StringVar(&config.GitRef, "git-ref", "", "Specify a git ref (branch, tag, commit) to build from, when --git is set")
 	cmd.Flags().StringVar(&config.Path, "path", ".", "Dockerfile or folder of dockerfile path")
 	cmd.Flags().StringVar(&config.Platforms, "platforms", "linux/amd64,linux/arm64", "Comma-separated list of target platforms (e.g., linux/amd64,linux/arm64). If not set, it will be auto-detected from the Dockerfile or default to linux/amd64,linux/arm64")
 	cmd.Flags().StringVar(&config.Repository, "repository", repository, "Docker image repository URL")
@@ -89,12 +87,10 @@ type BuildConfig struct {
 	Repository     string
 	Namespace      string
 	Platforms      string
-	Git            bool
-	GitRef         string
 }
 
 // dockerBuild uses cmd to trigger docker because we need buildx, and it's not simple to do it in pure go
-func dockerBuildx(config BuildConfig) error {
+func DockerBuildx(config BuildConfig) error {
 	if err := validatePrerequisites(); err != nil {
 		return err
 	}

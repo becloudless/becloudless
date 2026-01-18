@@ -13,7 +13,7 @@ func buildCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 		Short: "Build a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return dockerBuildx(config)
+			return DockerBuildx(config)
 		},
 	}
 
