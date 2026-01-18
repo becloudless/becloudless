@@ -44,11 +44,11 @@ jobs:
       - name: Build/Push image
         run: |
           branch=${GITHUB_REF##*/}
-          if [ "$branch" == "master" ]; then
+          if [ "$branch" == "main" ]; then
             export PUSH=true
             export CACHE=false
           else
-            FIRST_COMMIT_IN_BRANCH=$(git log --pretty=format:%H origin/master.. | tail -1)
+            FIRST_COMMIT_IN_BRANCH=$(git log --pretty=format:%H origin/main.. | tail -1)
             export COMMIT=$(git log -1 --pretty=format:%H ${FIRST_COMMIT_IN_BRANCH}^)
           fi
           # bash -x bin/build-from-git-changes.sh
