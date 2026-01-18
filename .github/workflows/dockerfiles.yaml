@@ -52,5 +52,5 @@ jobs:
             export COMMIT=$(git log -1 --pretty=format:%H ${FIRST_COMMIT_IN_BRANCH}^)
           fi
           # bash -x bin/build-from-git-changes.sh
-          go generate ./...
-          go run ./
+          ./gomake build
+          ./dist/x86_64-linux/bcl version
