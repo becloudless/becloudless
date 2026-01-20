@@ -5,9 +5,9 @@ import (
 )
 
 func buildCmd() *cobra.Command {
-	config := BuildConfig{
-		Load: true,
-	}
+	config := BuildConfig{}
+	config.Init()
+
 	cmd := &cobra.Command{
 		Use:   "build",
 		Args:  cobra.ExactArgs(0),

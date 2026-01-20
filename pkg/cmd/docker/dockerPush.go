@@ -7,6 +7,8 @@ func pushCmd() *cobra.Command {
 		Push:  true,
 		Cache: false,
 	}
+	config.Init()
+
 	cmd := &cobra.Command{
 		Use:   "push",
 		Args:  cobra.ExactArgs(0),

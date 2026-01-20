@@ -31,17 +31,12 @@ func DockerCmd() *cobra.Command {
 }
 
 func AddBuildPushCommonFlags(cmd *cobra.Command, config *BuildConfig) {
-	repository, err := findDockerRepositoryFromGitRepository(config.Path)
-	if err != nil {
-		logs.WithE(err).Warn("Failed to deduce current repository")
-	}
-
-	cmd.Flags().StringVar(&config.Path, "path", ".", "Dockerfile or folder of dockerfile path")
-	cmd.Flags().StringVar(&config.Platforms, "platforms", "linux/amd64,linux/arm64", "Comma-separated list of target platforms (e.g., linux/amd64,linux/arm64). If not set, it will be auto-detected from the Dockerfile or default to linux/amd64,linux/arm64")
-	cmd.Flags().StringVar(&config.Repository, "repository", repository, "Docker image repository URL")
-	cmd.Flags().StringVar(&config.Namespace, "namespace", "", "repository namespace") // TODO
-	cmd.Flags().StringVar(&config.BuildxFlags, "buildx-flags", "", "Additional flags to pass to docker buildx")
-	cmd.Flags().BoolVar(&config.Load, "load", true, "Load the built image to local Docker daemon")
+	cmd.Flags().StringVar(&config.Path, "path", config.Path, "Dockerfile or folder of dockerfile path")
+	cmd.Flags().StringVar(&config.Platforms, "platforms", config.Platforms, "Comma-separated list of target platforms (e.g., linux/amd64,linux/arm64). If not set, it will be auto-detected from the Dockerfile or default to linux/amd64,linux/arm64")
+	cmd.Flags().StringVar(&config.Repository, "repository", config.Repository, "Docker image repository URL")
+	cmd.Flags().StringVar(&config.Namespace, "namespace", config.Namespace, "repository namespace") // TODO
+	cmd.Flags().StringVar(&config.BuildxFlags, "buildx-flags", config.BuildxFlags, "Additional flags to pass to docker buildx")
+	cmd.Flags().BoolVar(&config.Load, "load", config.Load, "Load the built image to local Docker daemon")
 }
 
 func findDockerRepositoryFromGitRepository(path string) (string, error) {
@@ -87,6 +82,30 @@ type BuildConfig struct {
 	Repository     string
 	Namespace      string
 	Platforms      string
+	Tag            string
+}
+
+func (b *BuildConfig) Init() {
+	if b.Path == "" {
+		b.Path = "."
+	}
+	//if b.Load == nil {
+	//	b.Load = true // TOFO
+	//}
+	if b.Platforms == "" {
+		b.Platforms = "linux/amd64,linux/arm64"
+	}
+	if b.Repository == "" {
+		repository, err := findDockerRepositoryFromGitRepository(b.Path)
+		if err != nil {
+			logs.WithE(err).Warn("Failed to deduce current repository")
+		}
+		b.Repository = repository
+	}
+}
+
+func (*b) FromDockerfile() {
+
 }
 
 // dockerBuild uses cmd to trigger docker because we need buildx, and it's not simple to do it in pure go
@@ -112,7 +131,7 @@ func DockerBuildx(config BuildConfig) error {
 	}
 
 	if config.Platforms == "" {
-		platforms, err := docker.ExtractPlatformFromDockerfile(filepath.Join(config.DockerfilePath, "Dockerfile"))
+		platforms, err := docker.ExtractPlatformFromDockerfile(config.DockerfilePath)
 		if err != nil {
 			return errs.WithE(err, "Failed to extract platform from Dockerfile")
 		}

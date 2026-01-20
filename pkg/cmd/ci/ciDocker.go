@@ -55,6 +55,7 @@ func CiDockerCmd() *cobra.Command {
 				config := docker.BuildConfig{
 					Path: path,
 				}
+				config.Init()
 				if err := docker.DockerBuildx(config); err != nil {
 					return err
 				}
