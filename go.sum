@@ -509,6 +509,8 @@ github.com/n0rad/gomake v0.0.0-20260105145040-7210f7f1961f h1:s1MOC35Y1flc/QISKn
 github.com/n0rad/gomake v0.0.0-20260105145040-7210f7f1961f/go.mod h1:1xaDrrWtiIDob/tMRCv0OhPNz4qF8GP3Tk1PNOmSQTU=
 github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260116182953-a1aa5fc448fe h1:ATlr4tsP7xWDdUq7moh7zgfbUuhrymzjOLI63nIvXdY=
 github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260116182953-a1aa5fc448fe/go.mod h1:tT713iWOG54jdpKbAbL9EhCbtcpBcT0ffEIS9EiaO7E=
+github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260120012428-7b6c2af7698a h1:wsDdGvvNzx3YDdOcp27UQPxusBUBZ+3lrvGPxM2mATk=
+github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260120012428-7b6c2af7698a/go.mod h1:tT713iWOG54jdpKbAbL9EhCbtcpBcT0ffEIS9EiaO7E=
 github.com/oklog/run v1.2.0 h1:O8x3yXwah4A73hJdlrwo/2X6J62gE5qTMusH0dvz60E=
 github.com/oklog/run v1.2.0/go.mod h1:mgDbKRSwPhJfesJ4PntqFUbKQRZ50NgmZTSPlFA0YFk=
 github.com/onsi/ginkgo/v2 v2.21.0 h1:7rg/4f3rB88pb5obDgNZrNHrQ4e6WpjonchcpuBRnZM=
