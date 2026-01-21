@@ -43,13 +43,14 @@ jobs:
 
       - name: Build/Push image
         run: |
-          set -x
-          branch=${GITHUB_REF##*/}
-          ARGS=""
-          if [ "$branch" == "main" ]; then
-            ARGS=" --push "
-          else
-            FIRST_COMMIT_IN_BRANCH=$(git log --pretty=format:%H origin/main.. | tail -1)
-          fi
+#          set -x
+#          branch=${GITHUB_REF##*/}
+#          ARGS=""
+#          if [ "$branch" == "main" ]; then
+#            ARGS=" --push "
+#          else
+#            FIRST_COMMIT_IN_BRANCH=$(git log --pretty=format:%H origin/main.. | tail -1)
+#          fi
           ./gomake build
-          ./dist/bcl-linux-amd64/bcl ci docker $ARGS -L debug
+#          ./dist/bcl-linux-amd64/bcl ci docker $ARGS -L debug
+          ./dist/bcl-linux-amd64/bcl ci docker -L debug
