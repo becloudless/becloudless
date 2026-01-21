@@ -55,32 +55,32 @@ RUN echo "Hello World"`
 	tempDir := createTempDockerfileForTest(t, dockerfileContent)
 
 	config := BuildConfig{
-		Path:        tempDir,
-		Registry:    "test-registry.com",
-		Namespace:   "test-namespace",
-		Platforms:   "linux/amd64",
-		Load:        true,
-		Cache:       true,
-		BuildxFlags: "--progress=plain",
+		DockerfilePath: tempDir,
+		Registry:       "test-registry.com",
+		Namespace:      "test-namespace",
+		Platforms:      "linux/amd64",
+		Load:           true,
+		Cache:          true,
+		BuildxFlags:    "--progress=plain",
 	}
 
 	// Note: This test only validates the configuration setup
 	// We don't actually run dockerBuildx to avoid dependency on Docker being installed
 
 	// Verify that the path exists
-	stat, err := os.Stat(config.Path)
+	stat, err := os.Stat(config.DockerfilePath)
 	assert.NoError(t, err)
 	assert.True(t, stat.IsDir())
 
 	// Verify Dockerfile exists in the path
-	dockerfilePath := filepath.Join(config.Path, "Dockerfile")
+	dockerfilePath := filepath.Join(config.DockerfilePath, "Dockerfile")
 	_, err = os.Stat(dockerfilePath)
 	assert.NoError(t, err)
 
 	// Test path resolution logic (similar to what dockerBuildx does)
 	if stat.IsDir() {
-		buildPath := config.Path
-		dockerfilePath := filepath.Join(config.Path, "Dockerfile")
+		buildPath := config.DockerfilePath
+		dockerfilePath := filepath.Join(config.DockerfilePath, "Dockerfile")
 
 		assert.Equal(t, tempDir, buildPath)
 		assert.True(t, filepath.IsAbs(dockerfilePath) || filepath.Join(tempDir, "Dockerfile") != "")
@@ -129,14 +129,14 @@ CMD ["echo", "Hello from dockerBuildx test"]`
 	require.NoError(t, gitCommit.Run(), "Failed to commit Dockerfile")
 
 	config := BuildConfig{
-		Path:        tempDir,
-		Registry:    "localhost",
-		Namespace:   "test",
-		Platforms:   "linux/amd64",
-		Load:        true,
-		Cache:       true,
-		Push:        false,
-		BuildxFlags: "",
+		DockerfilePath: tempDir,
+		Registry:       "localhost",
+		Namespace:      "test",
+		Platforms:      "linux/amd64",
+		Load:           true,
+		Cache:          true,
+		Push:           false,
+		BuildxFlags:    "",
 	}
 
 	// Call the actual dockerBuildx function

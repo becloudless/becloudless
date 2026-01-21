@@ -138,105 +138,15 @@ func (r Repository) Checkout(ref string) error {
 	return nil
 }
 
-//
-//func (r Repository) HeadCommitHash(short bool) (string, error) {
-//	args := []string{"-C", r.repoDir, "rev-parse", "HEAD"}
-//	if short {
-//		args = append(args, "--short")
-//	}
-//	stdout, stderr, err := runner.ExecCmdGetStdoutAndStderr("git", args...)
-//	if err != nil {
-//		return "", errs.WithEF(err, data.WithField("stdout", stdout).WithField("stderr", stderr), "Failed to get git head commit hash")
-//	}
-//	return stdout, nil
-//}
-//
-//
-//func (r Repository) IsCommitHashExists(commitHash string) error {
-//	stdout, stderr, err := runner.ExecCmdGetStdoutAndStderr("git", "-C", r.repoDir, "cat-file", "-e", commitHash)
-//	if err != nil {
-//		return errs.WithEF(err, r.logData.WithField("commit", commitHash).
-//			WithField("stdout", stdout).
-//			WithField("stderr", stderr), "Git hash not found")
-//	}
-//	return nil
-//}
-//
-//func (r Repository) GetRemoteOriginURL() (string, error) {
-//	stdout, stderr, err := runner.ExecCmdGetStdoutAndStderr("git", "-C", r.repoDir, "config", "--get", "remote.origin.url")
-//	if err != nil {
-//		return "", errs.WithEF(err, r.logData.WithField("stderr", stderr), "Failed to get git remote url")
-//	}
-//	return stdout, nil
-//}
-//
-//func (r Repository) GetCurrentBranch() (string, error) {
-//	stdout, stderr, err := runner.ExecCmdGetStdoutAndStderr("git", "-C", r.repoDir, "symbolic-ref", "--quiet", "HEAD")
-//	if err != nil {
-//		return "", errs.WithEF(err, r.logData.WithField("stderr", stderr), "Failed to get git current branch")
-//	}
-//	branch := firstLine(stdout)
-//	return strings.TrimPrefix(branch, "refs/heads/"), nil
-//}
-//
-//func (r Repository) IsFileExistsInRevision(file string, revision string) error {
-//	if err := r.IsCommitHashExists(revision); err != nil {
-//		return errs.WithEF(err, r.logData.WithField("revision", revision), "cannot get file content for un-existing revision")
-//	}
-//
-//	fileAbsolutePath, err := filepath.Abs(file)
-//	if err != nil {
-//		return errs.WithEF(err, r.logData.WithField("file", file), "Failed to get absolute path of file")
-//	}
-//
-//	_, err = runner.ExecCmdGetOutput("git", "-C", r.repoDir, "show", revision+":"+strings.TrimPrefix(fileAbsolutePath, r.repoDir+"/"))
-//	if err != nil {
-//		return errs.WithEF(err, r.logData.WithField("file", file).WithField("revision", revision),
-//			"Failed to get content of file for revision")
-//	}
-//	return nil
-//}
-//
-//func (r Repository) GetFileContentAndDateInRevision(file string, revision string) (string, time.Time, error) {
-//	t := time.Time{}
-//
-//	if err := r.IsCommitHashExists(revision); err != nil {
-//		return "", t, errs.WithEF(err, r.logData.WithField("revision", revision), "cannot get file content for un-existing revision")
-//	}
-//
-//	fileAbsolutePath, err := filepath.Abs(file)
-//	if err != nil {
-//		return "", t, errs.WithEF(err, r.logData.WithField("file", file), "Failed to get absolute path of file")
-//	}
-//
-//	content, err := runner.ExecCmdGetOutput("git", "-C", r.repoDir, "show", revision+":"+strings.TrimPrefix(fileAbsolutePath, r.repoDir+"/"))
-//	if err != nil {
-//		return "", t, errs.WithEF(err, r.logData.WithField("file", file).WithField("revision", revision),
-//			"Failed to get content of file for revision")
-//	}
-//
-//	date, err := runner.ExecCmdGetOutput("git", "-C", r.repoDir,
-//		"log", revision, "-1", "--format=%ct", "--", fileAbsolutePath,
-//	)
-//	if err != nil {
-//		return "", t, errs.WithEF(err, r.logData.WithField("file", file), "Failed to get file commit date")
-//	}
-//
-//	i, err := strconv.ParseInt(date, 10, 64)
-//	if err != nil {
-//		return "", t, errs.WithEF(err, r.logData.WithField("file", file), "Failed to parse file commit date from git")
-//	}
-//	t = time.Unix(i, 0)
-//
-//	return content, t, nil
-//}
-//
-/////////////////////////
-//
-//// taken from github-cli to process git output
-//func firstLine(output string) string {
-//	if i := strings.IndexAny(output, "\n"); i >= 0 {
-//		return output[0:i]
-//	}
-//	return output
-//}
+func (r Repository) GetRemoteOriginURL() (string, error) {
+	remote, err := r.Repo.Remote("origin")
+	if err != nil {
+		return "", errs.WithEF(err, r.logData.WithField("remote", "origin"), "Failed to get git remote")
+	}
+
+	cfg := remote.Config()
+	if cfg == nil || len(cfg.URLs) == 0 {
+		return "", errs.WithEF(nil, r.logData.WithField("remote", "origin"), "Git remote origin has no URL configured")
+	}
+	return cfg.URLs[0], nil
+}

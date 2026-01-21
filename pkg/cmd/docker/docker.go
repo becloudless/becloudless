@@ -2,18 +2,20 @@ package docker
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"strings"
+
 	"github.com/becloudless/becloudless/pkg/docker"
+	"github.com/becloudless/becloudless/pkg/git"
 	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/becloudless/becloudless/pkg/version"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"github.com/spf13/cobra"
-	"os"
-	"os/exec"
-	"path"
-	"path/filepath"
-	"strings"
 )
 
 func DockerCmd() *cobra.Command {
@@ -29,14 +31,30 @@ func DockerCmd() *cobra.Command {
 }
 
 func AddBuildPushCommonFlags(cmd *cobra.Command, config *BuildConfig) {
-	cmd.Flags().BoolVar(&config.Git, "git", false, "Build from git status instead of path")
-	cmd.Flags().StringVar(&config.GitRef, "git-ref", "", "Specify a git ref (branch, tag, commit) to build from when --git is set")
-	cmd.Flags().StringVar(&config.Path, "path", ".", "Dockerfile or folder of dockerfile path")
-	cmd.Flags().StringVar(&config.Platforms, "platforms", "linux/amd64,linux/arm64", "Comma-separated list of target platforms (e.g., linux/amd64,linux/arm64). If not set, it will be auto-detected from the Dockerfile or default to linux/amd64,linux/arm64")
-	cmd.Flags().StringVar(&config.Registry, "registry", "gitea.cloudless.be", "Docker registry URL") // TODO
-	cmd.Flags().StringVar(&config.Namespace, "namespace", "bcl", "Registry namespace")               // TODO
+	cmd.Flags().StringVar(&config.DockerfilePath, "path", ".", "Dockerfile or folder of Dockerfile path")
+	cmd.Flags().StringVar(&config.Platforms, "platforms", "", "Comma-separated list of target platforms (e.g., linux/amd64,linux/arm64). If not set, it will be auto-detected from the Dockerfile or default to linux/amd64,linux/arm64")
+	cmd.Flags().StringVar(&config.Repository, "repository", "", "Docker image repository URL. Will be deduced from git repo by default")
+	cmd.Flags().StringVar(&config.Namespace, "namespace", "", "repository namespace") // TODO
 	cmd.Flags().StringVar(&config.BuildxFlags, "buildx-flags", "", "Additional flags to pass to docker buildx")
 	cmd.Flags().BoolVar(&config.Load, "load", true, "Load the built image to local Docker daemon")
+}
+
+func findDockerRepositoryFromGitRepository(path string) (string, error) {
+	gitRepo, err := git.OpenRepository(path)
+	if err != nil {
+		return "", errs.WithE(err, "Failed to open git repository")
+	}
+	url, err := gitRepo.GetRemoteOriginURL()
+	if err != nil {
+		return "", errs.WithE(err, "Failed to get remote origin URL")
+	}
+
+	_, repository, err := docker.GetRegistryAndRepositoryFromGitUrl(url)
+	if err != nil {
+		return "", errs.WithE(err, "Failed to deduce registry from git URL")
+	}
+
+	return repository, nil
 }
 
 func validatePrerequisites() error {
@@ -54,34 +72,77 @@ func validatePrerequisites() error {
 }
 
 type BuildConfig struct {
-	Path           string
-	BuildPath      string
 	DockerfilePath string
-	Push           bool
-	Load           bool
-	Cache          bool
-	BuildxFlags    string
-	Registry       string
-	Namespace      string
-	Platforms      string
-	Git            bool
-	GitRef         string
+	BuildPath      string
+	//DockerfilePath string
+	Push        bool
+	Load        bool
+	Cache       bool
+	BuildxFlags string
+	Repository  string
+	Name        string
+	Namespace   string
+	Platforms   string
+	Tag         string
+}
+
+func (b *BuildConfig) Init() error {
+	if stat, err := os.Stat(b.DockerfilePath); err != nil {
+		return errs.WithEF(err, data.WithField("path", b.DockerfilePath), "Failed to read path")
+	} else if stat.IsDir() {
+		b.DockerfilePath = path.Join(b.DockerfilePath, "Dockerfile")
+	} else {
+		b.BuildPath = filepath.Dir(b.DockerfilePath)
+	}
+
+	if b.Repository == "" {
+		repository, err := findDockerRepositoryFromGitRepository(b.DockerfilePath)
+		if err != nil {
+			if b.Push {
+				return errs.WithE(err, "Cannot push, Failed to deduce docker repository")
+			} else {
+				logs.WithE(err).Warn("Failed to deduce docker repository. Would not be able to push")
+			}
+		}
+		b.Repository = repository
+	}
+
+	fromDockerfile, err := docker.ExtractLabelsFromDockerfile(b.DockerfilePath)
+	if err != nil {
+		return errs.WithEF(err, data.WithField("dockerfile", b.DockerfilePath), "Failed to prepare build config from Dockerfile")
+	}
+
+	if b.Platforms == "" {
+		if platforms, ok := fromDockerfile["platforms"]; ok {
+			b.Platforms = platforms
+		} else {
+			b.Platforms = "linux/amd64,linux/arm64"
+		}
+	}
+
+	if b.Tag == "" {
+		tag, err := version.GenerateVersionFromDateAndGitState(1, b.DockerfilePath)
+		if err != nil {
+			return err
+		}
+		b.Tag = tag
+	}
+
+	if b.Name == "" {
+		b.Name = filepath.Base(filepath.Dir(b.DockerfilePath))
+	}
+
+	if b.BuildPath == "" {
+		b.BuildPath = filepath.Dir(b.DockerfilePath)
+	}
+
+	return nil
 }
 
 // dockerBuild uses cmd to trigger docker because we need buildx, and it's not simple to do it in pure go
-func dockerBuildx(config BuildConfig) error {
+func DockerBuildx(config BuildConfig) error {
 	if err := validatePrerequisites(); err != nil {
 		return err
-	}
-
-	if stat, err := os.Stat(config.Path); err != nil {
-		return errs.WithEF(err, data.WithField("path", config.Path), "Failed to read path")
-	} else if stat.IsDir() {
-		config.BuildPath = config.Path
-		config.DockerfilePath = path.Join(config.Path, "Dockerfile")
-	} else {
-		config.BuildPath = filepath.Dir(config.Path)
-		config.DockerfilePath = config.Path
 	}
 
 	args := []string{"buildx", "build", "--progress=plain"}
@@ -90,33 +151,18 @@ func dockerBuildx(config BuildConfig) error {
 		args = append(args, "--no-cache")
 	}
 
-	if config.Platforms == "" {
-		platforms, err := docker.ExtractPlatformFromDockerfile(filepath.Join(config.DockerfilePath, "Dockerfile"))
-		if err != nil {
-			return errs.WithE(err, "Failed to extract platform from Dockerfile")
-		}
-		config.Platforms = platforms
-	}
-
 	if config.Platforms != "" {
 		args = append(args, "--platform="+config.Platforms)
 	}
 
-	tag, err := version.GenerateVersionFromDateAndGitState(1, config.DockerfilePath)
-	if err != nil {
-		return err
+	fullImageName := fmt.Sprintf("%s/%s", config.Repository, config.Name)
+	if config.Namespace != "" {
+		fullImageName = fmt.Sprintf("%s/%s/%s", config.Repository, config.Namespace, config.Name)
 	}
-
-	imageName, err := getFolderNameFromDockerfilePath(config.DockerfilePath)
-	if err != nil {
-		return err
-	}
-
-	fullImageName := fmt.Sprintf("%s/%s/%s", config.Registry, config.Namespace, imageName)
-	args = append(args, "-t", fullImageName+":"+tag)
+	args = append(args, "-t", fullImageName+":"+config.Tag)
 	args = append(args, "-t", fullImageName+":latest")
 
-	args = append(args, "--build-arg=TAG="+tag)
+	args = append(args, "--build-arg=TAG="+config.Tag)
 
 	if config.BuildxFlags != "" {
 		flagArgs := strings.Fields(config.BuildxFlags)
@@ -133,24 +179,6 @@ func dockerBuildx(config BuildConfig) error {
 	args = append(args, "-f", config.DockerfilePath)
 	args = append(args, config.BuildPath)
 
-	logs.WithField("args", strings.Join(args, " ")).Debug("Executing docker buildx command")
-
 	localRunner := runner.NewLocalRunner()
 	return localRunner.ExecCmd("docker", args...)
-}
-
-func getFolderNameFromDockerfilePath(dockerfilePath string) (string, error) {
-	path := filepath.Dir(dockerfilePath)
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return "", err
-	}
-	info, err := os.Stat(abs)
-	if err != nil {
-		return "", err
-	}
-	if !info.IsDir() {
-		return "", errs.WithEF(err, data.WithField("path", abs), "path is not a directory")
-	}
-	return filepath.Base(abs), nil
 }

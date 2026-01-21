@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/becloudless/becloudless/pkg/bcl"
+	"github.com/becloudless/becloudless/pkg/cmd/ci"
 	"github.com/becloudless/becloudless/pkg/cmd/docker"
 	"github.com/becloudless/becloudless/pkg/cmd/kube"
 	"github.com/becloudless/becloudless/pkg/cmd/nixos"
@@ -34,6 +35,7 @@ func RootCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(
+		ci.CiCmd(),
 		kube.KubeCmd(),
 		docker.DockerCmd(),
 		version.VersionCmd(),
