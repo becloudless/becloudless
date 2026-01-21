@@ -2,11 +2,13 @@ package git
 
 import (
 	"io"
+	"slices"
 
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/n0rad/go-erlog/errs"
+	"github.com/n0rad/go-erlog/logs"
 )
 
 type ChangeType string
@@ -18,22 +20,62 @@ const (
 	ChangeRenamed  ChangeType = "renamed"
 )
 
-// TODO handle the added then deleted case
-func (r Repository) GetFilesChangedInCurrentBranch() (map[string]ChangeType, error) {
+var mainBranches = []string{"main", "master"}
+
+func (r Repository) IsCurrentBranchMain() (bool, error) {
+	branch, err := r.GetCurrentBranchName()
+	if err != nil {
+		return false, errs.WithE(err, "Failed to get current branch name")
+	}
+	return slices.Contains(mainBranches, branch), nil
+}
+
+func (r Repository) GetCurrentBranchName() (string, error) {
 	headRef, err := r.Repo.Head()
 	if err != nil {
-		return nil, errs.WithEF(err, r.logData, "Failed to get HEAD reference")
+		return "", errs.WithEF(err, r.logData, "Failed to get HEAD reference")
 	}
 
 	name := headRef.Name()
 	if !name.IsBranch() {
-		return nil, errs.WithEF(nil, r.logData.WithField("ref", name.String()), "HEAD is not pointing to a branch")
+		return "", errs.WithEF(nil, r.logData.WithField("ref", name.String()), "HEAD is not pointing to a branch")
+	}
+	return name.Short(), nil
+}
+
+func (r Repository) GetBranchCommit(branch string) (string, error) {
+	refName := plumbing.NewBranchReferenceName(branch)
+	ref, err := r.Repo.Reference(refName, true)
+	if err != nil {
+		return "", errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to get branch reference")
+	}
+	return ref.Hash().String(), nil
+}
+
+// TODO handle the added then deleted case
+func (r Repository) GetFilesChangedInCurrentBranch() (map[string]ChangeType, error) {
+
+	branch, err := r.GetCurrentBranchName()
+	if err != nil {
+		return nil, errs.WithE(err, "Failed to get current branch name")
 	}
 
-	branch := name.Short()
-	commitHashes, err := r.GetCommitsInBranch(branch)
-	if err != nil {
-		return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to get commits in branch")
+	var commitHashes []string
+	if slices.Contains(mainBranches, branch) {
+		logs.WithField("branch", branch).Info("Current branch is a main branch, building only last commit")
+
+		commit, err := r.GetBranchCommit(branch)
+		if err != nil {
+			return nil, errs.WithE(err, "Failed to get last commit of current branch")
+		}
+		commitHashes = []string{commit}
+	} else {
+		logs.WithField("branch", branch).Info("Current branch found")
+		hashs, err := r.GetCommitsInBranch(branch)
+		if err != nil {
+			return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to get commits in branch")
+		}
+		commitHashes = hashs
 	}
 
 	changedFiles := make(map[string]ChangeType)
@@ -134,8 +176,7 @@ func (r Repository) GetCommitsInBranch(branch string) ([]string, error) {
 	// Heuristic: prefer "main", then "master". If neither exists, fall back
 	// to traversing the full history from the branch tip.
 	var baseRef *plumbing.Reference
-	baseBranches := []string{"main", "master"}
-	for _, b := range baseBranches {
+	for _, b := range mainBranches {
 		br := plumbing.NewBranchReferenceName(b)
 		rref, e := r.Repo.Reference(br, true)
 		if e == nil {
