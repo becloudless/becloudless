@@ -78,6 +78,8 @@ func (r Repository) GetFilesChangedInCurrentBranch() (map[string]ChangeType, err
 		commitHashes = hashs
 	}
 
+	logs.WithField("commits", commitHashes).Trace("Commits to analyze for changes")
+
 	changedFiles := make(map[string]ChangeType)
 	for _, hash := range commitHashes {
 		files, err := r.GetFilesChangedInCommit(hash)
