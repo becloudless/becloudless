@@ -7,13 +7,15 @@ func pushCmd() *cobra.Command {
 		Push:  true,
 		Cache: false,
 	}
-	config.Init()
 
 	cmd := &cobra.Command{
 		Use:   "push",
 		Args:  cobra.ExactArgs(0),
 		Short: "Build and push a Docker image from the current directory.",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := config.Init(); err != nil {
+				return err
+			}
 			return DockerBuildx(config)
 		},
 	}

@@ -14,7 +14,7 @@ import (
 )
 
 func CiDockerCmd() *cobra.Command {
-	var gitRef string
+	//var gitRef string
 
 	cmd := &cobra.Command{
 		Use:   "docker",
@@ -30,7 +30,7 @@ func CiDockerCmd() *cobra.Command {
 				return err
 			}
 
-			toBuild := make(map[string]struct{}, 0)
+			toBuild := make(map[string]struct{})
 
 			for s, changeType := range changes {
 				if !strings.HasPrefix(s, "dockerfiles/") {
@@ -53,9 +53,11 @@ func CiDockerCmd() *cobra.Command {
 				logs.WithField("path", path).Info("Building docker image")
 
 				config := docker.BuildConfig{
-					Path: path,
+					DockerfilePath: path,
 				}
-				config.Init()
+				if err := config.Init(); err != nil {
+					return err
+				}
 				if err := docker.DockerBuildx(config); err != nil {
 					return err
 				}
@@ -65,7 +67,7 @@ func CiDockerCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&gitRef, "git-ref", "", "Specify a git ref (branch, tag, commit) to build from, when --git is set")
+	//cmd.Flags().StringVar(&gitRef, "git-ref", "", "Specify a git ref (branch, tag, commit) to build from")
 
 	return cmd
 }

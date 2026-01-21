@@ -6,13 +6,15 @@ import (
 
 func buildCmd() *cobra.Command {
 	config := BuildConfig{}
-	config.Init()
 
 	cmd := &cobra.Command{
 		Use:   "build",
 		Args:  cobra.ExactArgs(0),
 		Short: "Build a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := config.Init(); err != nil {
+				return err
+			}
 			return DockerBuildx(config)
 		},
 	}
