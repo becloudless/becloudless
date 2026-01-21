@@ -14,7 +14,7 @@ import (
 )
 
 func CiDockerCmd() *cobra.Command {
-	var push bool
+	//var push bool
 	//var gitRef string
 
 	cmd := &cobra.Command{
@@ -31,8 +31,14 @@ func CiDockerCmd() *cobra.Command {
 				return err
 			}
 
-			toBuild := make(map[string]struct{})
+			push := false
+			if isMain, err := repo.IsCurrentBranchMain(); err != nil {
+				return errs.WithE(err, "Failed to determine if current branch is main")
+			} else {
+				push = isMain
+			}
 
+			toBuild := make(map[string]struct{})
 			for s, changeType := range changes {
 				if !strings.HasPrefix(s, "dockerfiles/") {
 					continue
@@ -70,8 +76,7 @@ func CiDockerCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&push, "push", false, "push image")
-
+	//cmd.Flags().BoolVar(&push, "push", false, "push image")
 	//cmd.Flags().StringVar(&gitRef, "git-ref", "", "Specify a git ref (branch, tag, commit) to build from")
 
 	return cmd
