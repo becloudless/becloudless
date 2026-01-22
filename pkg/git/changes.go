@@ -20,7 +20,7 @@ const (
 	ChangeRenamed  ChangeType = "renamed"
 )
 
-var mainBranches = []string{"main", "master"}
+var mainBranches = []string{"main", "master", "origin/main", "origin/master"}
 
 func (r Repository) IsCurrentBranchMain() (bool, error) {
 	branch, err := r.GetCurrentBranchName()
@@ -196,7 +196,7 @@ func (r Repository) GetCommitsInBranch(branch string) ([]string, error) {
 	}
 
 	if baseCommit == nil {
-		return nil, errs.WithEF(nil, r.logData, "Could not find main or master branch to compare against")
+		return nil, errs.WithEF(nil, r.logData, "Could not find base branch to compare against")
 	}
 
 	mergeBases, err := branchCommit.MergeBase(baseCommit)
