@@ -163,69 +163,86 @@ func (r Repository) GetFilesChangedInCommit(commitHash string) (map[string]Chang
 }
 
 func (r Repository) GetCommitsInBranch(branch string) ([]string, error) {
-	branchHashStr, err := r.GetBranchLastCommit(branch)
+	// Behavior we want to emulate is roughly:
+	//   git log --pretty=format:%H origin/main..branch
+	// I.e. commits reachable from "branch" that are not reachable from the
+	// main branch (or any of the configured mainBranches).
+
+	// Resolve the branch reference
+	refName := plumbing.NewBranchReferenceName(branch)
+	ref, err := r.Repo.Reference(refName, true)
 	if err != nil {
-		return nil, err
-	}
-	branchHash, ok := plumbing.FromHex(branchHashStr)
-	if !ok {
-		return nil, errs.WithEF(nil, r.logData.WithField("commit", branchHashStr), "Invalid branch commit hash")
+		return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to get branch reference")
 	}
 
-	branchCommit, err := r.Repo.CommitObject(branchHash)
-	if err != nil {
-		return nil, errs.WithEF(err, r.logData.WithField("commit", branchHashStr), "Failed to get branch commit object")
-	}
+	// Build the set of commit hashes reachable from main branches
+	mainReachable := make(map[plumbing.Hash]struct{})
 
-	var baseCommit *object.Commit
-	var baseBranchName string
+	for _, mb := range mainBranches {
+		// Try both local branch and remote branch names where applicable
+		var names []plumbing.ReferenceName
+		if mb == "origin/main" || mb == "origin/master" {
+			// Remote branches
+			remoteName := plumbing.NewRemoteReferenceName("origin", mb[len("origin/"):])
+			names = append(names, remoteName)
+		} else {
+			names = append(names, plumbing.NewBranchReferenceName(mb))
+		}
 
-	for _, b := range mainBranches {
-		h, err := r.GetBranchLastCommit(b)
-		if err == nil {
-			baseHash, ok := plumbing.FromHex(h)
-			if ok {
-				c, err := r.Repo.CommitObject(baseHash)
-				if err == nil {
-					baseCommit = c
-					baseBranchName = b
+		for _, n := range names {
+			mref, err := r.Repo.Reference(n, true)
+			if err != nil {
+				continue // ignore missing main refs
+			}
+
+			ci, err := r.Repo.Log(&git.LogOptions{From: mref.Hash()})
+			if err != nil {
+				logs.WithEF(err, r.logData.WithField("ref", n.String())).Trace("Failed to build log for main branch, ignoring while computing commits in branch")
+				continue
+			}
+			defer ci.Close()
+
+			for {
+				c, err := ci.Next()
+				if err == io.EOF {
 					break
 				}
+				if err != nil {
+					logs.WithEF(err, r.logData.WithField("ref", n.String())).Trace("Error while iterating main branch commits, stopping iteration of this main branch")
+					break
+				}
+				mainReachable[c.Hash] = struct{}{}
 			}
 		}
 	}
 
-	if baseCommit == nil {
-		return nil, errs.WithEF(nil, r.logData, "Could not find base branch to compare against")
-	}
-
-	mergeBases, err := branchCommit.MergeBase(baseCommit)
+	// Now walk commits from the given branch HEAD and collect those
+	// whose hashes are not present in mainReachable.
+	branchLog, err := r.Repo.Log(&git.LogOptions{From: ref.Hash()})
 	if err != nil {
-		return nil, errs.WithEF(err, r.logData.WithField("branch", branch).WithField("base", baseBranchName), "Failed to calculate merge base")
+		return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to get log for branch")
 	}
-	if len(mergeBases) == 0 {
-		return nil, errs.WithEF(nil, r.logData, "No common ancestor found")
-	}
+	defer branchLog.Close()
 
-	mergeBaseHash := mergeBases[0].Hash
 	var commits []string
-
-	cIter, err := r.Repo.Log(&git.LogOptions{From: branchHash})
-	if err != nil {
-		return nil, errs.WithEF(err, r.logData, "Failed to get commit log")
-	}
-
-	err = cIter.ForEach(func(c *object.Commit) error {
-		if c.Hash == mergeBaseHash {
-			return io.EOF
+	for {
+		c, err := branchLog.Next()
+		if err == io.EOF {
+			break
 		}
-		commits = append(commits, c.Hash.String())
-		return nil
-	})
+		if err != nil {
+			return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed while iterating branch commits")
+		}
 
-	if err != nil && err != io.EOF {
-		return nil, errs.WithEF(err, r.logData, "Failed to iterate commits")
+		if _, exists := mainReachable[c.Hash]; exists {
+			// We reached a commit that is already in main; we can stop here
+			break
+		}
+
+		commits = append(commits, c.Hash.String())
 	}
 
+	// We collected commits from newest to oldest; keep this order as it
+	// matches `git log` output, which is what the caller expects.
 	return commits, nil
 }
