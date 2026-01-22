@@ -74,8 +74,8 @@ github.com/Masterminds/sprig/v3 v3.3.0 h1:mQh0Yrg1XPo6vjYXgtf5OtijNAKJRNcTdOOGZe
 github.com/Masterminds/sprig/v3 v3.3.0/go.mod h1:Zy1iXRYNqNLUolqCpL4uhk6SHUMAOSCzdgBfDb35Lz0=
 github.com/Masterminds/squirrel v1.5.4 h1:uUcX/aBc8O7Fg9kaISIUsHXdKuqehiXAMQTYX8afzqM=
 github.com/Masterminds/squirrel v1.5.4/go.mod h1:NNaOrjSoIDfDA40n7sr2tPNZRfjzjA400rg+riTZj10=
-github.com/Mic92/ssh-to-age v0.0.0-20251229041432-a8d2bffa321d h1:H47zHXDBCqkpLIou4rEYO9IzcJkpXQE4mF224RL7c04=
-github.com/Mic92/ssh-to-age v0.0.0-20251229041432-a8d2bffa321d/go.mod h1:p5nKVqNJr37uLQAMvoI+SMDthuKxu3KjijF0AfYHmpo=
+github.com/Mic92/ssh-to-age v0.0.0-20260119051422-3d2879496788 h1:509xYEFbht3NCbdZu9qE+yi4K/pkF3ZlnnNDJWxboFM=
+github.com/Mic92/ssh-to-age v0.0.0-20260119051422-3d2879496788/go.mod h1:U2iEQ15XV/zzsWLL4ZV+0VACyYkIaTe+1W2Sw5cleVU=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 h1:TngWCqHvy9oXAN6lEVMRuU21PR1EtLVZJmdB18Gu3Rw=
@@ -507,8 +507,6 @@ github.com/n0rad/go-erlog v0.0.0-20260115131226-fdddb793d4f1 h1:eUr+WRhiEI4S0lsv
 github.com/n0rad/go-erlog v0.0.0-20260115131226-fdddb793d4f1/go.mod h1:rOPFQgGtXqzncO3cGwHXvGbXNi7RuD1MzqeQKaPbGxo=
 github.com/n0rad/gomake v0.0.0-20260105145040-7210f7f1961f h1:s1MOC35Y1flc/QISKnW7PfaTTwqnMRKPQyV14mFLnGQ=
 github.com/n0rad/gomake v0.0.0-20260105145040-7210f7f1961f/go.mod h1:1xaDrrWtiIDob/tMRCv0OhPNz4qF8GP3Tk1PNOmSQTU=
-github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260116182953-a1aa5fc448fe h1:ATlr4tsP7xWDdUq7moh7zgfbUuhrymzjOLI63nIvXdY=
-github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260116182953-a1aa5fc448fe/go.mod h1:tT713iWOG54jdpKbAbL9EhCbtcpBcT0ffEIS9EiaO7E=
 github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260120012428-7b6c2af7698a h1:wsDdGvvNzx3YDdOcp27UQPxusBUBZ+3lrvGPxM2mATk=
 github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260120012428-7b6c2af7698a/go.mod h1:tT713iWOG54jdpKbAbL9EhCbtcpBcT0ffEIS9EiaO7E=
 github.com/oklog/run v1.2.0 h1:O8x3yXwah4A73hJdlrwo/2X6J62gE5qTMusH0dvz60E=
