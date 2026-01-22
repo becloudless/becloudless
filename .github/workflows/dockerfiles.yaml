@@ -11,8 +11,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
+      contents: write
 
     steps:
       - name: Create GitHub App Token
@@ -44,5 +43,8 @@ jobs:
 
       - name: Build/Push image
         run: |
+          set -x
           ./gomake build
+          FIRST_COMMIT_IN_BRANCH=$(git log --pretty=format:%H origin/main.. | tail -1)
+          echo "First commit in branch: $FIRST_COMMIT_IN_BRANCH"
           ./dist/bcl-linux-amd64/bcl ci docker -L trace
