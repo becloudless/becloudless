@@ -43,7 +43,7 @@ func (r Repository) GetCurrentBranchName() (string, error) {
 	return name.Short(), nil
 }
 
-func (r Repository) GetBranchCommit(branch string) (string, error) {
+func (r Repository) GetBranchLastCommit(branch string) (string, error) {
 	refName := plumbing.NewBranchReferenceName(branch)
 	ref, err := r.Repo.Reference(refName, true)
 	if err != nil {
@@ -64,7 +64,7 @@ func (r Repository) GetFilesChangedInCurrentBranch() (map[string]ChangeType, err
 	if slices.Contains(mainBranches, branch) {
 		logs.WithField("branch", branch).Info("Current branch is a main branch, building only last commit")
 
-		commit, err := r.GetBranchCommit(branch)
+		commit, err := r.GetBranchLastCommit(branch)
 		if err != nil {
 			return nil, errs.WithE(err, "Failed to get last commit of current branch")
 		}
@@ -134,26 +134,22 @@ func (r Repository) GetFilesChangedInCommit(commitHash string) (map[string]Chang
 		var path string
 		ct := ChangeModified
 
-		switch {
-		case from == nil && to != nil:
-			// Added file
+		if from == nil && to == nil {
+			continue
+		}
+
+		if from == nil {
 			path = to.Path()
 			ct = ChangeAdded
-		case from != nil && to == nil:
-			// Deleted file
+		} else if to == nil {
 			path = from.Path()
 			ct = ChangeDeleted
-		case from != nil && to != nil && from.Path() != to.Path():
-			// Renamed (or moved) file
+		} else if from.Path() != to.Path() {
 			path = to.Path()
 			ct = ChangeRenamed
-		default:
+		} else {
 			// Modified file
-			if to != nil {
-				path = to.Path()
-			} else if from != nil {
-				path = from.Path()
-			}
+			path = to.Path()
 		}
 
 		if path == "" {
@@ -167,70 +163,68 @@ func (r Repository) GetFilesChangedInCommit(commitHash string) (map[string]Chang
 }
 
 func (r Repository) GetCommitsInBranch(branch string) ([]string, error) {
-	// Resolve the branch tip
-	refName := plumbing.NewBranchReferenceName(branch)
-	ref, err := r.Repo.Reference(refName, true)
+	branchHashStr, err := r.GetBranchLastCommit(branch)
 	if err != nil {
-		return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to get branch reference")
+		return nil, err
+	}
+	branchHash, ok := plumbing.FromHex(branchHashStr)
+	if !ok {
+		return nil, errs.WithEF(nil, r.logData.WithField("commit", branchHashStr), "Invalid branch commit hash")
 	}
 
-	// Try to find the reference branch (where this branch was created from).
-	// Heuristic: prefer "main", then "master". If neither exists, fall back
-	// to traversing the full history from the branch tip.
-	var baseRef *plumbing.Reference
+	branchCommit, err := r.Repo.CommitObject(branchHash)
+	if err != nil {
+		return nil, errs.WithEF(err, r.logData.WithField("commit", branchHashStr), "Failed to get branch commit object")
+	}
+
+	var baseCommit *object.Commit
+	var baseBranchName string
+
 	for _, b := range mainBranches {
-		br := plumbing.NewBranchReferenceName(b)
-		rref, e := r.Repo.Reference(br, true)
-		if e == nil {
-			baseRef = rref
-			break
-		}
-	}
-
-	// Collect commits reachable from the base branch to know where to stop.
-	stop := map[plumbing.Hash]struct{}{}
-	if baseRef != nil {
-		baseIter, err := r.Repo.Log(&git.LogOptions{From: baseRef.Hash()})
-		if err != nil {
-			return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to get commits for base branch")
-		}
-		for {
-			c, err := baseIter.Next()
-			if err != nil {
-				if err == io.EOF {
+		h, err := r.GetBranchLastCommit(b)
+		if err == nil {
+			baseHash, ok := plumbing.FromHex(h)
+			if ok {
+				c, err := r.Repo.CommitObject(baseHash)
+				if err == nil {
+					baseCommit = c
+					baseBranchName = b
 					break
 				}
-				baseIter.Close()
-				return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to iterate over base branch commits")
 			}
-			stop[c.Hash] = struct{}{}
 		}
-		baseIter.Close()
 	}
 
-	logIter, err := r.Repo.Log(&git.LogOptions{From: ref.Hash()})
+	if baseCommit == nil {
+		return nil, errs.WithEF(nil, r.logData, "Could not find main or master branch to compare against")
+	}
+
+	mergeBases, err := branchCommit.MergeBase(baseCommit)
 	if err != nil {
-		return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to get commits for branch")
+		return nil, errs.WithEF(err, r.logData.WithField("branch", branch).WithField("base", baseBranchName), "Failed to calculate merge base")
 	}
-	defer logIter.Close()
+	if len(mergeBases) == 0 {
+		return nil, errs.WithEF(nil, r.logData, "No common ancestor found")
+	}
 
+	mergeBaseHash := mergeBases[0].Hash
 	var commits []string
-	for {
-		c, err := logIter.Next()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to iterate over commits")
-		}
 
-		// If we have a base branch and this commit is reachable from it,
-		// we reached the common history; stop here.
-		if _, ok := stop[c.Hash]; ok {
-			break
-		}
+	cIter, err := r.Repo.Log(&git.LogOptions{From: branchHash})
+	if err != nil {
+		return nil, errs.WithEF(err, r.logData, "Failed to get commit log")
+	}
 
+	err = cIter.ForEach(func(c *object.Commit) error {
+		if c.Hash == mergeBaseHash {
+			return io.EOF
+		}
 		commits = append(commits, c.Hash.String())
+		return nil
+	})
+
+	if err != nil && err != io.EOF {
+		return nil, errs.WithEF(err, r.logData, "Failed to iterate commits")
 	}
 
 	return commits, nil
