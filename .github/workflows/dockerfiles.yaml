@@ -11,7 +11,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
+      packages: write
 
     steps:
       - name: Create GitHub App Token
@@ -44,4 +45,4 @@ jobs:
       - name: Build/Push image
         run: |
           ./gomake build
-          ./dist/bcl-linux-amd64/bcl ci docker -L debug
+          ./dist/bcl-linux-amd64/bcl ci docker -L trace
