@@ -20,7 +20,7 @@ const (
 	ChangeRenamed  ChangeType = "renamed"
 )
 
-var mainBranches = []string{"main", "master"}
+var mainBranches = []string{"main", "master", "origin/main", "origin/master"}
 
 func (r Repository) IsCurrentBranchMain() (bool, error) {
 	branch, err := r.GetCurrentBranchName()
@@ -43,7 +43,7 @@ func (r Repository) GetCurrentBranchName() (string, error) {
 	return name.Short(), nil
 }
 
-func (r Repository) GetBranchCommit(branch string) (string, error) {
+func (r Repository) GetBranchLastCommit(branch string) (string, error) {
 	refName := plumbing.NewBranchReferenceName(branch)
 	ref, err := r.Repo.Reference(refName, true)
 	if err != nil {
@@ -64,7 +64,7 @@ func (r Repository) GetFilesChangedInCurrentBranch() (map[string]ChangeType, err
 	if slices.Contains(mainBranches, branch) {
 		logs.WithField("branch", branch).Info("Current branch is a main branch, building only last commit")
 
-		commit, err := r.GetBranchCommit(branch)
+		commit, err := r.GetBranchLastCommit(branch)
 		if err != nil {
 			return nil, errs.WithE(err, "Failed to get last commit of current branch")
 		}
@@ -134,26 +134,22 @@ func (r Repository) GetFilesChangedInCommit(commitHash string) (map[string]Chang
 		var path string
 		ct := ChangeModified
 
-		switch {
-		case from == nil && to != nil:
-			// Added file
+		if from == nil && to == nil {
+			continue
+		}
+
+		if from == nil {
 			path = to.Path()
 			ct = ChangeAdded
-		case from != nil && to == nil:
-			// Deleted file
+		} else if to == nil {
 			path = from.Path()
 			ct = ChangeDeleted
-		case from != nil && to != nil && from.Path() != to.Path():
-			// Renamed (or moved) file
+		} else if from.Path() != to.Path() {
 			path = to.Path()
 			ct = ChangeRenamed
-		default:
+		} else {
 			// Modified file
-			if to != nil {
-				path = to.Path()
-			} else if from != nil {
-				path = from.Path()
-			}
+			path = to.Path()
 		}
 
 		if path == "" {
@@ -167,71 +163,86 @@ func (r Repository) GetFilesChangedInCommit(commitHash string) (map[string]Chang
 }
 
 func (r Repository) GetCommitsInBranch(branch string) ([]string, error) {
-	// Resolve the branch tip
+	// Behavior we want to emulate is roughly:
+	//   git log --pretty=format:%H origin/main..branch
+	// I.e. commits reachable from "branch" that are not reachable from the
+	// main branch (or any of the configured mainBranches).
+
+	// Resolve the branch reference
 	refName := plumbing.NewBranchReferenceName(branch)
 	ref, err := r.Repo.Reference(refName, true)
 	if err != nil {
 		return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to get branch reference")
 	}
 
-	// Try to find the reference branch (where this branch was created from).
-	// Heuristic: prefer "main", then "master". If neither exists, fall back
-	// to traversing the full history from the branch tip.
-	var baseRef *plumbing.Reference
-	for _, b := range mainBranches {
-		br := plumbing.NewBranchReferenceName(b)
-		rref, e := r.Repo.Reference(br, true)
-		if e == nil {
-			baseRef = rref
-			break
-		}
-	}
+	// Build the set of commit hashes reachable from main branches
+	mainReachable := make(map[plumbing.Hash]struct{})
 
-	// Collect commits reachable from the base branch to know where to stop.
-	stop := map[plumbing.Hash]struct{}{}
-	if baseRef != nil {
-		baseIter, err := r.Repo.Log(&git.LogOptions{From: baseRef.Hash()})
-		if err != nil {
-			return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to get commits for base branch")
+	for _, mb := range mainBranches {
+		// Try both local branch and remote branch names where applicable
+		var names []plumbing.ReferenceName
+		if mb == "origin/main" || mb == "origin/master" {
+			// Remote branches
+			remoteName := plumbing.NewRemoteReferenceName("origin", mb[len("origin/"):])
+			names = append(names, remoteName)
+		} else {
+			names = append(names, plumbing.NewBranchReferenceName(mb))
 		}
-		for {
-			c, err := baseIter.Next()
+
+		for _, n := range names {
+			mref, err := r.Repo.Reference(n, true)
 			if err != nil {
+				continue // ignore missing main refs
+			}
+
+			ci, err := r.Repo.Log(&git.LogOptions{From: mref.Hash()})
+			if err != nil {
+				logs.WithEF(err, r.logData.WithField("ref", n.String())).Trace("Failed to build log for main branch, ignoring while computing commits in branch")
+				continue
+			}
+			defer ci.Close()
+
+			for {
+				c, err := ci.Next()
 				if err == io.EOF {
 					break
 				}
-				baseIter.Close()
-				return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to iterate over base branch commits")
+				if err != nil {
+					logs.WithEF(err, r.logData.WithField("ref", n.String())).Trace("Error while iterating main branch commits, stopping iteration of this main branch")
+					break
+				}
+				mainReachable[c.Hash] = struct{}{}
 			}
-			stop[c.Hash] = struct{}{}
 		}
-		baseIter.Close()
 	}
 
-	logIter, err := r.Repo.Log(&git.LogOptions{From: ref.Hash()})
+	// Now walk commits from the given branch HEAD and collect those
+	// whose hashes are not present in mainReachable.
+	branchLog, err := r.Repo.Log(&git.LogOptions{From: ref.Hash()})
 	if err != nil {
-		return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to get commits for branch")
+		return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to get log for branch")
 	}
-	defer logIter.Close()
+	defer branchLog.Close()
 
 	var commits []string
 	for {
-		c, err := logIter.Next()
+		c, err := branchLog.Next()
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed to iterate over commits")
+			return nil, errs.WithEF(err, r.logData.WithField("branch", branch), "Failed while iterating branch commits")
 		}
 
-		// If we have a base branch and this commit is reachable from it,
-		// we reached the common history; stop here.
-		if _, ok := stop[c.Hash]; ok {
+		if _, exists := mainReachable[c.Hash]; exists {
+			// We reached a commit that is already in main; we can stop here
 			break
 		}
 
 		commits = append(commits, c.Hash.String())
 	}
 
+	// We collected commits from newest to oldest; keep this order as it
+	// matches `git log` output, which is what the caller expects.
 	return commits, nil
 }
