@@ -21,169 +21,88 @@ func createTempDockerfile(t *testing.T, content string) string {
 	return dockerfilePath
 }
 
-func TestExtractPlatformFromDockerfile_WithPlatformLabel(t *testing.T) {
+func TestExtractLabelsFromDockerfile_SinglePlatformLabel(t *testing.T) {
 	content := `FROM ubuntu:20.04
 LABEL platform=linux/amd64
 RUN echo "Hello World"`
 
 	dockerfilePath := createTempDockerfile(t, content)
-	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
+	labels, err := ExtractLabelsFromDockerfile(dockerfilePath)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "linux/amd64", platform)
+	assert.Equal(t, map[string]string{"platform": "linux/amd64"}, labels)
 }
 
-func TestExtractPlatformFromDockerfile_CaseInsensitivePlatformLabel(t *testing.T) {
+func TestExtractLabelsFromDockerfile_MultipleLabels(t *testing.T) {
 	content := `FROM ubuntu:20.04
-LABEL PLATFORM=linux/arm64
+LABEL platform=linux/amd64 version=1.0 maintainer=test@example.com
 RUN echo "Hello World"`
 
 	dockerfilePath := createTempDockerfile(t, content)
-	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
+	labels, err := ExtractLabelsFromDockerfile(dockerfilePath)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "linux/arm64", platform)
+	assert.Equal(t, map[string]string{
+		"platform":   "linux/amd64",
+		"version":    "1.0",
+		"maintainer": "test@example.com",
+	}, labels)
 }
 
-func TestExtractPlatformFromDockerfile_MixedCasePlatformLabel(t *testing.T) {
-	content := `FROM ubuntu:20.04
-LABEL Platform=linux/arm/v7
-RUN echo "Hello World"`
+func TestExtractLabelsFromDockerfile_MultipleStagesLabelsMerged(t *testing.T) {
+	content := `FROM ubuntu:20.04 as builder
+LABEL stage=builder platform=linux/amd64
+RUN echo "Building"
+
+FROM alpine:latest
+LABEL stage=final version=2.0
+COPY --from=builder /app /app`
 
 	dockerfilePath := createTempDockerfile(t, content)
-	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
+	labels, err := ExtractLabelsFromDockerfile(dockerfilePath)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "linux/arm/v7", platform)
+	assert.Equal(t, map[string]string{
+		"stage":    "final",       // last one wins
+		"platform": "linux/amd64", // from first stage
+		"version":  "2.0",
+	}, labels)
 }
 
-func TestExtractPlatformFromDockerfile_MultipleLabelsIncludingPlatform(t *testing.T) {
+func TestExtractLabelsFromDockerfile_LabelOverride(t *testing.T) {
 	content := `FROM ubuntu:20.04
 LABEL version=1.0
-LABEL platform=linux/amd64
-LABEL maintainer=test@example.com
+LABEL version=2.0
 RUN echo "Hello World"`
 
 	dockerfilePath := createTempDockerfile(t, content)
-	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
+	labels, err := ExtractLabelsFromDockerfile(dockerfilePath)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "linux/amd64", platform)
+	assert.Equal(t, map[string]string{"version": "2.0"}, labels)
 }
 
-func TestExtractPlatformFromDockerfile_MultipleLabelsOnSameLineIncludingPlatform(t *testing.T) {
-	content := `FROM ubuntu:20.04
-LABEL version=1.0 platform=linux/s390x maintainer=test@example.com
-RUN echo "Hello World"`
-
-	dockerfilePath := createTempDockerfile(t, content)
-	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
-
-	assert.NoError(t, err)
-	assert.Equal(t, "linux/s390x", platform)
-}
-
-func TestExtractPlatformFromDockerfile_WithoutPlatformLabel(t *testing.T) {
-	content := `FROM ubuntu:20.04
-LABEL version=1.0
-LABEL maintainer=test@example.com
-RUN echo "Hello World"`
-
-	dockerfilePath := createTempDockerfile(t, content)
-	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
-
-	assert.NoError(t, err)
-	assert.Empty(t, platform)
-}
-
-func TestExtractPlatformFromDockerfile_NoLabels(t *testing.T) {
+func TestExtractLabelsFromDockerfile_NoLabels(t *testing.T) {
 	content := `FROM ubuntu:20.04
 RUN echo "Hello World"`
 
 	dockerfilePath := createTempDockerfile(t, content)
-	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
+	labels, err := ExtractLabelsFromDockerfile(dockerfilePath)
 
 	assert.NoError(t, err)
-	assert.Empty(t, platform)
+	assert.Empty(t, labels)
 }
 
-func TestExtractPlatformFromDockerfile_PlatformLabelInMultiStageBuild(t *testing.T) {
-	content := `FROM ubuntu:20.04 as builder
-LABEL platform=linux/amd64
-RUN echo "Building"
-
-FROM alpine:latest
-COPY --from=builder /app /app`
-
-	dockerfilePath := createTempDockerfile(t, content)
-	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
-
-	assert.NoError(t, err)
-	assert.Equal(t, "linux/amd64", platform)
-}
-
-func TestExtractPlatformFromDockerfile_PlatformLabelInSecondStage(t *testing.T) {
-	content := `FROM ubuntu:20.04 as builder
-RUN echo "Building"
-
-FROM alpine:latest
-LABEL platform=linux/arm64
-COPY --from=builder /app /app`
-
-	dockerfilePath := createTempDockerfile(t, content)
-	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
-
-	assert.NoError(t, err)
-	assert.Equal(t, "linux/arm64", platform)
-}
-
-func TestExtractPlatformFromDockerfile_PlatformLabelsInMultipleStagesFirstWins(t *testing.T) {
-	content := `FROM ubuntu:20.04 as builder
-LABEL platform=linux/amd64
-RUN echo "Building"
-
-FROM alpine:latest
-LABEL platform=linux/arm64
-COPY --from=builder /app /app`
-
-	dockerfilePath := createTempDockerfile(t, content)
-	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
-
-	assert.NoError(t, err)
-	assert.Equal(t, "linux/amd64", platform)
-}
-
-func TestExtractPlatformFromDockerfile_NonExistentFile(t *testing.T) {
-	platform, err := ExtractPlatformFromDockerfile("/nonexistent/path/Dockerfile")
+func TestExtractLabelsFromDockerfile_NonExistentFile(t *testing.T) {
+	labels, err := ExtractLabelsFromDockerfile("/nonexistent/path/Dockerfile")
 
 	assert.Error(t, err)
-	assert.Empty(t, platform)
+	assert.Nil(t, labels)
 }
 
-func TestExtractPlatformFromDockerfile_EmptyFilepath(t *testing.T) {
-	platform, err := ExtractPlatformFromDockerfile("")
+func TestExtractLabelsFromDockerfile_EmptyFilepath(t *testing.T) {
+	labels, err := ExtractLabelsFromDockerfile("")
 
 	assert.Error(t, err)
-	assert.Empty(t, platform)
-}
-
-func TestExtractPlatformFromDockerfile_InvalidDockerfileSyntax(t *testing.T) {
-	content := `INVALID INSTRUCTION
-LABEL platform=linux/amd64`
-
-	dockerfilePath := createTempDockerfile(t, content)
-	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
-
-	assert.Error(t, err)
-	assert.Empty(t, platform)
-}
-
-func TestExtractPlatformFromDockerfile_EmptyFile(t *testing.T) {
-	content := ""
-
-	dockerfilePath := createTempDockerfile(t, content)
-	platform, err := ExtractPlatformFromDockerfile(dockerfilePath)
-
-	assert.Error(t, err)
-	assert.Empty(t, platform)
+	assert.Nil(t, labels)
 }
