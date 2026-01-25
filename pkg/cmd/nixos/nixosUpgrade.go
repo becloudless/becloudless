@@ -53,5 +53,8 @@ func nixosUpgradeCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&action, "action", "a", "switch", "nixos-rebuild action to perform (switch, boot, test, build)")
 
+	// nixos-rebuild test --refresh --flake git+ssh://git@gitea.lmr.io/lmr/infra?dir=nixos#vm --upgrade
+	// nixos-rebuild build-vm --flake .#nixosConfigurations.Olimpo.config.system.build.toplevel
+
 	return cmd
 }
