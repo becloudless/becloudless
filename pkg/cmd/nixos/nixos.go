@@ -17,6 +17,7 @@ func NixosCmd() *cobra.Command {
 		nixosGroupCmd(),
 		nixosGlobalCmd(),
 		nixosHardwareCmd(),
+		nixosUpgradeCmd(),
 	)
 	return cmd
 }
