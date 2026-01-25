@@ -33,7 +33,7 @@
         packages = {
           # this package must be declared out of snowfall because it refuse to go outside nixos/ folder
           becloudless = let
-          in channels.nixpkgs.buildGo124Module {
+          in channels.nixpkgs.buildGo125Module {
             pname = "becloudless";
             version = "0.0.1"; # TODO set the version
             src = ../.;
