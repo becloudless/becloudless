@@ -7,6 +7,7 @@ import (
 	"github.com/becloudless/becloudless/pkg/git"
 	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/n0rad/go-erlog/errs"
+	"github.com/n0rad/memguarded"
 	"github.com/spf13/cobra"
 )
 
@@ -18,10 +19,6 @@ func nixosUpgradeCmd() *cobra.Command {
 		Short: "upgrade NixOS system",
 		Long:  "Small wrapper around nixos-rebuild to upgrade NixOS system from current infra git repo",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if os.Geteuid() != 0 {
-				return errs.With("Nixos upgrade must be run as root")
-			}
-
 			repository, err := git.OpenRepository(".")
 			if err != nil {
 				return errs.WithE(err, "failed to open git repository")
@@ -32,8 +29,22 @@ func nixosUpgradeCmd() *cobra.Command {
 				return errs.WithE(err, "failed to add changes to git")
 			}
 
-			localRunner := runner.NewLocalRunner()
-			localRunner.ExecCmd("nixos-rebuild", action, "--flake", filepath.Join(repository.Root, "nixos"))
+			run := runner.Runner(runner.NewLocalRunner())
+			if os.Geteuid() != 0 {
+				var password *memguarded.Service
+				if err := runner.IsSudoRunnableWithoutPassword(run); err != nil {
+					password = memguarded.NewService()
+					if err := password.AskSecret(false, "Sudo password to run upgrade"); err != nil {
+						return errs.WithE(err, "Failed to get sudo password")
+					}
+				}
+				run, err = runner.NewSudoRunner(run, password)
+				if err != nil {
+					return errs.WithE(err, "Failed to create sudo runner")
+				}
+			}
+
+			run.ExecCmd("nixos-rebuild", action, "--flake", filepath.Join(repository.Root, "nixos"))
 
 			return nil
 		},

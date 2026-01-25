@@ -21,6 +21,13 @@ func (s *SudoRunner) WithInline(inline bool) *SudoRunner {
 	return s
 }
 
+func IsSudoRunnableWithoutPassword(local Runner) error {
+	if stderr, err := local.ExecCmdGetStderr("sudo", "-n", "true"); err != nil {
+		return errs.WithEF(err, data.WithField("stderr", stderr), "Sudo require a password")
+	}
+	return nil
+}
+
 func NewSudoRunner(parent Runner, password *memguarded.Service) (*SudoRunner, error) {
 	run := &SudoRunner{
 		parent:   parent,
@@ -33,9 +40,9 @@ func NewSudoRunner(parent Runner, password *memguarded.Service) (*SudoRunner, er
 		return nil, errs.WithE(err, "Sudo is not available")
 	}
 
-	if !password.IsSet() {
-		if stderr, err := parent.ExecCmdGetStderr("sudo", "-n", "true"); err != nil {
-			return nil, errs.WithEF(err, data.WithField("stderr", stderr), "Sudo require a password")
+	if password == nil || !password.IsSet() {
+		if err := IsSudoRunnableWithoutPassword(parent); err != nil {
+			return nil, err
 		}
 	} else {
 		if _, err := run.ExecCmdGetStderr("true"); err != nil {
