@@ -31,6 +31,7 @@ func nixosUpgradeCmd() *cobra.Command {
 
 			run := runner.Runner(runner.NewLocalRunner())
 			if os.Geteuid() != 0 {
+				// Running sudo internally to prevent root modification of git state during add
 				var password *memguarded.Service
 				if err := runner.IsSudoRunnableWithoutPassword(run); err != nil {
 					password = memguarded.NewService()
