@@ -94,12 +94,12 @@ func Bootstrap() error {
 		return errs.WithE(err, "Failed to ensure bcl namespace")
 	}
 
-	// flux sops key
+	// flux sops key, to open secrets in git
 	if err := applyInfraFluxSopsKey(ctx); err != nil {
 		return errs.WithE(err, "Failed to apply flux sops key")
 	}
 
-	// git repo secret
+	// git repo secret, to fetch infra repo
 	if err := applyInfraGitRepoSecret(ctx); err != nil {
 		return errs.WithE(err, "Failed to apply git repo secret")
 	}
