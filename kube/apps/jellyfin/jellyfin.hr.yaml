@@ -27,7 +27,7 @@ spec:
       container:
         image:
           repository: ghcr.io/jellyfin/jellyfin
-          tag: 10.11.4
+          tag: 10.11.6
         securityContext:
           privileged: true
           allowPrivilegeEscalation: true
