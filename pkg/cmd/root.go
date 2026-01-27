@@ -18,12 +18,17 @@ import (
 func RootCmd() *cobra.Command {
 	var logLevel string
 	var home string
+	completion := completionCmd()
 
 	cmd := &cobra.Command{
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		Use:           filepath.Base(os.Args[0]),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if cmd == completion {
+				// Do not init or process anything if just generating completion
+				return nil
+			}
 			if level, err := logs.ParseLevel(logLevel); err != nil {
 				logs.WithField("value", logLevel).Fatal("Unknown log level") // TODO fatal
 			} else {
@@ -35,6 +40,7 @@ func RootCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(
+		completion,
 		ci.CiCmd(),
 		kube.KubeCmd(),
 		docker.DockerCmd(),
