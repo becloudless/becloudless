@@ -1,7 +1,6 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: [
-    ":automergeBranch",
     ":disableRateLimiting",
     ":dependencyDashboard",
     ":semanticCommits",
@@ -19,6 +18,9 @@
     "prEditedNotification",
     "prIgnoreNotification",
   ],
+
+  automergeType: "branch",
+  automergeStrategy: "squash",
 
   branchConcurrentLimit: 0,
   // TODO platform automerge requires to put some mandatory checks, else it will be merged, even if the CI is red
@@ -62,7 +64,7 @@
     },
     {
       matchUpdateTypes: ["minor", "patch", "pin", "digest"],
-      automerge: true
+      automerge: true,
     },
   ],
 
