@@ -6,7 +6,7 @@ toolchain go1.25.6
 
 require (
 	github.com/Mic92/ssh-to-age v0.0.0-20260119051422-3d2879496788
-	github.com/atombender/go-jsonschema v0.20.0
+	github.com/atombender/go-jsonschema v0.21.0
 	github.com/awnumar/memguard v0.23.0
 	github.com/charmbracelet/huh v0.8.0
 	github.com/client9/misspell v0.3.4
@@ -149,7 +149,7 @@ require (
 	github.com/go-openapi/swag/typeutils v0.25.3 // indirect
 	github.com/go-openapi/swag/yamlutils v0.25.3 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
-	github.com/goccy/go-yaml v1.17.1 // indirect
+	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/gofrs/flock v0.13.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
