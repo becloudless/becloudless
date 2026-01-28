@@ -23,31 +23,6 @@ func createTempDockerfileForTest(t *testing.T, content string) string {
 	return tempDir
 }
 
-func TestGetFolderNameFromDockerfilePath(t *testing.T) {
-	// Create a temporary directory structure
-	tempDir, err := os.MkdirTemp("", "test_folder")
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = os.RemoveAll(tempDir) })
-
-	// Create a Dockerfile in the temp directory
-	dockerfilePath := filepath.Join(tempDir, "Dockerfile")
-	err = os.WriteFile(dockerfilePath, []byte("FROM ubuntu:20.04"), 0644)
-	require.NoError(t, err)
-
-	// Test the function
-	folderName, err := getFolderNameFromDockerfilePath(dockerfilePath)
-
-	assert.NoError(t, err)
-	assert.Equal(t, filepath.Base(tempDir), folderName)
-}
-
-func TestGetFolderNameFromDockerfilePath_InvalidPath(t *testing.T) {
-	// Test with non-existent path
-	_, err := getFolderNameFromDockerfilePath("/non/existent/path/Dockerfile")
-
-	assert.Error(t, err)
-}
-
 func TestDockerBuildx_ConfigValidation(t *testing.T) {
 	// Create a temporary directory with a simple Dockerfile
 	dockerfileContent := `FROM ubuntu:20.04
@@ -56,7 +31,7 @@ RUN echo "Hello World"`
 
 	config := BuildConfig{
 		DockerfilePath: tempDir,
-		Registry:       "test-registry.com",
+		Repository:     "test-registry.com",
 		Namespace:      "test-namespace",
 		Platforms:      "linux/amd64",
 		Load:           true,
@@ -130,7 +105,7 @@ CMD ["echo", "Hello from dockerBuildx test"]`
 
 	config := BuildConfig{
 		DockerfilePath: tempDir,
-		Registry:       "localhost",
+		Repository:     "localhost/something",
 		Namespace:      "test",
 		Platforms:      "linux/amd64",
 		Load:           true,
@@ -139,17 +114,15 @@ CMD ["echo", "Hello from dockerBuildx test"]`
 		BuildxFlags:    "",
 	}
 
+	assert.NoError(t, config.Init())
+
 	// Call the actual dockerBuildx function
-	err := dockerBuildx(config)
+	err := DockerBuildx(config)
 
 	// Assert that the build succeeded
 	assert.NoError(t, err, "dockerBuildx should succeed with valid configuration")
 
-	// Verify the image was built by checking if it exists in local Docker
-	folderName, err := getFolderNameFromDockerfilePath(filepath.Join(tempDir, "Dockerfile"))
-	require.NoError(t, err)
-
-	expectedImageName := fmt.Sprintf("%s/%s/%s:latest", config.Registry, config.Namespace, folderName)
+	expectedImageName := fmt.Sprintf("%s/%s/%s:latest", config.Repository, config.Namespace, filepath.Base(tempDir))
 
 	// Check if the image exists
 	checkCmd := exec.Command("docker", "images", expectedImageName, "--format", "{{.Repository}}:{{.Tag}}")

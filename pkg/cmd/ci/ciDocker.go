@@ -14,9 +14,6 @@ import (
 )
 
 func CiDockerCmd() *cobra.Command {
-	//var push bool
-	//var gitRef string
-
 	cmd := &cobra.Command{
 		Use:   "docker",
 		Short: "Handle docker",
@@ -75,9 +72,6 @@ func CiDockerCmd() *cobra.Command {
 			return nil
 		},
 	}
-
-	//cmd.Flags().BoolVar(&push, "push", false, "push image")
-	//cmd.Flags().StringVar(&gitRef, "git-ref", "", "Specify a git ref (branch, tag, commit) to build from")
 
 	return cmd
 }
