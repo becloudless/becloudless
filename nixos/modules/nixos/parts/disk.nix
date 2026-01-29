@@ -26,17 +26,22 @@ in {
 
   config = lib.mkIf cfg.enable {
 
-    services.udev.extraRules =
-      let
-        mkRule = as: lib.concatStringsSep ", " as;
-        mkRules = rs: lib.concatStringsSep "\n" rs;
-      in mkRules ([( mkRule [
-        ''ACTION=="add|change"''
-        ''SUBSYSTEM=="block"''
-        ''KERNEL=="sd[a-z]*"''
-        ''ATTR{queue/rotational}=="1"''
-        ''RUN+="${pkgs.hdparm}/bin/hdparm -B 127 -S 246 /dev/%k"'' # 246: standby after 3h # 127: high power but allow standby
-      ])]);
+    services.udev.extraRules = [
+    ''
+      # make disks stop spinning after 3h. 246=3h, 127=most powerful mode that still allow going into standby
+      ACTION=="add|change", SUBSYSTEM=="block", KERNEL=="sd[a-z]*", ATTR{queue/rotational}=="1", RUN+="${pkgs.hdparm}/bin/hdparm -B 127 -S 246 /dev/%k"
+
+      # Seagate.
+      # check settings with: openSeaChest_PowerControl -d /dev/sda --showEPCSettings
+      # check state with: openSeaChest_PowerControl -d /dev/sda --checkPowerMode
+      # stop spinning now: openSeaChest_PowerControl -d dev/sdX --transitionPower standby
+      #
+      # idle_b=park heads, idle_c=reduce motor speed, standby_z=stop spinning
+      # 120000=20min, 600000=1.6h 900000=2.5h
+      ACTION=="add|change", SUBSYSTEM=="block", KERNEL=="sd[a-z]*", ATTR{queue/rotational}=="1", RUN+="${pkgs.openseachest}/bin/openSeaChest_PowerControl -d /dev/%k --idle_b 120000 --idle_c 600000 --standby_z 900000"
+
+    ''
+    ];
 
     fileSystems."/nix".neededForBoot = true;
 
