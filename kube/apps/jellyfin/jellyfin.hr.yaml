@@ -58,6 +58,11 @@ spec:
               - jellyfin.${BCL_GLOBAL_DOMAIN}
 
       volumes:
+        branding:
+          type: configMap
+          path: /config/config/branding.xml
+          subPath: branding.xml
+
 #        secrets:
 #          type: secret
 #          name: jellyfin
@@ -88,6 +93,42 @@ spec:
 
 
     resources:
+      configMaps:
+        main:
+          data:
+            branding.xml: |
+              <BrandingOptions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+                <LoginDisclaimer>
+                  &lt;form action="https://jellyfin.${BCL_GLOBAL_DOMAIN}/sso/OID/start/authelia"&gt;
+                    &lt;button class="raised block emby-button button-submit"&gt;
+                    Sign in with Authelia
+                    &lt;/button&gt;
+                  &lt;/form&gt;
+                </LoginDisclaimer>
+                <CustomCss>
+                  /* Hide manual login form */
+                  .manualLoginForm {
+                    display: none !important;
+                  }
+
+                  /* Hide 'Forgot password' button */
+                  .btnForgotPassword {
+                    display: none !important;
+                  }
+
+                  /* Add SSO button */
+                  a.raised.emby-button {
+                    padding:0.9em 1em;
+                    color: inherit !important;
+                  }
+
+                  .disclaimerContainer{
+                    display: block;
+                  }
+                </CustomCss>
+                <SplashscreenEnabled>false</SplashscreenEnabled>
+              </BrandingOptions>
+
 #      controllers:
 #        main:
 #          containers:
