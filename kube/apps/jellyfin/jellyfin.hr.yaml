@@ -109,6 +109,9 @@ spec:
                   .manualLoginForm {
                     display: none !important;
                   }
+                  .updatePasswordForm  {
+                    display: none !important;
+                  }
 
                   /* Hide 'Forgot password' button */
                   .btnForgotPassword {
