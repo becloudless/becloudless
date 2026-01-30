@@ -60,6 +60,7 @@ spec:
       volumes:
         branding:
           type: configMap
+          name: main
           path: /config/config/branding.xml
           subPath: branding.xml
 
