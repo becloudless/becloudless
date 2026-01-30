@@ -13,7 +13,7 @@ require (
 	github.com/fzipp/gocyclo v0.6.0
 	github.com/getsops/sops/v3 v3.11.0
 	github.com/go-bindata/go-bindata/v3 v3.1.3
-	github.com/go-git/go-git/v6 v6.0.0-20260123133532-f99a98e81ce9
+	github.com/go-git/go-git/v6 v6.0.0-20260127175347-b5117ad1603d
 	github.com/gordonklaus/ineffassign v0.2.0
 	github.com/moby/buildkit v0.27.0
 	github.com/n0rad/go-app v0.0.0-20251227182329-c1d5e61b7561
