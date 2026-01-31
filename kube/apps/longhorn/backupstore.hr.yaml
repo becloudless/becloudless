@@ -25,7 +25,7 @@ spec:
       container:
         image:
           repository: alpine
-          tag: 3.23.2
+          tag: 3.23.3
         env:
           CIFS_PASSWORD:
             valueFrom:
