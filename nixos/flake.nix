@@ -37,7 +37,7 @@
             pname = "becloudless";
             version = "0.0.1"; # TODO set the version
             src = ../.;
-            vendorHash = "sha256-ZJpnADhHRBxXYkjWhjK0xUc58zTAjtAC88S+PWEFva4=";
+            vendorHash = "sha256-Wj9rVuKm9WZJL74r4J2Pqklm5fCHjvte1rgreSXVV5A=";
 
             nativeBuildInputs = [ channels.nixpkgs.pkgs.git ];
 
