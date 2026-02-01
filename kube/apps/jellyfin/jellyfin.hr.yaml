@@ -63,6 +63,11 @@ spec:
           name_resource: main
           path: /config/config/branding.xml
           subPath: branding.xml
+        network:
+          type: configMap
+          name_resource: main
+          path: /config/config/network.xml
+          subPath: network.xml
 
 #        secrets:
 #          type: secret
@@ -129,6 +134,36 @@ spec:
                 </CustomCss>
                 <SplashscreenEnabled>false</SplashscreenEnabled>
               </BrandingOptions>
+
+            network.xml: |
+              <?xml version="1.0" encoding="utf-8"?>
+              <NetworkConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+                <BaseUrl />
+                <EnableHttps>false</EnableHttps>
+                <RequireHttps>false</RequireHttps>
+                <InternalHttpPort>8096</InternalHttpPort>
+                <InternalHttpsPort>8920</InternalHttpsPort>
+                <PublicHttpPort>8096</PublicHttpPort>
+                <PublicHttpsPort>8920</PublicHttpsPort>
+                <AutoDiscovery>true</AutoDiscovery>
+                <EnableIPv4>true</EnableIPv4>
+                <EnableIPv6>false</EnableIPv6>
+                <EnableRemoteAccess>true</EnableRemoteAccess>
+                <LocalNetworkSubnets />
+                <LocalNetworkAddresses />
+                <KnownProxies>
+                  <string>10.42.0.0/16</string>
+                </KnownProxies>
+                <IgnoreVirtualInterfaces>true</IgnoreVirtualInterfaces>
+                <VirtualInterfaceNames>
+                  <string>veth</string>
+                </VirtualInterfaceNames>
+                <EnablePublishedServerUriByRequest>false</EnablePublishedServerUriByRequest>
+                <PublishedServerUriBySubnet />
+                <RemoteIPFilter />
+                <IsRemoteIPFilterBlacklist>false</IsRemoteIPFilterBlacklist>
+              </NetworkConfiguration>
+
 
       controllers:
         main:
