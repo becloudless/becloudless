@@ -15,7 +15,7 @@ require (
 	github.com/go-bindata/go-bindata/v3 v3.1.3
 	github.com/go-git/go-git/v6 v6.0.0-20260127175347-b5117ad1603d
 	github.com/gordonklaus/ineffassign v0.2.0
-	github.com/moby/buildkit v0.27.0
+	github.com/moby/buildkit v0.27.1
 	github.com/n0rad/go-app v0.0.0-20251227182329-c1d5e61b7561
 	github.com/n0rad/go-erlog v0.0.0-20260115131226-fdddb793d4f1
 	github.com/n0rad/gomake v0.0.0-20260105145040-7210f7f1961f
@@ -183,7 +183,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kevinburke/ssh_config v1.4.0 // indirect
 	github.com/kisielk/errcheck v1.5.0 // indirect
-	github.com/klauspost/compress v1.18.2 // indirect
+	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
