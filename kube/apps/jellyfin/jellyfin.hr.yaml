@@ -142,12 +142,8 @@ spec:
               - -c
               - |
                 while true; do
-                  mkdir -p /data/Downloads/Images/Shows
-                  find /config/metadata/library/ -name backdrop1.jpg -exec bash -c 'id=$(echo {} | sed "s/.*\([a-z0-9]\{32\}\).*/\1/") && cp {} "/data/Downloads/Images/Shows/$id.jpg"' \;
-
-                  mkdir -p /data/Downloads/Images/Movies
-                  find /config/metadata/library/ -name backdrop.jpg -exec bash -c 'id=$(echo {} | sed "s/.*\([a-z0-9]\{32\}\).*/\1/") && cp {} "/data/Downloads/Images/Movies/$id.jpg"' \;
-
+                  mkdir -p /data/Downloads/Images/Backdrops
+                  find /config/metadata/library/ -name backdrop.jpg -exec bash -c 'id=$(echo {} | sed "s/.*\([a-z0-9]\{32\}\).*/\1/") && cp {} "/data/Downloads/Images/Backdrops/$id.jpg"' \;
                   sleep 7d
                 done
 
