@@ -49,12 +49,12 @@ func findDockerRepositoryFromGitRepository(path string) (string, error) {
 		return "", errs.WithE(err, "Failed to get remote origin URL")
 	}
 
-	_, repository, err := docker.GetRegistryAndRepositoryFromGitUrl(url)
+	registry, _, err := docker.GetRegistryAndRepositoryFromGitUrl(url)
 	if err != nil {
 		return "", errs.WithE(err, "Failed to deduce registry from git URL")
 	}
 
-	return repository, nil
+	return registry, nil
 }
 
 func validatePrerequisites() error {
@@ -129,7 +129,11 @@ func (b *BuildConfig) Init() error {
 	}
 
 	if b.Name == "" {
-		b.Name = filepath.Base(filepath.Dir(b.DockerfilePath))
+		abs, err := filepath.Abs(b.DockerfilePath)
+		if err != nil {
+			return errs.WithEF(err, data.WithField("path", b.DockerfilePath), "Failed to find absolute path of Dockerfile")
+		}
+		b.Name = filepath.Base(filepath.Dir(abs))
 	}
 
 	if b.BuildPath == "" {
@@ -139,7 +143,7 @@ func (b *BuildConfig) Init() error {
 	return nil
 }
 
-// dockerBuild uses cmd to trigger docker because we need buildx, and it's not simple to do it in pure go
+// use docker CLI because we need buildx, and it's not simple to do it in pure go
 func DockerBuildx(config BuildConfig) error {
 	if err := validatePrerequisites(); err != nil {
 		return err
@@ -159,7 +163,9 @@ func DockerBuildx(config BuildConfig) error {
 	if config.Namespace != "" {
 		fullImageName = fmt.Sprintf("%s/%s/%s", config.Repository, config.Namespace, config.Name)
 	}
-	args = append(args, "-t", fullImageName+":"+config.Tag)
+	fullImageNameVersion := fullImageName + ":" + config.Tag
+
+	args = append(args, "-t", fullImageNameVersion)
 	args = append(args, "-t", fullImageName+":latest")
 
 	args = append(args, "--build-arg=TAG="+config.Tag)
@@ -180,5 +186,12 @@ func DockerBuildx(config BuildConfig) error {
 	args = append(args, config.BuildPath)
 
 	localRunner := runner.NewLocalRunner()
-	return localRunner.ExecCmd("docker", args...)
+	dataFields := data.WithField("image", fullImageNameVersion)
+	err := localRunner.ExecCmd("docker", args...)
+	if err != nil {
+		return errs.WithEF(err, dataFields, "Failed to process docker image")
+	}
+
+	logs.WithFields(dataFields).Info("Done")
+	return nil
 }
