@@ -34,7 +34,7 @@ in {
       # Seagate.
       # check settings with: openSeaChest_PowerControl -d /dev/sda --showEPCSettings
       # check state with: openSeaChest_PowerControl -d /dev/sda --checkPowerMode
-      # stop spinning now: openSeaChest_PowerControl -d dev/sdX --transitionPower standby
+      # stop spinning now: openSeaChest_PowerControl -d /dev/sdX --transitionPower standby
       #
       # idle_b=park heads, idle_c=reduce motor speed, standby_z=stop spinning
       # 120000=20min, 600000=1.6h 900000=2.5h

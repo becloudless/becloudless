@@ -13,7 +13,7 @@ func GetRegistryAndRepositoryFromGitUrl(gitUrl string) (string, string, error) {
 	}
 
 	if host == "github.com" {
-		return "ghcr.io", "ghcr.io/" + owner + "/" + repo, nil
+		host = "ghcr.io"
 	}
-	return host, host + "/" + owner + "/" + repo, nil
+	return host + "/" + owner, repo, nil
 }
