@@ -170,8 +170,8 @@ spec:
           containers:
             images:
               image:
-                repository: ghcr.io/becloudless/becloudless/alpine
-                tag: 1.260201.150-Hd04460d
+                repository: ghcr.io/becloudless/alpine
+                tag: 1.260202.1736-H7074dbd
               command: ["sh"]
               args:
               - -c
