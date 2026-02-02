@@ -32,7 +32,7 @@ spec:
                   spec:
                     containers:
                     - name: vpn
-                      image: ghcr.io/becloudless/becloudless/alpine-wireguard:1.260123.1805-H98603a4
+                      image: ghcr.io/becloudless/alpine-wireguard:1.260202.1735-H7074dbd
                       securityContext:
                         privileged: true
                       command: [ sh, -x, -e, -c ]
@@ -72,7 +72,7 @@ spec:
                   spec:
                     containers:
                     - name: vpn
-                      image: ghcr.io/becloudless/becloudless/alpine-wireguard:1.260123.1805-H98603a4
+                      image: ghcr.io/becloudless/alpine-wireguard:1.260202.1735-H7074dbd
                       securityContext:
                         privileged: true
                       command: [ sh, -x, -e, -c ]
