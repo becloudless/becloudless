@@ -34,8 +34,8 @@ spec:
           readOnlyRootFilesystem: false
         probes:
           startup:
-            spec:              
-              failureThreshold: 60 # 10min, huge Jellyfin can be slow to start
+            spec:
+              failureThreshold: 60 # 10min, huge Jellyfin on low hardware can be slow to start
 
       service:
         ports:
