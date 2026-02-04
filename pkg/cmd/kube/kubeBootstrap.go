@@ -29,6 +29,7 @@ import (
 )
 
 func kubeBootstrapCmd() *cobra.Command {
+	var adoptResources bool
 	cmd := cobra.Command{
 		Use:   "bootstrap",
 		Short: "Bootstrap Kubernetes clusters till Flux being able to take over and apply gitops",
@@ -36,13 +37,14 @@ func kubeBootstrapCmd() *cobra.Command {
 				  This script is re-entrant, and apply the components, like they are applied by gitops, so it can be run anytime.`,
 		Aliases: []string{"boot"},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return Bootstrap()
+			return Bootstrap(adoptResources)
 		},
 	}
+	cmd.Flags().BoolVar(&adoptResources, "adopt", false, "Take ownership of existing Kubernetes resources not managed by Helm")
 	return &cmd
 }
 
-func Bootstrap() error {
+func Bootstrap(adoptResources bool) error {
 	ctx, err := kube.GetContext(".")
 	if err != nil {
 		return errs.WithE(err, "Cannot find kube cluster context. Are you in a cluster folder?")
@@ -71,7 +73,7 @@ func Bootstrap() error {
 		if err := applyFluxHelmReleaseWithHelm(ctx,
 			filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/cilium"),
 			flux.NamespacedObjectKindReference{Name: "cilium", Namespace: "kube-system"},
-			envs); err != nil {
+			envs, adoptResources); err != nil {
 			return errs.WithE(err, "Failed to apply cilium")
 		}
 
@@ -79,7 +81,7 @@ func Bootstrap() error {
 		if err := applyFluxHelmReleaseWithHelm(ctx,
 			filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/coredns"),
 			flux.NamespacedObjectKindReference{Name: "coredns", Namespace: "kube-system"},
-			envs); err != nil {
+			envs, adoptResources); err != nil {
 			return errs.WithE(err, "Failed to apply coredns")
 		}
 	}
@@ -358,7 +360,7 @@ func prepareAndApplyFluxKustomization(ctx kube.Context, ks flux.Kustomization, r
 	return nil
 }
 
-func applyFluxHelmReleaseWithHelm(ctx kube.Context, resourcesPath string, objectRef flux.NamespacedObjectKindReference, envs map[string]string) error {
+func applyFluxHelmReleaseWithHelm(ctx kube.Context, resourcesPath string, objectRef flux.NamespacedObjectKindReference, envs map[string]string, adoptResources bool) error {
 	found := false
 	if err := filepath.WalkDir(resourcesPath, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -388,7 +390,7 @@ func applyFluxHelmReleaseWithHelm(ctx kube.Context, resourcesPath string, object
 		}
 
 		found = true
-		return prepareAndApplyFluxHelmRelease(ctx, hr, resourcesPath, envs)
+		return prepareAndApplyFluxHelmRelease(ctx, hr, resourcesPath, envs, adoptResources)
 
 	}); err != nil {
 		return errs.WithEF(err, data.WithField("folder", resourcesPath), "Failed to walk resources folder to find helm release")
@@ -399,7 +401,7 @@ func applyFluxHelmReleaseWithHelm(ctx kube.Context, resourcesPath string, object
 	return nil
 }
 
-func prepareAndApplyFluxHelmRelease(ctx kube.Context, hr flux.HelmRelease, resourcesPath string, envs map[string]string) error {
+func prepareAndApplyFluxHelmRelease(ctx kube.Context, hr flux.HelmRelease, resourcesPath string, envs map[string]string, adoptResources bool) error {
 	settings := cli.New()
 	settings.KubeConfig = ctx.KubeConfig
 
@@ -426,6 +428,9 @@ func prepareAndApplyFluxHelmRelease(ctx kube.Context, hr flux.HelmRelease, resou
 	upgrade := action.NewUpgrade(actionConfig)
 	upgrade.Namespace = hr.Metadata.Namespace
 	upgrade.Version = hr.Spec.Chart.Spec.Version
+	if adoptResources {
+		upgrade.TakeOwnership = true
+	}
 
 	// Build values from the HR spec
 	p := values.Options{}
@@ -469,6 +474,9 @@ func prepareAndApplyFluxHelmRelease(ctx kube.Context, hr flux.HelmRelease, resou
 			inst.ReleaseName = hr.Metadata.Name
 			inst.Namespace = hr.Metadata.Namespace
 			inst.Version = hr.Spec.Chart.Spec.Version
+			if adoptResources {
+				inst.TakeOwnership = true
+			}
 			if _, err := inst.Run(chart, vals); err != nil {
 				return errs.WithE(err, "Failed to install helm release")
 			}
