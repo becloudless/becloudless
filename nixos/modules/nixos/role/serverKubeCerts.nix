@@ -1,7 +1,4 @@
 { config, lib, pkgs, ... }:
-let
-  clusterNumber = "1"; # TODO derive from hostname
-in
 {
   config = lib.mkIf (config.bcl.role.name == "serverKube") {
 
