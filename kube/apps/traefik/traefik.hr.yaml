@@ -26,6 +26,7 @@ spec:
 
     providers:
       kubernetesCRD:
+        allowExternalNameServices: true
         allowCrossNamespace: true # TODO should not do cross references ?
 
     ports:
