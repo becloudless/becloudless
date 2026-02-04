@@ -73,13 +73,13 @@
           mode tcp
           balance roundrobin
           default-server verify none check-ssl inter 10s downinter 5s rise 2 fall 2 slowstart 60s maxconn 5000 maxqueue 5000 weight 100
-          server srv${config.bcl.role.serverKube.clusterNumber}1 srv${config.bcl.role.serverKube.clusterNumber}1:6443 check
-          server srv${config.bcl.role.serverKube.clusterNumber}2 srv${config.bcl.role.serverKube.clusterNumber}2:6443 check
-          server srv${config.bcl.role.serverKube.clusterNumber}3 srv${config.bcl.role.serverKube.clusterNumber}3:6443 check
-          server srv${config.bcl.role.serverKube.clusterNumber}4 srv${config.bcl.role.serverKube.clusterNumber}4:6443 check
-          server srv${config.bcl.role.serverKube.clusterNumber}5 srv${config.bcl.role.serverKube.clusterNumber}5:6443 check
-          server srv${config.bcl.role.serverKube.clusterNumber}6 srv${config.bcl.role.serverKube.clusterNumber}6:6443 check
-          server srv${config.bcl.role.serverKube.clusterNumber}7 srv${config.bcl.role.serverKube.clusterNumber}7:6443 check
+          server srv${toString config.bcl.role.serverKube.clusterNumber}1 srv${toString config.bcl.role.serverKube.clusterNumber}1:6443 check
+          server srv${toString config.bcl.role.serverKube.clusterNumber}2 srv${toString config.bcl.role.serverKube.clusterNumber}2:6443 check
+          server srv${toString config.bcl.role.serverKube.clusterNumber}3 srv${toString config.bcl.role.serverKube.clusterNumber}3:6443 check
+          server srv${toString config.bcl.role.serverKube.clusterNumber}4 srv${toString config.bcl.role.serverKube.clusterNumber}4:6443 check
+          server srv${toString config.bcl.role.serverKube.clusterNumber}5 srv${toString config.bcl.role.serverKube.clusterNumber}5:6443 check
+          server srv${toString config.bcl.role.serverKube.clusterNumber}6 srv${toString config.bcl.role.serverKube.clusterNumber}6:6443 check
+          server srv${toString config.bcl.role.serverKube.clusterNumber}7 srv${toString config.bcl.role.serverKube.clusterNumber}7:6443 check
       '';
     };
   };
