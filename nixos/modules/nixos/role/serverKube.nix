@@ -74,7 +74,7 @@ in
         KeepConfiguration = true;
       };
       address = [
-        "192.168.41.${toString bcl.role.serverKube.clusterNumber}${toString srvNumber}/22"
+        "192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}/22"
       ];
       routes = [
         {
@@ -93,7 +93,7 @@ in
       };
     };
 
-    services.openssh.ports = [ 22 (lib.strings.toInt "655${toString bcl.role.serverKube.clusterNumber}${toString srvNumber}") ];
+    services.openssh.ports = [ 22 (lib.strings.toInt "655${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}") ];
     services.openiscsi.enable = true;
     services.openiscsi.name = "iqn.2016-04.com.open-iscsi:543a6fbe2d4c"; # dummy name taken from archlinux
 
@@ -181,16 +181,16 @@ in
     };
 
     networking.extraHosts = ''
-      127.0.0.1       srv${toString bcl.role.serverKube.clusterNumber}${toString srvNumber}.h.${config.bcl.global.domain} ${config.networking.hostName} localhost
+      127.0.0.1       srv${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}.h.${config.bcl.global.domain} ${config.networking.hostName} localhost
       127.0.0.1       kube.${config.bcl.global.domain}
 
-      192.168.41.${toString bcl.role.serverKube.clusterNumber}1   srv${toString bcl.role.serverKube.clusterNumber}1
-      192.168.41.${toString bcl.role.serverKube.clusterNumber}2   srv${toString bcl.role.serverKube.clusterNumber}2
-      192.168.41.${toString bcl.role.serverKube.clusterNumber}3   srv${toString bcl.role.serverKube.clusterNumber}3
-      192.168.41.${toString bcl.role.serverKube.clusterNumber}4   srv${toString bcl.role.serverKube.clusterNumber}4
-      192.168.41.${toString bcl.role.serverKube.clusterNumber}5   srv${toString bcl.role.serverKube.clusterNumber}5
-      192.168.41.${toString bcl.role.serverKube.clusterNumber}6   srv${toString bcl.role.serverKube.clusterNumber}6
-      192.168.41.${toString bcl.role.serverKube.clusterNumber}7   srv${toString bcl.role.serverKube.clusterNumber}7
+      192.168.41.${toString config.bcl.role.serverKube.clusterNumber}1   srv${toString config.bcl.role.serverKube.clusterNumber}1
+      192.168.41.${toString config.bcl.role.serverKube.clusterNumber}2   srv${toString config.bcl.role.serverKube.clusterNumber}2
+      192.168.41.${toString config.bcl.role.serverKube.clusterNumber}3   srv${toString config.bcl.role.serverKube.clusterNumber}3
+      192.168.41.${toString config.bcl.role.serverKube.clusterNumber}4   srv${toString config.bcl.role.serverKube.clusterNumber}4
+      192.168.41.${toString config.bcl.role.serverKube.clusterNumber}5   srv${toString config.bcl.role.serverKube.clusterNumber}5
+      192.168.41.${toString config.bcl.role.serverKube.clusterNumber}6   srv${toString config.bcl.role.serverKube.clusterNumber}6
+      192.168.41.${toString config.bcl.role.serverKube.clusterNumber}7   srv${toString config.bcl.role.serverKube.clusterNumber}7
     '';
 
     environment.etc."crictl.yaml".text = ''
@@ -231,32 +231,32 @@ in
         etcd:
           local:
             serverCertSANs:
-            - "192.168.41.${toString bcl.role.serverKube.clusterNumber}${toString srvNumber}"
+            - "192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}"
             peerCertSANs:
-            - "192.168.41.${toString bcl.role.serverKube.clusterNumber}${toString srvNumber}"
+            - "192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}"
             extraArgs:
-              initial-cluster: srv${toString bcl.role.serverKube.clusterNumber}1=https://192.168.41.${toString bcl.role.serverKube.clusterNumber}1:2380
-              # TODO ,srv${toString bcl.role.serverKube.clusterNumber}2=https://192.168.41.${toString bcl.role.serverKube.clusterNumber}2:2380,srv${toString bcl.role.serverKube.clusterNumber}5=https://192.168.41.${toString clusterNumber}5:2380,srv${toString clusterNumber}6=https://192.168.41.${toString clusterNumber}6:2380,srv${toString clusterNumber}7=https://192.168.41.${toString clusterNumber}7:2380
+              initial-cluster: srv${toString config.bcl.role.serverKube.clusterNumber}1=https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}1:2380
+              # TODO ,srv${toString config.bcl.role.serverKube.clusterNumber}2=https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}2:2380,srv${toString config.bcl.role.serverKube.clusterNumber}5=https://192.168.41.${toString clusterNumber}5:2380,srv${toString clusterNumber}6=https://192.168.41.${toString clusterNumber}6:2380,srv${toString clusterNumber}7=https://192.168.41.${toString clusterNumber}7:2380
               initial-cluster-state: new
-              name: srv${toString bcl.role.serverKube.clusterNumber}${toString srvNumber}
-              listen-peer-urls: https://192.168.41.${toString bcl.role.serverKube.clusterNumber}${toString srvNumber}:2380
-              listen-client-urls: https://192.168.41.${toString bcl.role.serverKube.clusterNumber}${toString srvNumber}:2379
-              advertise-client-urls: https://192.168.41.${toString bcl.role.serverKube.clusterNumber}${toString srvNumber}:2379
-              initial-advertise-peer-urls: https://192.168.41.${toString bcl.role.serverKube.clusterNumber}${toString srvNumber}:2380
+              name: srv${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}
+              listen-peer-urls: https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}:2380
+              listen-client-urls: https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}:2379
+              advertise-client-urls: https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}:2379
+              initial-advertise-peer-urls: https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}:2380
         apiServer:
           extraArgs:
-            advertise-address: 192.168.41.${toString bcl.role.serverKube.clusterNumber}${toString srvNumber}
+            advertise-address: 192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}
             feature-gates: "SidecarContainers=true"
           certSANs:
           - kube.${config.bcl.global.domain} # service name
           - kube.${cfg.clusterName}.i.${config.bcl.global.domain} # service name
-          - 192.168.41.${toString bcl.role.serverKube.clusterNumber}1
-          - 192.168.41.${toString bcl.role.serverKube.clusterNumber}2
-          - 192.168.41.${toString bcl.role.serverKube.clusterNumber}3
-          - 192.168.41.${toString bcl.role.serverKube.clusterNumber}4
-          - 192.168.41.${toString bcl.role.serverKube.clusterNumber}5
-          - 192.168.41.${toString bcl.role.serverKube.clusterNumber}6
-          - 192.168.41.${toString bcl.role.serverKube.clusterNumber}7
+          - 192.168.41.${toString config.bcl.role.serverKube.clusterNumber}1
+          - 192.168.41.${toString config.bcl.role.serverKube.clusterNumber}2
+          - 192.168.41.${toString config.bcl.role.serverKube.clusterNumber}3
+          - 192.168.41.${toString config.bcl.role.serverKube.clusterNumber}4
+          - 192.168.41.${toString config.bcl.role.serverKube.clusterNumber}5
+          - 192.168.41.${toString config.bcl.role.serverKube.clusterNumber}6
+          - 192.168.41.${toString config.bcl.role.serverKube.clusterNumber}7
           - 127.0.0.1
         controllerManager:
           extraArgs:
@@ -271,7 +271,7 @@ in
         apiVersion: kubeadm.k8s.io/v1beta3
         kind: InitConfiguration
         localAPIEndpoint:
-          advertiseAddress: "192.168.41.${toString bcl.role.serverKube.clusterNumber}${toString srvNumber}"
+          advertiseAddress: "192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}"
         nodeRegistration:
           criSocket: unix:///var/run/crio/crio.sock
           taints: []
