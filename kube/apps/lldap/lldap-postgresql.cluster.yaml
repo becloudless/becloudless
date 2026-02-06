@@ -6,9 +6,15 @@ metadata:
 spec:
   instances: 1
 
-  postgresql:
-    pg_hba:
-      - hostssl app all all cert
+# server certificate
+#  certificates:
+#    serverTLSSecret: lldap-postgresql-tls
+#    serverCASecret: lldap-postgresql-tls
+
+  # client certificate
+  certificates:
+    clientCASecret: lldap-postgresql-app-tls
+    replicationTLSSecret: lldap-postgresql-app-tls
 
   storage:
     storageClass: longhorn-single-local-replica

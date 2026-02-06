@@ -1,0 +1,25 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: lldap-postgresql
+  namespace: lldap
+spec:
+  secretName: lldap-postgresql-tls
+  usages:
+    - server auth
+  dnsNames:
+    - lldap-postgresql-rw
+    - lldap-postgresql-rw.lldap
+    - lldap-postgresql-rw.lldap.svc
+    - lldap-postgresql-rw.lldap.svc.cluster.local
+    - lldap-postgresql-r
+    - lldap-postgresql-r.lldap
+    - lldap-postgresql-r.lldap.svc
+    - lldap-postgresql-r.lldap.svc.cluster.local
+    - lldap-postgresql-ro
+    - lldap-postgresql-ro.lldap
+    - lldap-postgresql-ro.lldap.svc
+    - lldap-postgresql-ro.lldap.svc.cluster.local
+  issuerRef:
+    name: selfsigned-root
+    kind: ClusterIssuer
