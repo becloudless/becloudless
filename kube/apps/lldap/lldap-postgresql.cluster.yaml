@@ -27,7 +27,7 @@ spec:
       endpointURL: https://lldap-postgresql-backup.lldap.svc.cluster.local
       endpointCA:
         name: lldap-postgresql-backup-tls
-        key: tls.crt
+        key: ca.crt
       s3Credentials:
         accessKeyId:
           name: lldap-postgresql-backup
