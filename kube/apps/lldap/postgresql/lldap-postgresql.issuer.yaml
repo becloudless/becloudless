@@ -4,6 +4,5 @@ metadata:
   name: lldap-postgresql
   namespace: lldap
 spec:
-  selfSigned: {}
-
----
+  ca:
+    secretName: lldap-postgresql-ca

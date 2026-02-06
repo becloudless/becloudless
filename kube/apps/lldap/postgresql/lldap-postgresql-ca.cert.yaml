@@ -1,3 +1,6 @@
+
+
+---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -16,5 +19,5 @@ spec:
     algorithm: ECDSA
     size: 256
   issuerRef:
-    name: lldap-postgresql
-    kind: Issuer
+    name: selfsigned-root
+    kind: ClusterIssuer
