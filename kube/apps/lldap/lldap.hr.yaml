@@ -122,7 +122,7 @@ spec:
                   name: lldap
                   port: 17170
         tls:
-          - secretName: tls-homer
+          - secretName: tls-lldap
             hosts:
               - lldap.${BCL_GLOBAL_DOMAIN}
     resources:
