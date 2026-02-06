@@ -1,16 +1,16 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: lldap-postgresql-app
+  name: lldap-postgresql-replication
   namespace: lldap
 spec:
-  secretName: lldap-postgresql-app-tls
+  secretName: lldap-postgresql-replication-tls
   secretTemplate:
     labels:
       cnpg.io/reload: ""
   usages:
     - client auth
-  commonName: app
+  commonName: streaming_replica
   issuerRef:
     name: selfsigned-root
     kind: ClusterIssuer

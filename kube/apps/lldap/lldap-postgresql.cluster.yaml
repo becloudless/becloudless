@@ -6,15 +6,17 @@ metadata:
 spec:
   instances: 1
 
-# server certificate
-#  certificates:
-#    serverTLSSecret: lldap-postgresql-tls
-#    serverCASecret: lldap-postgresql-tls
+  # https://cloudnative-pg.io/docs/1.28/ssl_connections
+  # kubectl cnpg certificate -n lldap lldap-postgresql-app-cert --cnpg-cluster lldap-postgresql --cnpg-user app
+  postgresql:
+    pg_hba:
+      - hostssl app all all cert
 
-  # client certificate
   certificates:
-    clientCASecret: lldap-postgresql-app-tls
-    replicationTLSSecret: lldap-postgresql-app-tls
+    clientCASecret: lldap-postgresql-replication-tls
+    replicationTLSSecret: lldap-postgresql-replication-tls
+    serverTLSSecret: lldap-postgresql-tls
+    serverCASecret: lldap-postgresql-tls
 
   storage:
     storageClass: longhorn-single-local-replica
@@ -53,6 +55,3 @@ spec:
   immediate: true
   cluster:
     name: lldap-postgresql
-
-# TODO as code
-# kubectl cnpg certificate -n lldap lldap-postgresql-app-cert --cnpg-cluster lldap-postgresql --cnpg-user app

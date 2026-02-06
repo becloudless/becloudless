@@ -5,6 +5,9 @@ metadata:
   namespace: lldap
 spec:
   secretName: lldap-postgresql-tls
+  secretTemplate:
+    labels:
+      cnpg.io/reload: ""
   usages:
     - server auth
   dnsNames:
