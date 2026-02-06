@@ -91,10 +91,12 @@ spec:
       volumes:
         dbcert:
           type: secret
-          name: lldap-postgresql-app-cert
+          name: lldap-postgresql-app-tls
         dbca:
           type: secret
           name: lldap-postgresql-ca
+          path: dbca/ca.crt
+          subPath: ca.crt
         cert:
           type: secret
           name: lldap-cert
