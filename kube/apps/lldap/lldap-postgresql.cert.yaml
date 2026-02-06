@@ -26,4 +26,3 @@ spec:
   issuerRef:
     name: lldap-postgresql-myca
     kind: Issuer
-    namespace: lldap
