@@ -1,7 +1,9 @@
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: lldap-postgresql-myca
+  name: lldap-postgresql
   namespace: lldap
 spec:
   selfSigned: {}
+
+---

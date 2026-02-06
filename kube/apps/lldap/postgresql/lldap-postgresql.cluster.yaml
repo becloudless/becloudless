@@ -13,8 +13,8 @@ spec:
       - hostssl app all all cert
 
   certificates:
-    clientCASecret: lldap-postgresql-myca
-    replicationTLSSecret: lldap-postgresql-replication-tls
+    clientCASecret: lldap-postgresql-ca
+    replicationTLSSecret: lldap-postgresql-replication-tls # TODO remove and let git be generated
     serverTLSSecret: lldap-postgresql-tls
     serverCASecret: lldap-postgresql-tls
 
