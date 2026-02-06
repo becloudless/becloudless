@@ -107,12 +107,32 @@ func Bootstrap(adoptResources bool) error {
 	}
 
 	// infra git repo
-	if err := applyInfraGitRepo(ctx); err != nil {
+	if err := applyResourcesFile(ctx, "bcl/infra.gitrepo.yaml"); err != nil {
 		return errs.WithE(err, "Failed to apply infra git repo")
 	}
 
-	// infra kustomization to bootstrap rest
-	if err := applyInfraKustomization(ctx); err != nil {
+	// infra kustomization from git repo to bootstrap rest
+	if err := applyResourcesFile(ctx, "bcl/infra.ks.yaml"); err != nil {
+		return errs.WithE(err, "Failed to apply infra kustomization")
+	}
+
+	//
+	// from there, if git is actually in the cluster, it requires more applies
+	// gitea (bcl-server) + longhorm (bcl-global) + gitea-secrets + ??
+
+	if err := applyKustomizationFolder(ctx, filepath.Join(ctx.ClusterPath, "../../../config")); err != nil {
+		return errs.WithE(err, "Failed to apply infra kustomization")
+	}
+
+	if err := applyResourcesFile(ctx, filepath.Join(ctx.ClusterPath, "bcl/bcl.gitrepo.yaml")); err != nil {
+		return errs.WithE(err, "Failed to apply infra kustomization")
+	}
+
+	if err := applyResourcesFile(ctx, filepath.Join(ctx.ClusterPath, "bcl/bcl-global.ks.yaml")); err != nil {
+		return errs.WithE(err, "Failed to apply infra kustomization")
+	}
+
+	if err := applyResourcesFile(ctx, filepath.Join(ctx.ClusterPath, "bcl/bcl-server.ks.yaml")); err != nil {
 		return errs.WithE(err, "Failed to apply infra kustomization")
 	}
 
@@ -138,29 +158,22 @@ metadata:
 	return nil
 }
 
-func applyInfraGitRepo(ctx kube.Context) error {
-	infraPath := filepath.Join(ctx.ClusterPath, "bcl/infra.gitrepo.yaml")
-	logs.WithField("file", infraPath).Info("Applying infra git repo")
-
-	applyCmd := exec.Command("kubectl", "apply", "-f", infraPath)
+func applyResourcesFile(ctx kube.Context, file string) error {
+	applyCmd := exec.Command("kubectl", "apply", "-f", file)
 	applyCmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
 	output, err := applyCmd.CombinedOutput()
 	if err != nil {
-		return errs.WithEF(err, data.WithField("output", string(output)).WithField("file", infraPath), "Failed to apply infra git repo manifest")
+		return errs.WithEF(err, data.WithField("output", string(output)).WithField("file", file), "Failed to apply infra kustomization manifest")
 	}
-
 	return nil
 }
 
-func applyInfraKustomization(ctx kube.Context) error {
-	infraKsPath := filepath.Join(ctx.ClusterPath, "bcl/infra.ks.yaml")
-	logs.WithField("file", infraKsPath).Info("Applying infra kustomization")
-
-	applyCmd := exec.Command("kubectl", "apply", "-f", infraKsPath)
-	applyCmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
-	output, err := applyCmd.CombinedOutput()
+func applyKustomizationFolder(ctx kube.Context, path string) error {
+	cmd := exec.Command("kubectl", "apply", "-k", path)
+	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return errs.WithEF(err, data.WithField("output", string(output)).WithField("file", infraKsPath), "Failed to apply infra kustomization manifest")
+		return errs.WithEF(err, data.WithField("output", string(output)), "Failed to apply kustomization")
 	}
 
 	return nil
@@ -349,15 +362,7 @@ func prepareAndApplyFluxKustomization(ctx kube.Context, ks flux.Kustomization, r
 	}
 
 	logs.WithField("ref", ref).Info("Applying flux kustomization")
-
-	cmd := exec.Command("kubectl", "apply", "-k", tmpDir)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return errs.WithEF(err, data.WithField("output", string(output)), "Failed to apply kustomization")
-	}
-
-	return nil
+	return applyKustomizationFolder(ctx, tmpDir)
 }
 
 func applyFluxHelmReleaseWithHelm(ctx kube.Context, resourcesPath string, objectRef flux.NamespacedObjectKindReference, envs map[string]string, adoptResources bool) error {
