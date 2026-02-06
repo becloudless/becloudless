@@ -50,7 +50,7 @@ spec:
           type: secret
           name: lldap-postgresql-backup-tls
           path: /certs/public.crt
-          subPath: tls.cert
+          subPath: tls.crt
         cert-private:
           type: secret
           name: lldap-postgresql-backup-tls
