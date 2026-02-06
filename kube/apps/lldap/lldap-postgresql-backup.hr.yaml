@@ -46,10 +46,16 @@ spec:
       volumes:
         storage:
           type: persistentVolumeClaim
-        certs:
+        cert-public:
           type: secret
-          name: lldap-postgresql-backup
-          readOnly: true
+          name: lldap-postgresql-backup-tls
+          path: /certs/public.crt
+          subPath: tls.cert
+        cert-private:
+          type: secret
+          name: lldap-postgresql-backup-tls
+          path: /certs/private.key
+          subPath: tls.key
 
       service:
         ports:
