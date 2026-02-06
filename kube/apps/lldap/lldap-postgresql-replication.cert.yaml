@@ -12,5 +12,5 @@ spec:
     - client auth
   commonName: streaming_replica
   issuerRef:
-    name: selfsigned-root
-    kind: ClusterIssuer
+    name: lldap-postgresql-myca
+    kind: Issuer

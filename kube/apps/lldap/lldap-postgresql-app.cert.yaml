@@ -12,5 +12,5 @@ spec:
     - client auth
   commonName: app
   issuerRef:
-    name: selfsigned-root
-    kind: ClusterIssuer
+    name: lldap-postgresql-myca
+    kind: Issuer

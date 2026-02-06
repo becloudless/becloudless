@@ -13,7 +13,7 @@ spec:
       - hostssl app all all cert
 
   certificates:
-    clientCASecret: lldap-postgresql-replication-tls
+    clientCASecret: lldap-postgresql-myca
     replicationTLSSecret: lldap-postgresql-replication-tls
     serverTLSSecret: lldap-postgresql-tls
     serverCASecret: lldap-postgresql-tls

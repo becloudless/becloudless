@@ -24,5 +24,5 @@ spec:
     - lldap-postgresql-ro.lldap.svc
     - lldap-postgresql-ro.lldap.svc.cluster.local
   issuerRef:
-    name: selfsigned-root
-    kind: ClusterIssuer
+    name: lldap-postgresql-myca
+    kind: Issuer
