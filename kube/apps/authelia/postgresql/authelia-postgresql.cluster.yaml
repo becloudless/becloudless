@@ -1,0 +1,29 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: authelia-postgresql
+  namespace: authelia
+spec:
+  instances: 2
+
+  # TODO connect authelia to postgresql with client certificates
+  #  postgresql:
+  #    pg_hba:
+  #      - hostssl app all all cert
+
+  certificates:
+    clientCASecret: lldap-postgresql-ca
+    # replication is required so cnpg do not look for ca.key in the clientCASecret, which is not the format of cert-manager
+    replicationTLSSecret: lldap-postgresql-replication-tls
+    serverTLSSecret: lldap-postgresql-tls
+    serverCASecret: lldap-postgresql-tls
+
+  storage:
+    storageClass: longhorn-single-local-replica
+    size: 1Gi
+
+  backup:
+    retentionPolicy: "60d"
+    volumeSnapshot:
+      className: longhorn-backup-incremental
+      snapshotOwnerReference: backup # removing the Backup object, removes the VolumeSnapshot
