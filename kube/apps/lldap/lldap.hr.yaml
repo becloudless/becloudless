@@ -99,7 +99,7 @@ spec:
           subPath: ca.crt
         cert:
           type: secret
-          name: lldap-cert
+          name: lldap-internal
         data:
           type: configMap
 
@@ -125,6 +125,7 @@ spec:
           - secretName: tls-lldap
             hosts:
               - lldap.${BCL_GLOBAL_DOMAIN}
+
     resources:
       configMaps:
         data:
