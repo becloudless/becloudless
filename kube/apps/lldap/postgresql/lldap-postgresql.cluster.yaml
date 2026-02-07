@@ -4,7 +4,7 @@ metadata:
   name: lldap-postgresql
   namespace: lldap
 spec:
-  instances: 1
+  instances: 2
 
   # https://cloudnative-pg.io/docs/1.28/ssl_connections
   # kubectl cnpg certificate -n lldap lldap-postgresql-app-cert --cnpg-cluster lldap-postgresql --cnpg-user app
