@@ -1,0 +1,8 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: authelia-postgresql
+  namespace: authelia
+spec:
+  ca:
+    secretName: authelia-postgresql-ca

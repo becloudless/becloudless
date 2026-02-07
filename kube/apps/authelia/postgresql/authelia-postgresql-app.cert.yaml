@@ -1,0 +1,16 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: authelia-postgresql-app
+  namespace: authelia
+spec:
+  secretName: authelia-postgresql-app-tls
+  secretTemplate:
+    labels:
+      cnpg.io/reload: ""
+  usages:
+    - client auth
+  commonName: app
+  issuerRef:
+    name: authelia-postgresql
+    kind: Issuer

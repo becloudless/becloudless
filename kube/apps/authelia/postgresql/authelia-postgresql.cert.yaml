@@ -1,0 +1,26 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: authelia-postgresql
+  namespace: authelia
+spec:
+  secretName: authelia-postgresql-tls
+  secretTemplate:
+    labels:
+      cnpg.io/reload: ""
+  dnsNames:
+    - authelia-postgresql-rw
+    - authelia-postgresql-rw.authelia
+    - authelia-postgresql-rw.authelia.svc
+    - authelia-postgresql-rw.authelia.svc.cluster.local
+    - authelia-postgresql-r
+    - authelia-postgresql-r.authelia
+    - authelia-postgresql-r.authelia.svc
+    - authelia-postgresql-r.authelia.svc.cluster.local
+    - authelia-postgresql-ro
+    - authelia-postgresql-ro.authelia
+    - authelia-postgresql-ro.authelia.svc
+    - authelia-postgresql-ro.authelia.svc.cluster.local
+  issuerRef:
+    name: authelia-postgresql
+    kind: Issuer

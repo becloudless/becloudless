@@ -26,11 +26,11 @@ spec:
             LLDAP_URL: http://lldap:17170
             LLDAP_ADMIN_USERNAME:
               secretKeyRef:
-                name: lldap
+                name: lldap-generated
                 key: LLDAP_LDAP_USER_DN
             LLDAP_ADMIN_PASSWORD:
               secretKeyRef:
-                name: lldap
+                name: lldap-generated
                 key: LLDAP_LDAP_USER_PASS
             DO_CLEANUP: "true"
           command: [ /usr/bin/env, bash ]
@@ -64,6 +64,8 @@ spec:
           repository: lldap/lldap
           tag: "2025-11-20" # TODO renovate
         envFrom:
+          - secretRef:
+              name: lldap-generated
           - secretRef:
               name: lldap
         env:

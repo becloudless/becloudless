@@ -8,8 +8,6 @@ spec:
   secretTemplate:
     labels:
       cnpg.io/reload: ""
-  usages:
-    - server auth
   dnsNames:
     - lldap-postgresql-rw
     - lldap-postgresql-rw.lldap

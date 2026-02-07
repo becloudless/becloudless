@@ -33,6 +33,7 @@ spec:
     secret:
       existingSecret: authelia
       additionalSecrets:
+        authelia-generated: {}
         authelia-postgresql-app: {}
         authelia-valkey: {}
         authelia-oidc: {}
@@ -98,6 +99,8 @@ spec:
         cookies:
           - domain: ${BCL_GLOBAL_DOMAIN}
             subdomain: authelia
+        encryption_key:
+          secret_name: authelia-generated
 
       password_policy:
         zxcvbn:
@@ -157,9 +160,16 @@ spec:
 #            subject:
 #              - [ 'group:role_service', 'group:app_mailu' ]
 
+      identity_validation:
+        reset_password:
+          secret:
+            secret_name: authelia-generated
+
       identity_providers:
         oidc:
           enabled: true
+          hmac_secret:
+            secret_name: authelia-generated
           jwks:
             - key_id: ''
               algorithm: 'RS256'
