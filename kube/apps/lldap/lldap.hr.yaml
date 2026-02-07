@@ -139,8 +139,8 @@ spec:
 
               [ldaps_options]
               enabled=true
-              key_file="/cert/private.key"
-              cert_file="/cert/public.crt"
+              key_file="/cert/tls.key"
+              cert_file="/cert/tls.crt"
 
     chartDefaults:
       workload:
