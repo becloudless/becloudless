@@ -2,6 +2,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 # TODO renovate
-components:
-  - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/refs/tags/v8.4.0/client/config/crd
-  - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/refs/tags/v8.4.0/deploy/kubernetes/snapshot-controller
+resources:
+  - github.com/kubernetes-csi/external-snapshotter/client/config/crd?ref=v8.4.0
+  - github.com/kubernetes-csi/external-snapshotter/deploy/kubernetes/snapshot-controller?ref=v8.4.0
