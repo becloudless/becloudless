@@ -38,9 +38,8 @@ spec:
         authelia-oidc: {}
 
     certificates:
-      existingSecret: authelia-certificates
-      additionalSecrets:
-        authelia-lldap-cert: {}
+      existingSecret: authelia-lldap-cert
+#      existingSecret: authelia-certificates
 
     configMap:
       theme: dark
