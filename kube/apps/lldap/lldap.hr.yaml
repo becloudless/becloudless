@@ -65,9 +65,9 @@ spec:
           tag: "2025-11-20" # TODO renovate
         envFrom:
           - secretRef:
-              name: lldap
+              name: lldap-generated
           - secretRef:
-              name: lldap-seed
+              name: lldap
         env:
           TZ: europe/paris
           PGUSER: app

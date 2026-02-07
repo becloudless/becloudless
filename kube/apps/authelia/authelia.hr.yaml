@@ -33,6 +33,7 @@ spec:
     secret:
       existingSecret: authelia
       additionalSecrets:
+        authelia-generated: {}
         authelia-postgresql-app: {}
         authelia-valkey: {}
         authelia-oidc: {}
