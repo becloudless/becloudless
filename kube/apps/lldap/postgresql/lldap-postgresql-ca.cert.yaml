@@ -6,11 +6,6 @@ metadata:
 spec:
   isCA: true
   commonName: lldap-postgresql-ca
-  subject:
-    organizations:
-      - ACME Inc.
-    organizationalUnits:
-      - Widgets
   secretName: lldap-postgresql-ca
   privateKey:
     algorithm: ECDSA

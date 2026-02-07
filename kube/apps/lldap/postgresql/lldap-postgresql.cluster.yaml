@@ -7,14 +7,14 @@ spec:
   instances: 2
 
   # https://cloudnative-pg.io/docs/1.28/ssl_connections
-  # kubectl cnpg certificate -n lldap lldap-postgresql-app-cert --cnpg-cluster lldap-postgresql --cnpg-user app
   postgresql:
     pg_hba:
       - hostssl app all all cert
 
   certificates:
     clientCASecret: lldap-postgresql-ca
-    replicationTLSSecret: lldap-postgresql-replication-tls # TODO remove and let git be generated
+    # replication is required so cnpg do not look for ca.key in the clientCASecret, which is not the format of cert-manager
+    replicationTLSSecret: lldap-postgresql-replication-tls
     serverTLSSecret: lldap-postgresql-tls
     serverCASecret: lldap-postgresql-tls
 
@@ -41,17 +41,3 @@ spec:
         compression: gzip
       data:
         compression: gzip
-        jobs: 2
-
----
-apiVersion: postgresql.cnpg.io/v1
-kind: ScheduledBackup
-metadata:
-  name: lldap-postgresql
-  namespace: lldap
-spec:
-  schedule: "0 4 * * *"
-  backupOwnerReference: self
-  immediate: true
-  cluster:
-    name: lldap-postgresql
