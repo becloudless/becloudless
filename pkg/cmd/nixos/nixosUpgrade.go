@@ -45,9 +45,7 @@ func nixosUpgradeCmd() *cobra.Command {
 				}
 			}
 
-			run.ExecCmd("nixos-rebuild", action, "--flake", filepath.Join(repository.Root, "nixos"))
-
-			return nil
+			return run.ExecCmd("nixos-rebuild", action, "--flake", filepath.Join(repository.Root, "nixos"))
 		},
 	}
 
