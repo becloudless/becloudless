@@ -73,7 +73,7 @@ spec:
           PGHOST: lldap-postgresql-rw
           PGSSLKEY: /dbcert/tls.key
           PGSSLCERT: /dbcert/tls.crt
-          PGSSLROOTCERT: /dbca/ca.crt
+          PGSSLROOTCERT: /dbcert/ca.crt
           PGSSLMODE: verify-full
 
         # TODO this should be automatic, but there is a race condition in selecting the port
@@ -92,11 +92,6 @@ spec:
         dbcert:
           type: secret
           name: lldap-postgresql-app-tls
-        dbca:
-          type: secret
-          name: lldap-postgresql-ca
-          path: dbca/ca.crt
-          subPath: ca.crt
         cert:
           type: secret
           name: lldap-internal
