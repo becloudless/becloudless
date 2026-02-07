@@ -5,7 +5,6 @@ metadata:
   namespace: lldap
 spec:
   instances: 2
-
   # https://cloudnative-pg.io/docs/1.28/ssl_connections
   postgresql:
     pg_hba:
@@ -22,22 +21,19 @@ spec:
     storageClass: longhorn-single-local-replica
     size: 1Gi
 
+#  bootstrap:
+#    recovery:
+#      volumeSnapshots:
+#        storage:
+#          name: <snapshot name>
+#          kind: VolumeSnapshot
+#          apiGroup: snapshot.storage.k8s.io
+# OR
+#      backup:
+#        name: backup-example
+
   backup:
     retentionPolicy: "60d"
-    barmanObjectStore:
-      destinationPath: s3://lldap-postgresql-backup
-      endpointURL: https://lldap-postgresql-backup.lldap.svc.cluster.local
-      endpointCA:
-        name: lldap-postgresql-backup-tls
-        key: ca.crt
-      s3Credentials:
-        accessKeyId:
-          name: lldap-postgresql-backup
-          key: MINIO_ROOT_USER
-        secretAccessKey:
-          name: lldap-postgresql-backup
-          key: MINIO_ROOT_PASSWORD
-      wal:
-        compression: gzip
-      data:
-        compression: gzip
+    volumeSnapshot:
+      className: longhorn-backup-incremental
+      snapshotOwnerReference: backup # removing the Backup object, removes the VolumeSnapshot
