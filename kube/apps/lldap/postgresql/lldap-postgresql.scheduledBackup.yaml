@@ -4,7 +4,8 @@ metadata:
   name: lldap-postgresql
   namespace: lldap
 spec:
-  schedule: "0 4 * * *"
+#  schedule: "0 4 * * *"
+  schedule: "/2 * * * *"
   backupOwnerReference: self
   immediate: true
   cluster:
