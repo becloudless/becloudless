@@ -73,7 +73,7 @@ spec:
           PGHOST: lldap-postgresql-rw
           PGSSLKEY: /dbcert/tls.key
           PGSSLCERT: /dbcert/tls.crt
-          PGSSLROOTCERT: /dbca/ca.crt
+          PGSSLROOTCERT: /dbcert/ca.crt
           PGSSLMODE: verify-full
 
         # TODO this should be automatic, but there is a race condition in selecting the port
@@ -91,13 +91,10 @@ spec:
       volumes:
         dbcert:
           type: secret
-          name: lldap-postgresql-app-cert
-        dbca:
-          type: secret
-          name: lldap-postgresql-ca
+          name: lldap-postgresql-app-tls
         cert:
           type: secret
-          name: lldap-cert
+          name: lldap-internal
         data:
           type: configMap
 
@@ -120,9 +117,10 @@ spec:
                   name: lldap
                   port: 17170
         tls:
-          - secretName: tls-homer
+          - secretName: tls-lldap
             hosts:
               - lldap.${BCL_GLOBAL_DOMAIN}
+
     resources:
       configMaps:
         data:
@@ -136,8 +134,8 @@ spec:
 
               [ldaps_options]
               enabled=true
-              key_file="/cert/private.key"
-              cert_file="/cert/public.crt"
+              key_file="/cert/tls.key"
+              cert_file="/cert/tls.crt"
 
     chartDefaults:
       workload:

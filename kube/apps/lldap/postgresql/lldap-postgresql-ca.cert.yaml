@@ -1,0 +1,15 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: lldap-postgresql-ca
+  namespace: lldap
+spec:
+  isCA: true
+  commonName: lldap-postgresql-ca
+  secretName: lldap-postgresql-ca
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: self-signed
+    kind: ClusterIssuer

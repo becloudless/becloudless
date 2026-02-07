@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: lldap-postgresql-backup
+  namespace: lldap
+spec:
+  dnsNames:
+    - lldap-postgresql-backup
+    - lldap-postgresql-backup.lldap.svc
+    - lldap-postgresql-backup.lldap.svc.cluster.local
+  secretName: lldap-postgresql-backup-tls
+  issuerRef:
+    name: self-signed
+    kind: ClusterIssuer

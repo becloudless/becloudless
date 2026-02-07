@@ -1,0 +1,15 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: lldap-internal
+  namespace: lldap
+spec:
+  secretName: lldap-internal
+  dnsNames:
+    - lldap
+    - lldap.lldap
+    - lldap.lldap.svc
+    - lldap.lldap.svc.cluster.local
+  issuerRef:
+    name: self-signed
+    kind: ClusterIssuer
