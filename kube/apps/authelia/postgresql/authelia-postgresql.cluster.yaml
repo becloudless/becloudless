@@ -12,11 +12,11 @@ spec:
   #      - hostssl app all all cert
 
   certificates:
-    clientCASecret: lldap-postgresql-ca
+    clientCASecret: authelia-postgresql-ca
     # replication is required so cnpg do not look for ca.key in the clientCASecret, which is not the format of cert-manager
-    replicationTLSSecret: lldap-postgresql-replication-tls
-    serverTLSSecret: lldap-postgresql-tls
-    serverCASecret: lldap-postgresql-tls
+    replicationTLSSecret: authelia-postgresql-replication-tls
+    serverTLSSecret: authelia-postgresql-tls
+    serverCASecret: authelia-postgresql-tls
 
   storage:
     storageClass: longhorn-single-local-replica
