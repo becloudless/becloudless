@@ -66,6 +66,8 @@ spec:
         envFrom:
           - secretRef:
               name: lldap
+          - secretRef:
+              name: lldap-seed
         env:
           TZ: europe/paris
           PGUSER: app
