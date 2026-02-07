@@ -24,7 +24,7 @@ spec:
 
   backup:
     volumeSnapshot:
-      className: longhorn-snapshot
+      className: longhorn-backup-incremental
 
 #    retentionPolicy: "60d"
 #    barmanObjectStore:
