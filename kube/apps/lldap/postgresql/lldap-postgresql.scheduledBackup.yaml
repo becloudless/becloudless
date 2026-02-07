@@ -4,9 +4,22 @@ metadata:
   name: lldap-postgresql
   namespace: lldap
 spec:
-#  schedule: "0 4 * * *"
-  schedule: "/2 * * * *"
+  schedule: "0 4 * * *"
   backupOwnerReference: self
   immediate: true
+  cluster:
+    name: lldap-postgresql
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: lldap-postgresql-snapshot
+  namespace: lldap
+spec:
+  schedule: "* * * * *"
+  backupOwnerReference: self
+  immediate: true
+  method: volumeSnapshot
   cluster:
     name: lldap-postgresql
