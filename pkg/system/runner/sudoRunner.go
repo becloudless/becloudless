@@ -77,5 +77,9 @@ func (r SudoRunner) Exec(envs *[]string, stdin io.Reader, stdout io.Writer, stde
 		newArgs = append([]string{"-S", head}, args...)
 	}
 
-	return r.parent.Exec(envs, r.password.Reader(), stdout, stderr, newHead, newArgs...)
+	if r.password == nil {
+		return r.parent.Exec(envs, stdin, stdout, stderr, newHead, newArgs...)
+	} else {
+		return r.parent.Exec(envs, r.password.Reader(), stdout, stderr, newHead, newArgs...)
+	}
 }
