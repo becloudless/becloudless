@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# TODO renovate
+resources:
+  - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/refs/tags/v8.4.0/client/config/crd
+  - https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/refs/tags/v8.4.0/deploy/kubernetes/snapshot-controller
