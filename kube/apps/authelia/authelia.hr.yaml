@@ -39,6 +39,8 @@ spec:
 
     certificates:
       existingSecret: authelia-certificates
+      additionalSecrets:
+        authelia-lldap-cert: {}
 
     configMap:
       theme: dark
