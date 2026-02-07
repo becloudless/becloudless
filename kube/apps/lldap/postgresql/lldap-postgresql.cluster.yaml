@@ -23,7 +23,8 @@ spec:
     size: 1Gi
 
   backup:
-    className: longhorn-snapshot
+    volumeSnapshot:
+      className: longhorn-snapshot
 
 #    retentionPolicy: "60d"
 #    barmanObjectStore:
