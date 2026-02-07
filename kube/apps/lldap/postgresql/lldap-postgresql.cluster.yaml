@@ -14,7 +14,7 @@ spec:
 
   certificates:
     clientCASecret: lldap-postgresql-ca
-#    replicationTLSSecret: lldap-postgresql-replication-tls # TODO remove and let git be generated
+    replicationTLSSecret: lldap-postgresql-replication-tls # TODO remove and let git be generated
     serverTLSSecret: lldap-postgresql-tls
     serverCASecret: lldap-postgresql-tls
 
