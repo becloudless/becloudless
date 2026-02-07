@@ -10,5 +10,5 @@ spec:
     - lldap-postgresql-backup.lldap.svc.cluster.local
   secretName: lldap-postgresql-backup-tls
   issuerRef:
-    name: selfsigned-root
+    name: self-signed
     kind: ClusterIssuer
