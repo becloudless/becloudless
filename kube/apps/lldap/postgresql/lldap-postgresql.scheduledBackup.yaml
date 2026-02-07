@@ -17,7 +17,7 @@ metadata:
   name: lldap-postgresql-snapshot
   namespace: lldap
 spec:
-  schedule: "*/5 * * * *"
+  schedule: "0 0 * * *"
   backupOwnerReference: self
   immediate: true
   method: volumeSnapshot
