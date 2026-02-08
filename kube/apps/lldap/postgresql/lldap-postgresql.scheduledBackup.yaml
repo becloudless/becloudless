@@ -4,7 +4,7 @@ metadata:
   name: lldap-postgresql
   namespace: lldap
 spec:
-  schedule: "0 4 * * *"
+  schedule: "0 0 4 * * *" # cron with seconds
   backupOwnerReference: self # removing the schedule, removes the Backup object, which may or not remove the VolumeSnapshot object depending on the cluster's setup
   immediate: true
   method: volumeSnapshot
