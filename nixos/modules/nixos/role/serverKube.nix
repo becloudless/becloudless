@@ -207,6 +207,7 @@ in
         kind: KubeletConfiguration
         cgroupDriver: systemd
         failSwapOn: false
+        maxPods: 200
         evictionHard:
           imagefs.available: 1%
           memory.available: 100Mi
