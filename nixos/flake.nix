@@ -92,8 +92,7 @@
             snowfall.namespace = "infra";
           };
           flake-options = builtins.removeAttrs flake-and-lib-options ["inputs" "src"];
-        in
-          lib.mkFlake (flake-options // {
+          result = lib.mkFlake (flake-options // {
             systems.modules.nixos = bclModules;
             systems.hosts = {
               iso = {
@@ -117,6 +116,7 @@
             ];
 
           });
+        in result;
   in
     bclFlake // {
       inherit mkFlake;

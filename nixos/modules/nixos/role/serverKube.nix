@@ -10,7 +10,7 @@ in
     clusterSize = lib.mkOption {
       type = lib.types.int;
       default = 3;
-      description = "Number of nodes in the cluster";
+      description = "Number of nodes in the etcd cluster";
     };
 
 #    cidr = lib.mkOption {

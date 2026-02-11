@@ -1,0 +1,16 @@
+bcl:
+    boot:
+        efi: false
+    system:
+        enable: true
+        group: test-server
+        ids: motherboardUuid=22222222-2222-2222-2222-222222222222
+        devices:
+            - /dev/sda
+
+# TODO this should be provided by facter
+boot:
+    initrd:
+        kernelModules:
+            - e1000
+
