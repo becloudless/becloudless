@@ -7,7 +7,11 @@ in
   options.bcl.role.serverKube = {
     clusterName = lib.mkOption {type = lib.types.str;};
     clusterNumber = lib.mkOption {type = lib.types.int; default = 1;};
-
+    clusterSize = lib.mkOption {
+      type = lib.types.int;
+      default = 1;
+      description = "Number of master nodes in the cluster";
+    };
 #    cidr = lib.mkOption {
 #      type = lib.types.str;
 #      default = "192.168.41.20/22";
@@ -236,8 +240,7 @@ in
             peerCertSANs:
             - "192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}"
             extraArgs:
-              initial-cluster: srv${toString config.bcl.role.serverKube.clusterNumber}1=https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}1:2380
-              # TODO ,srv${toString config.bcl.role.serverKube.clusterNumber}2=https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}2:2380,srv${toString config.bcl.role.serverKube.clusterNumber}5=https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}5:2380,srv${toString config.bcl.role.serverKube.clusterNumber}6=https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}6:2380,srv${toString config.bcl.role.serverKube.clusterNumber}7=https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}7:2380
+              initial-cluster: ${lib.concatMapStringsSep "," (n: "srv${toString config.bcl.role.serverKube.clusterNumber}${toString n}=https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString n}:2380") (lib.genList (n: n + 1) cfg.clusterSize)}
               initial-cluster-state: new
               name: srv${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}
               listen-peer-urls: https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}:2380
