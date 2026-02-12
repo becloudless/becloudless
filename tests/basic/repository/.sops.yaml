@@ -4,6 +4,7 @@ keys:
   - &admin                  age1fc4whssgqcyua532zktqycxt35pvf20j7j95yquaj9qjpma0psqsjg5pwj
   - &group-test-tv          age16mst9mp7sq67n7gpdypjm7wkwlxtd34jghqyj42mynp66pjhsq5s6xdcv6
   - &group-test-workstaton  age10lqzqe44w00hmx3zv2ewjr9ad73ac2l6xjukkmw0n379cs9sxugsdtn9nq
+  - &group-test-server      age1c8mf2dmwm9h7808730xx4m6qwevs3nngas04mg5ycjr696ku34cq2hfdze
   - &install                age1m9zgn8x3wfxzsk03ucdgsj086f0z9vww67w8hu33ees2rnunxfusm0vsv0
 
 creation_rules:
@@ -15,6 +16,10 @@ creation_rules:
   - path_regex: nixos/modules/nixos/global/admins.secrets.yaml
     key_groups:
       - age: [*admin, *n0rad, *group-test-workstaton]
+
+  - path_regex: nixos/modules/nixos/groups/test-server/default.secrets.yaml
+    key_groups:
+      - age: [*admin, *n0rad, *group-test-server]
 
   - path_regex: nixos/modules/nixos/groups/test-workstation/default.secrets.yaml
     key_groups:
