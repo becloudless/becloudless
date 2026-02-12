@@ -5,7 +5,7 @@
     bcl.role.serverKube = {
       clusterName = "test";
       clusterNumber = 1;
-      clusterSize = 2;
+      masterNodeCount = 2;
     };
     bcl.role.secretFile = ./default.secrets.yaml;
 
