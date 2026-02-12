@@ -107,6 +107,57 @@ in
         Type = "oneshot";
       };
 
+      preStart = ''
+        # Check if this node needs to be added to an existing etcd cluster
+        ETCD_DIR="/var/lib/etcd"
+        MY_IP="192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}"
+        MY_NAME="srv${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}"
+        FIRST_NODE_IP="192.168.41.${toString config.bcl.role.serverKube.clusterNumber}1"
+
+        # If etcd data doesn't exist and this is not the first node, check if we need to join an existing cluster
+        if [ ! -d "$ETCD_DIR/member" ] && [ "${toString srvNumber}" != "1" ]; then
+          echo "No local etcd data found, checking first node for existing cluster..."
+
+          # Check if first node has a running etcd cluster
+          if ${pkgs.etcd}/bin/etcdctl --endpoints=https://$FIRST_NODE_IP:2379 \
+            --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+            --cert=/etc/kubernetes/pki/etcd/peer.crt \
+            --key=/etc/kubernetes/pki/etcd/peer.key \
+            endpoint health >/dev/null 2>&1; then
+
+            echo "Found existing etcd cluster on first node"
+
+            # Check if this member is already in the cluster
+            MEMBER_EXISTS=$(${pkgs.etcd}/bin/etcdctl --endpoints=https://$FIRST_NODE_IP:2379 \
+              --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+              --cert=/etc/kubernetes/pki/etcd/peer.crt \
+              --key=/etc/kubernetes/pki/etcd/peer.key \
+              member list | grep "$MY_NAME" || echo "")
+
+            if [ -z "$MEMBER_EXISTS" ]; then
+              # Add as new member
+              echo "Adding $MY_NAME to existing etcd cluster..."
+              ${pkgs.etcd}/bin/etcdctl --endpoints=https://$FIRST_NODE_IP:2379 \
+                --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+                --cert=/etc/kubernetes/pki/etcd/peer.crt \
+                --key=/etc/kubernetes/pki/etcd/peer.key \
+                member add $MY_NAME --peer-urls=https://$MY_IP:2380 || true
+
+              # Update kubeadm config to use 'existing' state
+              sed -i 's/initial-cluster-state: new/initial-cluster-state: existing/' /etc/kubernetes/kubeadm.yaml
+              echo "Node added to existing cluster, will join with state=existing"
+            else
+              echo "Member already exists in cluster (likely recovering from data loss)"
+              sed -i 's/initial-cluster-state: new/initial-cluster-state: existing/' /etc/kubernetes/kubeadm.yaml
+            fi
+          else
+            echo "First node not available or no existing cluster found"
+          fi
+        else
+          echo "Etcd data exists or this is the first node, proceeding with standard initialization"
+        fi
+      '';
+
       script = ''
         # bootstrap at very first node, first boot, with: kubeadm init --skip-phases=preflight --config=/etc/kubernetes/kubeadm.yaml
         ${pkgs.kubernetes}/bin/kubeadm init --skip-phases=preflight,bootstrap-token,addon/coredns,show-join-command --config=/etc/kubernetes/kubeadm.yaml
