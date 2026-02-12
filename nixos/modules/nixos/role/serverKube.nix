@@ -7,7 +7,7 @@ in
   options.bcl.role.serverKube = {
     clusterName = lib.mkOption {type = lib.types.str;};
     clusterNumber = lib.mkOption {type = lib.types.int; default = 1;};
-    clusterSize = lib.mkOption {
+    masterNodeCount = lib.mkOption {
       type = lib.types.int;
       default = 1;
       description = "Number of master nodes in the cluster";
@@ -240,7 +240,7 @@ in
             peerCertSANs:
             - "192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}"
             extraArgs:
-              initial-cluster: ${lib.concatMapStringsSep "," (n: "srv${toString config.bcl.role.serverKube.clusterNumber}${toString n}=https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString n}:2380") (lib.genList (n: n + 1) cfg.clusterSize)}
+              initial-cluster: ${lib.concatMapStringsSep "," (n: "srv${toString config.bcl.role.serverKube.clusterNumber}${toString n}=https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString n}:2380") (lib.genList (n: n + 1) cfg.masterNodeCount)}
               initial-cluster-state: new
               name: srv${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}
               listen-peer-urls: https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}:2380
