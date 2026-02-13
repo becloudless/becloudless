@@ -112,7 +112,7 @@
             # Ensure downstream flakes see the bcl package namespace under pkgs.bcl
             overlays = [
               (final: prev: {
-                bcl = self.packages.${final.system} or {};
+                bcl = self.packages.${final.stdenv.hostPlatform.system} or {};
               })
             ];
 
