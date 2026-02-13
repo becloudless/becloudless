@@ -51,6 +51,11 @@ in
       '')
     ];
 
+    programs.bash.interactiveShellInit = lib.mkIf (config.users.users.root.shell == pkgs.bash) ''
+      export KUBECONFIG=/etc/kubernetes/admin.conf
+      alias k='kubectl'
+    '';
+
     networking.nameservers = ["192.168.40.12"];
     services.resolved.dnssec = "true";
     networking.firewall.enable = false;
