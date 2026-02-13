@@ -44,7 +44,7 @@ var (
 	validFor   = flag.Duration("duration", 10*365*24*time.Hour, "Duration that certificate is valid for")
 )
 
-func publicKey(priv interface{}) interface{} {
+func publicKey(priv any) any {
 	switch k := priv.(type) {
 	case *ecdsa.PrivateKey:
 		return &k.PublicKey
@@ -81,7 +81,7 @@ func main() {
 		log.Fatalf("Missing required --host parameter")
 	}
 
-	var priv interface{}
+	var priv any
 	var err error
 	switch *ecdsaCurve {
 	case "":

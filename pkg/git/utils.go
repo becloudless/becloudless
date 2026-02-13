@@ -39,8 +39,8 @@ func ParseGitUrl(gitUrl string) (host, owner, repo string, err error) {
 	}
 
 	// SSH scp-like syntax: git@github.com:owner/repo.git
-	if i := strings.Index(gitUrl, "@"); i >= 0 {
-		rest := gitUrl[i+1:]
+	if _, after, ok := strings.Cut(gitUrl, "@"); ok {
+		rest := after
 		// rest is like: github.com:owner/repo.git
 		parts := strings.SplitN(rest, ":", 2)
 		if len(parts) != 2 {

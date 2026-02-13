@@ -58,8 +58,8 @@ func (s SystemInfo) Matches(other SystemInfo) bool {
 func SystemInfoFromEnvVars(envVars string) (SystemInfo, error) {
 	info := SystemInfo{}
 
-	keyValues := strings.Split(envVars, "\n")
-	for _, keyValueString := range keyValues {
+	keyValues := strings.SplitSeq(envVars, "\n")
+	for keyValueString := range keyValues {
 		if keyValueString == "" {
 			continue
 		}
@@ -74,19 +74,19 @@ func SystemInfoFromEnvVars(envVars string) (SystemInfo, error) {
 		case cpuSerial:
 			info.CpuSerial = keyValue[1]
 		case networkMacs:
-			for _, s := range strings.Split(keyValue[1], ",") {
+			for s := range strings.SplitSeq(keyValue[1], ",") {
 				if s != "" {
 					info.NetworkMacs = append(info.NetworkMacs, s)
 				}
 			}
 		case networkIps:
-			for _, s := range strings.Split(keyValue[1], ",") {
+			for s := range strings.SplitSeq(keyValue[1], ",") {
 				if s != "" {
 					info.NetworkIps = append(info.NetworkIps, s)
 				}
 			}
 		case disks:
-			for _, s := range strings.Split(keyValue[1], ",") {
+			for s := range strings.SplitSeq(keyValue[1], ",") {
 				if s != "" {
 					info.Disks = append(info.Disks, s)
 				}

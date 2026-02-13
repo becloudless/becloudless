@@ -2,6 +2,7 @@ package git
 
 import (
 	"io"
+	"maps"
 	"slices"
 
 	"github.com/go-git/go-git/v6"
@@ -86,9 +87,7 @@ func (r Repository) GetFilesChangedInCurrentBranch() (map[string]ChangeType, err
 		if err != nil {
 			return nil, errs.WithEF(err, r.logData.WithField("commit", hash), "Failed to get files changed in commit")
 		}
-		for path, ct := range files {
-			changedFiles[path] = ct
-		}
+		maps.Copy(changedFiles, files)
 	}
 
 	return changedFiles, nil

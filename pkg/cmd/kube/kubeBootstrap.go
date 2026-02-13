@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -424,7 +425,7 @@ func prepareAndApplyFluxHelmRelease(ctx kube.Context, hr flux.HelmRelease, resou
 	}
 
 	actionConfig := new(action.Configuration)
-	if err := actionConfig.Init(settings.RESTClientGetter(), hr.Metadata.Namespace, os.Getenv("HELM_DRIVER"), func(format string, v ...interface{}) {
+	if err := actionConfig.Init(settings.RESTClientGetter(), hr.Metadata.Namespace, os.Getenv("HELM_DRIVER"), func(format string, v ...any) {
 		fmt.Printf(format+"\n", v...)
 	}); err != nil {
 		return errs.WithE(err, "Failed to initialize Helm action configuration")
@@ -449,9 +450,7 @@ func prepareAndApplyFluxHelmRelease(ctx kube.Context, hr flux.HelmRelease, resou
 	if !ok {
 		return errs.With("Processed values are not a map[string]any")
 	}
-	for k, v := range processedValues {
-		vals[k] = v
-	}
+	maps.Copy(vals, processedValues)
 
 	chartPathOptions := &action.ChartPathOptions{
 		RepoURL: repoUrl,
