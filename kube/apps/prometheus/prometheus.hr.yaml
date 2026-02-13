@@ -112,7 +112,7 @@ spec:
           - routing_key: 'R03DITLI3SI4RI4VI5V91KBJ8BBZD3GA' #TODO is this a security hole
             severity: '{{ or .GroupLabels.severity "warning"}}'
             details:
-              env: 'lar'
+              env: ${BCL_GLOBAL_NAME}
               severity: '{{ or .GroupLabels.severity "warning"}}'
               job: '{{ .GroupLabels.job }}'
               namespace: '{{ .GroupLabels.namespace }}'
@@ -346,7 +346,7 @@ spec:
 #                  - '_obs._tcp.h.${BCL_GLOBAL_DOMAIN}.'
 
         externalLabels:
-          kubernetes_cluster: lar
+          kubernetes_cluster: ${BCL_GLOBAL_NAME}
         storageSpec:
           volumeClaimTemplate:
             spec:
