@@ -4,11 +4,4 @@
     "github>becloudless/becloudless//assets/renovate/global.json5",
   ],
 
-  packageRules: [
-      {
-        // bgp needs migration
-        matchDepNames: ["cilium"],
-        enabled: false
-      }
-    ]
 }

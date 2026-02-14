@@ -36,10 +36,6 @@ spec:
 
     ipam:
       mode: kubernetes
-    bgp:
-      enabled: true
-      announce:
-        loadbalancerIP: true
 
     bgpControlPlane:
       enabled: true
