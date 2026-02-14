@@ -306,6 +306,7 @@ in
         apiServer:
           extraArgs:
             advertise-address: 192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}
+            etcd-servers: ${lib.concatMapStringsSep "," (n: "https://192.168.41.${toString config.bcl.role.serverKube.clusterNumber}${toString n}:2379") (lib.genList (n: n + 1) cfg.masterNodeCount)}
             feature-gates: "SidecarContainers=true"
           certSANs:
           - kube.${config.bcl.global.domain} # service name
