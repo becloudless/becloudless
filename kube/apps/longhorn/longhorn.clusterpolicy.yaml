@@ -20,6 +20,7 @@ metadata:
       deployments such that the PATH is explicitly set to support
       NixOS based systems.
 spec:
+  failurePolicy: Fail
   rules:
     - name: add-env-vars
       match:
