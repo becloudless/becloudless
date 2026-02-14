@@ -13,7 +13,7 @@
       home.file.".ssh/config".text = ''
         Host gitea.${config.bcl.global.domain}
           IdentityFile /nix/etc/ssh/ssh_host_ed25519_key
-          ProxyCommand /bin/sh -c "openssl s_client -servername ssh-%h -connect ssh-%h:443"
+          ProxyCommand /bin/sh -c "openssl s_client -servername ssh-%h -connect ssh-%h:443 -quiet -verify_quiet -verify_return_error 2> /dev/null"
       '';
 
       home.packages = with pkgs; [
