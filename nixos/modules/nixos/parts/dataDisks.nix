@@ -14,35 +14,60 @@ let
   }) disks);
   crypttabText = lib.concatStringsSep "\n" (lib.mapAttrsToList (name: path: "${name}  ${path}          none luks") disks);
   hasDataDisks = disks != {};
+  dataTypes = [ "Audio" "Videos" "Images" "Games" "Software" "Caches" ];
   mkMergeData = type: {
     name = "/data/${type}";
     value = {
-      device = "/disks/*/${type}";
+      device = "/var/empty";
       fsType = "fuse.mergerfs";
-      options = [ "rw" "minfreespace=50G" "category.create=msplfs" "noauto" ];
+      options = [ "rw" "minfreespace=50G" "category.create=msplfs" "defaults" "allow_other" "use_ino" "cache.files=partial" "dropcacheonclose=true" "category.create=mfs" ];
     };
   };
-  mergerfsFileSystems = builtins.listToAttrs [
-    (mkMergeData "Audio")
-    (mkMergeData "Videos")
-    (mkMergeData "Images")
-    (mkMergeData "Games")
-    (mkMergeData "Software")
-    (mkMergeData "Caches")
-  ];
-  mountMergerfsService = {
-    systemd.services."mount-mergerfs" = {
+  mergerfsFileSystems = builtins.listToAttrs (map mkMergeData dataTypes);
+  diskNames = lib.attrNames disks;
+  # Generate systemd service to dynamically add disks to mergerfs pools
+  mergerfsUpdateService = {
+    systemd.services."mergerfs-update-pools" = {
       enable = true;
+      description = "Dynamically add disks to mergerfs pools";
       script = ''
-        systemctl start data-Caches.mount
-        systemctl start data-Audio.mount
-        systemctl start data-Videos.mount
-        systemctl start data-Images.mount
-        systemctl start data-Games.mount
-        systemctl start data-Software.mount
+        # Wait a bit to ensure mergerfs mounts are ready
+        sleep 2
+
+        # For each data type, update the mergerfs pool with available disks
+        for dataType in ${lib.concatStringsSep " " dataTypes}; do
+          mountpoint="/data/$dataType"
+          controlFile="$mountpoint/.mergerfs"
+
+          if [ -f "$controlFile" ]; then
+            # Build the list of available disk paths for this data type
+            paths=""
+            for diskName in ${lib.concatStringsSep " " diskNames}; do
+              diskPath="/disks/$diskName/$dataType"
+              if [ -d "$diskPath" ]; then
+                if [ -z "$paths" ]; then
+                  paths="$diskPath"
+                else
+                  paths="$paths:$diskPath"
+                fi
+              fi
+            done
+
+            # Update mergerfs with the new paths if any exist
+            if [ -n "$paths" ]; then
+              echo "Updating $mountpoint with paths: $paths"
+              echo "$paths" > "$controlFile/branches"
+            fi
+          fi
+        done
       '';
-      after = [ "fs-local.target" ];
-      wantedBy = ["multi-user.target"];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+      after = [ "local-fs.target" ] ++ (map (name: "disks-${name}.mount") diskNames);
+      wants = map (name: "disks-${name}.mount") diskNames;
+      wantedBy = [ "multi-user.target" ];
     };
   };
 in {
@@ -71,6 +96,6 @@ in {
     { fileSystems = fileSystemsEntries; }
     (lib.mkIf (crypttabText != "") { environment.etc.crypttab.text = crypttabText + "\n"; })
     (lib.mkIf hasDataDisks { fileSystems = mergerfsFileSystems; })
-    (lib.mkIf hasDataDisks mountMergerfsService)
+    (lib.mkIf hasDataDisks mergerfsUpdateService)
   ];
 }
