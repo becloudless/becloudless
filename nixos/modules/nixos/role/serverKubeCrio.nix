@@ -43,50 +43,50 @@
         };
       };
     in builtins.listToAttrs [
-      (mkRegistry "registry.k8s.io")
-      (mkRegistry "docker.io")
-      (mkRegistry "registry-1.docker.io")
-      (mkRegistry "docker.${config.bcl.global.domain}")
-      (mkRegistry "registry.${config.bcl.global.domain}")
-      (mkRegistry "quay.io")
-      (mkRegistry "ghcr.io")
-      (mkRegistry "tccr.io") # truecharts
-      (mkRegistry "nvcr.io") # nvidia
-      {
-        name = "crio/crio.conf.d/${config.bcl.global.domain}.crio.conf";
-        value = {
-          text = ''
-             [crio.network]
-             plugin_dirs = ["/opt/cni/bin/", "/usr/libexec/cni"]
-
-             [crio.runtime]
-             #conmon_cgroup = "pod"
-             cgroup_manager = "systemd"
-
-             hooks_dir = ["/usr/share/containers/oci/hooks.d"]
-             pids_limit = 2048
-             default_capabilities = [
-             "CHOWN",
-             "DAC_OVERRIDE",
-             "FSETID",
-             "FOWNER",
-             "SETGID",
-             "SETUID",
-             "SETPCAP",
-             "NET_BIND_SERVICE",
-             "KILL",
-             "SYS_CHROOT",
-             ]
-             #default_sysctls = [
-             #      "net.ipv4.ping_group_range = 0   2147483647",
-             #]
-
-             [crio.metrics]
-             enable_metrics = true
-             metrics_port = 9092
-           '';
-        };
-      }
+#      (mkRegistry "registry.k8s.io")
+#      (mkRegistry "docker.io")
+#      (mkRegistry "registry-1.docker.io")
+#      (mkRegistry "docker.${config.bcl.global.domain}")
+#      (mkRegistry "registry.${config.bcl.global.domain}")
+#      (mkRegistry "quay.io")
+#      (mkRegistry "ghcr.io")
+#      (mkRegistry "tccr.io") # truecharts
+#      (mkRegistry "nvcr.io") # nvidia
+#      {
+#        name = "crio/crio.conf.d/${config.bcl.global.domain}.crio.conf";
+#        value = {
+#          text = ''
+#             [crio.network]
+#             plugin_dirs = ["/opt/cni/bin/", "/usr/libexec/cni"]
+#
+#             [crio.runtime]
+#             #conmon_cgroup = "pod"
+#             cgroup_manager = "systemd"
+#
+#             hooks_dir = ["/usr/share/containers/oci/hooks.d"]
+#             pids_limit = 2048
+#             default_capabilities = [
+#             "CHOWN",
+#             "DAC_OVERRIDE",
+#             "FSETID",
+#             "FOWNER",
+#             "SETGID",
+#             "SETUID",
+#             "SETPCAP",
+#             "NET_BIND_SERVICE",
+#             "KILL",
+#             "SYS_CHROOT",
+#             ]
+#             #default_sysctls = [
+#             #      "net.ipv4.ping_group_range = 0   2147483647",
+#             #]
+#
+#             [crio.metrics]
+#             enable_metrics = true
+#             metrics_port = 9092
+#           '';
+#        };
+#      }
       {
         name = "containers/registries.conf.d/unqualified.conf";
         value = {
