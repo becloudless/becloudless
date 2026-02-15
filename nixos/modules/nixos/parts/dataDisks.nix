@@ -1,4 +1,4 @@
-{ lib, config, ... }:
+{ lib, config, pkgs, ... }:
 let
   cfg = config.bcl.dataDisks;
   # Accept attrset with { path, mode } and normalize to maps of paths and modes
@@ -24,6 +24,30 @@ let
     };
   };
   mergerfsFileSystems = builtins.listToAttrs (map mkMergeData dataTypes);
+  dataMergerServices = builtins.listToAttrs (lib.mapAttrsToList (name: _: {
+    name = "data-merger@${name}";
+    value = {
+      description = "Merge data directories from ${name} into mergerfs pools";
+      after = [ "disks-${name}.mount" ];
+      requires = [ "disks-${name}.mount" ];
+      wantedBy = [ "disks-${name}.mount" ];
+      path = with pkgs; [ attr ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+      script = ''
+        DISK_MOUNT=/disks/${name}
+
+        for type in ${lib.concatStringsSep " " dataTypes}; do
+          if [ -d "$DISK_MOUNT/$type" ]; then
+            echo "Adding $DISK_MOUNT/$type to mergerfs"
+            setfattr -n user.mergerfs.branches -v "'+<$DISK_MOUNT/$type=RW'" /data/$type/.mergerfs
+          fi
+        done
+      '';
+    };
+  }) disks);
 in {
   options.bcl.dataDisks = lib.mkOption {
     type = lib.types.attrsOf (lib.types.submodule ({ ... }: {
@@ -47,30 +71,11 @@ in {
   };
 
   config = lib.mkMerge [
+    { fileSystems = fileSystemsEntries; }
     (lib.mkIf (crypttabText != "") { environment.etc.crypttab.text = crypttabText + "\n"; })
-    (lib.mkIf (disks != {}) { fileSystems = mergerfsFileSystems; })
-    {
-      fileSystems = fileSystemsEntries;
-
-      systemd.services."data-merger@" = {
-        enable = true;
-        path = with pkgs; [ gawk util-linux  ];
-        serviceConfig.ExecStart =
-          let
-            script = pkgs.writeScript "data-merger" ''
-              #!${pkgs.runtimeShell}
-
-              DISK_MOUNT=/disks/$1
-
-              for type in ${lib.concatStringsSep " " dataTypes}; do
-                if [ -d "$DISK_MOUNT/$type" ]; then
-                  echo "Adding $DISK_MOUNT/$type to mergerfs"
-                  setfattr -n user.mergerfs.branches -v "'+<$DISK_MOUNT/$type=RW /data/$type/.mergerfs
-                fi
-              done
-            '';
-          in "${script} %i";
-      };
-    }
+    (lib.mkIf (disks != {}) {
+      fileSystems = mergerfsFileSystems;
+      systemd.services = dataMergerServices;
+    })
   ];
 }
