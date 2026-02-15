@@ -1,4 +1,4 @@
-{ lib, config, ... }:
+{ lib, config, pkgs, ... }:
 let
   cfg = config.bcl.dataDisks;
   # Accept attrset with { path, mode } and normalize to maps of paths and modes
@@ -13,38 +13,53 @@ let
     };
   }) disks);
   crypttabText = lib.concatStringsSep "\n" (lib.mapAttrsToList (name: path: "${name}  ${path}          none luks") disks);
-  hasDataDisks = disks != {};
+
+  dataTypes = [ "Backups" "Audio" "Videos" "Images" "Games" "Software" "Caches" ];
   mkMergeData = type: {
     name = "/data/${type}";
     value = {
-      device = "/disks/*/${type}";
+      device = "/var/empty";
       fsType = "fuse.mergerfs";
-      options = [ "rw" "minfreespace=50G" "category.create=msplfs" "noauto" ];
+      options = [ "rw" "minfreespace=50G" "category.create=msplfs" "defaults" "allow_other" ];
     };
   };
-  mergerfsFileSystems = builtins.listToAttrs [
-    (mkMergeData "Audio")
-    (mkMergeData "Videos")
-    (mkMergeData "Images")
-    (mkMergeData "Games")
-    (mkMergeData "Software")
-    (mkMergeData "Caches")
-  ];
-  mountMergerfsService = {
-    systemd.services."mount-mergerfs" = {
-      enable = true;
+  mergerfsFileSystems = builtins.listToAttrs (map mkMergeData dataTypes);
+
+  # Services to add disks to mergerfs when mounted
+  dataMergerServices = builtins.listToAttrs (lib.mapAttrsToList (name: _: {
+    name = "data-merger@${name}";
+    value = {
+      description = "Merge data directories from ${name} into mergerfs pools";
+      after = [ "disks-${name}.mount" ];
+      requires = [ "disks-${name}.mount" ];
+      wantedBy = [ "disks-${name}.mount" ];
+      path = with pkgs; [ attr ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
       script = ''
-        systemctl start data-Caches.mount
-        systemctl start data-Audio.mount
-        systemctl start data-Videos.mount
-        systemctl start data-Images.mount
-        systemctl start data-Games.mount
-        systemctl start data-Software.mount
+        DISK_MOUNT=/disks/${name}
+
+        for type in ${lib.concatStringsSep " " dataTypes}; do
+          if [ -d "$DISK_MOUNT/$type" ]; then
+            echo "Adding $DISK_MOUNT/$type to mergerfs"
+            setfattr -n user.mergerfs.branches -v "'+<$DISK_MOUNT/$type=RW'" /data/$type/.mergerfs
+          fi
+        done
       '';
-      after = [ "fs-local.target" ];
-      wantedBy = ["multi-user.target"];
+      preStop = ''
+        DISK_MOUNT=/disks/${name}
+
+        for type in ${lib.concatStringsSep " " dataTypes}; do
+          if [ -d "$DISK_MOUNT/$type" ]; then
+            echo "Removing $DISK_MOUNT/$type from mergerfs"
+            setfattr -n user.mergerfs.branches -v "'-<$DISK_MOUNT/$type'" /data/$type/.mergerfs
+          fi
+        done
+      '';
     };
-  };
+  }) disks);
 in {
   options.bcl.dataDisks = lib.mkOption {
     type = lib.types.attrsOf (lib.types.submodule ({ ... }: {
@@ -70,7 +85,9 @@ in {
   config = lib.mkMerge [
     { fileSystems = fileSystemsEntries; }
     (lib.mkIf (crypttabText != "") { environment.etc.crypttab.text = crypttabText + "\n"; })
-    (lib.mkIf hasDataDisks { fileSystems = mergerfsFileSystems; })
-    (lib.mkIf hasDataDisks mountMergerfsService)
+    (lib.mkIf (disks != {}) {
+      fileSystems = mergerfsFileSystems;
+      systemd.services = dataMergerServices;
+    })
   ];
 }
