@@ -24,6 +24,8 @@ let
     };
   };
   mergerfsFileSystems = builtins.listToAttrs (map mkMergeData dataTypes);
+
+  # Services to add disks to mergerfs when mounted
   dataMergerServices = builtins.listToAttrs (lib.mapAttrsToList (name: _: {
     name = "data-merger@${name}";
     value = {
@@ -43,6 +45,16 @@ let
           if [ -d "$DISK_MOUNT/$type" ]; then
             echo "Adding $DISK_MOUNT/$type to mergerfs"
             setfattr -n user.mergerfs.branches -v "'+<$DISK_MOUNT/$type=RW'" /data/$type/.mergerfs
+          fi
+        done
+      '';
+      preStop = ''
+        DISK_MOUNT=/disks/${name}
+
+        for type in ${lib.concatStringsSep " " dataTypes}; do
+          if [ -d "$DISK_MOUNT/$type" ]; then
+            echo "Removing $DISK_MOUNT/$type from mergerfs"
+            setfattr -n user.mergerfs.branches -v "'-<$DISK_MOUNT/$type'" /data/$type/.mergerfs
           fi
         done
       '';
