@@ -256,6 +256,10 @@ spec:
                       subtitle: Media player
                       logo: https://static-00.iconduck.com/assets.00/jellyfin-icon-2048x2048-4rlr467k.png
                       url: https://jellyfin.${BCL_GLOBAL_DOMAIN}
+                    - name: Seerr
+                      subtitle: Media discovery
+                      logo:
+                      url: https://seerr.${BCL_GLOBAL_DOMAIN}
 
                 - name: "Applications"
                   icon: "fas fa-heartbeat"

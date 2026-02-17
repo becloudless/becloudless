@@ -127,24 +127,30 @@ spec:
               - prometheus.${BCL_GLOBAL_DOMAIN}
               - fluxwebhook.${BCL_GLOBAL_DOMAIN}
               - rutorrent.${BCL_GLOBAL_DOMAIN}
-            policy: two_factor
+              - seerr.${BCL_GLOBAL_DOMAIN}
             subject:
               - [ 'group:role_admin' ]
+            policy: two_factor
           - domain:
               - jellyfin.${BCL_GLOBAL_DOMAIN}
-            policy: two_factor
             subject:
               - [ 'group:app_jellyfin' ]
+            policy: two_factor
           - domain:
               - gitea.${BCL_GLOBAL_DOMAIN}
-            policy: two_factor
             subject:
               - [ 'group:app_gitea' ]
+            policy: two_factor
           - domain:
               - pushprox.${BCL_GLOBAL_DOMAIN}
-            policy: one_factor
             subject:
               - [ 'group:app_pushprox' ]
+            policy: one_factor
+          - domain:
+              - jellyfin.${BCL_GLOBAL_DOMAIN}
+            subject:
+              - [ 'group:role_service', 'group:app_jellyfin' ]
+            policy: one_factor
           - domain:
               - whoami.${BCL_GLOBAL_DOMAIN}
             policy: one_factor
