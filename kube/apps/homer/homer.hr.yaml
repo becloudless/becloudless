@@ -258,7 +258,7 @@ spec:
                       url: https://jellyfin.${BCL_GLOBAL_DOMAIN}
                     - name: Seerr
                       subtitle: Media discovery
-                      logo:
+                      logo: https://seerr.dev/os_logo_filled.svg
                       url: https://seerr.${BCL_GLOBAL_DOMAIN}
 
                 - name: "Applications"
