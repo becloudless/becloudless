@@ -127,12 +127,12 @@ spec:
               - prometheus.${BCL_GLOBAL_DOMAIN}
               - fluxwebhook.${BCL_GLOBAL_DOMAIN}
               - rutorrent.${BCL_GLOBAL_DOMAIN}
-              - seerr.${BCL_GLOBAL_DOMAIN}
             subject:
               - [ 'group:role_admin' ]
             policy: two_factor
           - domain:
               - jellyfin.${BCL_GLOBAL_DOMAIN}
+              - seerr.${BCL_GLOBAL_DOMAIN}
             subject:
               - [ 'group:app_jellyfin' ]
             policy: two_factor
