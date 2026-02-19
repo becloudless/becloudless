@@ -6,10 +6,16 @@
       nixos-facter
     ];
 
-    # put public keys of all admins to nixos user
-    users.users.nixos.openssh.authorizedKeys.keys =
-      lib.attrValues (lib.mapAttrs (_name: userCfg: userCfg.sshPublicKey)
-        config.bcl.global.admins);
+    # Define the nixos user for the install image
+    # (for iso this is provided by installation-cd-minimal.nix, but raw-efi needs it explicitly)
+    users.users.nixos = {
+      isNormalUser = true;
+      group = "nixos";
+      openssh.authorizedKeys.keys =
+        lib.attrValues (lib.mapAttrs (_name: userCfg: userCfg.sshPublicKey)
+          config.bcl.global.admins);
+    };
+    users.groups.nixos = {};
 
     # this is impure to include ssh host key to iso, without having it in git
     # still it lives in the store, but there is not much secrets behind this private key
