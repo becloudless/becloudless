@@ -33,13 +33,22 @@
         packages = {
           # this package must be declared out of snowfall because it refuse to go outside nixos/ folder
           becloudless = let
-          in channels.nixpkgs.buildGo125Module {
+            pkgs = channels.nixpkgs;
+            # Map Nix system to Go platform (GOOS-GOARCH format)
+            goPlatform = {
+              "x86_64-linux" = "linux-amd64";
+              "aarch64-linux" = "linux-arm64";
+              "i686-linux" = "linux-386";
+              "x86_64-darwin" = "darwin-amd64";
+              "aarch64-darwin" = "darwin-arm64";
+            }.${pkgs.stdenv.hostPlatform.system} or "linux-amd64";
+          in pkgs.buildGo125Module {
             pname = "becloudless";
             version = "0.0.1"; # TODO set the version
             src = ../.;
             vendorHash = "sha256-VKOCzSrL9nLZpaqpO0W9m809DvuRw/18Dill03FVa1g=";
 
-            nativeBuildInputs = [ channels.nixpkgs.pkgs.git ];
+            nativeBuildInputs = [ pkgs.git ];
 
             preBuild = ''
               echo "Pre build"
@@ -53,7 +62,7 @@
 
             installPhase = ''
               mkdir -p $out/bin
-              cp dist/bcl-linux-amd64/bcl $out/bin/bcl
+              cp dist/bcl-${goPlatform}/bcl $out/bin/bcl
             '';
           };
         };
