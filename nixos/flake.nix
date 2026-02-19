@@ -109,6 +109,17 @@
                 system = "aarch64-linux";
                 modules = with bclInputs; [
                   nixos-generators.nixosModules.all-formats
+                  ({ lib, ... }: {
+                    nixpkgs.pkgs = lib.mkForce (import nixpkgs {
+                      localSystem.system = "x86_64-linux";
+                      crossSystem.system = "aarch64-linux";
+                      overlays = [
+                        (final: prev: {
+                          bcl = self.packages.${final.stdenv.hostPlatform.system} or {};
+                        })
+                      ];
+                    });
+                  })
                 ];
               };
               iso = {
