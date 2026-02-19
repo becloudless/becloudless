@@ -5,7 +5,7 @@ go 1.25.0
 toolchain go1.26.0
 
 require (
-	github.com/Mic92/ssh-to-age v0.0.0-20260119051422-3d2879496788
+	github.com/Mic92/ssh-to-age v0.0.0-20260216045429-bd4106f3ef5d
 	github.com/atombender/go-jsonschema v0.22.0
 	github.com/awnumar/memguard v0.23.0
 	github.com/charmbracelet/huh v0.8.0
