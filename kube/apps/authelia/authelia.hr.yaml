@@ -147,11 +147,6 @@ spec:
               - [ 'group:app_pushprox' ]
             policy: one_factor
           - domain:
-              - jellyfin.${BCL_GLOBAL_DOMAIN}
-            subject:
-              - [ 'group:role_service', 'group:app_jellyfin' ]
-            policy: one_factor
-          - domain:
               - whoami.${BCL_GLOBAL_DOMAIN}
             policy: one_factor
 
