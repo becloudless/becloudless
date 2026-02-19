@@ -2,6 +2,8 @@ package nixos
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/becloudless/becloudless/pkg/bcl"
 	"github.com/becloudless/becloudless/pkg/security"
@@ -16,10 +18,10 @@ import (
 
 // This matches the path used in the nixos install process
 const InstallHostKeyTmpPath = "/tmp/install-ssh_host_ed25519_key"
-const BuiltIsoFileNixosPath = "/result/iso/bcl.iso"
 
 func nixosIsoCmd() *cobra.Command {
 	var device string
+	var typeAndSystem string
 	var rebuild bool
 
 	sudoPassword := memguarded.NewService()
@@ -34,7 +36,19 @@ func nixosIsoCmd() *cobra.Command {
 				return errs.WithE(err, "Failed to open current infra repository")
 			}
 
-			isoPath := infra.GetNixosDir() + BuiltIsoFileNixosPath
+			//nix eval --json ".#isoConfigurations" --apply 'x: builtins.attrNames x'
+
+			var isoPath string
+			typeAndSystemArray := strings.SplitN(typeAndSystem, "/", 2)
+			if len(typeAndSystemArray) != 2 {
+				return errs.WithF(data.WithField("system", typeAndSystem), "Invalid system type, expected format kind/system, e.g. iso/install or raw-efi/host")
+			}
+			switch typeAndSystemArray[0] {
+			case "iso":
+				isoPath = infra.GetNixosDir() + "/result/iso/bcl.iso"
+			case "raw-efi":
+				isoPath = infra.GetNixosDir() + "/result/nixos.img"
+			}
 			_, err = os.Stat(isoPath)
 			if err != nil || rebuild {
 
@@ -65,7 +79,25 @@ func nixosIsoCmd() *cobra.Command {
 				}()
 
 				logs.WithField("group", "install").Info("Building iso")
-				if err := run.ExecCmd("nix", "build", infra.GetNixosDir()+"#isoConfigurations.iso", "--impure"); err != nil {
+
+				// raw-efi is building the img on TMPDIR, which may be too small, using current folder
+				dir, err := os.Getwd()
+				if err != nil {
+					return errs.WithE(err, "Failed to get current working directory")
+				}
+				currentTmp := filepath.Join(dir, "build_tmp")
+				if err := os.MkdirAll(currentTmp, 0777); err != nil {
+					return errs.WithE(err, "Failed to create temporary build directory")
+				}
+				if err := os.Setenv("TMPDIR", currentTmp); err != nil {
+					return errs.WithE(err, "Failed to set TMPDIR environment variable")
+				}
+				defer func() {
+					if err := os.RemoveAll(currentTmp); err != nil {
+						logs.WithE(err).WithField("dir", currentTmp).Error("Failed to remove temporary build directory")
+					}
+				}()
+				if err := run.ExecCmd("nix", "build", infra.GetNixosDir()+"#"+typeAndSystemArray[0]+"Configurations."+typeAndSystemArray[1], "--impure"); err != nil {
 					return errs.WithE(err, "Iso build failed")
 				}
 			}
@@ -94,10 +126,15 @@ func nixosIsoCmd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVarP(&typeAndSystem, "system", "s", "iso/install", "kind and target system configuration name")
 	cmd.Flags().StringVarP(&device, "device", "d", "", "Target device to write the iso to")
 	cmd.Flags().BoolVarP(&rebuild, "rebuild", "r", false, "Rebuild iso even if file is already available")
 
 	withSudoPasswordFlag(cmd, sudoPassword)
 
 	return cmd
+}
+
+func findSystemKind() {
+
 }
