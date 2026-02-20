@@ -115,7 +115,34 @@
                       crossSystem.system = "aarch64-linux";
                       overlays = [
                         (final: prev: {
-                          bcl = self.packages.${final.stdenv.hostPlatform.system} or {};
+                          bcl = {
+                            becloudless = final.buildPackages.buildGo125Module {
+                              pname = "becloudless";
+                              version = "0.0.1";
+                              src = ../.;
+                              vendorHash = "sha256-MZ3ocRax0ZAYp89r0I+fZfdzpwzqtGmdjk7cIl436Ao=";
+                              nativeBuildInputs = [ final.buildPackages.git ];
+
+                              preBuild = ''
+                                echo "Pre build"
+                                ./gomake build -p
+                              '';
+                              buildPhase = ''
+                                runHook preBuild
+                                echo "Cross-compiling for aarch64"
+                                version="$(./gomake version -H ${revision})"
+                                CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build \
+                                  -ldflags "-s -w -X main.Version=$version" \
+                                  -o dist/bcl-linux-arm64/bcl \
+                                  ./
+                                runHook postBuild
+                              '';
+                              installPhase = ''
+                                mkdir -p $out/bin
+                                cp dist/bcl-linux-arm64/bcl $out/bin/bcl
+                              '';
+                            };
+                          };
                         })
                       ];
                     });
