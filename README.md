@@ -5,6 +5,11 @@ Build and maintain your own infrastructure easily, from zero to enterprise level
 
 BeCloudLess only do, with an opinionated architecture, the glue between awesome free and open source software, to make what can be (seen as) a complex infrastructure, a dead simple stack to use.
 
+# Project status
+
+BeCloudLess is in early development.
+It's used in production by the author, but the architecture is not stable yet and breaking changes can occur anytime.
+Stable architecture and self migration is only planned for V1.
 
 # Key concept
 
