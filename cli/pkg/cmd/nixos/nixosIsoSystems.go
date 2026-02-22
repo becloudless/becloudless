@@ -10,8 +10,9 @@ import (
 
 func nixosIsoSystemsCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "systems",
-		Short: "List available iso/raw-efi system configurations",
+		Use:     "systems",
+		Aliases: []string{"system"},
+		Short:   "List available systems",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			infra, err := bcl.FindInfraFromPath(".")
 			if err != nil {
