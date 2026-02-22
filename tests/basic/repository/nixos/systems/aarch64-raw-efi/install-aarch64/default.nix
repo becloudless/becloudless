@@ -1,7 +1,12 @@
 { modulesPath, ... }:
+let
+  unstable = inputs.nixpkgs-unstable.legacyPackages.${pkgs.system};
+in
 {
   imports = [ "${modulesPath}/installer/cd-dvd/installation-cd-minimal.nix" ];
   bcl.role.name = "install";
+
+  boot.kernelPackages = unstable.linuxPackages_latest;
 
   boot.kernelParams = [
     "rootwait"
