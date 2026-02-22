@@ -135,11 +135,11 @@ validate-test-tv() {
 	ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ../secrets/ed25519 -p 10022 toto@127.0.0.1 pidof jellyfin-desktop
 }
 
-#(cd ./tests/basic/repository && installHost "test-tv" \
-#	"7d5e9855-0cba-4c41-b45e-cdff7a9514d9" \
-#	13G \
-#	3G \
-#	validate-test-tv)
+(cd ./tests/basic/repository && installHost "test-tv" \
+	"7d5e9855-0cba-4c41-b45e-cdff7a9514d9" \
+	13G \
+	3G \
+	validate-test-tv)
 
 
 
