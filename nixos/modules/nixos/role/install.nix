@@ -10,19 +10,13 @@ in {
         nixos-facter
       ];
 
-      # Define the nixos user for the install image
-      # (for iso this is provided by installation-cd-minimal.nix, but raw-efi needs it explicitly)
-      users.users.nixos = {
-        isNormalUser = true;
-        group = "nixos";
-        openssh.authorizedKeys.keys =
-          lib.attrValues (lib.mapAttrs (_name: userCfg: userCfg.sshPublicKey)
-            config.bcl.global.admins);
-      };
-      users.groups.nixos = {};
+      # Add admin SSH keys to the nixos user created by install-iso.nix
+      users.users.nixos.openssh.authorizedKeys.keys =
+        lib.attrValues (lib.mapAttrs (_name: userCfg: userCfg.sshPublicKey)
+          config.bcl.global.admins);
 
-      # this is impure to include ssh host key to iso, without having it in git
-      # still it lives in the store, but there is not much secrets behind this private key
+      # This is impure: include ssh host key in the iso without storing it in git.
+      # It still lives in the store, but there is not much secret behind this private key.
       environment.etc."ssh/ssh_host_ed25519_key" = {
         mode = "0600";
         source = "${/tmp/install-ssh_host_ed25519_key}";
@@ -34,7 +28,7 @@ in {
         }
       ];
 
-      # give time to dhcp to get IP, so it will be display
+      # Give time to dhcp to get IP, so it will be displayed
       services.getty.extraArgs = [ "--delay=10" ];
       environment.etc."issue.d/ip.issue".text = "\\4\n";
       networking.dhcpcd.runHook = "${pkgs.utillinux}/bin/agetty --reload";
@@ -42,7 +36,6 @@ in {
 
     (lib.mkIf isInstall (lib.optionalAttrs hasImageBaseName {
       image.baseName = lib.mkForce "bcl";
-      isoImage.squashfsCompression = "gzip -Xcompression-level 1";
       isoImage.volumeID = lib.mkForce "bcl-iso";
     }))
   ];

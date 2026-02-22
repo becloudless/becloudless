@@ -6,6 +6,7 @@ in {
 
   imports = [
     ./install.nix
+    ./install-iso.nix
     ./popKube.nix
     ./serverKube.nix
     ./serverKubeCerts.nix
