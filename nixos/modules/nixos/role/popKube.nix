@@ -38,7 +38,7 @@ in
         openssh
         openssl
         kubectl
-        bcl.becloudless
+#        bcl.becloudless
       ];
       serviceConfig = {
         Type = "oneshot";
