@@ -6,6 +6,12 @@ in
   imports = [ "${modulesPath}/installer/cd-dvd/installation-cd-minimal.nix" ];
   bcl.role.name = "install";
 
+  nixpkgs.overlays = [(final: super: {
+    zfs = super.zfs.overrideAttrs(_: {
+      meta.platforms = [];
+    });
+  })];
+
   boot.kernelPackages = unstable.linuxPackages_latest;
 
   boot.kernelParams = [
