@@ -27,7 +27,9 @@ in {
 
   # TODO move that somewhere else
   imports = lib.filter
-              (n: !lib.strings.hasSuffix "default.nix" n && lib.strings.hasSuffix ".nix" n)
+              (n: !lib.strings.hasSuffix "default.nix" n
+               && !lib.strings.hasInfix "/role/" n
+               && lib.strings.hasSuffix ".nix" n)
               (lib.filesystem.listFilesRecursive ../.);
 
   config = lib.mkIf cfg.enable {

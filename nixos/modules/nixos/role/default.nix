@@ -4,6 +4,17 @@ let
   revision = let self = inputs.self; in self.shortRev or self.dirtyShortRev or self.lastModified or "unknown";
 in {
 
+  imports = [
+    ./install.nix
+    ./popKube.nix
+    ./serverKube.nix
+    ./serverKubeCerts.nix
+    ./serverKubeCrio.nix
+    ./serverKubeHap.nix
+    ./tv.nix
+    ./workstation.nix
+  ];
+
   options.bcl.role = {
     name = lib.mkOption {
       type = lib.types.str;

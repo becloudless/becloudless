@@ -1,9 +1,10 @@
 { config, lib, pkgs, options, ... }:
 let
   isInstall = config.bcl.role.name == "install";
+  hasImageBaseName = options ? image && options.image ? baseName;
 in {
-  config = lib.mkIf isInstall (
-    {
+  config = lib.mkMerge [
+    (lib.mkIf isInstall {
       bcl.wifi.enable = true;
       environment.systemPackages = with pkgs; [
         nixos-facter
@@ -37,14 +38,12 @@ in {
       services.getty.extraArgs = [ "--delay=10" ];
       environment.etc."issue.d/ip.issue".text = "\\4\n";
       networking.dhcpcd.runHook = "${pkgs.utillinux}/bin/agetty --reload";
-    }
-    // lib.optionalAttrs (options ? image && options.image ? baseName) {
+    })
+
+    (lib.mkIf isInstall (lib.optionalAttrs hasImageBaseName {
       image.baseName = lib.mkForce "bcl";
       isoImage.squashfsCompression = "gzip -Xcompression-level 1";
       isoImage.volumeID = lib.mkForce "bcl-iso";
-
-#    "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
-##            "${nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
-    }
-  );
+    }))
+  ];
 }
