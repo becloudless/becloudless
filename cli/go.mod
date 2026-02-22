@@ -27,7 +27,7 @@ require (
 	golang.org/x/lint v0.0.0-20241112194109-818c5a804067
 	golang.org/x/term v0.40.0
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.20.0
+	helm.sh/helm/v4 v4.1.1
 )
 
 require (
