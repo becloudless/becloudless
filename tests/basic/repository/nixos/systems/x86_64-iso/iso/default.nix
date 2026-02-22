@@ -1,3 +1,0 @@
-{
-  bcl.role.name = "install";
-}
