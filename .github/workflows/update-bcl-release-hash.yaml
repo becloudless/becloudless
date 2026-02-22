@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Auto Update BCL Hashes
+on:
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - "nixos/packages/bcl/default.nix"
+
+jobs:
+  update-bcl-hashes:
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Create GitHub App Token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        id: github-app-token
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.ref_name }}
+          token: ${{ steps.github-app-token.outputs.token }}
+
+      - uses: cachix/install-nix-action@2126ae7fc54c9df00dd18f7f18754393182c73cd # v31.9.1
+        with:
+          nix_path: nixpkgs=channel:nixos-25.05
+
+      - name: Update hashes
+        run: |
+          set -euo pipefail
+          FILE="nixos/packages/bcl/default.nix"
+          VERSION="$(grep -E '^\s+version = ' "$FILE" | sed 's/.*"\(.*\)".*/\1/')"
+          echo "version=$VERSION"
+
+          for platform in linux-amd64 linux-arm64 darwin-amd64 darwin-arm64; do
+            url="https://github.com/becloudless/becloudless/releases/download/cli-v${VERSION}/bcl-${platform}.tar.gz"
+            hash="$(nix store prefetch-file --hash-type sha256 --json "$url" | jq -r .hash)"
+            echo "platform=$platform hash=$hash"
+            sed -i "s|\"${platform}\"  *=.*|\"${platform}\" = \"${hash}\";|" "$FILE"
+          done
+
+      - uses: iarekylew00t/verified-bot-commit@5b66c3d7b0a381748190f41c71bf3ff8128e8e76 # v2.1.4
+        with:
+          ref: ${{ github.ref_name }}
+          token: ${{ steps.github-app-token.outputs.token }}
+          message: "Auto Update BCL Hashes"
+          files: |
+            nixos/packages/bcl/default.nix
+
