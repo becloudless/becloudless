@@ -71,13 +71,17 @@ installHost() {
 
 ###########
 
-echo_brightred "## Building bcl"
-./cli/gomake build
-BCL_BIN="./cli/dist/bcl-*/bcl"
-
-#echo_brightred "## Building bcl"
-#(cd nixos && nix build .#becloudless)
-#BCL_BIN="$PWD/nixos/result/bin/bcl"
+if compgen -G "./cli/dist/bcl-*/bcl" > /dev/null 2>&1; then
+	echo_brightred "## Using local bcl build"
+	BCL_BIN="$(compgen -G "./cli/dist/bcl-*/bcl" | head -1)"
+else
+	echo_brightred "## Downloading bcl from GitHub release"
+	VERSION="$(grep -E '^\s+version = ' nixos/packages/bcl/default.nix | sed 's/.*"\(.*\)".*/\1/')"
+	mkdir -p ./work
+	curl -fsSL "https://github.com/becloudless/becloudless/releases/download/cli-v${VERSION}/bcl-linux-amd64.tar.gz" \
+		| tar -xz -C ./work
+	BCL_BIN="./work/bcl-linux-amd64/bcl"
+fi
 
 echo_brightred "## Check flake"
 (cd tests/basic/repository/nixos && nix flake update && nix flake check)
