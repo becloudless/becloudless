@@ -16,13 +16,26 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check for changes in dockerfiles
+        id: changes
+        run: |
+          mainHash=$(git rev-parse origin/main)
+          if git diff --name-only $mainHash ${{ github.sha }} | grep -Eq '^dockerfiles/'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up QEMU
+        if: steps.changes.outputs.changed == 'true'
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
 
       - name: Set up Docker Buildx
+        if: steps.changes.outputs.changed == 'true'
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       - name: Login to Docker Hub
+        if: steps.changes.outputs.changed == 'true'
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
@@ -30,6 +43,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download bcl
+        if: steps.changes.outputs.changed == 'true'
         run: |
           VERSION="$(grep -E '^\s+version = ' nixos/packages/bcl/default.nix | sed 's/.*"\(.*\)".*/\1/')"
           mkdir -p cli/dist
@@ -38,4 +52,5 @@ jobs:
           chmod +x cli/dist/bcl-linux-amd64/bcl
 
       - name: Build/Push image
+        if: steps.changes.outputs.changed == 'true'
         run: cli/dist/bcl-linux-amd64/bcl ci docker -L trace
