@@ -1,4 +1,4 @@
-{ modulesPath, inputs, ... }:
+{ modulesPath, inputs, pkgs, ... }:
 let
   unstable = inputs.nixpkgs-unstable.legacyPackages.${pkgs.system};
 in
