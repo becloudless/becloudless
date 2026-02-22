@@ -45,24 +45,24 @@
           in pkgs.buildGo125Module {
             pname = "becloudless";
             version = "0.0.1"; # TODO set the version
-            src = ../.;
+            src = ../cli;
             vendorHash = "sha256-MZ3ocRax0ZAYp89r0I+fZfdzpwzqtGmdjk7cIl436Ao=";
 
             nativeBuildInputs = [ pkgs.git ];
 
             preBuild = ''
               echo "Pre build"
-              ./gomake build -p
+              # ./gomake build -p
             '';
 
             buildPhase = ''
               echo "Build"
-              ./gomake build -v "$(./gomake version -H ${revision})"
+              # ./gomake build -v "$(./gomake version -H ${revision})"
             '';
 
             installPhase = ''
               mkdir -p $out/bin
-              cp dist/bcl-${goPlatform}/bcl $out/bin/bcl
+              # cp dist/bcl-${goPlatform}/bcl $out/bin/bcl
             '';
           };
         };

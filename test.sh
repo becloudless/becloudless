@@ -71,13 +71,13 @@ installHost() {
 
 ###########
 
-#echo_brightred "## Building bcl"
-#./gomake build
-#BCL_BIN="./dist/bcl-*/bcl"
-
 echo_brightred "## Building bcl"
-(cd nixos && nix build .#becloudless)
-BCL_BIN="$PWD/nixos/result/bin/bcl"
+./gomake build
+BCL_BIN="./dist/bcl-*/bcl"
+
+#echo_brightred "## Building bcl"
+#(cd nixos && nix build .#becloudless)
+#BCL_BIN="$PWD/nixos/result/bin/bcl"
 
 echo_brightred "## Check flake"
 (cd tests/basic/repository/nixos && nix flake update && nix flake check)
