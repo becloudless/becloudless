@@ -11,7 +11,7 @@
 { config, lib, options, ... }:
 let
   isInstall = config.bcl.role.name == "install";
-  hasIsoImage = options ? isoImage;
+  hasIsoImage = options ? isoImage && options.isoImage ? makeBootable;
 in {
   config = lib.mkIf isInstall (
     {
