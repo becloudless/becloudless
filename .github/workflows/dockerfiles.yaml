@@ -29,7 +29,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build/Push image
+      - name: Download bcl
         run: |
-          cli/gomake build
-          cli/dist/bcl-linux-amd64/bcl ci docker -L trace
+          VERSION="$(grep -E '^\s+version = ' nixos/packages/bcl/default.nix | sed 's/.*"\(.*\)".*/\1/')"
+          mkdir -p cli/dist
+          curl -fsSL "https://github.com/becloudless/becloudless/releases/download/cli-v${VERSION}/bcl-linux-amd64.tar.gz" \
+            | tar -xz -C cli/dist
+          chmod +x cli/dist/bcl-linux-amd64/bcl
+
+      - name: Build/Push image
+        run: cli/dist/bcl-linux-amd64/bcl ci docker -L trace
