@@ -31,4 +31,4 @@ jobs:
         if: github.ref == 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gomake release
+        run: ./gomake release -p cli-
