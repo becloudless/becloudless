@@ -46,10 +46,9 @@ jobs:
             exit 0
           fi
 
-          main_sha="$(git rev-parse origin/main)"
-          tag_sha="$(git rev-parse "${latest_tag}")"
+          changed_files="$(git diff --name-only "${latest_tag}" origin/main -- ':!cli/')"
 
-          if [[ "${main_sha}" != "${tag_sha}" ]]; then
+          if [[ -n "${changed_files}" ]]; then
             echo "main has changes since ${latest_tag}"
             echo "should_release=true" >> "$GITHUB_OUTPUT"
           else

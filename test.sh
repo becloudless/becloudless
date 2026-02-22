@@ -72,8 +72,8 @@ installHost() {
 ###########
 
 echo_brightred "## Building bcl"
-./gomake build
-BCL_BIN="./dist/bcl-*/bcl"
+./cli/gomake build
+BCL_BIN="./cli/dist/bcl-*/bcl"
 
 #echo_brightred "## Building bcl"
 #(cd nixos && nix build .#becloudless)
