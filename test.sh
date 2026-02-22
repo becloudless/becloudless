@@ -80,7 +80,7 @@ else
 	mkdir -p ./work
 	curl -fsSL "https://github.com/becloudless/becloudless/releases/download/cli-v${VERSION}/bcl-linux-amd64.tar.gz" \
 		| tar -xz -C ./work
-	BCL_BIN="./work/bcl-linux-amd64/bcl"
+	BCL_BIN="$PWD/work/bcl-linux-amd64/bcl"
 fi
 
 echo_brightred "## Check flake"
