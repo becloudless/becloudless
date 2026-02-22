@@ -1,0 +1,9 @@
+# gomake build
+dist
+dist-tools
+
+# manual go build
+./becloudless
+
+# Generated go source files
+pkg/generated
