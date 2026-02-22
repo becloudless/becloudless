@@ -5,7 +5,7 @@ in
 {
   config = lib.mkIf (config.bcl.role.name != "") {
     environment.systemPackages = with pkgs; [
-#      bcl.becloudless
+      bcl.bcl
       pciutils usbutils
       cryptsetup
       ethtool socat conntrack-tools iputils iproute2
