@@ -25,7 +25,7 @@ jobs:
         run: |
           set -x 
           mainHash=$(git rev-parse origin/main)          
-          if git diff --name-only $mainHash ${{ github.sha }} | grep -Eq '^(nixos/|pkg/|tests/)'; then
+          if git diff --name-only $mainHash ${{ github.sha }} | grep -Eq '^(nixos/|tests/|test.sh)'; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "changed=false" >> $GITHUB_OUTPUT

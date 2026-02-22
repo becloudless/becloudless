@@ -80,7 +80,7 @@ else
 	mkdir -p ./work
 	curl -fsSL "https://github.com/becloudless/becloudless/releases/download/cli-v${VERSION}/bcl-linux-amd64.tar.gz" \
 		| tar -xz -C ./work
-	BCL_BIN="./work/bcl-linux-amd64/bcl"
+	BCL_BIN="$PWD/work/bcl-linux-amd64/bcl"
 fi
 
 echo_brightred "## Check flake"
@@ -135,11 +135,11 @@ validate-test-tv() {
 	ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ../secrets/ed25519 -p 10022 toto@127.0.0.1 pidof jellyfin-desktop
 }
 
-#(cd ./tests/basic/repository && installHost "test-tv" \
-#	"7d5e9855-0cba-4c41-b45e-cdff7a9514d9" \
-#	13G \
-#	3G \
-#	validate-test-tv)
+(cd ./tests/basic/repository && installHost "test-tv" \
+	"7d5e9855-0cba-4c41-b45e-cdff7a9514d9" \
+	13G \
+	3G \
+	validate-test-tv)
 
 
 
