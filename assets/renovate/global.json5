@@ -43,6 +43,13 @@
 
   regexManagers: [
     {
+      description: "Update versions annotated with # renovate: in .nix files",
+      fileMatch: [".+\\.nix$"],
+      matchStrings: [
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>.+?)( extractVersion=(?<extractVersion>.+?))?( versioning=(?<versioning>.+?))?\\s+\\w+ = \"(?<currentValue>.+?)\";"
+      ],
+    },
+    {
       description: "Docker image and tag classic helm values declaration",
       fileMatch: [".+\\.yaml$"],
       matchStrings: [
