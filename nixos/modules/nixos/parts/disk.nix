@@ -138,7 +138,7 @@ in {
             type = "disk";
             device = device;
             content = diskContent;
-            postCreateHook = lib.mkIf cfg.uBootPackage ''
+            postCreateHook = lib.mkIf cfg.uBootPackage != null ''
               echo "Writing u-boot to ${device}"
               ${pkgs.coreutils}/bin/dd if=${uBootPackage}/idbloader.img of=${device} seek=64    conv=fsync,notrunc
               ${pkgs.coreutils}/bin/dd if=${uBootPackage}/u-boot.itb    of=${device} seek=16384 conv=fsync,notrunc

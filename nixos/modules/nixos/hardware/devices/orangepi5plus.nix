@@ -44,6 +44,9 @@
           "input_leds"
         ];
       };
+
+      # kernel version support. unstable is still required at least till 7.0
+      # https://gitlab.collabora.com/hardware-enablement/rockchip-3588/notes-for-rockchip-3588/-/blob/main/mainline-status.md
       kernelPackages = unstable.linuxPackages_latest;
       kernelParams = [
         "rootwait"
