@@ -6,7 +6,7 @@
   config = lib.mkIf (config.bcl.hardware.device == "orangepi5plus") {
 
     bcl.boot.loader = "uboot";
-    bcl.disk.uBootPackage = pkgs.ubootOrangePi5Plus;
+    bcl.disk.ubootPackage = pkgs.ubootOrangePi5Plus;
 
     hardware = {
       firmware = [ unstable.linux-firmware ];

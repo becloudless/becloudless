@@ -20,7 +20,7 @@ in {
       type = with lib.types; listOf str;
       default = [ ];
     };
-    uBootPackage = lib.mkOption {
+    ubootPackage = lib.mkOption {
       type = with lib.types; nullOr package;
       default = null;
       description = "U-Boot package to flash to the beginning of the disk (before partitions).";
@@ -138,10 +138,10 @@ in {
             type = "disk";
             device = device;
             content = diskContent;
-            postCreateHook = lib.mkIf (cfg.uBootPackage != null) ''
+            postCreateHook = lib.mkIf (cfg.ubootPackage != null) ''
               echo "Writing u-boot to ${device}"
-              ${pkgs.coreutils}/bin/dd if=${uBootPackage}/idbloader.img of=${device} seek=64    conv=fsync,notrunc
-              ${pkgs.coreutils}/bin/dd if=${uBootPackage}/u-boot.itb    of=${device} seek=16384 conv=fsync,notrunc
+              ${pkgs.coreutils}/bin/dd if=${cfg.ubootPackage}/idbloader.img of=${device} seek=64    conv=fsync,notrunc
+              ${pkgs.coreutils}/bin/dd if=${cfg.ubootPackage}/u-boot.itb    of=${device} seek=16384 conv=fsync,notrunc
             '';
           };
         };
