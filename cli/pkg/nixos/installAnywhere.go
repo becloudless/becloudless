@@ -13,6 +13,7 @@ import (
 	"github.com/becloudless/becloudless/pkg/system"
 	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/becloudless/becloudless/pkg/utils"
+	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"gopkg.in/yaml.v3"
@@ -55,6 +56,10 @@ func InstallAnywhere(sshConfig *runner.SshConnectionConfig, diskPassword string)
 	systemName, err := findSystem(infra, localRunner, info)
 	if err != nil {
 		return errs.WithE(err, "Fail during process to find the system to install")
+	}
+
+	if systemName == "" {
+		return errs.WithF(data.WithField("info", info), "Cannot find matching system to install")
 	}
 	//var systemConfig SystemConfig
 	//systemParentFolder := path.Join(infra.GetNixosDir(), "systems", "x86_64-linux")
@@ -146,6 +151,11 @@ func InstallAnywhere(sshConfig *runner.SshConnectionConfig, diskPassword string)
 func prepareHostSshKeys(repo *bcl.Infra, temp string, systemName string) error {
 	localRunner := runner.NewLocalRunner()
 
+	sshHostFolder := path.Join(temp, "fs", "nix", "etc", "ssh")
+	if err := os.MkdirAll(sshHostFolder, 0755); err != nil {
+		return errs.WithE(err, "Failed to create ssh host folder")
+	}
+
 	groupName, err := localRunner.ExecCmdGetStdout(
 		"nix",
 		"--extra-experimental-features", "nix-command flakes",
@@ -153,6 +163,11 @@ func prepareHostSshKeys(repo *bcl.Infra, temp string, systemName string) error {
 		"--raw")
 	if err != nil {
 		return errs.WithE(err, "Failed to find group name of system")
+	}
+
+	if groupName == "" {
+		logs.WithField("name", systemName).Warn("System does not have a group, skipping ssh host key preparation")
+		return nil
 	}
 
 	logs.WithField("system", systemName).WithField("group", groupName).Info("Extracting host ssh key for group")
@@ -173,11 +188,6 @@ func prepareHostSshKeys(repo *bcl.Infra, temp string, systemName string) error {
 	secretFile := GroupSecretFile{}
 	if err := yaml.Unmarshal(stdout.Bytes(), &secretFile); err != nil {
 		return errs.WithE(err, "Failed to unmarshal group secret file")
-	}
-
-	sshHostFolder := path.Join(temp, "fs", "nix", "etc", "ssh")
-	if err := os.MkdirAll(sshHostFolder, 0755); err != nil {
-		return errs.WithE(err, "Failed to create ssh host folder")
 	}
 
 	sshHostKeyFile := path.Join(sshHostFolder, "ssh_host_ed25519_key")

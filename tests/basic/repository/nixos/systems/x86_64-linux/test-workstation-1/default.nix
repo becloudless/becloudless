@@ -1,1 +1,17 @@
-{ inputs, ... }: inputs.yaml.lib.fromYaml ./default.yaml // { facter.reportPath = ./facter.json; }
+{ ... }: {
+  bcl = {
+    boot = {
+      loader = "bios";
+      ssh = true; # for testing only
+    };
+    system = {
+      enable = true;
+      group = "test-workstation";
+      ids = "motherboardUuid=c9b0fb14-1949-6949-9711-63409d2f9cfe";
+      devices = [ "/dev/sda" ];
+    };
+  };
+
+  # TODO this should be provided by facter
+  boot.initrd.kernelModules = [ "e1000" ];
+}
