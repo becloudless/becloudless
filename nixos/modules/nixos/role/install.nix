@@ -39,9 +39,9 @@ in {
       networking.dhcpcd.runHook = "${pkgs.utillinux}/bin/agetty --reload";
     }
     // lib.optionalAttrs (options ? image && options.image ? baseName) {
-      image.baseName = lib.mkForce "bcl";
-      isoImage.squashfsCompression = "gzip -Xcompression-level 1";
-      isoImage.volumeID = lib.mkForce "bcl-iso";
+#      image.baseName = lib.mkForce "bcl";
+#      isoImage.squashfsCompression = "gzip -Xcompression-level 1";
+#      isoImage.volumeID = lib.mkForce "bcl-iso";
 
 #    "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
 ##            "${nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
