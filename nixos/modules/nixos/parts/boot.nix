@@ -60,13 +60,15 @@ in {
           enable = true;
           configurationLimit = 10;
         };
-        grub = lib.mkIf (cfg.loader == "bios" || (cfg.loader == "efi" && (builtins.length config.bcl.disk.devices) > 1)) {
+        grub = if (cfg.loader == "bios" || (cfg.loader == "efi" && (builtins.length config.bcl.disk.devices) > 1)) then {
           enable = true;
           efiSupport = cfg.loader == "efi";
           efiInstallAsRemovable = lib.mkIf (cfg.loader == "efi") ((builtins.length config.bcl.disk.devices) > 1); # required to install on multiple disks
           configurationLimit = 10;
 #          device = "nodev";
 #          theme = "${pkgs.grub-cyberexs}/share/grub/themes/CyberEXS";
+        } else {
+          enable = false;
         };
         generic-extlinux-compatible = lib.mkIf (cfg.loader == "uboot") {
           enable = true;
