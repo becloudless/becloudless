@@ -18,9 +18,10 @@ in {
       description = ''Private key for initrd SSH server.'';
 #      default = lib.mkIf cfg.ssh "";
     };
-    efi = lib.mkOption {
-       type = lib.types.bool;
-       default = true;
+    loader = lib.mkOption {
+      type = lib.types.enum [ "efi" "bios" "uboot" ];
+      default = "efi";
+      description = ''Boot loader type: "efi" for systemd-boot/grub with EFI, "bios" for legacy BIOS with grub, "uboot" for generic-extlinux-compatible (ARM boards).'';
     };
     configurationLimit = lib.mkOption {
       default = 42;
@@ -55,19 +56,23 @@ in {
         [];
       loader = {
         timeout = lib.mkForce (if cfg.quiet then 0 else 1);
-        systemd-boot = lib.mkIf (cfg.efi && (builtins.length config.bcl.disk.devices) == 1) {
+        systemd-boot = lib.mkIf (cfg.loader == "efi" && (builtins.length config.bcl.disk.devices) == 1) {
           enable = true;
           configurationLimit = 10;
         };
-        grub = lib.mkIf (!cfg.efi || (builtins.length config.bcl.disk.devices) > 1) {
+        grub = lib.mkIf (cfg.loader == "bios" || (cfg.loader == "efi" && (builtins.length config.bcl.disk.devices) > 1)) {
           enable = true;
-          efiSupport = cfg.efi;
-          efiInstallAsRemovable = lib.mkIf cfg.efi ((builtins.length config.bcl.disk.devices) > 1); # required to install on multiple disks
+          efiSupport = cfg.loader == "efi";
+          efiInstallAsRemovable = lib.mkIf (cfg.loader == "efi") ((builtins.length config.bcl.disk.devices) > 1); # required to install on multiple disks
           configurationLimit = 10;
 #          device = "nodev";
 #          theme = "${pkgs.grub-cyberexs}/share/grub/themes/CyberEXS";
         };
-        efi.canTouchEfiVariables = (builtins.length config.bcl.disk.devices) <= 1;
+        generic-extlinux-compatible = lib.mkIf (cfg.loader == "uboot") {
+          enable = true;
+          configurationLimit = 10;
+        };
+        efi.canTouchEfiVariables = lib.mkIf (cfg.loader != "uboot") ((builtins.length config.bcl.disk.devices) <= 1);
       };
       initrd = {
         verbose = !cfg.quiet;

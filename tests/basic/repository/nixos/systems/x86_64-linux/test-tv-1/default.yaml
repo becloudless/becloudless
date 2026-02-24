@@ -1,6 +1,6 @@
 bcl:
     boot:
-        efi: false
+        loader: bios
     system:
         enable: true
         group: test-tv

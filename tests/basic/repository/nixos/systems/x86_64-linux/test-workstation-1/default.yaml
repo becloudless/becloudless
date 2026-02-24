@@ -1,6 +1,6 @@
 bcl:
     boot:
-        efi: false
+        loader: bios
         ssh: true # for testing only
     system:
         enable: true
