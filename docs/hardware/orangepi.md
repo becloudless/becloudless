@@ -13,5 +13,5 @@ sudo ./build.sh # or sudo ./build.sh docker BOARD=orangepi5plus BRANCH=current B
 cd output/debs/u-boot/
 sudo dpkg -x linux-u-boot-current-orangepi5plus_1.2.2_arm64.deb .
 ls usr/lib/linux-u-boot-current-orangepi5plus_1.2.2_arm64/rkspi_loader.img
-sudo dd if=rkspi_loader.img of=/dev/mtdblock0 status=progress conv=notrunc
+sudo dd if=rkspi_loader.img of=/dev/mtdblock0 status=progress conv=fsync,notrunc
 ```
