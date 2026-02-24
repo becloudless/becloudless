@@ -6,7 +6,10 @@ let
 in
 {
   #  nix build .#nixosConfigurations.install-opi.config.system.build.sdImage
-  imports = [ "${modulesPath}/installer/sd-card/sd-image.nix" ];
+  imports = [
+    "${modulesPath}/installer/sd-card/sd-image.nix"
+    "${modulesPath}/profiles/installation-device.nix"
+  ];
 
   boot = {
     kernelPackages = unstable.linuxPackages_latest;
