@@ -5,6 +5,7 @@ let
   uboot = pkgs.ubootOrangePi5Plus;
 in
 {
+  #  nix build .#nixosConfigurations.install-opi.config.system.build.sdImage
   imports = [ "${modulesPath}/installer/sd-card/sd-image.nix" ];
 
   boot = {
