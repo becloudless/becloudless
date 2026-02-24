@@ -13,6 +13,7 @@ import (
 	"github.com/becloudless/becloudless/pkg/system"
 	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/becloudless/becloudless/pkg/utils"
+	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"gopkg.in/yaml.v3"
@@ -55,6 +56,10 @@ func InstallAnywhere(sshConfig *runner.SshConnectionConfig, diskPassword string)
 	systemName, err := findSystem(infra, localRunner, info)
 	if err != nil {
 		return errs.WithE(err, "Fail during process to find the system to install")
+	}
+
+	if systemName == "" {
+		return errs.WithF(data.WithField("info", info), "Cannot find matching system to install")
 	}
 	//var systemConfig SystemConfig
 	//systemParentFolder := path.Join(infra.GetNixosDir(), "systems", "x86_64-linux")
