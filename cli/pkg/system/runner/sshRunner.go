@@ -63,7 +63,7 @@ func NewSshRunner(config *SshConnectionConfig) (*SshRunner, error) {
 			if err != nil {
 				return "", errs.WithE(err, "Failed to open ssh password enclave")
 			}
-			defer buff.Destroy()
+			//defer buff.Destroy() TODO: destroy the buffer makes the string() dereferenced
 			return buff.String(), nil
 		}))
 	}
