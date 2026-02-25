@@ -6,7 +6,7 @@ in
   config = lib.mkIf (builtins.elem config.bcl.hardware.device [ "orangepi5" "orangepi5plus" ]) {
 
     hardware = {
-      firmware = [ unstable.linux-firmware ];
+#      firmware = [ unstable.linux-firmware ];
       firmware = [ (pkgs.callPackage ../../../../packages/orangepi-firmware {}) ];
     };
 
