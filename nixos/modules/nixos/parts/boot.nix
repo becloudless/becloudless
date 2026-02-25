@@ -99,7 +99,7 @@ in {
           authorizedKeys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILvM8t4hXJxjBzrUS5FhAQ/TD9TJscT7CyLKFSOjZjj4 id_ed25519" ];
           hostKeys = [
             (if cfg.loader == "uboot"
-              then (/. + "${pkgs.writeText "initrd_ssh_host_ed25519_key" cfg.initrdSSHPrivateKey}")
+              then (pkgs.writeText "initrd_ssh_host_ed25519_key" cfg.initrdSSHPrivateKey).outPath
               else "/etc/ssh/initrd_ssh_host_ed25519_key")
           ];
         };
