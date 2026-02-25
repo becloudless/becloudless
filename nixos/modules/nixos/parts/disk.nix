@@ -136,6 +136,11 @@ in {
             type = "disk";
             device = device;
             content = diskContent;
+            postCreateHook = lib.mkIf (cfg.ubootPackage != null) ''
+              echo "Writing u-boot to ${device}"
+              ${pkgs.coreutils}/bin/dd if=${cfg.ubootPackage}/idbloader.img of=${device} seek=64    conv=fsync,notrunc
+              ${pkgs.coreutils}/bin/dd if=${cfg.ubootPackage}/u-boot.itb    of=${device} seek=16384 conv=fsync,notrunc
+            '';
           };
         };
       in builtins.listToAttrs (lib.imap1 (i: v: (mkDisk i v)) cfg.devices);
