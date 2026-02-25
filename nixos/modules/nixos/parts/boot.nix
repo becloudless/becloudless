@@ -31,6 +31,13 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = cfg.ssh -> cfg.initrdSSHPrivateKey != "";
+        message = "bcl.boot.initrdSSHPrivateKey must be set when bcl.boot.ssh is enabled.";
+      }
+    ];
+
     boot = {
       consoleLogLevel = if cfg.quiet then 0 else 4;
       kernelParams = if cfg.plymouth && cfg.quiet then
@@ -90,7 +97,11 @@ in {
           enable = true;
           port = 22;
           authorizedKeys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILvM8t4hXJxjBzrUS5FhAQ/TD9TJscT7CyLKFSOjZjj4 id_ed25519" ];
-          hostKeys = [ "/etc/ssh/initrd_ssh_host_ed25519_key" ];
+          hostKeys = [
+            (if cfg.loader == "uboot"
+              then (/. + "${pkgs.writeText "initrd_ssh_host_ed25519_key" cfg.initrdSSHPrivateKey}")
+              else "/etc/ssh/initrd_ssh_host_ed25519_key")
+          ];
         };
         # postDeviceCommands = lib.mkAfter ''
         #   zfs rollback -r rpool/local/root@blank
@@ -106,7 +117,7 @@ in {
     # This key is used only in initrd. nix-sops does not support secrets in initrd,
     # and it have to be a dedicated key anyway since boot partition is not encrypted.
     # Also this key have to be set at install because `ssh` setup is run before `environment`
-    environment.etc."ssh/initrd_ssh_host_ed25519_key" = lib.mkIf cfg.ssh {
+    environment.etc."ssh/initrd_ssh_host_ed25519_key" = lib.mkIf (cfg.ssh && cfg.loader != "uboot") {
       mode = "0600";
       text = cfg.initrdSSHPrivateKey;
     };
