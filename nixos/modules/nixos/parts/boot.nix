@@ -92,10 +92,7 @@ in {
             shell = "/bin/systemd-tty-ask-password-agent";
           };
           contents = lib.mkIf (cfg.ssh && cfg.loader == "uboot") {
-            "/etc/ssh/initrd_ssh_host_ed25519_key" = {
-              text = cfg.initrdSSHPrivateKey;
-              mode = "0600";
-            };
+            "/etc/ssh/initrd_ssh_host_ed25519_key".text = cfg.initrdSSHPrivateKey;
             "/etc/ssh/sshd_config".text = lib.mkAfter ''
               HostKey /etc/ssh/initrd_ssh_host_ed25519_key
             '';
