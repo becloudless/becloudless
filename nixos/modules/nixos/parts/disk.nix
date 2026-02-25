@@ -95,7 +95,9 @@ in {
           type = "gpt";
           partitions = {
             MBR = {
-              size = "1M";
+              # Raw gap consumed by u-boot binaries; no filesystem.
+              # 16 MiB keeps us safely past u-boot.itb (sector 16384 = 8 MiB).
+              size = "16M";
               type = "EF02";
               priority = 1;
             };
@@ -136,10 +138,13 @@ in {
             type = "disk";
             device = device;
             content = diskContent;
-            postCreateHook = lib.mkIf (cfg.ubootPackage != null) ''
+            postCreateHook = if cfg.ubootPackage != null then ''
               echo "Writing u-boot to ${device}"
               ${pkgs.coreutils}/bin/dd if=${cfg.ubootPackage}/idbloader.img of=${device} seek=64    conv=fsync,notrunc
               ${pkgs.coreutils}/bin/dd if=${cfg.ubootPackage}/u-boot.itb    of=${device} seek=16384 conv=fsync,notrunc
+            '' else ''
+              #echo "Erasing MBR gap on ${device} (preserving GPT)"
+              #${pkgs.coreutils}/bin/dd if=/dev/zero of=${device} bs=1M seek=1 count=15 conv=fsync,notrunc
             '';
           };
         };

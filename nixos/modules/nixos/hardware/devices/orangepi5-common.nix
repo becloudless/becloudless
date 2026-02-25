@@ -4,7 +4,7 @@ let
 in
 {
   config = lib.mkIf (builtins.elem config.bcl.hardware.device [ "orangepi5" "orangepi5plus" ]) {
-    bcl.boot.loader = "efi";
+#    bcl.boot.loader = "efi";
 
     hardware = {
       firmware = [ unstable.linux-firmware ];
