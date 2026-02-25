@@ -20,6 +20,11 @@ in {
       type = with lib.types; listOf str;
       default = [ ];
     };
+    ubootPackage = lib.mkOption {
+      type = with lib.types; nullOr package;
+      default = null;
+      description = "U-Boot package to flash to the beginning of the disk (before partitions).";
+    };
   };
 
   ###################
