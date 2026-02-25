@@ -74,7 +74,6 @@ in {
           enable = true;
           configurationLimit = 10;
         };
-        supportsInitrdSecrets = true;
         efi.canTouchEfiVariables = lib.mkIf (cfg.loader != "uboot") ((builtins.length config.bcl.disk.devices) <= 1);
       };
       initrd = {
