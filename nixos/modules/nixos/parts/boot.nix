@@ -91,17 +91,28 @@ in {
           users.root = {
             shell = "/bin/systemd-tty-ask-password-agent";
           };
+          contents = lib.mkIf (cfg.ssh && cfg.loader == "uboot") {
+            "/etc/ssh/initrd_ssh_host_ed25519_key" = {
+              text = cfg.initrdSSHPrivateKey;
+              mode = "0600";
+            };
+            "/etc/ssh/sshd_config".text = lib.mkAfter ''
+              HostKey /etc/ssh/initrd_ssh_host_ed25519_key
+            '';
+          };
+          services.sshd.preStart = lib.mkIf (cfg.ssh && cfg.loader == "uboot") ''
+            /bin/chmod 0600 /etc/ssh/initrd_ssh_host_ed25519_key
+          '';
         };
         kernelModules = config.boot.kernelModules;
         network.ssh = lib.mkIf cfg.ssh {
           enable = true;
           port = 22;
           authorizedKeys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILvM8t4hXJxjBzrUS5FhAQ/TD9TJscT7CyLKFSOjZjj4 id_ed25519" ];
-          hostKeys = [
-            (if cfg.loader == "uboot"
-              then (pkgs.writeText "initrd_ssh_host_ed25519_key" cfg.initrdSSHPrivateKey).outPath
-              else "/etc/ssh/initrd_ssh_host_ed25519_key")
+          hostKeys = lib.mkIf (cfg.loader != "uboot") [
+            "/etc/ssh/initrd_ssh_host_ed25519_key"
           ];
+          ignoreEmptyHostKeys = (cfg.loader == "uboot");
         };
         # postDeviceCommands = lib.mkAfter ''
         #   zfs rollback -r rpool/local/root@blank
