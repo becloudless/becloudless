@@ -20,11 +20,6 @@ in {
       type = with lib.types; listOf str;
       default = [ ];
     };
-    ubootPackage = lib.mkOption {
-      type = with lib.types; nullOr package;
-      default = null;
-      description = "U-Boot package to flash to the beginning of the disk (before partitions).";
-    };
   };
 
   ###################
@@ -94,14 +89,12 @@ in {
         diskContent = if cfg.gpt then {
           type = "gpt";
           partitions = {
-            # Raw gap consumed by u-boot binaries; no filesystem.
-            # 16 MiB keeps us safely past u-boot.itb (sector 16384 = 8 MiB).
-            bootloader = {
-              size = "16M";
-              type = "EF02"; # BIOS boot — keeps parted/gdisk happy, never mounted
+            MBR = {
+              size = "1M";
+              type = "EF02";
               priority = 1;
             };
-            boot = {
+            ESP = {
               size = "1G";
               type = "EF00";
               content = bootContent;
@@ -138,11 +131,6 @@ in {
             type = "disk";
             device = device;
             content = diskContent;
-            postCreateHook = lib.mkIf (cfg.ubootPackage != null) ''
-              echo "Writing u-boot to ${device}"
-              ${pkgs.coreutils}/bin/dd if=${cfg.ubootPackage}/idbloader.img of=${device} seek=64    conv=fsync,notrunc
-              ${pkgs.coreutils}/bin/dd if=${cfg.ubootPackage}/u-boot.itb    of=${device} seek=16384 conv=fsync,notrunc
-            '';
           };
         };
       in builtins.listToAttrs (lib.imap1 (i: v: (mkDisk i v)) cfg.devices);
