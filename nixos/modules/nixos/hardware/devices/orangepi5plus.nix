@@ -4,7 +4,7 @@
 
   config = lib.mkIf (config.bcl.hardware.device == "orangepi5plus") {
 
-#    bcl.disk.ubootPackage = pkgs.ubootOrangePi5Plus;
+    bcl.disk.ubootPackage = lib.mkIf (config.bcl.boot.loader == "uboot") pkgs.ubootOrangePi5Plus;
 
     hardware.deviceTree = {
       name = "rockchip/rk3588-orangepi-5-plus.dtb";
