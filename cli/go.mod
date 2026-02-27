@@ -5,7 +5,7 @@ go 1.25.0
 toolchain go1.26.0
 
 require (
-	github.com/Mic92/ssh-to-age v0.0.0-20260216045429-bd4106f3ef5d
+	github.com/Mic92/ssh-to-age v0.0.0-20260223045416-df77431428a1
 	github.com/atombender/go-jsonschema v0.22.0
 	github.com/awnumar/memguard v0.23.0
 	github.com/charmbracelet/huh v0.8.0
@@ -43,7 +43,7 @@ require (
 	cloud.google.com/go/storage v1.60.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	filippo.io/age v1.3.1 // indirect
-	filippo.io/edwards25519 v1.1.1 // indirect
+	filippo.io/edwards25519 v1.2.0 // indirect
 	filippo.io/hpke v0.4.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.21.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.1 // indirect
