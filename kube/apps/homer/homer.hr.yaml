@@ -270,6 +270,8 @@ spec:
                       url: https://gitea.${BCL_GLOBAL_DOMAIN}/${BCL_GLOBAL_NAME}/infra
                     - name: RuTorrent
                       url: https://rutorrent.${BCL_GLOBAL_DOMAIN}
+                    - name: Mailu
+                      url: https://mail.${BCL_GLOBAL_DOMAIN}
 
                 - name: "System"
                   icon: "fas fa-code-branch"
