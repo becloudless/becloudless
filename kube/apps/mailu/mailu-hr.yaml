@@ -143,6 +143,9 @@ spec:
     #########
 
     front:
+      nodeSelector:
+        kubernetes.io/hostname: srv21 # TODO
+
       updateStrategy:
         type: Recreate # TODO because we have only 1 server
 
