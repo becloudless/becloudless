@@ -1,0 +1,27 @@
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: br0-dhcp
+  namespace: kube-system
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.0",
+      "name": "mymacvlan",
+      "plugins": [
+        {
+          "type": "macvlan",
+          "master": "br0",
+          "mode": "bridge",
+          "ipam": {
+            "type": "dhcp",
+            "request": [
+              {
+                "skipDefault": true,
+                "option": "subnet-mask"
+              }
+            ]
+          }
+        }
+      ]
+    }
