@@ -15,10 +15,10 @@ let
   # To recompute hashes after a version bump, run for each platform (linux-amd64, linux-arm64, darwin-amd64, darwin-arm64):
   #   nix store prefetch-file --hash-type sha256 --json "https://github.com/becloudless/becloudless/releases/download/cli-v<version>/bcl-<platform>.tar.gz" | jq -r .hash
   hashes = {
-    "linux-amd64" = "sha256-p06RK18YVrmIw+RMXQjzCkQSiM753AicckcS07WR4us=";
-    "linux-arm64" = "sha256-Mx4+Nrq7YGuiW7SsmQ7yIedds0/hNLj196bso6vzKvo=";
-    "darwin-amd64" = "sha256-iVMvqurZL28C8K7AvkLYskOLwG3R8Qoblv05YQA0Tqg=";
-    "darwin-arm64" = "sha256-feDwPWnh8TPUPSd2l7fZTZ99/Bljk4DbT2rrRV166t0=";
+    "linux-amd64" = "sha256-/QEoxc0l3jP6AsTpvXPj4tUzWZAdbMUzLdemPqF55jY=";
+    "linux-arm64" = "sha256-YDaoLfLyxQbjKSUE/iraffMJ+8NSI9wQ1fR0hNmvfkg=";
+    "darwin-amd64" = "sha256-+pCwCHa+e8xMFVoMksIDgdV3UQMSt2T7w6WEMf4hVzM=";
+    "darwin-arm64" = "sha256-0vaX/STfgp861HN3bgPzyHb8vNpYMsT/ArR2sxNoXBk=";
   };
 in
 
