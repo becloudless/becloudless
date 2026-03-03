@@ -73,7 +73,7 @@ installHost() {
 
 if compgen -G "./cli/dist/bcl-*/bcl" > /dev/null 2>&1; then
 	echo_brightred "## Using local bcl build"
-	BCL_BIN="$(compgen -G "./cli/dist/bcl-*/bcl" | head -1)"
+	BCL_BIN="$(compgen -G "$PWD/cli/dist/bcl-*/bcl" | head -1)"
 else
 	echo_brightred "## Downloading bcl from GitHub release"
 	VERSION="$(grep -E '^\s+version = ' nixos/packages/bcl/default.nix | sed 's/.*"\(.*\)".*/\1/')"
