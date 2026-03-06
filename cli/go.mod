@@ -1,6 +1,6 @@
 module github.com/becloudless/becloudless
 
-go 1.25.0
+go 1.25.5
 
 toolchain go1.26.0
 
@@ -15,7 +15,7 @@ require (
 	github.com/go-bindata/go-bindata/v3 v3.1.3
 	github.com/go-git/go-git/v6 v6.0.0-20260227233803-efde8c49a5e2
 	github.com/gordonklaus/ineffassign v0.2.0
-	github.com/moby/buildkit v0.27.1
+	github.com/moby/buildkit v0.28.0
 	github.com/n0rad/go-app v0.0.0-20251227182329-c1d5e61b7561
 	github.com/n0rad/go-erlog v0.0.0-20260115131226-fdddb793d4f1
 	github.com/n0rad/gomake v0.0.0-20260222163535-ad57f88ecc88
@@ -135,20 +135,20 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-openapi/jsonpointer v0.22.1 // indirect
-	github.com/go-openapi/jsonreference v0.21.3 // indirect
-	github.com/go-openapi/swag v0.25.3 // indirect
-	github.com/go-openapi/swag/cmdutils v0.25.3 // indirect
-	github.com/go-openapi/swag/conv v0.25.3 // indirect
-	github.com/go-openapi/swag/fileutils v0.25.3 // indirect
-	github.com/go-openapi/swag/jsonname v0.25.3 // indirect
-	github.com/go-openapi/swag/jsonutils v0.25.3 // indirect
-	github.com/go-openapi/swag/loading v0.25.3 // indirect
-	github.com/go-openapi/swag/mangling v0.25.3 // indirect
-	github.com/go-openapi/swag/netutils v0.25.3 // indirect
-	github.com/go-openapi/swag/stringutils v0.25.3 // indirect
-	github.com/go-openapi/swag/typeutils v0.25.3 // indirect
-	github.com/go-openapi/swag/yamlutils v0.25.3 // indirect
+	github.com/go-openapi/jsonpointer v0.22.4 // indirect
+	github.com/go-openapi/jsonreference v0.21.4 // indirect
+	github.com/go-openapi/swag v0.25.4 // indirect
+	github.com/go-openapi/swag/cmdutils v0.25.4 // indirect
+	github.com/go-openapi/swag/conv v0.25.4 // indirect
+	github.com/go-openapi/swag/fileutils v0.25.4 // indirect
+	github.com/go-openapi/swag/jsonname v0.25.4 // indirect
+	github.com/go-openapi/swag/jsonutils v0.25.4 // indirect
+	github.com/go-openapi/swag/loading v0.25.4 // indirect
+	github.com/go-openapi/swag/mangling v0.25.4 // indirect
+	github.com/go-openapi/swag/netutils v0.25.4 // indirect
+	github.com/go-openapi/swag/stringutils v0.25.4 // indirect
+	github.com/go-openapi/swag/typeutils v0.25.4 // indirect
+	github.com/go-openapi/swag/yamlutils v0.25.4 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/gofrs/flock v0.13.0 // indirect
@@ -185,7 +185,7 @@ require (
 	github.com/json-iterator/go v1.1.13-0.20220915233716-71ac16282d12 // indirect
 	github.com/kevinburke/ssh_config v1.5.0 // indirect
 	github.com/kisielk/errcheck v1.5.0 // indirect
-	github.com/klauspost/compress v1.18.3 // indirect
+	github.com/klauspost/compress v1.18.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
@@ -258,7 +258,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp v0.0.0-20251209150349-8475f28825e9 // indirect
 	golang.org/x/mod v0.33.0 // indirect
-	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
