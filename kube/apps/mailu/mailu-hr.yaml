@@ -200,6 +200,7 @@ spec:
 
     dovecot:
       # on crio, we need to be root to have the SYS_CHROOT capability, and this is required by dovecot to run properly
+      # https://github.com/Mailu/Mailu/issues/1714
       containerSecurityContext:
         capabilities:
           add:
