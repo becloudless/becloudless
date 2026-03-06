@@ -199,8 +199,14 @@ spec:
         storageClass: mailu-postfix
 
     dovecot:
-      nodeSelector:
-        kubernetes.io/hostname: srv21 # TODO
+      # on crio, we need to be root to have the SYS_CHROOT capability, and this is required by dovecot to run properly
+      containerSecurityContext:
+        capabilities:
+          add:
+            - "SYS_CHROOT"
+        enabled: true
+        runAsUser: 0
+
       updateStrategy:
         type: Recreate
       persistence:
