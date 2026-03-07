@@ -288,6 +288,7 @@ spec:
               authorization_policy: 'two_factor'
               require_pkce: false
               pkce_challenge_method: ''
+              pre_configured_consent_duration: 1 year
               redirect_uris:
                 - 'https://immich.${BCL_GLOBAL_DOMAIN}/auth/login'
                 - 'https://immich.${BCL_GLOBAL_DOMAIN}/user-settings'
