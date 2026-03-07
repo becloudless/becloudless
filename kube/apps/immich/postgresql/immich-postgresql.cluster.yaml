@@ -9,7 +9,7 @@ spec:
   bootstrap:
     initdb:
       database: app
-      owner: app
+      owner: immich-postgresql-app
       postInitSQL:
         - CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
 
