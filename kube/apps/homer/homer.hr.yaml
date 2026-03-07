@@ -254,7 +254,7 @@ spec:
                   items:
                     - name: Jellyfin
                       subtitle: Media player
-                      logo: https://jellyfin.${BCL_GLOBAL_DOMAIN}/favicon.ico
+                      logo: https://jellyfin.org/images/favicon.ico # assets on the service are hashed, so we cannot use them directly
                       url: https://jellyfin.${BCL_GLOBAL_DOMAIN}
                     - name: Seerr
                       subtitle: Media discovery
@@ -273,7 +273,7 @@ spec:
                       logo: https://gitea.${BCL_GLOBAL_DOMAIN}/assets/img/favicon.png
                       url: https://gitea.${BCL_GLOBAL_DOMAIN}
                     - name: RuTorrent
-                      logo: https://rutorrent.${BCL_GLOBAL_DOMAIN}/favicon.ico
+                      logo: https://rutorrent.${BCL_GLOBAL_DOMAIN}/images/favicon.ico
                       url: https://rutorrent.${BCL_GLOBAL_DOMAIN}
                     - name: Mailu
                       logo: https://mail.${BCL_GLOBAL_DOMAIN}/favicon.ico
