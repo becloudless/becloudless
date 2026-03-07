@@ -79,7 +79,6 @@ spec:
         main:
           enabled: true
           annotations:
-            traefik.ingress.kubernetes.io/router.middlewares: traefik-authelia@kubernetescrd
             kubernetes.io/tls-acme: "true"
           hosts:
             - host: immich.${BCL_GLOBAL_DOMAIN}
