@@ -76,9 +76,6 @@ spec:
           storageClass: longhorn-single-local-replica
           accessMode: ReadWriteMany
 
-    redis:
-      enabled: false
-
     env:
       DB_HOSTNAME: immich-postgresql-rw
       DB_DATABASE_NAME: app
