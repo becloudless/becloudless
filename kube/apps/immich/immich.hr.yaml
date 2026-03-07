@@ -55,6 +55,7 @@ spec:
 
 
     server:
+# TODO immich do not do client cert authentication, not following libpq completely apparently
 #      persistence:
 #        dbcert:
 #          enabled: true
