@@ -6,9 +6,9 @@ metadata:
 spec:
   instances: 2
   # https://cloudnative-pg.io/docs/1.28/ssl_connections
-  postgresql:
-    pg_hba:
-      - hostssl app all all cert
+#  postgresql:
+#    pg_hba:
+#      - hostssl app all all cert
 
   certificates:
     clientCASecret: immich-postgresql-ca
