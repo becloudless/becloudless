@@ -8,7 +8,7 @@ spec:
   imageName: tensorchord/cloudnative-vectorchord:16.9-0.4.3
   bootstrap:
     initdb:
-      postInitSQL:
+      postInitApplicationSQL:
         - CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
 
   postgresql:
