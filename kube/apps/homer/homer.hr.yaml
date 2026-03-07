@@ -270,11 +270,13 @@ spec:
                   items:
                     - name: Gitea
                       subtitle: Source code management
-                      logo: https://gitea.${BCL_GLOBAL_DOMAIN}/${BCL_GLOBAL_NAME}/infra/favicon.ico
-                      url: https://gitea.${BCL_GLOBAL_DOMAIN}/${BCL_GLOBAL_NAME}/infra
+                      logo: https://gitea.${BCL_GLOBAL_DOMAIN}/assets/img/favicon.png
+                      url: https://gitea.${BCL_GLOBAL_DOMAIN}
                     - name: RuTorrent
+                      logo: https://rutorrent.${BCL_GLOBAL_DOMAIN}/favicon.ico
                       url: https://rutorrent.${BCL_GLOBAL_DOMAIN}
                     - name: Mailu
+                      logo: https://mail.${BCL_GLOBAL_DOMAIN}/favicon.ico
                       url: https://mail.${BCL_GLOBAL_DOMAIN}
 
                 - name: "System"
@@ -287,7 +289,6 @@ spec:
                       logo: https://authelia.${BCL_GLOBAL_DOMAIN}/favicon.ico
                       url: https://authelia.${BCL_GLOBAL_DOMAIN}
                     - name: Lldap
-                      logo: https://lldap.${BCL_GLOBAL_DOMAIN}/favicon.ico
                       url: https://lldap.${BCL_GLOBAL_DOMAIN}
                     - name: WhoAmI
                       url: https://whoami.${BCL_GLOBAL_DOMAIN}
@@ -296,11 +297,11 @@ spec:
                   icon: "fas fa-network-wired"
                   items:
                     - name: Grafana
-                      logo: https://grafana.${BCL_GLOBAL_DOMAIN}/favicon.ico
+                      logo: https://grafana.${BCL_GLOBAL_DOMAIN}/public/build/img/fav32.png
                       url: https://grafana.${BCL_GLOBAL_DOMAIN}
 
                     - name: "Prometheus"
-                      logo: https://prometheus.${BCL_GLOBAL_DOMAIN}/favicon.ico
+                      logo: https://prometheus.${BCL_GLOBAL_DOMAIN}/favicon.svg
                       # subtitle: "Network-wide Ad Blocking" # optional, if no subtitle is defined, PiHole statistics will be shown
                       tag: "other"
                       url: "https://prometheus.${BCL_GLOBAL_DOMAIN}"
