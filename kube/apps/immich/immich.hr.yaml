@@ -55,8 +55,18 @@ spec:
 
 
     server:
+      pod:
+        nodeSelector:
+          kubernetes.io/hostname: srv21
+      persistence:
+        photos:
+          enabled: true
+          type: hostPath
+          hostPath: /data/Images
+          mountPath: /Images
+          readOnly: true
+
 # TODO immich do not do client cert authentication, not following libpq completely apparently
-#      persistence:
 #        dbcert:
 #          enabled: true
 #          type: secret

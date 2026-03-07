@@ -5,6 +5,9 @@ metadata:
   namespace: immich
 spec:
   instances: 2
+  affinity:
+    nodeSelector:
+      kubernetes.io/hostname: srv21
   # https://github.com/tensorchord/cloudnative-vectorchord/pkgs/container/cloudnative-vectorchord/versions?filters%5Bversion_type%5D=tagged
   imageName: tensorchord/cloudnative-vectorchord:18.3-1.1.1
   bootstrap:
