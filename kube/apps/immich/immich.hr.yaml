@@ -37,6 +37,11 @@ spec:
               PGSSLCERT: /dbcert/tls.crt
               PGSSLROOTCERT: /dbcert/ca.crt
               PGSSLMODE: verify-full
+              PGPASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: immich-postgresql-app
+                    key: password
 
 #              postgres:PASSWORD@192.168.1.102:5432/immich?sslmode=require&uselibpqcompat=true
 #              DB_URL=postgresql://postgres:PASSWORD@192.168.1.102:5432/immich?sslmode=require&sslmode=no-verify
