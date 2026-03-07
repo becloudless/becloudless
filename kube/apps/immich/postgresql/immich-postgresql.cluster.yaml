@@ -5,7 +5,7 @@ metadata:
   namespace: immich
 spec:
   instances: 2
-  imageName: tensorchord/cloudnative-vectorchord:16.9-0.4.3
+  imageName: tensorchord/cloudnative-vectorchord:18.3-1.1.1
   bootstrap:
     initdb:
       database: app
@@ -48,7 +48,6 @@ spec:
 #        name: backup-example
 
   backup:
-    retentionPolicy: "60d"
     volumeSnapshot:
       className: longhorn-backup-incremental
       snapshotOwnerReference: backup # removing the Backup object, removes the VolumeSnapshot

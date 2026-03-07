@@ -33,7 +33,6 @@ spec:
 #        name: backup-example
 
   backup:
-    retentionPolicy: "60d"
     volumeSnapshot:
       className: longhorn-backup-incremental
       snapshotOwnerReference: backup # removing the Backup object, removes the VolumeSnapshot
