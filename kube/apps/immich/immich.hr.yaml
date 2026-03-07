@@ -35,10 +35,15 @@ spec:
               PGSSLCERT: /dbcert/tls.crt
               PGSSLROOTCERT: /dbcert/ca.crt
               PGSSLMODE: verify-full
+
+              DB_URL: postgresql://?uselibpqcompat=true
+#              postgres:PASSWORD@192.168.1.102:5432/immich?sslmode=require&uselibpqcompat=true
+#              DB_URL=postgresql://postgres:PASSWORD@192.168.1.102:5432/immich?sslmode=require&sslmode=no-verify
 #              DB_HOSTNAME: immich-postgresql-rw
 #              DB_DATABASE_NAME: app
 #              DB_USERNAME: app
 #              DB_PASSWORD: ""
+
               REDIS_HOSTNAME: immich-valkey
               REDIS_USERNAME: app
               REDIS_PASSWORD:
