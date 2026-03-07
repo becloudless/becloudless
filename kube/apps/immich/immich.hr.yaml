@@ -63,7 +63,7 @@ spec:
           enabled: true
           type: hostPath
           hostPath: /data/Images
-          mountPath: /Images
+          path: /hostData/Images
           readOnly: true
 
 # TODO immich do not do client cert authentication, not following libpq completely apparently
