@@ -82,6 +82,10 @@ spec:
       DB_USERNAME: app
       DB_PASSWORD: ""
       REDIS_HOSTNAME: immich-valkey
+      REDIS_PASSWORD:
+        secretKeyRef:
+          name: immich-valkey
+          key: immich
 
 ---
 apiVersion: v1
