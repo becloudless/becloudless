@@ -42,7 +42,11 @@ spec:
 #              DB_HOSTNAME: immich-postgresql-rw
 #              DB_DATABASE_NAME: app
 #              DB_USERNAME: app
-#              DB_PASSWORD: ""
+              DB_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: immich-postgresql-app
+                    key: password
 
               REDIS_HOSTNAME: immich-valkey
               REDIS_USERNAME: app
