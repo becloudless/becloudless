@@ -5,7 +5,9 @@ metadata:
   namespace: immich
 spec:
   instances: 2
-  imageName: tensorchord/cloudnative-vectorchord:16.9-0.4.3
+  # https://github.com/tensorchord/cloudnative-vectorchord/pkgs/container/cloudnative-vectorchord/versions?filters%5Bversion_type%5D=tagged
+#  imageName: tensorchord/cloudnative-vectorchord:16.9-0.4.3
+  imageName: tensorchord/cloudnative-vectorchord:16.13-1.1.1
   bootstrap:
     initdb:
       postInitApplicationSQL:
