@@ -83,6 +83,16 @@ spec:
           tls:
             skip_verify: false
             minimum_version: TLS1.2
+          attributes:
+            extra:
+              immichquota: # The attribute name from LDAP
+                name: 'immich_quota'
+                multi_valued: false
+                value_type: 'integer'
+              immichrole:
+                name: 'immich_role'
+                multi_valued: false
+                value_type: 'string'
 
       session:
         expiration: 16 hours # sessions expires every day
@@ -202,6 +212,17 @@ spec:
           claims_policies:
             grafana:
               id_token: [ 'email', 'name', 'groups', 'preferred_username' ]
+            immich_policy:
+              custom_claims:
+                immich_quota:
+                  attribute: 'immich_quota'
+                immich_role:
+                  attribute: 'immich_role'
+          scopes:
+            immich_scope:
+              claims:
+                - 'immich_quota'
+                - 'immich_role'
           ## See: https://www.authelia.com/c/oidc
           # generate a client_id
           # docker run --rm authelia/authelia:latest authelia crypto rand --length 72 --charset rfc3986
@@ -297,10 +318,12 @@ spec:
                 - 'openid'
                 - 'profile'
                 - 'email'
+                - 'immich_scope'
+              claims_policy: 'immich_policy'
               response_types:
                 - 'code'
               grant_types:
                 - 'authorization_code'
-              access_token_signed_response_alg: 'none'
-              userinfo_signed_response_alg: 'none'
+              access_token_signed_response_alg: 'RS256'
+              userinfo_signed_response_alg: 'RS256'
               token_endpoint_auth_method: 'client_secret_post'
