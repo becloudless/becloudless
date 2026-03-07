@@ -40,11 +40,12 @@ spec:
               DB_USERNAME: app
               DB_PASSWORD: ""
               REDIS_HOSTNAME: immich-valkey
+              REDIS_USERNAME: app
               REDIS_PASSWORD:
                 valueFrom:
                   secretKeyRef:
                     name: immich-valkey
-                    key: immich
+                    key: app
 
 
     server:

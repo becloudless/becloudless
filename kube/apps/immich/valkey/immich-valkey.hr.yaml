@@ -26,6 +26,6 @@ spec:
       aclUsers:
         default:
           permissions: "~* -@all"
-        immich:
+        app:
           permissions: "~* &* +@all"
-      usersExistingSecret: immich-valkey
+      usersExistingSecret: app-valkey
