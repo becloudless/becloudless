@@ -22,10 +22,32 @@ spec:
         library:
           existingClaim: immich-data
 
+    controllers:
+      main:
+        containers:
+          main:
+            env:
+              TZ: Europe/Paris
+              PGUSER: app
+              PGDATABASE: app
+              PGHOST: immich-postgresql-rw
+              PGSSLKEY: /dbcert/tls.key
+              PGSSLCERT: /dbcert/tls.crt
+              PGSSLROOTCERT: /dbcert/ca.crt
+              PGSSLMODE: verify-full
+              DB_HOSTNAME: immich-postgresql-rw
+              DB_DATABASE_NAME: app
+              DB_USERNAME: app
+              DB_PASSWORD: ""
+              REDIS_HOSTNAME: immich-valkey
+              REDIS_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: immich-valkey
+                    key: immich
+
+
     server:
-      enabled: true
-      image:
-        tag: v1.132.3
       ingress:
         main:
           enabled: true
@@ -41,21 +63,6 @@ spec:
             - secretName: tls-immich
               hosts:
                 - immich.${BCL_GLOBAL_DOMAIN}
-
-      env:
-        TZ: Europe/Paris
-        PGUSER: app
-        PGDATABASE: app
-        PGHOST: immich-postgresql-rw
-        PGSSLKEY: /dbcert/tls.key
-        PGSSLCERT: /dbcert/tls.crt
-        PGSSLROOTCERT: /dbcert/ca.crt
-        PGSSLMODE: verify-full
-
-      envFrom:
-        - secretRef:
-            name: immich
-
       persistence:
         dbcert:
           enabled: true
@@ -66,8 +73,6 @@ spec:
 
     machine-learning:
       enabled: true
-      image:
-        tag: v1.132.3
       persistence:
         cache:
           enabled: true
@@ -75,18 +80,6 @@ spec:
           type: persistentVolumeClaim
           storageClass: longhorn-single-local-replica
           accessMode: ReadWriteMany
-
-    env:
-      DB_HOSTNAME: immich-postgresql-rw
-      DB_DATABASE_NAME: app
-      DB_USERNAME: app
-      DB_PASSWORD: ""
-      REDIS_HOSTNAME: immich-valkey
-      REDIS_PASSWORD:
-        valueFrom:
-          secretKeyRef:
-            name: immich-valkey
-            key: immich
 
 ---
 apiVersion: v1
