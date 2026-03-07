@@ -127,6 +127,7 @@ spec:
               - prometheus.${BCL_GLOBAL_DOMAIN}
               - fluxwebhook.${BCL_GLOBAL_DOMAIN}
               - rutorrent.${BCL_GLOBAL_DOMAIN}
+              - immich.${BCL_GLOBAL_DOMAIN} # TODO: remove when immich is migrated to OIDC
             subject:
               - [ 'group:role_admin' ]
             policy: two_factor
