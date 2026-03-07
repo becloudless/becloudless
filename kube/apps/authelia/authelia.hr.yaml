@@ -131,25 +131,40 @@ spec:
               - [ 'group:role_admin' ]
             policy: two_factor
           - domain:
-              - jellyfin.${BCL_GLOBAL_DOMAIN}
+              - homer.${BCL_GLOBAL_DOMAIN}
+            subject:
+              - [ 'group:role_user' ]
+              - [ 'group:role_admin' ]
+            policy: two_factor
+          - domain:
               - seerr.${BCL_GLOBAL_DOMAIN}
             subject:
+              - [ 'group:app_seerr' ]
+              - [ 'group:role_admin' ]
+            policy: two_factor
+          - domain:
+              - jellyfin.${BCL_GLOBAL_DOMAIN}
+            subject:
               - [ 'group:app_jellyfin' ]
+              - [ 'group:role_admin' ]
             policy: two_factor
           - domain:
               - immich.${BCL_GLOBAL_DOMAIN}
             subject:
               - [ 'group:app_immich' ]
+              - [ 'group:role_admin' ]
             policy: two_factor
           - domain:
               - gitea.${BCL_GLOBAL_DOMAIN}
             subject:
               - [ 'group:app_gitea' ]
+              - [ 'group:role_admin' ]
             policy: two_factor
           - domain:
               - pushprox.${BCL_GLOBAL_DOMAIN}
             subject:
               - [ 'group:app_pushprox' ]
+              - [ 'group:role_admin' ]
             policy: one_factor
           - domain:
               - whoami.${BCL_GLOBAL_DOMAIN}
