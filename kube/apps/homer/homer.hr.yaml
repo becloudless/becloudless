@@ -33,7 +33,7 @@ spec:
             traefik.ingress.kubernetes.io/router.middlewares: traefik-authelia@kubernetescrd
             kubernetes.io/tls-acme: "true"
           hosts:
-            - host: home.${BCL_GLOBAL_DOMAIN}
+            - host: homer.${BCL_GLOBAL_DOMAIN}
               paths:
                 - path: /
                   service:
@@ -42,7 +42,7 @@ spec:
           tls:
             - secretName: tls-homer
               hosts:
-                - home.${BCL_GLOBAL_DOMAIN}
+                - homer.${BCL_GLOBAL_DOMAIN}
 
       volumes:
         config:
@@ -254,11 +254,11 @@ spec:
                   items:
                     - name: Jellyfin
                       subtitle: Media player
-                      logo: https://static-00.iconduck.com/assets.00/jellyfin-icon-2048x2048-4rlr467k.png
+                      logo: https://jellyfin.${BCL_GLOBAL_DOMAIN}/favicon.ico
                       url: https://jellyfin.${BCL_GLOBAL_DOMAIN}
                     - name: Seerr
                       subtitle: Media discovery
-                      logo: https://seerr.dev/os_logo_filled.svg
+                      logo: https://seerr.${BCL_GLOBAL_DOMAIN}/favicon.ico
                       url: https://seerr.${BCL_GLOBAL_DOMAIN}
                     - name: Immich
                       subtitle: Photos management
@@ -270,7 +270,7 @@ spec:
                   items:
                     - name: Gitea
                       subtitle: Source code management
-                      logo: https://cdn.icon-icons.com/icons2/2407/PNG/512/gitea_icon_146173.png
+                      logo: https://gitea.${BCL_GLOBAL_DOMAIN}/${BCL_GLOBAL_NAME}/infra/favicon.ico
                       url: https://gitea.${BCL_GLOBAL_DOMAIN}/${BCL_GLOBAL_NAME}/infra
                     - name: RuTorrent
                       url: https://rutorrent.${BCL_GLOBAL_DOMAIN}
@@ -281,11 +281,13 @@ spec:
                   icon: "fas fa-code-branch"
                   items:
                     - name: Longhorm 
-                      logo: data:image/png;base64,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
+                      logo: https://longhorn.${BCL_GLOBAL_DOMAIN}/favicon.ico
                       url: https://longhorn.${BCL_GLOBAL_DOMAIN}
                     - name: Authelia
+                      logo: https://authelia.${BCL_GLOBAL_DOMAIN}/favicon.ico
                       url: https://authelia.${BCL_GLOBAL_DOMAIN}
                     - name: Lldap
+                      logo: https://lldap.${BCL_GLOBAL_DOMAIN}/favicon.ico
                       url: https://lldap.${BCL_GLOBAL_DOMAIN}
                     - name: WhoAmI
                       url: https://whoami.${BCL_GLOBAL_DOMAIN}
@@ -294,11 +296,11 @@ spec:
                   icon: "fas fa-network-wired"
                   items:
                     - name: Grafana
+                      logo: https://grafana.${BCL_GLOBAL_DOMAIN}/favicon.ico
                       url: https://grafana.${BCL_GLOBAL_DOMAIN}
-                      logo: https://grafana.${BCL_GLOBAL_DOMAIN}/public/img/grafana_icon.svg
 
                     - name: "Prometheus"
-                      logo: "https://prometheus.${BCL_GLOBAL_DOMAIN}/static/media/prometheus_logo_grey.3cf697e5443028ca5e5255b93c7906c5.svg"
+                      logo: https://prometheus.${BCL_GLOBAL_DOMAIN}/favicon.ico
                       # subtitle: "Network-wide Ad Blocking" # optional, if no subtitle is defined, PiHole statistics will be shown
                       tag: "other"
                       url: "https://prometheus.${BCL_GLOBAL_DOMAIN}"
@@ -308,5 +310,5 @@ spec:
                       # background: red # optional color for card to set color directly without custom stylesheet
 
                     - name: AlertManager
-                      url: https://alertmanager.${BCL_GLOBAL_DOMAIN}
                       logo: https://alertmanager.${BCL_GLOBAL_DOMAIN}/favicon.ico
+                      url: https://alertmanager.${BCL_GLOBAL_DOMAIN}
