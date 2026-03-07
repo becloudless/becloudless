@@ -43,17 +43,7 @@ spec:
                     name: immich-postgresql-app
                     key: password
 
-#              postgres:PASSWORD@192.168.1.102:5432/immich?sslmode=require&uselibpqcompat=true
-#              DB_URL=postgresql://postgres:PASSWORD@192.168.1.102:5432/immich?sslmode=require&sslmode=no-verify
-#              DB_HOSTNAME: immich-postgresql-rw
-#              DB_DATABASE_NAME: app
-#              DB_USERNAME: app
               DB_URL: postgresql://?uselibpqcompat=true
-#              DB_URL:
-#                valueFrom:
-#                  secretKeyRef:
-#                    name: immich-postgresql-app
-#                    key: uri
 
               REDIS_HOSTNAME: immich-valkey
               REDIS_USERNAME: app
@@ -65,13 +55,13 @@ spec:
 
 
     server:
-      persistence:
-        dbcert:
-          enabled: true
-          type: secret
-          name: immich-postgresql-app-tls
-          mountPath: /dbcert
-          readOnly: true
+#      persistence:
+#        dbcert:
+#          enabled: true
+#          type: secret
+#          name: immich-postgresql-app-tls
+#          mountPath: /dbcert
+#          readOnly: true
 
       ingress:
         main:
