@@ -80,7 +80,7 @@ spec:
           enabled: true
           annotations:
             kubernetes.io/tls-acme: "true"
-            traefik.ingress.kubernetes.io/router.middlewares: traefik-body-limit-2g@kubernetescrd
+#            traefik.ingress.kubernetes.io/router.middlewares: traefik-body-limit-2g@kubernetescrd
           hosts:
             - host: immich.${BCL_GLOBAL_DOMAIN}
               paths:
