@@ -28,4 +28,4 @@ spec:
           permissions: "~* -@all"
         app:
           permissions: "~* &* +@all"
-      usersExistingSecret: app-valkey
+      usersExistingSecret: immich-valkey
