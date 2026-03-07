@@ -87,10 +87,10 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: immich-upload
+  name: immich-data
   namespace: immich
 spec:
-  storageClassName: immich-upload
+  storageClassName: immich-data
   accessModes:
     - ReadWriteMany
   resources:
@@ -101,7 +101,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: immich-upload
+  name: immich-data
 spec:
   capacity:
     storage: 100Gi
@@ -109,13 +109,13 @@ spec:
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: immich-upload
+  storageClassName: immich-data
   csi:
     driver: driver.longhorn.io
     fsType: ext4
     volumeAttributes:
       numberOfReplicas: '1'
       staleReplicaTimeout: '2880'
-    volumeHandle: immich-upload
+    volumeHandle: immich-data
 
 
