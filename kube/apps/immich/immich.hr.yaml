@@ -35,10 +35,10 @@ spec:
               PGSSLCERT: /dbcert/tls.crt
               PGSSLROOTCERT: /dbcert/ca.crt
               PGSSLMODE: verify-full
-              DB_HOSTNAME: immich-postgresql-rw
-              DB_DATABASE_NAME: app
-              DB_USERNAME: app
-              DB_PASSWORD: ""
+#              DB_HOSTNAME: immich-postgresql-rw
+#              DB_DATABASE_NAME: app
+#              DB_USERNAME: app
+#              DB_PASSWORD: ""
               REDIS_HOSTNAME: immich-valkey
               REDIS_USERNAME: app
               REDIS_PASSWORD:
