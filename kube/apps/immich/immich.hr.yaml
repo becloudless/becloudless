@@ -76,9 +76,6 @@ spec:
           storageClass: longhorn-single-local-replica
           accessMode: ReadWriteMany
 
-    postgresql:
-      enabled: false
-
     redis:
       enabled: false
 
