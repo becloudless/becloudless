@@ -260,6 +260,10 @@ spec:
                       subtitle: Media discovery
                       logo: https://seerr.dev/os_logo_filled.svg
                       url: https://seerr.${BCL_GLOBAL_DOMAIN}
+                    - name: Immich
+                      subtitle: Photos management
+                      logo: https://immich.${BCL_GLOBAL_DOMAIN}/favicon.ico
+                      url: https://immich.${BCL_GLOBAL_DOMAIN}
 
                 - name: "Applications"
                   icon: "fas fa-heartbeat"

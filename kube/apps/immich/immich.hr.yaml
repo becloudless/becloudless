@@ -33,10 +33,10 @@ spec:
               PGUSER: app
               PGDATABASE: app
               PGHOST: immich-postgresql-rw
-              PGSSLKEY: /dbcert/tls.key
-              PGSSLCERT: /dbcert/tls.crt
-              PGSSLROOTCERT: /dbcert/ca.crt
-              PGSSLMODE: verify-full
+              # PGSSLKEY: /dbcert/tls.key
+              # PGSSLCERT: /dbcert/tls.crt
+              # PGSSLROOTCERT: /dbcert/ca.crt
+              # PGSSLMODE: verify-full
               PGPASSWORD:
                 valueFrom:
                   secretKeyRef:
