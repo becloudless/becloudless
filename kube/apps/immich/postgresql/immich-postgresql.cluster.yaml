@@ -14,16 +14,15 @@ spec:
         - CREATE EXTENSION IF NOT EXISTS earthdistance CASCADE;
 
   postgresql:
+    # https://cloudnative-pg.io/docs/1.28/ssl_connections
+    pg_hba:
+      - hostssl app all all cert
+
     shared_preload_libraries:
       - "vchord.so"
     parameters:
       max_connections: "400"
       shared_buffers: 256MB
-
-  # https://cloudnative-pg.io/docs/1.28/ssl_connections
-#  postgresql:
-#    pg_hba:
-#      - hostssl app all all cert
 
   certificates:
     clientCASecret: immich-postgresql-ca
