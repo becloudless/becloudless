@@ -21,6 +21,12 @@ spec:
       persistence:
         library:
           existingClaim: immich-data
+        dbcert:
+          enabled: true
+          type: secret
+          name: immich-postgresql-app-tls
+          mountPath: /dbcert
+          readOnly: true
 
     controllers:
       main:
@@ -64,13 +70,6 @@ spec:
             - secretName: tls-immich
               hosts:
                 - immich.${BCL_GLOBAL_DOMAIN}
-      persistence:
-        dbcert:
-          enabled: true
-          type: secret
-          name: immich-postgresql-app-tls
-          mountPath: /dbcert
-          readOnly: true
 
     machine-learning:
       enabled: true
