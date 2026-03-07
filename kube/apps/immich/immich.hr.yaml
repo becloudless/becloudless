@@ -63,8 +63,9 @@ spec:
           enabled: true
           type: hostPath
           hostPath: /data/Images
-          path: /hostData/Images
-          readOnly: true
+          globalMounts:
+            - path: /hostData/Images
+              readOnly: true
 
 # TODO immich do not do client cert authentication, not following libpq completely apparently
 #        dbcert:
