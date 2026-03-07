@@ -118,7 +118,7 @@ spec:
           - domain:
 #              - ssh-gitea.${BCL_GLOBAL_DOMAIN}
               - gitea.${BCL_GLOBAL_DOMAIN}
-              - home.${BCL_GLOBAL_DOMAIN}
+              - homer.${BCL_GLOBAL_DOMAIN}
               - lldap.${BCL_GLOBAL_DOMAIN}
               - longhorn.${BCL_GLOBAL_DOMAIN}
               - mail.${BCL_GLOBAL_DOMAIN}
