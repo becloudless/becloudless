@@ -1,0 +1,26 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: immich-postgresql
+  namespace: immich
+spec:
+  secretName: immich-postgresql-tls
+  secretTemplate:
+    labels:
+      cnpg.io/reload: ""
+  dnsNames:
+    - immich-postgresql-rw
+    - immich-postgresql-rw.immich
+    - immich-postgresql-rw.immich.svc
+    - immich-postgresql-rw.immich.svc.cluster.local
+    - immich-postgresql-r
+    - immich-postgresql-r.immich
+    - immich-postgresql-r.immich.svc
+    - immich-postgresql-r.immich.svc.cluster.local
+    - immich-postgresql-ro
+    - immich-postgresql-ro.immich
+    - immich-postgresql-ro.immich.svc
+    - immich-postgresql-ro.immich.svc.cluster.local
+  issuerRef:
+    name: immich-postgresql
+    kind: Issuer

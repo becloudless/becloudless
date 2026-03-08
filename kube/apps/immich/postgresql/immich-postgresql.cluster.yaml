@@ -1,0 +1,53 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: immich-postgresql
+  namespace: immich
+spec:
+  instances: 2
+  # https://github.com/tensorchord/cloudnative-vectorchord/pkgs/container/cloudnative-vectorchord/versions?filters%5Bversion_type%5D=tagged
+  imageName: tensorchord/cloudnative-vectorchord:18.3-1.1.1
+  bootstrap:
+    initdb:
+      postInitApplicationSQL:
+        - CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
+        - CREATE EXTENSION IF NOT EXISTS earthdistance CASCADE;
+
+  postgresql:
+    # https://cloudnative-pg.io/docs/1.28/ssl_connections
+    pg_hba:
+      - hostssl app all all cert
+
+    shared_preload_libraries:
+      - "vchord.so"
+    parameters:
+      max_connections: "400"
+      shared_buffers: 256MB
+
+  certificates:
+    clientCASecret: immich-postgresql-ca
+    # replication is required so cnpg do not look for ca.key in the clientCASecret, which is not the format of cert-manager
+    replicationTLSSecret: immich-postgresql-replication-tls
+    serverTLSSecret: immich-postgresql-tls
+    serverCASecret: immich-postgresql-tls
+
+  storage:
+    storageClass: longhorn-single-local-replica
+    size: 5Gi
+
+#  bootstrap:
+#    recovery:
+#      volumeSnapshots:
+#        storage:
+#          name: <snapshot name>
+#          kind: VolumeSnapshot
+#          apiGroup: snapshot.storage.k8s.io
+# OR
+#      backup:
+#        name: backup-example
+
+  backup:
+    volumeSnapshot:
+      className: longhorn-backup-incremental
+      snapshotOwnerReference: backup # removing the Backup object, removes the VolumeSnapshot
+

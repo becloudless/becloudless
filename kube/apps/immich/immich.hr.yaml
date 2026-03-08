@@ -1,0 +1,129 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: immich
+  namespace: immich
+spec:
+  interval: 60m
+  chart:
+    spec:
+      chart: immich
+      version: 0.10.3
+      sourceRef:
+        kind: HelmRepository
+        name: immich
+        namespace: immich
+  rollback:
+    cleanupOnFail: true
+  values:
+    # https://github.com/immich-app/immich-charts/blob/main/charts/immich/values.yaml
+    immich:
+      persistence:
+        library:
+          existingClaim: immich-data
+
+    controllers:
+      main:
+        containers:
+          main:
+            image:
+              tag: v2.5.6
+            env:
+              TZ: Europe/Paris
+              PGUSER: app
+              PGDATABASE: app
+              PGHOST: immich-postgresql-rw
+              # PGSSLKEY: /dbcert/tls.key
+              # PGSSLCERT: /dbcert/tls.crt
+              # PGSSLROOTCERT: /dbcert/ca.crt
+              # PGSSLMODE: verify-full
+              PGPASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: immich-postgresql-app
+                    key: password
+
+              DB_URL: postgresql://?uselibpqcompat=true
+
+              REDIS_HOSTNAME: immich-valkey
+              REDIS_USERNAME: app
+              REDIS_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: immich-valkey
+                    key: app
+
+
+    server:
+      pod:
+        nodeSelector:
+          kubernetes.io/hostname: srv21
+      persistence:
+        photos:
+          enabled: true
+          type: hostPath
+          hostPath: /data/Images
+          globalMounts:
+            - path: /hostData/Images
+              readOnly: true
+
+# TODO immich do not do client cert authentication, not following libpq completely apparently
+#        dbcert:
+#          enabled: true
+#          type: secret
+#          name: immich-postgresql-app-tls
+#          mountPath: /dbcert
+#          readOnly: true
+
+      ingress:
+        main:
+          enabled: true
+          annotations:
+            kubernetes.io/tls-acme: "true"
+#            traefik.ingress.kubernetes.io/router.middlewares: traefik-body-limit-2g@kubernetescrd
+          hosts:
+            - host: immich.${BCL_GLOBAL_DOMAIN}
+              paths:
+                - path: /
+                  pathType: Prefix
+          tls:
+            - secretName: tls-immich
+              hosts:
+                - immich.${BCL_GLOBAL_DOMAIN}
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: immich-data
+  namespace: immich
+spec:
+  storageClassName: immich-data
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: immich-data
+spec:
+  capacity:
+    storage: 100Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: immich-data
+  csi:
+    driver: driver.longhorn.io
+    fsType: ext4
+    volumeAttributes:
+      numberOfReplicas: '1'
+      staleReplicaTimeout: '2880'
+    volumeHandle: immich-data
+
+

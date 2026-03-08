@@ -1,0 +1,33 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: immich-valkey
+  namespace: immich
+spec:
+  interval: 10m
+  timeout: 1m
+  chart:
+    spec:
+      chart: valkey
+      version: 0.9.3
+      sourceRef:
+        kind: HelmRepository
+        name: immich-valkey
+  rollback:
+    cleanupOnFail: true
+  values:
+    replicaCount: 1
+    nodeSelector:
+      kubernetes.io/hostname: srv21
+    dataStorage:
+      enabled: true
+      requestedSize: 1Gi
+
+    auth:
+      enabled: true
+      aclUsers:
+        default:
+          permissions: "~* -@all"
+        app:
+          permissions: "~* &* +@all"
+      usersExistingSecret: immich-valkey
