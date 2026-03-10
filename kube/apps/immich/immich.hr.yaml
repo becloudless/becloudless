@@ -93,20 +93,6 @@ metadata:
 spec:
   storageClassName: immich-data
   accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 100Gi
-
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: immich-data
-  namespace: immich
-spec:
-  storageClassName: immich-data
-  accessModes:
     - ReadWriteOnce
   resources:
     requests:
