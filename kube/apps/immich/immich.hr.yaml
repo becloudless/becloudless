@@ -93,7 +93,7 @@ metadata:
 spec:
   storageClassName: immich-data
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 100Gi
@@ -108,7 +108,7 @@ spec:
     storage: 100Gi
   volumeMode: Filesystem
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
   storageClassName: immich-data
   csi:
