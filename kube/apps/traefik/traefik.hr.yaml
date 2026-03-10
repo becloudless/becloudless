@@ -38,6 +38,14 @@ spec:
               to: websecure
               permanent: true
 
+      websecure:
+        transport:
+          # required by immich for big files upload ~>150Mb
+          respondingTimeouts:
+            readTimeout: 600s
+            idleTimeout: 600s
+            writeTimeout: 600s
+
     deployment:
 #      kind: DaemonSet
       replicas: 1
