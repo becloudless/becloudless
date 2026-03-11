@@ -2,7 +2,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: immich
-  namespace: immich
+  namespace: ${INSTANCE:=immich}
 spec:
   interval: 60m
   chart:
@@ -12,7 +12,6 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: immich
-        namespace: immich
   rollback:
     cleanupOnFail: true
   values:
@@ -69,14 +68,14 @@ spec:
           annotations:
             kubernetes.io/tls-acme: "true"
           hosts:
-            - host: immich.${BCL_GLOBAL_DOMAIN}
+            - host: ${INSTANCE:=immich}.${BCL_GLOBAL_DOMAIN}
               paths:
                 - path: /
                   pathType: Prefix
           tls:
             - secretName: tls-immich
               hosts:
-                - immich.${BCL_GLOBAL_DOMAIN}
+                - ${INSTANCE:=immich}.${BCL_GLOBAL_DOMAIN}
 
     machine-learning:
       persistence:
@@ -89,9 +88,9 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: immich-data
-  namespace: immich
+  namespace: ${INSTANCE:=immich}
 spec:
-  storageClassName: immich-data
+  storageClassName: ${INSTANCE:=immich}-data
   accessModes:
     - ReadWriteMany
   resources:
@@ -102,7 +101,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: immich-data
+  name: ${INSTANCE:=immich}-data
 spec:
   capacity:
     storage: 100Gi
@@ -110,13 +109,13 @@ spec:
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: immich-data
+  storageClassName: ${INSTANCE:=immich}-data
   csi:
     driver: driver.longhorn.io
     fsType: ext4
     volumeAttributes:
       numberOfReplicas: '1'
       staleReplicaTimeout: '2880'
-    volumeHandle: immich-data
+    volumeHandle: ${INSTANCE:=immich}-data
 
 
