@@ -90,7 +90,7 @@ metadata:
   name: immich-data
   namespace: ${INSTANCE:=immich}
 spec:
-  storageClassName: immich-data
+  storageClassName: ${INSTANCE:=immich}-data
   accessModes:
     - ReadWriteMany
   resources:
