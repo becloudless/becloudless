@@ -4,3 +4,11 @@ metadata:
   name: concurrent-automatic-engine-upgrade-per-node-limit
   namespace: longhorn-system
 value: "1"
+
+---
+apiVersion: longhorn.io/v1beta2
+kind: Setting
+metadata:
+  name: default-backup-block-size
+  namespace: longhorn-system
+value: "16"
