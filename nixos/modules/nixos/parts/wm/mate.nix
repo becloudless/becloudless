@@ -88,7 +88,7 @@
         };
 
         "org/mate/desktop/background" = {
-          picture-filename = "/home/kwiskas/Pictures/chaussette.jpg";
+          picture-filename = "/home/toto/Pictures/chaussette.jpg";
         };
 
       };

@@ -12,9 +12,8 @@
       name = "gnome";
       user = "kwiskas";
     };
-    bcl.user = {
-      enable = true;
-      name = "kwiskas";
+    bcl.users.toto = {
+      hashedPasswordFile = ./default.secrets.yaml;
     };
     programs.firefox = {
       enable = true;
@@ -43,13 +42,6 @@
       LC_TELEPHONE = "fr_FR.UTF-8";
       LC_TIME = "fr_FR.UTF-8";
     };
-
-#    sops.secrets."users.kwiskas.password" = {
-#      neededForUsers = true;
-#      sopsFile = ./hideki.secrets.yaml;
-#    };
-
-
 
   };
 }
