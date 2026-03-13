@@ -18,11 +18,11 @@
   config = lib.mkIf (config.bcl.role.name == "tv") {
     bcl.boot.quiet = true;
     bcl.sound.enable = true;
-    bcl.wm = {
-      name = "dwm";
-      user = "tv";
-    };
     bcl.wifi.enable = true;
+
+    bcl.users.tv = {
+      wm = "dwm";
+    };
 
     security.sudo.wheelNeedsPassword = false;
 
@@ -31,12 +31,6 @@
       xdotool # move mouse
       pulseaudio
     ];
-
-    users.users.tv = {
-      isNormalUser = true;
-      group = "users";
-    };
-
 
     systemd.tmpfiles.rules = [
       "d /nix/home/tv 0700 tv users"

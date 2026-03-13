@@ -5,15 +5,20 @@ let
 
   userOpts = { name, config, ... }: {
     options = {
-      hashedPasswordFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.path;
-        default = null;
-        description = "Path to a file containing the hashed password for this user. Takes precedence over sopsFile.";
-      };
       sopsFile = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
         default = null;
         description = "Path to the sops secrets file containing the hashed password at key 'users.<name>.hashedPassword'.";
+      };
+      wm = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = "Window manager / desktop environment to configure for this user (e.g. \"gnome\").";
+      };
+      autoLogin = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether to automatically log in as this user.";
       };
     };
   };
@@ -26,20 +31,28 @@ in
     description = "Attribute set of users to create, keyed by username.";
   };
 
-  config = {
+  config =
+    let
+      autoLoginUsers = lib.filterAttrs (name: ucfg: ucfg.autoLogin) cfg;
+      autoLoginUser = if autoLoginUsers != {} then lib.head (lib.attrNames autoLoginUsers) else null;
+    in
+    {
+    services.displayManager.autoLogin = lib.mkIf (autoLoginUser != null) {
+      enable = true;
+      user = autoLoginUser;
+    };
+
     users.users = lib.mapAttrs (name: ucfg:
       {
         isNormalUser = true;
         group = "users";
-      } // lib.optionalAttrs (ucfg.hashedPasswordFile != null) {
-        hashedPasswordFile = ucfg.hashedPasswordFile;
-      } // lib.optionalAttrs (ucfg.hashedPasswordFile == null && ucfg.sopsFile != null) {
-        hashedPasswordFile = "/run/secrets/users.${name}.hashedPassword";
+      } // lib.optionalAttrs (ucfg.sopsFile != null) {
+        hashedPasswordFile = config.sops.secrets."users.${name}.hashedPassword".path;
       }
     ) cfg;
 
     sops.secrets = lib.mkMerge (lib.mapAttrsToList (name: ucfg:
-      lib.optionalAttrs (ucfg.hashedPasswordFile == null && ucfg.sopsFile != null) {
+      lib.optionalAttrs (ucfg.sopsFile != null) {
         "users.${name}.hashedPassword" = {
           neededForUsers = true;
           sopsFile = ucfg.sopsFile;

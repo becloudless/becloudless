@@ -2,13 +2,9 @@
   cfg = config.bcl.wm;
 in {
   options.bcl.wm = {
-    name = lib.mkOption { # TODO check it matches an import
+    name = lib.mkOption {
       type = lib.types.str;
       default = "";
-    };
-    user = lib.mkOption {
-      type = lib.types.str;
-#      default = "";
     };
   };
 }

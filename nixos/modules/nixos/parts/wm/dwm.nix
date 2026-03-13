@@ -13,10 +13,6 @@
     services.displayManager = {
   #    enable = true;
       defaultSession = "none+dwm";
-      autoLogin = {
-        enable = true;
-        user = config.bcl.wm.user;
-      };
     };
 
     services.xserver = {

@@ -8,13 +8,6 @@
     bcl.sound.enable = true;
     bcl.wifi.enable = true;
     bcl.role.setAdminPassword = true;
-    bcl.wm = {
-      name = "gnome";
-      user = "kwiskas";
-    };
-    bcl.users.toto = {
-      hashedPasswordFile = ./default.secrets.yaml;
-    };
     programs.firefox = {
       enable = true;
     };

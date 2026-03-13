@@ -1,9 +1,12 @@
 { config, lib, pkgs, ... }:
+let
+  mateUsers = lib.filterAttrs (name: ucfg: ucfg.wm == "mate") config.bcl.users;
+in
 {
   config = lib.mkIf (config.bcl.wm.name == "mate") {
     services.xserver.desktopManager.mate.enable = true;
 
-    home-manager.users."${config.bcl.wm.user}" = { lib, pkgs, ... }: {
+    home-manager.users = lib.mapAttrs (name: ucfg: { lib, pkgs, ... }: {
       dconf.settings = with lib.hm.gvariant; {
         "org/mate/panel/toplevels/top" = {
           size = 18;
@@ -92,6 +95,6 @@
         };
 
       };
-    };
+    }) mateUsers;
   };
 }

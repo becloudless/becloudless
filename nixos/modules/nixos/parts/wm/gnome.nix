@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }: {
+{ config, lib, pkgs, ... }:
+
+let
+  gnomeUsers = lib.filterAttrs (name: ucfg: ucfg.wm == "gnome") config.bcl.users;
+in
+{
   config = lib.mkIf (config.bcl.wm.name == "gnome") {
 
     services.xserver = {
@@ -69,7 +74,7 @@
     #   wantedBy = [ "graphical-session.target" ];
     # };
 
-    home-manager.users."${config.bcl.wm.user}" = { lib, pkgs, ... }: {
+    home-manager.users = lib.mapAttrs (name: ucfg: { lib, pkgs, ... }: {
 
       home.packages = with pkgs; [
         gnomeExtensions.dash-to-panel
@@ -126,7 +131,7 @@
         };
 
         "org/gnome/shell/extensions/azwallpaper" = {
-          slideshow-directory = "/home/${config.bcl.wm.user}/Pictures/Wallpapers/3840x2160";
+          slideshow-directory = "/home/${name}/Pictures/Wallpapers/3840x2160";
           slideshow-slide-duration = mkTuple [ 4 0 0 ];
         };
 
@@ -281,6 +286,6 @@
           ];
         };
       };
-    };
+    }) gnomeUsers;
   };
 }
