@@ -196,3 +196,4 @@ https://codeberg.org/PopeRigby/nixos/src/branch/main/systems/x86_64-iso/skut/def
 https://github.com/danth/stylix
 https://github.com/khaneliman/khanelinix/blob/main/flake.nix
 https://git.hoyer.xyz/harald/nixcfg/src/branch/main
+
