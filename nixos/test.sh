@@ -71,12 +71,12 @@ installHost() {
 
 ###########
 
-if compgen -G "./cli/dist/bcl-*/bcl" > /dev/null 2>&1; then
+if compgen -G "../cli/dist/bcl-*/bcl" > /dev/null 2>&1; then
 	echo_brightred "## Using local bcl build"
-	BCL_BIN="$(compgen -G "./cli/dist/bcl-*/bcl" | head -1)"
+	BCL_BIN="$(compgen -G "../cli/dist/bcl-*/bcl" | head -1)"
 else
 	echo_brightred "## Downloading bcl from GitHub release"
-	VERSION="$(grep -E '^\s+version = ' nixos/packages/bcl/default.nix | sed 's/.*"\(.*\)".*/\1/')"
+	VERSION="$(grep -E '^\s+version = ' packages/bcl/default.nix | sed 's/.*"\(.*\)".*/\1/')"
 	mkdir -p ./work
 	curl -fsSL "https://github.com/becloudless/becloudless/releases/download/cli-v${VERSION}/bcl-linux-amd64.tar.gz" \
 		| tar -xz -C ./work
@@ -97,6 +97,7 @@ $BCL_BIN -H ./tests/basic nixos prepare
 	nix-shell -p sops -p yq --run "sops -d ./tests/basic/repository/nixos/modules/nixos/groups/install/default.secrets.yaml | yq -r .ssh_host_ed25519_key" > $tmpKeyFile
 	(cd tests/basic/repository/nixos && nix build .#isoConfigurations.install --impure)
 }
+
 
 ###
 #rm -Rf ./tests/new && mkdir -p ./tests/new
@@ -147,3 +148,4 @@ validate-test-tv() {
 
 echo_green "## EVERYTHING IS OK"
 exit 0
+

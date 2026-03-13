@@ -10,5 +10,9 @@ in {
       type = lib.types.str;
 #      default = "";
     };
+    user = lib.mkOption {
+      type = lib.types.str;
+#      default = "";
+    };
   };
 }

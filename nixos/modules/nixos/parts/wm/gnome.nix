@@ -1,3 +1,6 @@
+    };
+          slideshow-directory = "/home/${config.bcl.wm.user}/Pictures/Wallpapers/3840x2160";
+    home-manager.users."${config.bcl.wm.user}" = { lib, pkgs, ... }: {
 { config, lib, pkgs, ... }: {
   config = lib.mkIf (config.bcl.wm.name == "gnome") {
 

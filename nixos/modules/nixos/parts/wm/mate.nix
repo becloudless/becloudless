@@ -1,5 +1,6 @@
+    };
+    home-manager.users."${config.bcl.wm.user}" = { lib, pkgs, ... }: {
 { config, lib, pkgs, ... }:
-{
   config = lib.mkIf (config.bcl.wm.name == "mate") {
     services.xserver.desktopManager.mate.enable = true;
 
