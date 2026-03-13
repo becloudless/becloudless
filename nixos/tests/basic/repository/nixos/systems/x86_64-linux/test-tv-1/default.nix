@@ -12,4 +12,3 @@
   # TODO this should be provided by facter
   boot.initrd.kernelModules = [ "e1000" ];
 }
-

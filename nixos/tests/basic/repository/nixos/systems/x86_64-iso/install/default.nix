@@ -8,4 +8,3 @@
   isoImage.squashfsCompression = "gzip -Xcompression-level 1";
   isoImage.volumeID = lib.mkForce "bcl-iso";
 }
-

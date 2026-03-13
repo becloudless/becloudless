@@ -1,6 +1,6 @@
 {
   inputs = {
-    bcl.url = "path:../../../../../nixos";
+    bcl.url = "path:../../../../nixos";
   };
 
   outputs = inputs: inputs.bcl.mkFlake {
@@ -8,4 +8,3 @@
     src = ./.;
   };
 }
-
