@@ -40,7 +40,7 @@ installHost() {
 		-enable-kvm \
 		-net nic \
 		-net user,hostfwd=tcp::10022-:22 \
-		-cdrom ./result/iso/bcl.iso \
+		-cdrom ./nixos/result/iso/bcl.iso \
 		-pidfile ../../work/$host.pid \
 		-daemonize \
 		$display \
