@@ -30,9 +30,12 @@ jobs:
 
       - name: Check for changes
         id: changes
+        env:
+          PATHS: ${{ inputs.paths }}
         run: |
           mainHash=$(git rev-parse origin/main)
-          pattern=$(echo "${{ inputs.paths }}" | sed '/^$/d' | sed 's|.*|^&|' | paste -sd'|')
+          pattern=$(echo "$PATHS" | sed '/^$/d' | sed 's|.*|^&|' | paste -sd'|')
+          echo "pattern: $pattern"
           if git diff --name-only "$mainHash" "${{ github.sha }}" | grep -Eq "$pattern"; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
