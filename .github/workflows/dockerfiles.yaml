@@ -11,7 +11,7 @@ jobs:
     with:
       paths: |
         dockerfiles/
-#        .github/workflows/dockerfiles.yaml
+        .github/workflows/dockerfiles.yaml
 
   build:
     needs: check

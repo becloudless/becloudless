@@ -12,7 +12,7 @@ jobs:
     with:
       paths: |
         nixos/
-#        .github/workflows/nixos.yaml
+        .github/workflows/nixos.yaml
 
   build:
     needs: check

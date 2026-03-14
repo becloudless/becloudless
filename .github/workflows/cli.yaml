@@ -12,7 +12,7 @@ jobs:
     with:
       paths: |
         cli/
-#        .github/workflows/cli.yaml
+        .github/workflows/cli.yaml
 
   build:
     needs: check
