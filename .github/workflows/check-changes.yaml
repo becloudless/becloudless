@@ -38,3 +38,7 @@ jobs:
           else
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Report changes
+        run: echo "changed=${{ steps.changes.outputs.changed }}"
+
