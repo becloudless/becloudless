@@ -9,7 +9,9 @@ jobs:
   check:
     uses: ./.github/workflows/check-changes.yaml
     with:
-      path: dockerfiles/
+      paths: |
+        dockerfiles/
+        .github/workflows/dockerfiles.yaml
 
   build:
     needs: check

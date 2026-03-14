@@ -10,7 +10,9 @@ jobs:
   check:
     uses: ./.github/workflows/check-changes.yaml
     with:
-      path: nixos/
+      paths: |
+        nixos/
+        .github/workflows/nixos.yaml
 
   build:
     needs: check
