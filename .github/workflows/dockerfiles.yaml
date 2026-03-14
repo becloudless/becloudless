@@ -4,6 +4,9 @@ name: Dockerfiles
 
 on:
   push:
+    paths:
+      - dockerfiles/**
+      - .github/workflows/dockerfiles.yaml
 
 jobs:
   build:
