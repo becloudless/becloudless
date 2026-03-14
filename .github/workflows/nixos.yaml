@@ -4,6 +4,9 @@ name: Nixos
 
 on:
   push:
+    paths:
+        - nixos/**
+        - .github/workflows/nixos.yaml
   workflow_dispatch:
 
 jobs:
