@@ -4,16 +4,20 @@ name: CLI
 
 on:
   push:
-    paths:
-      - cli/**
-      - .github/workflows/cli.yaml
   workflow_dispatch:
 
 jobs:
+  check:
+    uses: ./.github/workflows/check-changes.yaml
+    with:
+      paths: |
+        cli/
+        .github/workflows/cli.yaml
+
   build:
+    needs: check
+    if: needs.check.outputs.changed == 'true'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -21,5 +25,4 @@ jobs:
           fetch-depth: 0 # whole repo
 
       - name: Build CLI
-        if: github.ref != 'refs/heads/main'
         run: cli/gomake build

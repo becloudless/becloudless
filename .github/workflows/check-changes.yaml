@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Check changes
+
+on:
+  workflow_call:
+    inputs:
+      paths:
+        description: |
+          Newline-separated list of path prefixes to check for changes against origin/main.
+          Example:
+            dockerfiles/
+            .github/workflows/dockerfiles.yaml
+        required: true
+        type: string
+    outputs:
+      changed:
+        description: "true if any file under the given paths changed on this branch compared to origin/main"
+        value: ${{ jobs.check.outputs.changed }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.changes.outputs.changed }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes
+        id: changes
+        run: |
+          mainHash=$(git rev-parse origin/main)
+          pattern=$(echo "${{ inputs.paths }}" | sed '/^$/d' | sed 's|.*|^&|' | paste -sd'|')
+          if git diff --name-only "$mainHash" "${{ github.sha }}" | grep -Eq "$pattern"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Report changes
+        run: echo "changed=${{ steps.changes.outputs.changed }}"
+
