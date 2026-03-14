@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 
-name: BeCloudLess
+name: Nixos
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
         run: |
           set -x 
           mainHash=$(git rev-parse origin/main)          
-          if git diff --name-only $mainHash ${{ github.sha }} | grep -Eq '^(nixos/|tests/|test.sh)'; then
+          if git diff --name-only $mainHash ${{ github.sha }} | grep -Eq '^(nixos/)'; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "changed=false" >> $GITHUB_OUTPUT
@@ -65,4 +65,4 @@ jobs:
       - name: test nixos
         if: steps.changes.outputs.changed == 'true'
         run: |
-          bash -x ./test.sh
+          cd nixos && bash -x ./test.sh

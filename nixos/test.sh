@@ -40,7 +40,7 @@ installHost() {
 		-enable-kvm \
 		-net nic \
 		-net user,hostfwd=tcp::10022-:22 \
-		-cdrom ./nixos/result/iso/bcl.iso \
+		-cdrom ./result/iso/bcl.iso \
 		-pidfile ../../work/$host.pid \
 		-daemonize \
 		$display \
@@ -71,12 +71,12 @@ installHost() {
 
 ###########
 
-if compgen -G "./cli/dist/bcl-*/bcl" > /dev/null 2>&1; then
+if compgen -G "../cli/dist/bcl-*/bcl" > /dev/null 2>&1; then
 	echo_brightred "## Using local bcl build"
-	BCL_BIN="$(compgen -G "./cli/dist/bcl-*/bcl" | head -1)"
+	BCL_BIN="$(compgen -G "../cli/dist/bcl-*/bcl" | head -1)"
 else
 	echo_brightred "## Downloading bcl from GitHub release"
-	VERSION="$(grep -E '^\s+version = ' nixos/packages/bcl/default.nix | sed 's/.*"\(.*\)".*/\1/')"
+	VERSION="$(grep -E '^\s+version = ' packages/bcl/default.nix | sed 's/.*"\(.*\)".*/\1/')"
 	mkdir -p ./work
 	curl -fsSL "https://github.com/becloudless/becloudless/releases/download/cli-v${VERSION}/bcl-linux-amd64.tar.gz" \
 		| tar -xz -C ./work
