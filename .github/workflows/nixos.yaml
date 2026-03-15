@@ -17,10 +17,7 @@ jobs:
   build:
     needs: changes
     if: needs.changes.outputs.changed == 'true'
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ ubuntu-latest ] #, macos-latest
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -30,13 +27,13 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
 
-      - name: prepare macos
-        if: matrix.os == 'macos-latest'
-        run: |
-          brew install go
+#      - name: prepare macos
+#        if: matrix.os == 'macos-latest'
+#        run: |
+#          brew install go
 
       - name: prepare ubuntu
-        if: matrix.os == 'ubuntu-latest'
+#        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt update
           sudo apt install qemu-system qemu-utils -y
