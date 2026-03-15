@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 
-name: Check changes
+name: Changes
 
 on:
   workflow_call:
@@ -16,10 +16,10 @@ on:
     outputs:
       changed:
         description: "true if any file under the given paths changed on this branch compared to origin/main"
-        value: ${{ jobs.check.outputs.changed }}
+        value: ${{ jobs.changes.outputs.changed }}
 
 jobs:
-  check:
+  changes:
     runs-on: ubuntu-latest
     outputs:
       changed: ${{ steps.changes.outputs.changed }}
