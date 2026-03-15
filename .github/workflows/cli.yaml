@@ -7,16 +7,16 @@ on:
   workflow_dispatch:
 
 jobs:
-  check-changes:
-    uses: ./.github/workflows/check-changes.yaml
+  changes:
+    uses: ./.github/workflows/changes.yaml
     with:
       paths: |
         cli/
         .github/workflows/cli.yaml
 
   build:
-    needs: check-changes
-    if: needs.check-changes.outputs.changed == 'true'
+    needs: changes
+    if: needs.changes.outputs.changed == 'true'
     runs-on: ubuntu-latest
 
     steps:
