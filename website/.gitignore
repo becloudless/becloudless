@@ -1,0 +1,7 @@
+# Hugo build output
+public/
+resources/_gen/
+
+# Hugo module cache
+_vendor/
+
