@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 
-name: Check changes
+name: Changes
 
 on:
   workflow_call:
@@ -16,10 +16,10 @@ on:
     outputs:
       changed:
         description: "true if any file under the given paths changed on this branch compared to origin/main"
-        value: ${{ jobs.check.outputs.changed }}
+        value: ${{ jobs.changes.outputs.changed }}
 
 jobs:
-  check:
+  changes:
     runs-on: ubuntu-latest
     outputs:
       changed: ${{ steps.changes.outputs.changed }}
@@ -31,9 +31,12 @@ jobs:
       - name: Check for changes
         id: changes
         run: |
-          mainHash=$(git rev-parse origin/main)
+          mergeBase=$(git merge-base origin/main "${{ github.sha }}")
+          if [ "$mergeBase" = "${{ github.sha }}" ]; then
+            mergeBase=$(git rev-parse "${{ github.sha }}~1")
+          fi
           pattern=$(echo "${{ inputs.paths }}" | sed '/^$/d' | sed 's|.*|^&|' | paste -sd'|')
-          if git diff --name-only "$mainHash" "${{ github.sha }}" | grep -Eq "$pattern"; then
+          if git diff --name-only "$mergeBase" "${{ github.sha }}" | grep -Eq "$pattern"; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "changed=false" >> $GITHUB_OUTPUT

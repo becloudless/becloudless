@@ -6,16 +6,16 @@ on:
   push:
 
 jobs:
-  check:
-    uses: ./.github/workflows/check-changes.yaml
+  changes:
+    uses: ./.github/workflows/changes.yaml
     with:
       paths: |
         dockerfiles/
         .github/workflows/dockerfiles.yaml
 
   build:
-    needs: check
-    if: needs.check.outputs.changed == 'true'
+    needs: changes
+    if: needs.changes.outputs.changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       packages: write
