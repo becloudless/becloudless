@@ -73,14 +73,14 @@ installHost() {
 
 if compgen -G "../cli/dist/bcl-*/bcl" > /dev/null 2>&1; then
 	echo_brightred "## Using local bcl build"
-	BCL_BIN="$(compgen -G "../cli/dist/bcl-*/bcl" | head -1)"
+	BCL_BIN="$(realpath $(compgen -G "../cli/dist/bcl-*/bcl" | head -1))"
 else
 	echo_brightred "## Downloading bcl from GitHub release"
 	VERSION="$(grep -E '^\s+version = ' packages/bcl/default.nix | sed 's/.*"\(.*\)".*/\1/')"
 	mkdir -p ./work
 	curl -fsSL "https://github.com/becloudless/becloudless/releases/download/cli-v${VERSION}/bcl-linux-amd64.tar.gz" \
 		| tar -xz -C ./work
-	BCL_BIN="$PWD/work/bcl-linux-amd64/bcl"
+	BCL_BIN=$(realpath "$PWD/work/bcl-linux-amd64/bcl")
 fi
 
 echo_brightred "## Check flake"
@@ -124,11 +124,11 @@ $BCL_BIN -H ./tests/basic nixos prepare
 #validate-test-workstation() {
 #	echo "hello" | ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i tests/basic/secrets/ed25519 -p 10022 toto@127.0.0.1 sudo ls -la
 #}
-#installHost "test-workstation" \
+#(cd ./tests/basic/repository && installHost "test-workstation" \
 # 	"c9b0fb14-1949-6949-9711-63409d2f9cfe" \
 # 	14G \
 # 	3G \
-# 	validate-test-workstation
+# 	validate-test-workstation)
 
 ###
 validate-test-tv() {
