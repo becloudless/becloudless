@@ -24,4 +24,3 @@ hugo --minify
 ```
 
 Output is written to `public/`.
-
