@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  check:
+  check-changes:
     uses: ./.github/workflows/check-changes.yaml
     with:
       paths: |
@@ -15,8 +15,8 @@ jobs:
         .github/workflows/cli.yaml
 
   build:
-    needs: check
-    if: needs.check.outputs.changed == 'true'
+    needs: check-changes
+    if: needs.check-changes.outputs.changed == 'true'
     runs-on: ubuntu-latest
 
     steps:

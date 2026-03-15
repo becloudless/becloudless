@@ -16,13 +16,13 @@ on:
     outputs:
       changed:
         description: "true if any file under the given paths changed on this branch compared to origin/main"
-        value: ${{ jobs.check.outputs.changed }}
+        value: ${{ jobs.check-changes.outputs.changed }}
 
 jobs:
-  check:
+  check-changes:
     runs-on: ubuntu-latest
     outputs:
-      changed: ${{ steps.changes.outputs.changed }}
+      changed: ${{ steps.check-changes.outputs.changed }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -40,5 +40,5 @@ jobs:
           fi
 
       - name: Report changes
-        run: echo "changed=${{ steps.changes.outputs.changed }}"
+        run: echo "changed=${{ steps.check-changes.outputs.changed }}"
 
