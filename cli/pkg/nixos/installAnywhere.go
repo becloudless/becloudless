@@ -85,7 +85,7 @@ func InstallAnywhere(sshConfig *runner.SshConnectionConfig, diskPassword string)
 	//}
 
 	anywhereRunner := runner.NewNixShellRunner(localRunner, "nixos-anywhere")
-	logs.WithField("system", systemName).Info("Run kexec phase")
+	//logs.WithField("system", systemName).Info("Run kexec phase")
 
 	nixosAnywhereArgs := []string{
 		"--debug",
@@ -110,12 +110,12 @@ func InstallAnywhere(sshConfig *runner.SshConnectionConfig, diskPassword string)
 	}
 
 	// kexec
-	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + sshPassword}, nil, nil, nil, "nixos-anywhere", append(nixosAnywhereArgs,
-		"--phases", "kexec",
-		sshConfig.User+"@"+sshConfig.Host,
-	)...); err != nil {
-		return errs.WithE(err, "kexec phase failed")
-	}
+	//if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + sshPassword}, nil, nil, nil, "nixos-anywhere", append(nixosAnywhereArgs,
+	//	"--phases", "kexec",
+	//	sshConfig.User+"@"+sshConfig.Host,
+	//)...); err != nil {
+	//	return errs.WithE(err, "kexec phase failed")
+	//}
 
 	temp, err := os.MkdirTemp(os.TempDir(), "bcl-install")
 	if err != nil {
@@ -131,14 +131,14 @@ func InstallAnywhere(sshConfig *runner.SshConnectionConfig, diskPassword string)
 	}
 
 	installUser := "root"
-	if info.IsInstaller {
-		// was already running installer. No kexec was run
-		installUser = sshConfig.User
-	}
+	//if info.IsInstaller {
+	// was already running installer. No kexec was run
+	installUser = sshConfig.User
+	//}
 
 	logs.WithField("system", systemName).Info("Run disko,install,reboot phases")
 	if _, err := anywhereRunner.Exec(&[]string{"SSHPASS=" + sshPassword}, nil, nil, nil, "nixos-anywhere", append(nixosAnywhereArgs,
-		"--phases", "disko,install,reboot",
+		"--phases", "kexec,disko,install,reboot",
 		"--extra-files", path.Join(temp, "fs"),
 		"--disk-encryption-keys", "/root/secret.key", path.Join(temp, "install", "secret.key"),
 		installUser+"@"+sshConfig.Host,

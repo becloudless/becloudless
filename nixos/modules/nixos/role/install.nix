@@ -9,6 +9,11 @@ in {
         nixos-facter
       ];
 
+      # workaround https://github.com/nix-community/nixos-anywhere/issues/613, adding keys to root user
+      users.users.root.openssh.authorizedKeys.keys =
+          lib.attrValues (lib.mapAttrs (_name: userCfg: userCfg.sshPublicKey)
+            config.bcl.global.admins);
+
       # Define the nixos user for the install image
       # (for iso this is provided by installation-cd-minimal.nix, but raw-efi needs it explicitly)
       users.users.nixos = {
