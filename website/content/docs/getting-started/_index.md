@@ -33,7 +33,7 @@ nix develop
 2. Assign a role (e.g., `workstation`, `serverKube`) in the system configuration.
 3. Apply optional hardware and parts modules.
 
-See [NixOS — Adding a System]({{< relref "nixos/adding-a-system" >}}) for a detailed walkthrough.
+See [NixOS — Adding a System]({{< relref "docs/nixos/adding-a-system" >}}) for a detailed walkthrough.
 
 ## Step 2 – Bootstrap a Kubernetes Cluster
 
@@ -41,7 +41,7 @@ See [NixOS — Adding a System]({{< relref "nixos/adding-a-system" >}}) for a de
 2. Use the `bcl` CLI to bootstrap Flux onto the cluster.
 3. Flux will reconcile all apps defined under `kube/`.
 
-See [Runbooks — Bootstrap Cluster]({{< relref "runbooks/bootstrap-cluster" >}}) for the full sequence.
+See [Runbooks — Bootstrap Cluster]({{< relref "docs/runbooks/bootstrap-cluster" >}}) for the full sequence.
 
 ## Step 3 – Deploy Applications
 
@@ -52,6 +52,6 @@ See [Kubernetes]({{< relref "kubernetes" >}}) for the full app inventory.
 ## Next Steps
 
 - [Architecture]({{< relref "architecture" >}}) — understand the big picture
-- [CLI Reference]({{< relref "cli/commands" >}}) — explore all available commands
+- [CLI Reference]({{< relref "docs/cli/commands" >}}) — explore all available commands
 - [Runbooks]({{< relref "runbooks" >}}) — day-two operations
 
