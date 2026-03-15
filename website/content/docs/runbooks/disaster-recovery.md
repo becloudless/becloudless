@@ -85,5 +85,5 @@ Restore PostgreSQL databases as described in [section 2](#2-recover-a-cloudnativ
 
 ### 3.4 — Verify
 
-Follow the [Bootstrap Cluster]({{< relref "runbooks/bootstrap-cluster" >}}) post-bootstrap checklist to confirm all services are healthy.
+Follow the [Bootstrap Cluster]({{< relref "docs/runbooks/bootstrap-cluster" >}}) post-bootstrap checklist to confirm all services are healthy.
 

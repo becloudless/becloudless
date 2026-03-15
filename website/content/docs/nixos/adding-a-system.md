@@ -77,5 +77,5 @@ bcl nixos deploy <hostname>
 
 ## 6. (Optional) Add Hardware Module
 
-If the machine uses a device not yet covered, add a hardware module under `nixos/modules/nixos/hardware/devices/`. See [Hardware — Adding a Device]({{< relref "hardware/adding-hardware" >}}).
+If the machine uses a device not yet covered, add a hardware module under `nixos/modules/nixos/hardware/devices/`. See [Hardware — Adding a Device]({{< relref "docs/hardware/adding-hardware" >}}).
 

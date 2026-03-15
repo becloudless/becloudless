@@ -83,5 +83,5 @@ Fix any evaluation errors before deploying to the target device.
 | `orangepi5plus.nix` | OrangePi 5 Plus |
 | `orangepi5-common.nix` | Shared base for OrangePi 5 family |
 
-See [OrangePi Setup]({{< relref "hardware/orangepi" >}}) for the full OrangePi bring-up procedure.
+See [OrangePi Setup]({{< relref "docs/hardware/orangepi" >}}) for the full OrangePi bring-up procedure.
 
