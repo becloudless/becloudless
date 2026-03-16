@@ -32,5 +32,8 @@ cd cli
 
 `bcl` reads its configuration from the repository root. Run commands from within the repository.
 
-{{% children containerstyle="div" style="h2" description="true" %}}
+{{< cards >}}
+  {{< card link="commands" title="Commands" >}}
+  {{< card link="development" title="Development" >}}
+{{< /cards >}}
 

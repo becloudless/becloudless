@@ -7,7 +7,9 @@ Build and maintain your own infrastructure easily, from zero to enterprise-level
 
 BeCloudLess provides the opinionated glue between awesome FOSS tools to make what might seem like a complex infrastructure a dead-simple stack to operate.
 
-{{% children containerstyle="div" style="h2" description="true" %}}
+{{< cards >}}
+  {{< card link="docs" title="Documentation" >}}
+{{< /cards >}}
 
 ## Project Status
 

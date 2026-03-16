@@ -25,5 +25,10 @@ nixos/
 └── shells/              # Dev shells
 ```
 
-{{% children containerstyle="div" style="h2" description="true" %}}
+{{< cards >}}
+  {{< card link="adding-a-system" title="Adding a System" >}}
+  {{< card link="global-config" title="Global Config" >}}
+  {{< card link="parts" title="Parts" >}}
+  {{< card link="roles" title="Roles" >}}
+{{< /cards >}}
 

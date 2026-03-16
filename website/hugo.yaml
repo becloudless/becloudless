@@ -1,0 +1,52 @@
+baseURL: "https://becloudless.net/"
+languageCode: "en-us"
+title: "BeCloudLess"
+
+
+menu:
+  main:
+    - name: Documentation
+      pageRef: /docs
+      weight: 1
+    - name: Blog
+      pageRef: /blog
+      params:
+        type: link
+        icon: rss
+      weight: 2
+    - name: About
+      pageRef: /about
+      weight: 3
+    - name: Search
+      weight: 4
+      params:
+        type: search
+    - name: GitHub
+      weight: 5
+      url: "https://github.com/becloudless/becloudless"
+      params:
+        icon: github
+
+module:
+  imports:
+    - # https://imfing.github.io/hextra/docs/getting-started/
+      path: github.com/imfing/hextra
+
+params:
+  titleSeparator: "::"
+  page:
+    width: full
+
+outputs:
+  home:
+    - HTML
+    - RSS
+    - JSON
+
+markup:
+  highlight:
+    noClasses: false
+  goldmark:
+    renderer:
+      unsafe: true
+
