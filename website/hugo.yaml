@@ -34,8 +34,11 @@ module:
 
 params:
   titleSeparator: "::"
+  customCSS:
+    - css/custom.css
   page:
     width: full
+
 
 outputs:
   home:
