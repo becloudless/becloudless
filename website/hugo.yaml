@@ -38,6 +38,9 @@ params:
     - css/custom.css
   page:
     width: full
+  editURL:
+    enable: true
+    base: "https://github.com/becloudless/becloudless/tree/main/website/content"
 
 
 outputs:
