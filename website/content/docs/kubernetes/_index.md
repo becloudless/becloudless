@@ -29,5 +29,11 @@ git push → Flux source controller detects change
          → Helm controller reconciles Helm releases
 ```
 
-{{% children containerstyle="div" style="h2" description="true" %}}
+{{< cards >}}
+  {{< card link="adding-an-app" title="Adding an App" >}}
+  {{< card link="apps" title="Apps" >}}
+  {{< card link="networking" title="Networking" >}}
+  {{< card link="security" title="Security" >}}
+  {{< card link="storage" title="Storage" >}}
+{{< /cards >}}
 

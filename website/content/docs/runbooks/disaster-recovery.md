@@ -59,9 +59,9 @@ Apply and wait for the `Cluster` to reach `Ready` state.
 
 ## 3. Rebuild the Cluster from Scratch
 
-{{% notice warning %}}
+{{< callout type="warning" >}}
 **Destructive** — only proceed if the cluster cannot be recovered in place.
-{{% /notice %}}
+{{< /callout >}}
 
 ### 3.1 — Restore NixOS on Nodes
 

@@ -12,5 +12,10 @@ Runbooks document step-by-step operational procedures for common (and not-so-com
 - `<placeholder>` values must be substituted with your actual values.
 - Steps marked **⚠️ destructive** will cause downtime or data loss if run incorrectly.
 
-{{% children containerstyle="div" style="h2" description="true" %}}
+{{< cards >}}
+  {{< card link="bootstrap-cluster" title="Bootstrap Cluster" >}}
+  {{< card link="disaster-recovery" title="Disaster Recovery" >}}
+  {{< card link="rotate-secrets" title="Rotate Secrets" >}}
+  {{< card link="upgrade-nixos" title="Upgrade NixOS" >}}
+{{< /cards >}}
 
