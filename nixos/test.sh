@@ -2,6 +2,8 @@
 set -e
 set -x
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 DEBUG="${DEBUG:=false}"
 
 echo_stderr() { echo -e "$*" 1>&2;}
@@ -14,7 +16,7 @@ echo_blue() { echo_stderr "\033[0;34m$*\033[0m";}
 
 
 clean_up () {
-	[ -z "$(find ./tests/work -type f -name '*.pid')" ] || pkill -F ./tests/work/*.pid
+	[ -z "$(find "$DIR/tests/work" -type f -name '*.pid')" ] || pkill -F "$DIR/tests/work/*.pid"
 }
 trap clean_up EXIT
 
@@ -26,8 +28,8 @@ installHost() {
 	validation=$5
 
 	echo_brightred "## Creating $host disk image"
-	mkdir -p ../../work
-	qemu-img create -f qcow2 "../..//work/$host.cow" $diskSize
+	mkdir -p $DIR/tests/work
+	qemu-img create -f qcow2 "$DIR/tests/work/$host.cow" $diskSize
 
 	echo_brightred "## Starting VM"
 	display="-display none"
@@ -40,11 +42,11 @@ installHost() {
 		-enable-kvm \
 		-net nic \
 		-net user,hostfwd=tcp::10022-:22 \
-		-cdrom ./nixos/result/iso/bcl.iso \
-		-pidfile ../../work/$host.pid \
+		-cdrom $DIR/tests/basic/repository/nixos/result/iso/bcl.iso \
+		-pidfile $DIR/tests/work/$host.pid \
 		-daemonize \
 		$display \
-		../../work/$host.cow
+		$DIR/tests/work/$host.cow
 	#	-drive file=../..//work/test-tv.cow,if=virtio,format=raw,cache=none,aio=native \
 
 	$DEBUG && {
@@ -71,12 +73,12 @@ installHost() {
 
 ###########
 
-if compgen -G "../cli/dist/bcl-*/bcl" > /dev/null 2>&1; then
+if compgen -G "$DIR/../cli/dist/bcl-*/bcl" > /dev/null 2>&1; then
 	echo_brightred "## Using local bcl build"
-	BCL_BIN="$(realpath $(compgen -G "../cli/dist/bcl-*/bcl" | head -1))"
+	BCL_BIN="$(realpath $(compgen -G "$DIR/../cli/dist/bcl-*/bcl" | head -1))"
 else
 	echo_brightred "## Downloading bcl from GitHub release"
-	VERSION="$(grep -E '^\s+version = ' packages/bcl/default.nix | sed 's/.*"\(.*\)".*/\1/')"
+	VERSION="$(grep -E '^\s+version = ' "$DIR/packages/bcl/default.nix" | sed 's/.*"\(.*\)".*/\1/')"
 	mkdir -p ./work
 	curl -fsSL "https://github.com/becloudless/becloudless/releases/download/cli-v${VERSION}/bcl-linux-amd64.tar.gz" \
 		| tar -xz -C ./work
@@ -84,18 +86,18 @@ else
 fi
 
 echo_brightred "## Check flake"
-(cd tests/basic/repository/nixos && nix flake update && nix flake check)
+(cd "$DIR/tests/basic/repository/nixos" && nix flake update && nix flake check)
 
 echo_brightred "## Prepare host"
-$BCL_BIN -H ./tests/basic nixos prepare
+$BCL_BIN -H "$DIR/tests/basic" nixos prepare
 
-[ -f ./tests/basic/repository/nixos/result/iso/bcl.iso ] || {
+[ -f "$DIR/tests/basic/repository/nixos/result/iso/bcl.iso" ] || {
 	echo_brightred "## Building iso image"
 	# TODO $BCL_BIN nixos iso build -s iso/install
 	tmpKeyFile=/tmp/install-ssh_host_ed25519_key
-	export SOPS_AGE_KEY_FILE=./tests/basic/secrets/age
-	nix-shell -p sops -p yq --run "sops -d ./tests/basic/repository/nixos/modules/nixos/groups/install/default.secrets.yaml | yq -r .ssh_host_ed25519_key" > $tmpKeyFile
-	(cd tests/basic/repository/nixos && nix build .#isoConfigurations.install --impure)
+	export SOPS_AGE_KEY_FILE="$DIR/tests/basic/secrets/age"
+	nix-shell -p sops -p yq --run "sops -d $DIR/tests/basic/repository/nixos/modules/nixos/groups/install/default.secrets.yaml | yq -r .ssh_host_ed25519_key" > $tmpKeyFile
+	(cd $DIR/tests/basic/repository/nixos && nix build .#isoConfigurations.install --impure)
 }
 
 ###
@@ -121,21 +123,21 @@ $BCL_BIN -H ./tests/basic nixos prepare
 #exit 0
 
 ###
-#validate-test-workstation() {
-#	echo "hello" | ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i tests/basic/secrets/ed25519 -p 10022 toto@127.0.0.1 sudo ls -la
-#}
-#(cd ./tests/basic/repository && installHost "test-workstation" \
-# 	"c9b0fb14-1949-6949-9711-63409d2f9cfe" \
-# 	14G \
-# 	3G \
-# 	validate-test-workstation)
+validate-test-workstation() {
+	echo "hello" | ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $DIR/tests/basic/secrets/ed25519 -p 10022 toto@127.0.0.1 sudo ls -la
+}
+(cd "$DIR/tests/basic/repository" && installHost "test-workstation" \
+ 	"c9b0fb14-1949-6949-9711-63409d2f9cfe" \
+ 	14G \
+ 	3G \
+ 	validate-test-workstation)
 
 ###
 validate-test-tv() {
 	ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ../secrets/ed25519 -p 10022 toto@127.0.0.1 pidof jellyfin-desktop
 }
 
-(cd ./tests/basic/repository && installHost "test-tv" \
+(cd "$DIR/tests/basic/repository" && installHost "test-tv" \
 	"7d5e9855-0cba-4c41-b45e-cdff7a9514d9" \
 	13G \
 	3G \

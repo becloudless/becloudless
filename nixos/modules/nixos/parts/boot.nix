@@ -93,11 +93,14 @@ in {
           };
         };
         kernelModules = config.boot.kernelModules;
-        network.ssh = lib.mkIf cfg.ssh {
+        network = lib.mkIf cfg.ssh {
           enable = true;
-          port = 22;
-          authorizedKeys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILvM8t4hXJxjBzrUS5FhAQ/TD9TJscT7CyLKFSOjZjj4 id_ed25519" ];
-          hostKeys = ["/etc/ssh/initrd_ssh_host_ed25519_key" ];
+          ssh = {
+            enable = true;
+            port = 22;
+            authorizedKeys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILvM8t4hXJxjBzrUS5FhAQ/TD9TJscT7CyLKFSOjZjj4 id_ed25519" ]; # TODO from global
+            hostKeys = ["/etc/ssh/initrd_ssh_host_ed25519_key" ];
+          };
         };
         # postDeviceCommands = lib.mkAfter ''
         #   zfs rollback -r rpool/local/root@blank
