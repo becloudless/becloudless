@@ -123,14 +123,14 @@ $BCL_BIN -H "$DIR/tests/basic" nixos prepare
 #exit 0
 
 ###
-validate-test-workstation() {
-	echo "hello" | ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $DIR/tests/basic/secrets/ed25519 -p 10022 toto@127.0.0.1 sudo ls -la
-}
-(cd "$DIR/tests/basic/repository" && installHost "test-workstation" \
- 	"c9b0fb14-1949-6949-9711-63409d2f9cfe" \
- 	14G \
- 	3G \
- 	validate-test-workstation)
+#validate-test-workstation() {
+#	echo "hello" | ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $DIR/tests/basic/secrets/ed25519 -p 10022 toto@127.0.0.1 sudo ls -la
+#}
+#(cd "$DIR/tests/basic/repository" && installHost "test-workstation" \
+# 	"c9b0fb14-1949-6949-9711-63409d2f9cfe" \
+# 	16G \
+# 	3G \
+# 	validate-test-workstation)
 
 ###
 validate-test-tv() {

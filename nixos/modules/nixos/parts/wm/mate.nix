@@ -91,7 +91,7 @@ in
         };
 
         "org/mate/desktop/background" = {
-          picture-filename = "/home/toto/Pictures/chaussette.jpg";
+          picture-filename = "/home/${name}/Pictures/chaussette.jpg";
         };
 
       };

@@ -3,6 +3,5 @@ basic/repository/nixos/result
 basic/repository/nixos/flake.lock
 */version
 */lock
-basic/repository/nixos/result
 work/
 new/
