@@ -16,7 +16,7 @@ echo_blue() { echo_stderr "\033[0;34m$*\033[0m";}
 
 
 clean_up () {
-	[ -z "$(find "$DIR/tests/work" -type f -name '*.pid')" ] || pkill -F "$DIR/tests/work/*.pid"
+	[ -z "$(find "$DIR/tests/work" -type f -name '*.pid')" ] || pkill -F $DIR/tests/work/*.pid
 }
 trap clean_up EXIT
 
