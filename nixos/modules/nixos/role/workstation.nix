@@ -8,14 +8,6 @@
     bcl.sound.enable = true;
     bcl.wifi.enable = true;
     bcl.role.setAdminPassword = true;
-    bcl.wm = {
-      name = "gnome";
-      user = "kwiskas";
-    };
-    bcl.user = {
-      enable = true;
-      name = "kwiskas";
-    };
     programs.firefox = {
       enable = true;
     };
@@ -43,13 +35,6 @@
       LC_TELEPHONE = "fr_FR.UTF-8";
       LC_TIME = "fr_FR.UTF-8";
     };
-
-#    sops.secrets."users.kwiskas.password" = {
-#      neededForUsers = true;
-#      sopsFile = ./hideki.secrets.yaml;
-#    };
-
-
 
   };
 }

@@ -44,7 +44,6 @@
         bclFlake.nixosModules.global
         bclFlake.nixosModules.group
         bclFlake.nixosModules.hardware
-        bclFlake.nixosModules."parts/wm"
         bclFlake.nixosModules.role
         bclFlake.nixosModules.system
 

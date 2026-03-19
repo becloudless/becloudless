@@ -1,7 +1,10 @@
 { config, lib, pkgs, ... }:
+let
+  dwmUsers = lib.filterAttrs (name: ucfg: ucfg.wm == "dwm") config.bcl.users;
+in
 {
 
-  config = lib.mkIf (config.bcl.wm.name == "dwm") {
+  config = lib.mkIf (dwmUsers != {}) {
 
     services.unclutter.enable = true; # TODO this is not working
 
@@ -13,10 +16,6 @@
     services.displayManager = {
   #    enable = true;
       defaultSession = "none+dwm";
-      autoLogin = {
-        enable = true;
-        user = config.bcl.wm.user;
-      };
     };
 
     services.xserver = {

@@ -1,9 +1,12 @@
 { config, lib, pkgs, ... }:
+let
+  mateUsers = lib.filterAttrs (name: ucfg: ucfg.wm == "mate") config.bcl.users;
+in
 {
-  config = lib.mkIf (config.bcl.wm.name == "mate") {
+  config = lib.mkIf (mateUsers != {}) {
     services.xserver.desktopManager.mate.enable = true;
 
-    home-manager.users."${config.bcl.wm.user}" = { lib, pkgs, ... }: {
+    home-manager.users = lib.mapAttrs (name: ucfg: { lib, pkgs, ... }: {
       dconf.settings = with lib.hm.gvariant; {
         "org/mate/panel/toplevels/top" = {
           size = 18;
@@ -88,10 +91,10 @@
         };
 
         "org/mate/desktop/background" = {
-          picture-filename = "/home/kwiskas/Pictures/chaussette.jpg";
+          picture-filename = "/home/${name}/Pictures/chaussette.jpg";
         };
 
       };
-    };
+    }) mateUsers;
   };
 }
