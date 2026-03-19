@@ -4,7 +4,7 @@ let
   gnomeUsers = lib.filterAttrs (name: ucfg: ucfg.wm == "gnome") config.bcl.users;
 in
 {
-  config = {
+  config = lib.mkIf (gnomeUsers != {}) {
 
     services.xserver = {
       enable = true;

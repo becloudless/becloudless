@@ -3,7 +3,7 @@ let
   mateUsers = lib.filterAttrs (name: ucfg: ucfg.wm == "mate") config.bcl.users;
 in
 {
-  config = lib.mkIf (config.bcl.wm.name == "mate") {
+  config = lib.mkIf (mateUsers != {}) {
     services.xserver.desktopManager.mate.enable = true;
 
     home-manager.users = lib.mapAttrs (name: ucfg: { lib, pkgs, ... }: {

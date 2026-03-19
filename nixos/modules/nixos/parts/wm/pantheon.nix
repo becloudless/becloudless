@@ -3,7 +3,7 @@ let
   pantheonUsers = lib.filterAttrs (name: ucfg: ucfg.wm == "pantheon") config.bcl.users;
 in
 {
-  config = lib.mkIf (config.bcl.wm.name == "pantheon") {
+  config = lib.mkIf (pantheonUsers != {}) {
     services.xserver.desktopManager.pantheon.enable = true;
 
     # pantheon greeter does not respect keyboard layout
