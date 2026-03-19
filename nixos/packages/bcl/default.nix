@@ -37,6 +37,15 @@ stdenv.mkDerivation {
     mkdir -p $out/bin
     cp bcl-${platform}/bcl $out/bin/bcl
     chmod +x $out/bin/bcl
+
+    mkdir -p $out/share/bash-completion/completions
+    $out/bin/bcl completion bash > $out/share/bash-completion/completions/bcl
+
+    mkdir -p $out/share/zsh/site-functions
+    $out/bin/bcl completion zsh > $out/share/zsh/site-functions/_bcl
+
+    mkdir -p $out/share/fish/vendor_completions.d
+    $out/bin/bcl completion fish > $out/share/fish/vendor_completions.d/bcl.fish
   '';
 
   meta = with lib; {
