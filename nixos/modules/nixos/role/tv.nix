@@ -22,6 +22,7 @@
 
     bcl.users.tv = {
       wm = "dwm";
+      autoLogin = true;
     };
 
     security.sudo.wheelNeedsPassword = false;
