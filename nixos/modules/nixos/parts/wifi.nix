@@ -28,7 +28,7 @@
       in lib.filter (s: s != null) (map extractSsid lines);
 
   # Merge SSIDs from the secret file and the explicit option, deduplicating
-  wirelessSsids = lib.unique (ssidsFromFile ++ global.networking.wireless);
+  wirelessSsids = lib.unique (ssidsFromFile ++ builtins.attrNames global.networking.wireless);
 
 in {
   options.bcl.wifi = {

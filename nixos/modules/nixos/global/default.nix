@@ -48,9 +48,22 @@ in {
     networking = lib.mkOption {
       type = lib.types.submodule ({ ... }: {
         options.wireless = lib.mkOption {
-          type = lib.types.listOf lib.types.str;
-          default = [];
-          description = "Extra WiFi SSIDs to manage (merged with those found in secretFile).";
+          type = lib.types.attrsOf (lib.types.submodule ({ ... }: {
+            options = {
+#              password = lib.mkOption {
+#                type = lib.types.nullOr lib.types.str;
+#                default = null;
+#                description = "WiFi password (if needed).";
+#              };
+#              hidden = lib.mkOption {
+#                type = lib.types.bool;
+#                default = false;
+#                description = "Whether the network is hidden.";
+#              };
+            };
+          }));
+          default = {};
+          description = "WiFi networks keyed by SSID (merged with those found in secretFile).";
         };
       });
       default = {};
