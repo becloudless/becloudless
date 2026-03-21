@@ -17,9 +17,6 @@
         sshPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILvM8t4hXJxjBzrUS5FhAQ/TD9TJscT7CyLKFSOjZjj4";
       };
     };
-    networking.wireless = {
-      "SSID1" = {};
-      "SSID2" = {};
-    };
+
   };
 }
