@@ -20,6 +20,35 @@ let
         default = false;
         description = "Whether to automatically log in as this user.";
       };
+      syncthing = {
+        enable = lib.mkEnableOption "Enable syncthing for this user";
+        sopsFile = lib.mkOption {
+          type = lib.types.nullOr lib.types.path;
+          default = null;
+        };
+        remote = lib.mkOption {
+          type = lib.types.submodule {
+            options = {
+              id = lib.mkOption { type = lib.types.str; default = ""; };
+            };
+          };
+          default = {};
+        };
+        homeFolderId = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+        };
+        folders = lib.mkOption {
+          type = lib.types.attrsOf (lib.types.submodule {
+            options = {
+              id = lib.mkOption { type = lib.types.str; };
+              key = lib.mkOption { type = lib.types.str; };
+              endpoint = lib.mkOption { type = lib.types.str; };
+            };
+          });
+          default = {};
+        };
+      };
     };
   };
 
