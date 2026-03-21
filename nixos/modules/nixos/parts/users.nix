@@ -103,7 +103,7 @@ in
         }) stUsers)
       );
 
-      home-manager.users = lib.mapAttrs (name: ucfg: { lib, pkgs, ... }: {
+      home-manager.users = lib.mapAttrs (name: ucfg: { lib, pkgs, config, ... }: {
         imports = [ (inputs.impermanence + "/home-manager.nix") ];
 
         home.file.".config/user-dirs.dirs".text = ''
@@ -118,49 +118,51 @@ in
         '';
 
         home.stateVersion = "23.11"; # never touch that
+
+        services.syncthing = lib.mkIf ucfg.syncthing.enable {
+          enable = true;
+          cert = "/nix/syncthing/${name}/config/cert.pem";
+          key = "/nix/syncthing/${name}/config/key.pem";
+          settings = {
+            options = {
+              localAnnounceEnabled = false;
+              relaysEnabled = true;
+              urAccepted = -1;
+              listenAddresses = [ "relay://syncthing.bcl.io:22067/?id=??" ];
+            };
+            devices."${name}.syncthing.bcl.io" = {
+              id = ucfg.syncthing.remote.id;
+              autoAcceptFolders = false;
+            };
+            folders =
+              (lib.mapAttrs' (k: v: lib.nameValuePair k {
+                id = v.id;
+                path = "/nix/syncthing/${name}/home/${k}";
+                devices = [ "${name}.syncthing.bcl.io" ];
+              }) ucfg.syncthing.folders)
+              // lib.optionalAttrs (ucfg.syncthing.homeFolderId != "") {
+                "Home" = {
+                  id = ucfg.syncthing.homeFolderId;
+                  path = "/nix/syncthing/homes/home/${name}";
+                  devices = [ "${name}.syncthing.bcl.io" ];
+                  fsWatcherEnabled = false;
+                  rescanIntervalS = 3600;
+                };
+              };
+          };
+        };
       }) cfg;
 
-      systemd.tmpfiles.rules =
-        # home dirs
-        lib.concatLists (lib.mapAttrsToList (name: ucfg: [
-          "d /nix/home/${name}/.local 0700 ${name} users"
-          "d /nix/home/${name}/.local/share 0700 ${name} users"
-          "d /nix/home/${name}/.local/state 0700 ${name} users"
-          "d /nix/home/${name}/.local/state/wireplumber 0700 ${name} users"
-          "d /nix/home/${name}/.config 0700 ${name} users"
-          "d /nix/home/${name}/.config/VirtualBox 0700 ${name} users"
-          "d /nix/home/${name}/.cache 0700 ${name} users"
-          "d /nix/home/${name}/Tmp 0700 ${name} users"
-        ]) cfg)
-        ++
-        # syncthing config dirs
-        lib.concatLists (lib.mapAttrsToList (name: _: [
-          "d /nix/syncthing/${name}/config 0700 ${name} users"
-        ]) stUsers);
-
-      systemd.services = lib.mapAttrs' (name: ucfg:
-        lib.nameValuePair "syncthing-${name}" {
-          description = "Syncthing for ${name}";
-          after = [ "network.target" "sops-nix.service" ];
-          wantedBy = [ "multi-user.target" ];
-          environment.STNODEFAULTFOLDER = "true";
-          serviceConfig = {
-            User = name;
-            ExecStart = lib.concatStringsSep " " [
-              "${pkgs.syncthing}/bin/syncthing serve"
-              "--no-browser" "--no-restart" "--logflags=0"
-              "--config=/nix/syncthing/${name}/config"
-              "--data=/nix/syncthing/${name}/home"
-            ];
-            Restart = "on-failure";
-            SuccessExitStatus = "3 4";
-            RestartForceExitStatus = "3 4";
-            PrivateTmp = true;
-            ProtectSystem = "full";
-            ReadWritePaths = [ "/nix/syncthing/${name}" ];
-          };
-        }
-      ) stUsers;
+      systemd.tmpfiles.rules = lib.concatLists (lib.mapAttrsToList (name: ucfg: [
+        "d /nix/home/${name}/.local 0700 ${name} users"
+        "d /nix/home/${name}/.local/share 0700 ${name} users"
+        "d /nix/home/${name}/.local/state 0700 ${name} users"
+        "d /nix/home/${name}/.local/state/wireplumber 0700 ${name} users"
+        "d /nix/home/${name}/.config 0700 ${name} users"
+        "d /nix/home/${name}/.config/VirtualBox 0700 ${name} users"
+        "d /nix/home/${name}/.cache 0700 ${name} users"
+        "d /nix/home/${name}/Tmp 0700 ${name} users"
+      ]) cfg);
 
       environment.persistence = lib.mkMerge (
         [
