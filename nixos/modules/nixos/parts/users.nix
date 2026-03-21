@@ -22,10 +22,6 @@ let
       };
       syncthing = {
         enable = lib.mkEnableOption "Enable syncthing for this user";
-        sopsFile = lib.mkOption {
-          type = lib.types.nullOr lib.types.path;
-          default = null;
-        };
         remote = lib.mkOption {
           type = lib.types.submodule {
             options = {

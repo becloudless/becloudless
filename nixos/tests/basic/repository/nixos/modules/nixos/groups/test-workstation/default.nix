@@ -6,6 +6,10 @@
     bcl.users.auser = {
       sopsFile = ./default.secrets.yaml;
       wm = "gnome";
+      syncthing = {
+        enable = true;
+        homeFolderId = "home-4242";
+      };
     };
 
     bcl.boot.initrdSSHPrivateKey = ''

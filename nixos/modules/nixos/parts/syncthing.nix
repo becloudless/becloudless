@@ -8,16 +8,15 @@ let
   mkUserConfig = userName: userCfg:
     let
       st = userCfg.syncthing;
-      sopsFile = if st.sopsFile != null then st.sopsFile else userCfg.sopsFile;
     in {
     sops.secrets."syncthing.${config.networking.hostName}.${userName}.cert" = {
       owner = userName;
-      sopsFile = sopsFile;
+      sopsFile = userCfg.sopsFile;
       path = "/nix/syncthing/${userName}/config/cert.pem";
     };
     sops.secrets."syncthing.${config.networking.hostName}.${userName}.key" = {
       owner = userName;
-      sopsFile = sopsFile;
+      sopsFile = userCfg.sopsFile;
       path = "/nix/syncthing/${userName}/config/key.pem";
     };
 
