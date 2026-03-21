@@ -63,12 +63,13 @@ in {
             };
           }));
           default = {};
-          description = "WiFi networks keyed by SSID.";
+          description = "WiFi networks keyed by SSID (merged with those found in secretFile).";
         };
       });
       default = {};
       description = "Networking-related global configuration.";
     };
+
   };
 
   ###################
