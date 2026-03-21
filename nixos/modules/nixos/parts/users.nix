@@ -90,12 +90,12 @@ in
         ++
         # syncthing certs
         (lib.mapAttrsToList (name: ucfg: {
-          "syncthing.${config.networking.hostName}.${name}.cert" = {
+          "users.${name}.syncthing.cert" = {
             owner = name;
             sopsFile = ucfg.sopsFile;
             path = "/nix/syncthing/${name}/config/cert.pem";
           };
-          "syncthing.${config.networking.hostName}.${name}.key" = {
+          "users.${name}.syncthing.key" = {
             owner = name;
             sopsFile = ucfg.sopsFile;
             path = "/nix/syncthing/${name}/config/key.pem";
