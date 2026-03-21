@@ -1,6 +1,29 @@
 { config, lib, pkgs, ... }:
 
+let
+  cfg = config.bcl.role.workstation;
+
+  localeMap = {
+    en = "en_US.UTF-8";
+    fr = "fr_FR.UTF-8";
+  };
+
+  locale = localeMap.${cfg.language} or "${cfg.language}";
+in
 {
+  options.bcl.role.workstation = {
+    language = lib.mkOption {
+      type = lib.types.str;
+      default = "en";
+      description = "Language for the workstation (e.g. 'en', 'fr').";
+    };
+    keyboard = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ "us" ];
+      description = "Keyboard layouts for the workstation (e.g. [ 'us' ] or [ 'fr' 'us' ]). First layout will be used as default.";
+    };
+  };
+
   config = lib.mkIf (config.bcl.role.name == "workstation") {
     bcl.disk.encrypted = true;
     bcl.boot.plymouth = true;
@@ -18,22 +41,22 @@
 
     services.xserver = {
       enable = true;
-      xkb.layout = "fr,us";
+      xkb.layout = lib.concatStringsSep "," cfg.keyboard;
     };
 
-    console.keyMap = "us";
-    i18n.defaultLocale = lib.mkForce "fr_FR.UTF-8";
+    console.keyMap = builtins.head cfg.keyboard;
+    i18n.defaultLocale = lib.mkForce locale;
 
     i18n.extraLocaleSettings = {
-      LC_ADDRESS = "fr_FR.UTF-8";
-      LC_IDENTIFICATION = "fr_FR.UTF-8";
-      LC_MEASUREMENT = "fr_FR.UTF-8";
-      LC_MONETARY = "fr_FR.UTF-8";
-      LC_NAME = "fr_FR.UTF-8";
-      LC_NUMERIC = "fr_FR.UTF-8";
-      LC_PAPER = "fr_FR.UTF-8";
-      LC_TELEPHONE = "fr_FR.UTF-8";
-      LC_TIME = "fr_FR.UTF-8";
+      LC_ADDRESS = locale;
+      LC_IDENTIFICATION = locale;
+      LC_MEASUREMENT = locale;
+      LC_MONETARY = locale;
+      LC_NAME = locale;
+      LC_NUMERIC = locale;
+      LC_PAPER = locale;
+      LC_TELEPHONE = locale;
+      LC_TIME = locale;
     };
 
   };
