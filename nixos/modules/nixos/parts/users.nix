@@ -128,9 +128,9 @@ in
               localAnnounceEnabled = false;
               relaysEnabled = true;
               urAccepted = -1;
-              listenAddresses = [ "relay://syncthing.bcl.io:22067/?id=??" ];
+              listenAddresses = [ "relay://syncthing.${config.bcl.global.domain}:22067/?id=??" ];
             };
-            devices."${name}.syncthing.bcl.io" = {
+            devices."${name}.syncthing.${config.bcl.global.domain}" = {
               id = ucfg.syncthing.remote.id;
               autoAcceptFolders = false;
             };
@@ -138,13 +138,13 @@ in
               (lib.mapAttrs' (k: v: lib.nameValuePair k {
                 id = v.id;
                 path = "/nix/syncthing/${name}/home/${k}";
-                devices = [ "${name}.syncthing.bcl.io" ];
+                devices = [ "${name}.syncthing.${config.bcl.global.domain}" ];
               }) ucfg.syncthing.folders)
               // lib.optionalAttrs (ucfg.syncthing.homeFolderId != "") {
                 "Home" = {
                   id = ucfg.syncthing.homeFolderId;
                   path = "/nix/syncthing/homes/home/${name}";
-                  devices = [ "${name}.syncthing.bcl.io" ];
+                  devices = [ "${name}.syncthing.${config.bcl.global.domain}" ];
                   fsWatcherEnabled = false;
                   rescanIntervalS = 3600;
                 };
