@@ -87,13 +87,13 @@ in {
           extraGroups = userCfg.extraGroups;
           openssh.authorizedKeys.keys = lib.mkIf (pk != null) [ pk ];
         } // lib.optionalAttrs (setAdminPasswordFlag && cfg.adminsSecretFile != null) {
-          hashedPasswordFile = config.sops.secrets."admins.${name}.hashedPassword".path;
+          hashedPasswordFile = config.sops.secrets."users.${name}.hashedPassword".path;
         }
       )) cfg.admins);
 
       sops.secrets = lib.optionalAttrs (setAdminPasswordFlag && cfg.adminsSecretFile != null && cfg.admins != null) (
         lib.mapAttrs' (name: _: {
-          name = "admins.${name}.hashedPassword";
+          name = "users.${name}.hashedPassword";
           value = {
             neededForUsers = true;
             sopsFile = cfg.adminsSecretFile;
