@@ -3,6 +3,7 @@
 let
   cfg = config.bcl.users;
   stUsers = lib.filterAttrs (_: u: u.syncthing.enable) cfg;
+  nixosConfig = config;
 
   userOpts = { name, config, ... }: {
     options = {
@@ -128,9 +129,9 @@ in
               localAnnounceEnabled = false;
               relaysEnabled = true;
               urAccepted = -1;
-              listenAddresses = [ "relay://syncthing.${config.bcl.global.domain}:22067/?id=??" ];
+              listenAddresses = [ "relay://syncthing.${nixosConfig.bcl.global.domain}:22067/?id=??" ];
             };
-            devices."${name}.syncthing.${config.bcl.global.domain}" = {
+            devices."${name}.syncthing.${nixosConfig.bcl.global.domain}" = {
               id = ucfg.syncthing.remote.id;
               autoAcceptFolders = false;
             };
@@ -138,13 +139,13 @@ in
               (lib.mapAttrs' (k: v: lib.nameValuePair k {
                 id = v.id;
                 path = "/nix/syncthing/${name}/home/${k}";
-                devices = [ "${name}.syncthing.${config.bcl.global.domain}" ];
+                devices = [ "${name}.syncthing.${nixosConfig.bcl.global.domain}" ];
               }) ucfg.syncthing.folders)
               // lib.optionalAttrs (ucfg.syncthing.homeFolderId != "") {
                 "Home" = {
                   id = ucfg.syncthing.homeFolderId;
                   path = "/nix/syncthing/homes/home/${name}";
-                  devices = [ "${name}.syncthing.${config.bcl.global.domain}" ];
+                  devices = [ "${name}.syncthing.${nixosConfig.bcl.global.domain}" ];
                   fsWatcherEnabled = false;
                   rescanIntervalS = 3600;
                 };
