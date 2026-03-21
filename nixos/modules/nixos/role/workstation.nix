@@ -31,7 +31,7 @@ in
     bcl.sound.enable = true;
     bcl.wifi.enable = true;
     bcl.role.setAdminPassword = true;
-    bcl.
+
     programs.firefox = {
       enable = true;
     };
