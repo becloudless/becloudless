@@ -138,7 +138,7 @@ in
             folders =
               (lib.mapAttrs' (k: v: lib.nameValuePair k {
                 id = v.id;
-                path = "/nix/syncthing/${name}/home/${k}";
+                path = "/nix/syncthing/${name}/${k}";
                 devices = [ "${name}.syncthing.${nixosConfig.bcl.global.domain}" ];
               }) ucfg.syncthing.folders)
               // lib.optionalAttrs (ucfg.syncthing.homeFolderId != "") {
