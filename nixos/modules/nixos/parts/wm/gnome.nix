@@ -235,7 +235,11 @@ in
           cpu-refresh-time = 2000;
           memory-show-text = false;
           memory-graph-width = 70;
-          memory-refresh-time = 2000;
+          memory-refresh-time = 5000;
+          swap-display = true;
+          swap-show-text = false;
+          swap-graph-width = 70;
+          swap-refresh-time = 10000;
           net-show-text = false;
           net-graph-width = 70;
           net-refresh-time = 2000;
