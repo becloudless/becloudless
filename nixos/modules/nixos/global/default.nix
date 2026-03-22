@@ -45,6 +45,17 @@ in {
       default = null;
       description = "Definition of admin users.";
     };
+    syncthing = lib.mkOption {
+      type = lib.types.submodule ({ ... }: {
+        options.relayId = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+          description = "Syncthing relay server device ID used in listenAddresses.";
+        };
+      });
+      default = {};
+      description = "Global Syncthing configuration.";
+    };
     networking = lib.mkOption {
       type = lib.types.submodule ({ ... }: {
         options.wireless = lib.mkOption {

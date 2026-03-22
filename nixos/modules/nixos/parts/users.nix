@@ -129,7 +129,7 @@ in
               localAnnounceEnabled = false;
               relaysEnabled = true;
               urAccepted = -1;
-              listenAddresses = [ "relay://syncthing.${nixosConfig.bcl.global.domain}:22067/?id=??" ];
+              listenAddresses = [ "relay://syncthing.${nixosConfig.bcl.global.domain}:22067/?id=${nixosConfig.bcl.global.syncthing.relayId}" ];
             };
             devices."${name}.syncthing.${nixosConfig.bcl.global.domain}" = {
               id = ucfg.syncthing.remote.id;
