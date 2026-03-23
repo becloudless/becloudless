@@ -185,7 +185,7 @@ in
         ++
         lib.mapAttrsToList (name: ucfg:
           {
-            "/nix/syncthing/${name}" = {
+            "/nix/syncthing" = {
               hideMounts = true;
               users."${name}".directories = lib.attrNames ucfg.syncthing.folders;
             };
