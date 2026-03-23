@@ -264,6 +264,7 @@ in
         };
         "org/gnome/shell" = {
           disable-user-extensions = false;
+          welcome-dialog-last-shown-version = "99.0";
 
           favorite-apps = [
             "firefox.desktop"
