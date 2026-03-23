@@ -94,12 +94,12 @@ in
           "users.${name}.syncthing.cert" = {
             owner = name;
             sopsFile = ucfg.sopsFile;
-            path = "/nix/syncthing/${name}/config/cert.pem";
+            path = "/home/${name}/.config/syncthing/cert.pem";
           };
           "users.${name}.syncthing.key" = {
             owner = name;
             sopsFile = ucfg.sopsFile;
-            path = "/nix/syncthing/${name}/config/key.pem";
+            path = "/nix/${name}/.config/syncthing/key.pem";
           };
         }) stUsers)
       );
@@ -138,7 +138,7 @@ in
             folders =
               (lib.mapAttrs' (k: v: lib.nameValuePair k {
                 id = v.id;
-                path = "/nix/syncthing/${name}/${k}";
+                path = "/nix/syncthing/home/${name}/${k}";
                 devices = [ "${name}.syncthing.${nixosConfig.bcl.global.domain}" ];
               }) ucfg.syncthing.folders)
               // lib.optionalAttrs (ucfg.syncthing.homeFolderId != "") {
@@ -168,6 +168,7 @@ in
       environment.persistence = lib.mkMerge (
         [
           {
+            # keep on the system disk
             "/nix" = {
               hideMounts = true;
               users = lib.mapAttrs (_: _: {
@@ -185,11 +186,13 @@ in
         ++
         lib.mapAttrsToList (name: ucfg:
           {
+            # keep on syncthing folders
             "/nix/syncthing" = {
               hideMounts = true;
               users."${name}".directories = lib.attrNames ucfg.syncthing.folders;
             };
           } // lib.optionalAttrs (ucfg.syncthing.homeFolderId != "") {
+            # keep from home folder on syncthing 'Home' folder
             "/nix/syncthing/homes" = {
               hideMounts = true;
               users."${name}" = {
