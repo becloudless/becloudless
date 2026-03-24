@@ -99,7 +99,7 @@ in
           "users.${name}.syncthing.key" = {
             owner = name;
             sopsFile = ucfg.sopsFile;
-            path = "/nix/home/${name}/.local/state/key.pem";
+            path = "/nix/home/${name}/.local/state/syncthing/key.pem";
           };
         }) stUsers)
       );
