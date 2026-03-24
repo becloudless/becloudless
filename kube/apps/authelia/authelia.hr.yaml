@@ -203,6 +203,17 @@ spec:
                 path: '/certificates/identity_providers.oidc.jwks_rsa.key'
               certificate_chain:
                 path: '/certificates/identity_providers.oidc.jwks_rsa.crt'
+          authorization_policies:
+            immich_authz:
+              default_policy: deny
+              rules:
+                - policy: two_factor
+                  subject:
+                    - [ 'group:role_admin' ]
+                - policy: one_factor
+                  subject:
+                    - [ 'group:app_immich_one_factor' ]
+
           claims_policies:
             grafana:
               id_token: [ 'email', 'name', 'groups', 'preferred_username' ]
@@ -300,7 +311,7 @@ spec:
               client_secret:
                 path: '/secrets/authelia-oidc/oidc.client.immich.value'
               public: false
-              authorization_policy: 'one_factor'
+              authorization_policy: 'immich_authz'
               require_pkce: false
               pkce_challenge_method: ''
               pre_configured_consent_duration: 1 year
