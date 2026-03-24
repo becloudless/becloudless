@@ -45,6 +45,17 @@ in {
       default = null;
       description = "Definition of admin users.";
     };
+    syncthing = lib.mkOption {
+      type = lib.types.submodule ({ ... }: {
+        options.relayId = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+          description = "Syncthing relay server device ID used in listenAddresses.";
+        };
+      });
+      default = {};
+      description = "Global Syncthing configuration.";
+    };
     networking = lib.mkOption {
       type = lib.types.submodule ({ ... }: {
         options.wireless = lib.mkOption {
@@ -87,13 +98,13 @@ in {
           extraGroups = userCfg.extraGroups;
           openssh.authorizedKeys.keys = lib.mkIf (pk != null) [ pk ];
         } // lib.optionalAttrs (setAdminPasswordFlag && cfg.adminsSecretFile != null) {
-          hashedPasswordFile = config.sops.secrets."admins.${name}.hashedPassword".path;
+          hashedPasswordFile = config.sops.secrets."users.${name}.hashedPassword".path;
         }
       )) cfg.admins);
 
       sops.secrets = lib.optionalAttrs (setAdminPasswordFlag && cfg.adminsSecretFile != null && cfg.admins != null) (
         lib.mapAttrs' (name: _: {
-          name = "admins.${name}.hashedPassword";
+          name = "users.${name}.hashedPassword";
           value = {
             neededForUsers = true;
             sopsFile = cfg.adminsSecretFile;
