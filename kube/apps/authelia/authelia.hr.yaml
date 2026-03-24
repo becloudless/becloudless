@@ -161,6 +161,11 @@ spec:
           - domain:
               - immich.${BCL_GLOBAL_DOMAIN}
             subject:
+              - [ 'group:app_immich_one_factor' ]
+            policy: one_factor
+          - domain:
+              - immich.${BCL_GLOBAL_DOMAIN}
+            subject:
               - [ 'group:app_immich' ]
               - [ 'group:role_admin' ]
             policy: two_factor
