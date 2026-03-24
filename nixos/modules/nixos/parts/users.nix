@@ -94,12 +94,12 @@ in
           "users.${name}.syncthing.cert" = {
             owner = name;
             sopsFile = ucfg.sopsFile;
-            path = "/home/${name}/.config/syncthing/cert.pem";
+            path = "/nix/home/${name}/.local/state/syncthing/cert.pem";
           };
           "users.${name}.syncthing.key" = {
             owner = name;
             sopsFile = ucfg.sopsFile;
-            path = "/nix/${name}/.config/syncthing/key.pem";
+            path = "/nix/home/${name}/.local/state/key.pem";
           };
         }) stUsers)
       );
@@ -122,8 +122,8 @@ in
 
         services.syncthing = lib.mkIf ucfg.syncthing.enable {
           enable = true;
-          cert = "/nix/syncthing/${name}/config/cert.pem";
-          key = "/nix/syncthing/${name}/config/key.pem";
+#          cert = "/nix/syncthing/${name}/config/cert.pem";
+#          key = "/nix/syncthing/${name}/config/key.pem";
           settings = {
             options = {
               localAnnounceEnabled = false;
@@ -177,6 +177,7 @@ in
                   "Tmp"
                   ".local/share/docker"
                   ".local/state/wireplumber"
+                  ".local/state/syncthing"
                   ".config/VirtualBox"
                 ];
               }) cfg;
