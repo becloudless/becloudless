@@ -24,7 +24,8 @@ spec:
         enabled: true
 
     image:
-      tag: 4.39.15
+      # TODO: workaround https://github.com/authelia/authelia/discussions/11478#discussioncomment-16156289
+      tag: 4.39.15 # renovate: ignore
 
     #################
     pod:
