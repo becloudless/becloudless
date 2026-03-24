@@ -159,17 +159,6 @@ spec:
               - [ 'group:role_admin' ]
             policy: two_factor
           - domain:
-              - immich.${BCL_GLOBAL_DOMAIN}
-            subject:
-              - [ 'group:app_immich_one_factor' ]
-            policy: one_factor
-          - domain:
-              - immich.${BCL_GLOBAL_DOMAIN}
-            subject:
-              - [ 'group:app_immich' ]
-              - [ 'group:role_admin' ]
-            policy: two_factor
-          - domain:
               - gitea.${BCL_GLOBAL_DOMAIN}
             subject:
               - [ 'group:app_gitea' ]
@@ -311,7 +300,7 @@ spec:
               client_secret:
                 path: '/secrets/authelia-oidc/oidc.client.immich.value'
               public: false
-              authorization_policy: 'two_factor'
+              authorization_policy: 'one_factor'
               require_pkce: false
               pkce_challenge_method: ''
               pre_configured_consent_duration: 1 year
