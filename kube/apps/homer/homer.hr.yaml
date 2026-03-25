@@ -273,34 +273,50 @@ spec:
                       logo: https://gitea.${BCL_GLOBAL_DOMAIN}/assets/img/favicon.png
                       url: https://gitea.${BCL_GLOBAL_DOMAIN}
                     - name: RuTorrent
+                      subtitle: Torrent downloader
                       logo: https://rutorrent.${BCL_GLOBAL_DOMAIN}/images/favicon.ico
                       url: https://rutorrent.${BCL_GLOBAL_DOMAIN}
                     - name: Mailu
+                      subtitle: Emails
                       logo: https://mail.${BCL_GLOBAL_DOMAIN}/favicon.ico
                       url: https://mail.${BCL_GLOBAL_DOMAIN}
+                    - name: Seafile
+                      subtitle: Files hosting
+                      logo: https://seafile.${BCL_GLOBAL_DOMAIN}/media/favicons/favicon.png
+                      url: https://seafile.${BCL_GLOBAL_DOMAIN}
+#                    - name: Paperless
+#                      subtitle: Document management
+#                      logo: https://paperless.${BCL_GLOBAL_DOMAIN}/favicon.ico
+#                      url: https://paperless.${BCL_GLOBAL_DOMAIN}
 
                 - name: "System"
                   icon: "fas fa-code-branch"
                   items:
-                    - name: Longhorm 
+                    - name: Longhorn
+                      subtitle: Distributed cluster storage
                       logo: https://longhorn.${BCL_GLOBAL_DOMAIN}/favicon.ico
                       url: https://longhorn.${BCL_GLOBAL_DOMAIN}
                     - name: Authelia
+                      subtitle: Login portal
                       logo: https://authelia.${BCL_GLOBAL_DOMAIN}/favicon.ico
                       url: https://authelia.${BCL_GLOBAL_DOMAIN}
                     - name: Lldap
+                      subtitle: Accounts management
                       url: https://lldap.${BCL_GLOBAL_DOMAIN}
                     - name: WhoAmI
+                      subtitle: Info about current connection
                       url: https://whoami.${BCL_GLOBAL_DOMAIN}
 
                 - name: "Observability"
                   icon: "fas fa-network-wired"
                   items:
                     - name: Grafana
+                      subtitle: Graph dashbards
                       logo: https://grafana.${BCL_GLOBAL_DOMAIN}/public/build/img/fav32.png
                       url: https://grafana.${BCL_GLOBAL_DOMAIN}
 
                     - name: "Prometheus"
+                      subtitle: Metrics monitoring
                       logo: https://prometheus.${BCL_GLOBAL_DOMAIN}/favicon.svg
                       # subtitle: "Network-wide Ad Blocking" # optional, if no subtitle is defined, PiHole statistics will be shown
                       tag: "other"
@@ -311,5 +327,6 @@ spec:
                       # background: red # optional color for card to set color directly without custom stylesheet
 
                     - name: AlertManager
+                      subtitle: Alerting
                       logo: https://alertmanager.${BCL_GLOBAL_DOMAIN}/favicon.ico
                       url: https://alertmanager.${BCL_GLOBAL_DOMAIN}

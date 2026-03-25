@@ -149,7 +149,7 @@ spec:
             subject:
               - [ 'group:role_user' ]
               - [ 'group:role_admin' ]
-            policy: two_factor
+            policy: one_factor
           - domain:
               - seerr.${BCL_GLOBAL_DOMAIN}
             subject:
