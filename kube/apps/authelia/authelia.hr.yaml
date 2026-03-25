@@ -175,6 +175,17 @@ spec:
               - [ 'group:role_admin' ]
             policy: one_factor
           - domain:
+              - immich.${BCL_GLOBAL_DOMAIN}
+            subject:
+              - [ 'group:app_immich' ]
+              - [ 'group:role_admin' ]
+            policy: two_factor
+          - domain:
+              - immich.${BCL_GLOBAL_DOMAIN}
+            subject:
+              - [ 'group:app_immich_one_factor' ]
+            policy: one_factor
+          - domain:
               - whoami.${BCL_GLOBAL_DOMAIN}
             policy: one_factor
 
@@ -214,6 +225,7 @@ spec:
                 - policy: two_factor
                   subject:
                     - [ 'group:role_admin' ]
+                    - [ 'group:app_immich' ]
                 - policy: one_factor
                   subject:
                     - [ 'group:app_immich_one_factor' ]
