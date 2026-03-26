@@ -33,6 +33,11 @@ module:
       path: github.com/imfing/hextra
 
 params:
+  navbar:
+    displayTitle: true
+    displayLogo: true
+    logo:
+      path: favicon.svg
   titleSeparator: "::"
   customCSS:
     - css/custom.css
