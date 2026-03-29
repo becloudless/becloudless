@@ -17,8 +17,6 @@ spec:
     cleanupOnFail: true
   values:
     replicaCount: 1
-    nodeSelector:
-      kubernetes.io/hostname: srv21
     dataStorage:
       enabled: true
       requestedSize: 1Gi
