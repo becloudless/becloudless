@@ -143,6 +143,16 @@ spec:
     #########
 
     front:
+      # TODO
+      # on crio, we need to be root to have the SYS_CHROOT capability, and this is required by dovecot to run properly
+      # https://github.com/Mailu/Mailu/issues/1714
+      containerSecurityContext:
+        capabilities:
+          add:
+            - "SYS_CHROOT"
+        enabled: true
+        runAsUser: 0
+
       updateStrategy:
         type: Recreate # TODO because we have only 1 server
 
@@ -196,6 +206,7 @@ spec:
         storageClass: mailu-postfix
 
     dovecot:
+      # TODO
       # on crio, we need to be root to have the SYS_CHROOT capability, and this is required by dovecot to run properly
       # https://github.com/Mailu/Mailu/issues/1714
       containerSecurityContext:
