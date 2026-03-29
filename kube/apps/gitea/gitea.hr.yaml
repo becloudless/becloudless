@@ -94,7 +94,7 @@ spec:
         kubernetes.io/tls-acme: "true"
         traefik.ingress.kubernetes.io/router.middlewares: traefik-body-limit-2g@kubernetescrd
 
-    redis-cluster:
+    valkey-cluster:
       enabled: true
       cluster:
         nodes: 1
