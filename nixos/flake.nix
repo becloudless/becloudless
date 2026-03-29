@@ -32,7 +32,7 @@
 
       overlays = [
         (final: prev: {
-          bcl = (bclFlake.packages.${final.system} or {}); # expose `becloudless` package under `bcl` namespace
+          bcl = (bclFlake.packages.${final.stdenv.hostPlatform.system} or {}); # expose `becloudless` package under `bcl` namespace
         })
       ];
     };
