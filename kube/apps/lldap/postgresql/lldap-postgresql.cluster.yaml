@@ -7,7 +7,7 @@ spec:
   instances: 2
   postgresql:
     parameters:
-      max_slot_wal_keep_size: "10GB"
+      max_slot_wal_keep_size: "500MB"
     pg_hba:
       # https://cloudnative-pg.io/docs/1.28/ssl_connections
       - hostssl app all all cert
