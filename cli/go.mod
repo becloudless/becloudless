@@ -13,7 +13,7 @@ require (
 	github.com/fzipp/gocyclo v0.6.0
 	github.com/getsops/sops/v3 v3.12.2
 	github.com/go-bindata/go-bindata/v3 v3.1.3
-	github.com/go-git/go-git/v6 v6.0.0-20260305211659-2083cf940afa
+	github.com/go-git/go-git/v6 v6.0.0-alpha.1
 	github.com/gordonklaus/ineffassign v0.2.0
 	github.com/moby/buildkit v0.29.0
 	github.com/n0rad/go-app v0.0.0-20251227182329-c1d5e61b7561
@@ -62,7 +62,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
 	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/ProtonMail/go-crypto v1.3.0 // indirect
+	github.com/ProtonMail/go-crypto v1.4.1 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
@@ -182,7 +182,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/json-iterator/go v1.1.13-0.20220915233716-71ac16282d12 // indirect
-	github.com/kevinburke/ssh_config v1.5.0 // indirect
+	github.com/kevinburke/ssh_config v1.6.0 // indirect
 	github.com/kisielk/errcheck v1.5.0 // indirect
 	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
