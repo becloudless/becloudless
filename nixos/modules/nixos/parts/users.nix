@@ -112,6 +112,7 @@ in
       home-manager.users = lib.mapAttrs (name: ucfg: { lib, pkgs, config, ... }: {
         imports = [ (inputs.impermanence + "/home-manager.nix") ];
 
+        # TODO better way to declare?
         home.file.".config/user-dirs.dirs".text = ''
           XDG_DESKTOP_DIR="$HOME/"
           XDG_DOWNLOAD_DIR="$HOME/Downloads"
@@ -122,6 +123,8 @@ in
           XDG_PICTURES_DIR="$HOME/Pictures"
           XDG_VIDEOS_DIR="$HOME/Videos"
         '';
+        xdg.configFile."user-dirs.dirs".force = true;
+
 
         # TODO move to keepassxc module
         home.file.".config/autostart/org.keepassxc.KeePassXC.desktop".text = ''
