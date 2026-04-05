@@ -40,6 +40,7 @@ in
     environment.systemPackages = with pkgs; [
       libreoffice
       vscodium
+      finamp
     ];
 
     services.xserver = {
