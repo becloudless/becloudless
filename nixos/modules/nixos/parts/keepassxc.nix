@@ -1,6 +1,8 @@
 { config, lib, pkgs, ... }:
 {
-  config = lib.mkIf (config.bcl.role.name != "") {
+  options.bcl.keepassxc.enable = lib.mkEnableOption "Enable";
+
+  config = lib.mkIf config.bcl.keepassxc.enable  {
 
     programs.ssh.startAgent = true;
 
