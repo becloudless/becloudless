@@ -5,17 +5,6 @@ let
   zshUsers = lib.filterAttrs (_: u: u.shell == "zsh") cfg;
 in
 {
-  options.bcl.users = lib.mkOption {
-    type = lib.types.attrsOf (lib.types.submodule {
-      options.shell = lib.mkOption {
-        type = lib.types.enum [ "bash" "zsh" ];
-        default = "bash";
-        description = "Shell to use for this user.";
-      };
-    });
-    default = {};
-  };
-
   config = lib.mkIf (zshUsers != {}) {
     programs.zsh = {
       enable = true;

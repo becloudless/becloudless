@@ -12,6 +12,11 @@ let
         default = null;
         description = "Path to the sops secrets file containing the hashed password at key 'users.<name>.hashedPassword'.";
       };
+      shell = lib.mkOption {
+        type = lib.types.enum [ "bash" "zsh" ];
+        default = "bash";
+        description = "Shell to use for this user.";
+      };
       wm = lib.mkOption {
         type = lib.types.str;
         default = "";
