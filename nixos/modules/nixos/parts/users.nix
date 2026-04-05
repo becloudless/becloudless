@@ -203,9 +203,9 @@ in
                 directories = [
                   ".cache"
                   "Tmp"
-                  ".local/share/docker"
-                  ".local/state/wireplumber"
-                  ".local/state/syncthing"
+                  ".local/share/docker" # for rootless docker
+                  ".local/state/wireplumber" # audio setup
+                  ".local/state/syncthing" # systemd user unit state
                   ".local/share/com.unicornsonlsd.finamp"
                   ".config/VirtualBox"
                   ".mozilla"  # # firefox/ and native-messaging-hosts/ for keepassxc
