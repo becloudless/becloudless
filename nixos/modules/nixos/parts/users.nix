@@ -208,7 +208,7 @@ in
                   ".local/state/syncthing"
                   ".local/share/com.unicornsonlsd.finamp"
                   ".config/VirtualBox"
-                  ".mozilla"  # using syncstorage
+                  ".mozilla"  # # firefox/ and native-messaging-hosts/ for keepassxc
                 ];
               }) cfg;
             };
@@ -227,7 +227,34 @@ in
             "/nix/syncthing/homes" = {
               hideMounts = true;
               users."${name}" = {
-                files = [ ".z" ];
+                directories = [
+                  
+                  # ".viminfo"
+                  ".tmux"
+                  # ".lesshst" # less replace the file
+                  ".docker" # must be the directory so it can mounted by bbc commands
+                  ".vscode-oss"
+                  ".config/chromium"
+                  ".config/Signal"
+                  ".local/bin" # scripts and bbc
+                  ".local/share/applications" # to keep plex chromium application
+                  ".local/share/desktop-directories"
+                  ".local/share/zoxide"
+                  ".config/menus" # .desktop applications into menu
+                  ".local/share/icons" # .desktop icons
+                  ".config/gcloud"
+                  ".config/sops" # TODO replace by static
+                  ".config/VSCodium"
+                  ".wine"
+
+                  ".local/share/JetBrains/" # plugins and license
+                  ".config/JetBrains" # looks required for license
+                  ".java/.userPrefs/jetbrains"
+                ];
+                files = [
+                  ".z"
+                  ".local/share/gnome-shell/application_state" # trusted .desktop applications
+                ];
               };
             };
           }
