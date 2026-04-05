@@ -208,6 +208,7 @@ in
                   ".local/state/wireplumber"
                   ".local/state/syncthing"
                   ".config/VirtualBox"
+                  ".mozilla"
                 ];
               }) cfg;
             };
@@ -226,7 +227,6 @@ in
             "/nix/syncthing/homes" = {
               hideMounts = true;
               users."${name}" = {
-                directories = [ ".mozilla" ];
                 files = [ ".z" ];
               };
             };
