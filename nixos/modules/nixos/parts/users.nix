@@ -118,6 +118,27 @@ in
           XDG_VIDEOS_DIR="$HOME/Videos"
         '';
 
+        # TODO move to keepassxc module
+        home.file.".config/autostart/org.keepassxc.KeePassXC.desktop".text = ''
+          [Desktop Entry]
+          Name=KeePassXC
+          GenericName=Password Manager
+          Exec=keepassxc
+          TryExec=keepassxc
+          Icon=keepassxc
+          StartupWMClass=keepassxc
+          StartupNotify=true
+          Terminal=false
+          Type=Application
+          Version=1.0
+          Categories=Utility;Security;Qt;
+          MimeType=application/x-keepass2;
+          X-GNOME-Autostart-enabled=true
+          X-GNOME-Autostart-Delay=2
+          X-KDE-autostart-after=panel
+          X-LXQt-Need-Tray=true
+        '';
+
         home.stateVersion = "23.11"; # never touch that
 
         services.syncthing = lib.mkIf ucfg.syncthing.enable {
