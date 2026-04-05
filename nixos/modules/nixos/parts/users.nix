@@ -206,6 +206,7 @@ in
                   ".local/share/docker"
                   ".local/state/wireplumber"
                   ".local/state/syncthing"
+                  ".local/share/com.unicornsonlsd.finamp"
                   ".config/VirtualBox"
                   ".mozilla"  # using syncstorage
                 ];
