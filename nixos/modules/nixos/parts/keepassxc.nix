@@ -6,6 +6,9 @@
 
     programs.ssh.startAgent = true;
 
+    services.gnome.gnome-keyring.enable = lib.mkForce false;
+    services.gnome.gcr-ssh-agent.enable = false;
+
     environment.systemPackages = with pkgs; [
       keepassxc
     ];
