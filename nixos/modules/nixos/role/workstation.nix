@@ -39,8 +39,31 @@ in
 
     environment.systemPackages = with pkgs; [
       libreoffice
+
+      # Dev
       vscodium
-      finamp
+
+      # Nix
+      nixos-anywhere
+
+      # Media
+      finamp mplayer mpv vlc ffmpeg x264 x265 flac
+      imagemagick ghostscript
+
+      # System
+      wavemon powertop htop iftop lsof dfc psmisc ncdu tree nmon
+      s-tui stress
+
+      # Shell
+      powerline-go pay-respects
+      tmux tmux-cssh xsel expect
+      sshfs gocryptfs
+      bc yq-go jq ipcalc dyff
+
+      # Kube
+      kubectl krew kubernetes-helm k9s kubeseal stern fluxcd helm-ls cilium-cli kubelogin-oidc
+      istioctl
+
     ];
 
     services.xserver = {
