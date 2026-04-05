@@ -123,7 +123,6 @@ in
           XDG_PICTURES_DIR="$HOME/Pictures"
           XDG_VIDEOS_DIR="$HOME/Videos"
         '';
-        xdg.configFile."user-dirs.dirs".force = true;
 
 
         # TODO move to keepassxc module
@@ -208,7 +207,7 @@ in
                   ".local/state/wireplumber"
                   ".local/state/syncthing"
                   ".config/VirtualBox"
-                  ".mozilla"
+                  ".mozilla"  # using syncstorage
                 ];
               }) cfg;
             };
