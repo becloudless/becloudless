@@ -150,8 +150,6 @@ in
 
         services.syncthing = lib.mkIf ucfg.syncthing.enable {
           enable = true;
-#          cert = "/nix/syncthing/${name}/config/cert.pem";
-#          key = "/nix/syncthing/${name}/config/key.pem";
           settings = {
             options = {
               localAnnounceEnabled = false;
@@ -260,5 +258,11 @@ in
           }
         ) stUsers
       );
+
     };
 }
+
+      sops.secrets = lib.mkMerge (
+        # user passwords
+        (lib.mapAttrsToList (name: ucfg:
+          lib.optionalAttrs (ucfg.sopsFile != null) {

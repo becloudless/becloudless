@@ -38,31 +38,35 @@ in
     };
 
     environment.systemPackages = with pkgs; [
+      # office
       libreoffice
+      ungoogled-chromium
 
       # Dev
-      vscodium
+      gitFull meld git-trim
+      vscodium graphviz
+      kubectl krew kubernetes-helm k9s kubeseal stern fluxcd helm-ls cilium-cli kubelogin-oidc
+      istioctl renovate # terraform # terraform-docs
+      dgoss gcrane
+      go yarn gradle maven nodejs_22
 
       # Nix
       nixos-anywhere
 
       # Media
       finamp mplayer mpv vlc ffmpeg x264 x265 flac
-      imagemagick ghostscript
+      gimp imagemagick ghostscript
 
       # System
       wavemon powertop htop iftop lsof dfc psmisc ncdu tree nmon
       s-tui stress
+      gnupg libsecret sops kubeseal ssh-to-age
 
       # Shell
       powerline-go pay-respects
       tmux tmux-cssh xsel expect
       sshfs gocryptfs
       bc yq-go jq ipcalc dyff
-
-      # Kube
-      kubectl krew kubernetes-helm k9s kubeseal stern fluxcd helm-ls cilium-cli kubelogin-oidc
-      istioctl
 
     ];
 

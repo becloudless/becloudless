@@ -10,13 +10,16 @@ in
       enable = true;
     };
 
-
     # Enable the GNOME Desktop Environment.
     services.displayManager.gdm.enable = true;
     services.desktopManager.gnome.enable = true;
 
     # so keepassxc can do the keyring
     services.gnome.gnome-keyring.enable = lib.mkForce false;
+
+    environment.systemPackages = with pkgs; [
+      gnome-browser-connector gnome-tweaks dconf-editor
+    ];
 
     environment.gnome.excludePackages = (with pkgs; [
       # gnome-photos
