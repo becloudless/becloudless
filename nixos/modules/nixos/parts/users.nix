@@ -180,6 +180,17 @@ in
         };
       }) cfg;
 
+      # TODO this is gnome specific
+      system.activationScripts = lib.mkMerge (lib.mapAttrsToList (name: ucfg: {
+        "accountsservice-icon-${name}" = {
+          text = ''
+            mkdir -p /var/lib/AccountsService/{icons,users}
+            cp /nix/home/${name}/Pictures/face.png /var/lib/AccountsService/icons/${name}
+            echo -e "[User]\nSession=gnome\nIcon=/var/lib/AccountsService/icons/${name}\n" > /var/lib/AccountsService/users/${name}
+          '';
+        };
+      }) stUsers);
+
       systemd.tmpfiles.rules = lib.concatLists (lib.mapAttrsToList (name: ucfg: [
         "d /nix/home/${name}/.local 0700 ${name} users"
         "d /nix/home/${name}/.local/share 0700 ${name} users"
