@@ -272,8 +272,3 @@ in
 
     };
 }
-
-      sops.secrets = lib.mkMerge (
-        # user passwords
-        (lib.mapAttrsToList (name: ucfg:
-          lib.optionalAttrs (ucfg.sopsFile != null) {
