@@ -39,13 +39,19 @@ in
     };
 
     environment.systemPackages = with pkgs; [
+      # System
+      wavemon powertop htop iftop lsof dfc psmisc ncdu tree nmon
+      s-tui stress
+      gnupg libsecret sops kubeseal ssh-to-age
+
       # office
-      libreoffice
+      libreoffice nemo
       ungoogled-chromium
+      turbovnc
 
       # Dev
       gitFull meld git-trim
-      vscodium graphviz
+      vscodium gh graphviz
       kubectl krew kubernetes-helm k9s kubeseal stern fluxcd helm-ls cilium-cli kubelogin-oidc
       istioctl renovate # terraform # terraform-docs
       dgoss gcrane
@@ -58,17 +64,16 @@ in
       finamp mplayer mpv vlc ffmpeg x264 x265 flac
       gimp imagemagick ghostscript
 
-      # System
-      wavemon powertop htop iftop lsof dfc psmisc ncdu tree nmon
-      s-tui stress
-      gnupg libsecret sops kubeseal ssh-to-age
-
       # Shell
       powerline-go pay-respects
+      tig tk silver-searcher 
+      # quicktile-git
+      # oh-my-zsh-git
       tmux tmux-cssh xsel expect
       sshfs gocryptfs
       bc yq-go jq ipcalc dyff
-
+      grc # pygmentize
+      ranger
     ];
 
     services.xserver = {

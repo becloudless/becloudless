@@ -16,9 +16,10 @@ in
 
     # so keepassxc can do the keyring
     services.gnome.gnome-keyring.enable = lib.mkForce false;
+    services.gnome.gnome-browser-connector.enable = true;
 
     environment.systemPackages = with pkgs; [
-      gnome-browser-connector gnome-tweaks dconf-editor
+      gnome-tweaks dconf-editor
     ];
 
     environment.gnome.excludePackages = (with pkgs; [
