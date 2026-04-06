@@ -28,6 +28,7 @@ in
     bcl.disk.encrypted = true;
     bcl.boot.plymouth = true;
     bcl.boot.quiet = true;
+    bcl.bluetooth.enable = true;
     bcl.sound.enable = true;
     bcl.wifi.enable = true;
     bcl.role.setAdminPassword = true;
