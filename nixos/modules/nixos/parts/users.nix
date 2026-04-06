@@ -185,7 +185,7 @@ in
         "accountsservice-icon-${name}" = {
           text = ''
             mkdir -p /var/lib/AccountsService/{icons,users}
-            cp /nix/home/${name}/Pictures/face.png /var/lib/AccountsService/icons/${name}
+            cp /home/${name}/Pictures/face.png /var/lib/AccountsService/icons/${name} || true
             echo -e "[User]\nSession=gnome\nIcon=/var/lib/AccountsService/icons/${name}\n" > /var/lib/AccountsService/users/${name}
           '';
         };
