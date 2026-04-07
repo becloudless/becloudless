@@ -219,6 +219,7 @@ in
         };
         "org/gnome/mutter" = {
           edge-tiling = true;
+          workspaces-only-on-primary = false;
         };
         "org/gnome/shell/app-switcher" = {
           current-workspace-only = true;
