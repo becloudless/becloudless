@@ -32,6 +32,7 @@ in
     bcl.sound.enable = true;
     bcl.wifi.enable = true;
     bcl.docker.enable = true;
+    bcl.printScan.enable = true;
     bcl.role.setAdminPassword = true;
     bcl.keepassxc.enable = true;
 
