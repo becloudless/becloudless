@@ -78,6 +78,7 @@ in
         {
           isNormalUser = true;
           group = "users";
+          extraGroups = ["adbusers" "keyd" "docker"];
         } // lib.optionalAttrs (ucfg.sopsFile != null) {
           hashedPasswordFile = config.sops.secrets."users.${name}.hashedPassword".path;
         }
