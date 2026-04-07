@@ -31,6 +31,7 @@ in
     bcl.bluetooth.enable = true;
     bcl.sound.enable = true;
     bcl.wifi.enable = true;
+    bcl.docker.enable = true;
     bcl.role.setAdminPassword = true;
     bcl.keepassxc.enable = true;
 
