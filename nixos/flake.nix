@@ -58,6 +58,9 @@
     mkFlake = flake-and-lib-options @ {
           inputs,
           src,
+          # List of package names (strings) to allow as unfree, e.g. [ "goland" ].
+          # Merged with any allowUnfreePredicate already in channels-config.
+          allowedUnfreePackages ? [],
           ...
         }: let
           lib = bclInputs.snowfall-lib.mkLib {
@@ -65,10 +68,19 @@
             inputs = bclInputs // inputs;
             snowfall.namespace = "infra";
           };
-          flake-options = builtins.removeAttrs flake-and-lib-options ["inputs" "src"];
+          nixpkgsLib = bclInputs.nixpkgs.lib;
+          userChannelsConfig = flake-and-lib-options.channels-config or {};
+          unfreeConfig = bclInputs.nixpkgs.lib.optionalAttrs (allowedUnfreePackages != []) {
+            allowUnfreePredicate = pkg:
+              builtins.elem (nixpkgsLib.getName pkg) allowedUnfreePackages
+              || (userChannelsConfig.allowUnfreePredicate or (_: false)) pkg;
+          };
+          flake-options = builtins.removeAttrs flake-and-lib-options ["inputs" "src" "allowedUnfreePackages"];
         in
           lib.mkFlake (flake-options // {
             systems.modules.nixos = bclModules;
+
+            channels-config = userChannelsConfig // unfreeConfig;
 
             # Ensure downstream flakes see the bcl package namespace under pkgs.bcl
             overlays = [

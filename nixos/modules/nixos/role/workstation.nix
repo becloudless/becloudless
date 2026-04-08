@@ -28,16 +28,54 @@ in
     bcl.disk.encrypted = true;
     bcl.boot.plymouth = true;
     bcl.boot.quiet = true;
+    bcl.bluetooth.enable = true;
     bcl.sound.enable = true;
     bcl.wifi.enable = true;
+    bcl.docker.enable = true;
+    bcl.printScan.enable = true;
     bcl.role.setAdminPassword = true;
+    bcl.keepassxc.enable = true;
 
     programs.firefox = {
       enable = true;
     };
 
     environment.systemPackages = with pkgs; [
-      libreoffice
+      # System
+      wavemon powertop htop iftop lsof dfc psmisc ncdu tree nmon
+      s-tui stress
+      gnupg libsecret sops kubeseal ssh-to-age
+
+      # office
+      libreoffice nemo
+      ungoogled-chromium
+      turbovnc
+
+      # Dev
+      gitFull meld git-trim
+      vscodium gh graphviz
+      kubectl krew kubernetes-helm k9s kubeseal stern fluxcd helm-ls cilium-cli kubelogin-oidc
+      istioctl renovate # terraform # terraform-docs
+      dgoss gcrane
+      go yarn gradle maven nodejs_22
+
+      # Nix
+      nixos-anywhere
+
+      # Media
+      finamp mplayer mpv vlc ffmpeg x264 x265 flac
+      gimp imagemagick ghostscript
+
+      # Shell
+      powerline-go pay-respects
+      tig tk silver-searcher 
+      # quicktile-git
+      # oh-my-zsh-git
+      tmux tmux-cssh xsel expect
+      sshfs gocryptfs
+      bc yq-go jq ipcalc dyff
+      grc # pygmentize
+      ranger
     ];
 
     services.xserver = {

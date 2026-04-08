@@ -2,6 +2,7 @@
 
 {
   config = lib.mkIf (config.bcl.role.name != "") {
+
     services.openssh = {
       enable = true;
       hostKeys = [
@@ -15,6 +16,11 @@
         KbdInteractiveAuthentication = false;
       };
     };
+
+    programs.ssh.extraConfig = ''
+      Host gitea.${config.bcl.global.domain}
+        ProxyCommand /bin/sh -c "openssl s_client -servername ssh-%h -connect ssh-%h:443 -quiet -verify_quiet -verify_return_error 2> /dev/null"
+    '';
 
     programs.ssh.knownHosts = {
       "gitea.${config.bcl.global.domain}" = {

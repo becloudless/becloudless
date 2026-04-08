@@ -10,13 +10,17 @@ in
       enable = true;
     };
 
-
     # Enable the GNOME Desktop Environment.
     services.displayManager.gdm.enable = true;
     services.desktopManager.gnome.enable = true;
 
     # so keepassxc can do the keyring
     services.gnome.gnome-keyring.enable = lib.mkForce false;
+    services.gnome.gnome-browser-connector.enable = true;
+
+    environment.systemPackages = with pkgs; [
+      gnome-tweaks dconf-editor
+    ];
 
     environment.gnome.excludePackages = (with pkgs; [
       # gnome-photos
@@ -215,6 +219,7 @@ in
         };
         "org/gnome/mutter" = {
           edge-tiling = true;
+          workspaces-only-on-primary = false;
         };
         "org/gnome/shell/app-switcher" = {
           current-workspace-only = true;

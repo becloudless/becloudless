@@ -12,6 +12,11 @@ let
         default = null;
         description = "Path to the sops secrets file containing the hashed password at key 'users.<name>.hashedPassword'.";
       };
+      shell = lib.mkOption {
+        type = lib.types.enum [ "bash" "zsh" ];
+        default = "bash";
+        description = "Shell to use for this user.";
+      };
       wm = lib.mkOption {
         type = lib.types.str;
         default = "";
@@ -73,6 +78,7 @@ in
         {
           isNormalUser = true;
           group = "users";
+          extraGroups = ["adbusers" "keyd" "docker"];
         } // lib.optionalAttrs (ucfg.sopsFile != null) {
           hashedPasswordFile = config.sops.secrets."users.${name}.hashedPassword".path;
         }
@@ -107,6 +113,7 @@ in
       home-manager.users = lib.mapAttrs (name: ucfg: { lib, pkgs, config, ... }: {
         imports = [ (inputs.impermanence + "/home-manager.nix") ];
 
+        # TODO better way to declare?
         home.file.".config/user-dirs.dirs".text = ''
           XDG_DESKTOP_DIR="$HOME/"
           XDG_DOWNLOAD_DIR="$HOME/Downloads"
@@ -118,12 +125,32 @@ in
           XDG_VIDEOS_DIR="$HOME/Videos"
         '';
 
+
+        # TODO move to keepassxc module
+        home.file.".config/autostart/org.keepassxc.KeePassXC.desktop".text = ''
+          [Desktop Entry]
+          Name=KeePassXC
+          GenericName=Password Manager
+          Exec=keepassxc
+          TryExec=keepassxc
+          Icon=keepassxc
+          StartupWMClass=keepassxc
+          StartupNotify=true
+          Terminal=false
+          Type=Application
+          Version=1.0
+          Categories=Utility;Security;Qt;
+          MimeType=application/x-keepass2;
+          X-GNOME-Autostart-enabled=true
+          X-GNOME-Autostart-Delay=2
+          X-KDE-autostart-after=panel
+          X-LXQt-Need-Tray=true
+        '';
+
         home.stateVersion = "23.11"; # never touch that
 
         services.syncthing = lib.mkIf ucfg.syncthing.enable {
           enable = true;
-#          cert = "/nix/syncthing/${name}/config/cert.pem";
-#          key = "/nix/syncthing/${name}/config/key.pem";
           settings = {
             options = {
               localAnnounceEnabled = false;
@@ -154,6 +181,17 @@ in
         };
       }) cfg;
 
+      # TODO this is gnome specific
+      system.activationScripts = lib.mkMerge (lib.mapAttrsToList (name: ucfg: {
+        "accountsservice-icon-${name}" = {
+          text = ''
+            mkdir -p /var/lib/AccountsService/{icons,users}
+            echo -e "[User]\nSession=gnome\nIcon=/var/lib/AccountsService/icons/${name}\n" > /var/lib/AccountsService/users/${name}
+            cp /nix/syncthing/home/${name}/Pictures/face.png /var/lib/AccountsService/icons/${name} || true
+          '';
+        };
+      }) stUsers);
+
       systemd.tmpfiles.rules = lib.concatLists (lib.mapAttrsToList (name: ucfg: [
         "d /nix/home/${name}/.local 0700 ${name} users"
         "d /nix/home/${name}/.local/share 0700 ${name} users"
@@ -175,10 +213,12 @@ in
                 directories = [
                   ".cache"
                   "Tmp"
-                  ".local/share/docker"
-                  ".local/state/wireplumber"
-                  ".local/state/syncthing"
+                  ".local/share/docker" # for rootless docker
+                  ".local/state/wireplumber" # audio setup
+                  ".local/state/syncthing" # systemd user unit state
+                  ".local/share/com.unicornsonlsd.finamp"
                   ".config/VirtualBox"
+                  ".mozilla"  # # firefox/ and native-messaging-hosts/ for keepassxc
                 ];
               }) cfg;
             };
@@ -197,12 +237,40 @@ in
             "/nix/syncthing/homes" = {
               hideMounts = true;
               users."${name}" = {
-                directories = [ ".mozilla" ];
-                files = [ ".z" ];
+                directories = [
+                  
+                  # ".viminfo"
+                  ".tmux"
+                  # ".lesshst" # less replace the file
+                  ".docker" # must be the directory so it can mounted by bbc commands
+                  ".vscode-oss"
+                  ".config/chromium"
+                  ".config/Signal"
+                  ".local/bin" # scripts and bbc
+                  ".local/share/applications" # to keep plex chromium application
+                  ".local/share/desktop-directories"
+                  ".local/share/zoxide"
+                  ".config/menus" # .desktop applications into menu
+                  ".local/share/icons" # .desktop icons
+                  ".config/gcloud"
+                  ".config/sops" # TODO replace by static
+                  ".config/VSCodium"
+                  ".config/keepassxc"
+                  ".wine"
+
+                  ".local/share/JetBrains/" # plugins and license
+                  ".config/JetBrains" # looks required for license
+                  ".java/.userPrefs/jetbrains"
+                ];
+                files = [
+                  ".z"
+                  ".local/share/gnome-shell/application_state" # trusted .desktop applications
+                ];
               };
             };
           }
         ) stUsers
       );
+
     };
 }
