@@ -4,6 +4,10 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -74,6 +78,11 @@ func main() {
 				if err := gomake.EnsureTool("go-jsonschema", "github.com/atombender/go-jsonschema"); err != nil {
 					return err
 				}
+				// copy kube root folder to assets
+				if err := copyDir("../kube", "assets/kube"); err != nil {
+					return errs.WithE(err, "Failed to copy kube folder to assets")
+				}
+
 				return nil
 			},
 		}).
@@ -89,4 +98,41 @@ func main() {
 		}).
 		WithStep(&VersionStep{}).
 		MustBuild().MustExecute()
+}
+
+func copyDir(src, dst string) error {
+	if err := os.RemoveAll(dst); err != nil {
+		return errs.WithE(err, "Failed to remove destination directory")
+	}
+	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dst, rel)
+		if d.IsDir() {
+			return os.MkdirAll(target, 0755)
+		}
+		return copyFile(path, target)
+	})
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	return err
 }
