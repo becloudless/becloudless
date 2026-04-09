@@ -71,7 +71,7 @@ in
     services.k3s = {
       enable = true;
       extraFlags = [
-        "--tls-san=${config.networking.hostName}.i.${config.bcl.global.domain},${cfg.clusterName}.i.${config.bcl.global.domain}"
+        "--tls-san=${config.networking.hostName}.infra.${config.bcl.global.domain},${cfg.clusterName}.infra.${config.bcl.global.domain}"
       ];
     };
 
