@@ -72,7 +72,7 @@ func Bootstrap(adoptResources bool) error {
 	if !k3sServingExists {
 		// cilium network
 		if err := applyFluxHelmReleaseWithHelm(ctx,
-			filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/cilium"),
+			filepath.Join(bcl.BCL.EmbeddedPath, "assets/kube/apps/cilium"),
 			flux.NamespacedObjectKindReference{Name: "cilium", Namespace: "kube-system"},
 			envs, adoptResources); err != nil {
 			return errs.WithE(err, "Failed to apply cilium")
@@ -80,7 +80,7 @@ func Bootstrap(adoptResources bool) error {
 
 		// coredns dns
 		if err := applyFluxHelmReleaseWithHelm(ctx,
-			filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/coredns"),
+			filepath.Join(bcl.BCL.EmbeddedPath, "assets/kube/apps/coredns"),
 			flux.NamespacedObjectKindReference{Name: "coredns", Namespace: "kube-system"},
 			envs, adoptResources); err != nil {
 			return errs.WithE(err, "Failed to apply coredns")
@@ -88,7 +88,7 @@ func Bootstrap(adoptResources bool) error {
 	}
 
 	// flux
-	if err := applyFluxKustomizationWithKustomize(ctx, filepath.Join(bcl.BCL.EmbeddedPath, "kube/apps/flux"), flux.NamespacedObjectKindReference{Name: "flux", Namespace: "flux-system"}); err != nil {
+	if err := applyFluxKustomizationWithKustomize(ctx, filepath.Join(bcl.BCL.EmbeddedPath, "assets/kube/apps/flux"), flux.NamespacedObjectKindReference{Name: "flux", Namespace: "flux-system"}); err != nil {
 		return errs.WithE(err, "Failed to bootstrap flux")
 	}
 
