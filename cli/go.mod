@@ -2,7 +2,7 @@ module github.com/becloudless/becloudless
 
 go 1.25.5
 
-toolchain go1.26.1
+toolchain go1.26.2
 
 require (
 	github.com/Mic92/ssh-to-age v0.0.0-20260316045310-18de616454b6
