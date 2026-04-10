@@ -2,7 +2,7 @@
 
 let
   # renovate: datasource=github-releases depName=becloudless/becloudless
-  version = "0.260303.448-H153758a";
+  version = "0.260410.550-H89e635b";
 
   # Map Nix system to Go platform (GOOS-GOARCH format)
   platform = {
@@ -13,12 +13,16 @@ let
   }.${stdenv.hostPlatform.system} or (throw "bcl: unsupported system ${stdenv.hostPlatform.system}");
 
   # To recompute hashes after a version bump, run for each platform (linux-amd64, linux-arm64, darwin-amd64, darwin-arm64):
-  #   nix store prefetch-file --hash-type sha256 --json "https://github.com/becloudless/becloudless/releases/download/cli-v<version>/bcl-<platform>.tar.gz" | jq -r .hash
+  # VERSION=0.260410.550-H89e635b
+  # nix store prefetch-file --hash-type sha256 --json "https://github.com/becloudless/becloudless/releases/download/v$VERSION/bcl-linux-amd64.tar.gz" | jq -r .hash
+  # nix store prefetch-file --hash-type sha256 --json "https://github.com/becloudless/becloudless/releases/download/v$VERSION/bcl-linux-arm64.tar.gz" | jq -r .hash
+  # nix store prefetch-file --hash-type sha256 --json "https://github.com/becloudless/becloudless/releases/download/v$VERSION/bcl-darwin-amd64.tar.gz" | jq -r .hash
+  # nix store prefetch-file --hash-type sha256 --json "https://github.com/becloudless/becloudless/releases/download/v$VERSION/bcl-darwin-arm64.tar.gz" | jq -r .hash
   hashes = {
-    "linux-amd64" = "sha256-dxul/mYJXGee9Td4cm6OK3YaNpZ6Ha4kAjwQdbhhztY=";
-    "linux-arm64" = "sha256-WDrysb/o9qrbO8iAqFi4Fp94dhAZ2tTheDEzDx9nm84=";
-    "darwin-amd64" = "sha256-vLoMECdU7s0SLI1fGm0xIMEOE49wZmUnlSye+Q8u3PY=";
-    "darwin-arm64" = "sha256-fawQDcf10h7gciTU0mvNfuNNslFHrSlBXBd/mlKjP+A=";
+    "linux-amd64" = "sha256-CyMUUPG7ayDAzAQV/A3mbOJT7FOBFiivGAHUr/7IfnI=";
+    "linux-arm64" = "sha256-yODpmmNs+LCTdBNLZ2U/qQktTRYx70yF4lOp7nt5XqA=";
+    "darwin-amd64" = "sha256-GM8wx6n60bnAZyV06Jyyss0M3ZODafwDYTfG/Y7GGFQ=";
+    "darwin-arm64" = "sha256-GWEUsRVyAHbk3Fn72Cf1okGhSvOtBxu325s3/1TySf8=";
   };
 in
 
@@ -27,7 +31,7 @@ stdenv.mkDerivation {
   inherit version;
 
   src = fetchurl {
-    url = "https://github.com/becloudless/becloudless/releases/download/cli-v${version}/bcl-${platform}.tar.gz";
+    url = "https://github.com/becloudless/becloudless/releases/download/v${version}/bcl-${platform}.tar.gz";
     hash = hashes.${platform};
   };
 
