@@ -80,7 +80,7 @@ else
 	echo_brightred "## Downloading bcl from GitHub release"
 	VERSION="$(grep -E '^\s+version = ' "$DIR/packages/bcl/default.nix" | sed 's/.*"\(.*\)".*/\1/')"
 	mkdir -p ./work
-	curl -fsSL "https://github.com/becloudless/becloudless/releases/download/cli-v${VERSION}/bcl-linux-amd64.tar.gz" \
+	curl -fsSL "https://github.com/becloudless/becloudless/releases/download/v${VERSION}/bcl-linux-amd64.tar.gz" \
 		| tar -xz -C ./work
 	BCL_BIN=$(realpath "$PWD/work/bcl-linux-amd64/bcl")
 fi
