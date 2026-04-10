@@ -1,7 +1,7 @@
 { lib, stdenv, fetchurl }:
 
 let
-  # renovate: datasource=github-releases depName=becloudless/becloudless extractVersion=^cli-v(?<version>.+)$
+  # renovate: datasource=github-releases depName=becloudless/becloudless
   version = "0.260303.448-H153758a";
 
   # Map Nix system to Go platform (GOOS-GOARCH format)
@@ -57,4 +57,3 @@ stdenv.mkDerivation {
     maintainers = with maintainers; [ n0rad ];
   };
 }
-
