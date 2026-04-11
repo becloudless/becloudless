@@ -26,6 +26,7 @@
   // TODO platform automerge requires to put some mandatory checks, else it will be merged, even if the CI is red
   //platformAutomerge: true, // do not wait for next renovate run if the platform support automerge
   minimumReleaseAge: "3 days",
+  minimumReleaseAgeBehaviour: "timestamp-optional", // timestamp-required makes renovate never creating PR for packages without timestamp
   labels: ["dependencies"],
 
   flux: {
