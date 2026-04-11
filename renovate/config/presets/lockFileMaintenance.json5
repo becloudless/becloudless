@@ -1,8 +1,8 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "lockFileMaintenance": {
-    "enabled": true,
-    "automerge": true,
-    "extends": ["schedule:daily"]
-  }
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  lockFileMaintenance: {
+    enabled: true,
+    automerge: true,
+    extends: ["schedule:daily"],
+  },
 }

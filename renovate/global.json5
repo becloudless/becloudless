@@ -14,10 +14,7 @@
     "github>becloudless/becloudless//renovate/presets/lockFileMaintenance.json5",
     "github>becloudless/becloudless//renovate/presets/renovate.json5",
   ],
-  suppressNotifications: [
-    "prEditedNotification",
-    "prIgnoreNotification",
-  ],
+  suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
 
   automergeType: "branch",
   automergeStrategy: "squash",
@@ -30,16 +27,16 @@
   labels: ["dependencies"],
 
   flux: {
-    fileMatch: [".+\\.yaml$"]
+    fileMatch: [".+\\.yaml$"],
   },
   "helm-values": {
-    fileMatch: [".+\\.yaml$"]
+    fileMatch: [".+\\.yaml$"],
   },
   kubernetes: {
-    fileMatch: [".+\\.yaml$"]
+    fileMatch: [".+\\.yaml$"],
   },
   nix: {
-    enabled: true
+    enabled: true,
   },
 
   regexManagers: [
@@ -47,33 +44,32 @@
       description: "Update versions annotated with # renovate: in .nix files",
       fileMatch: [".+\\.nix$"],
       matchStrings: [
-        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>.+?)( extractVersion=(?<extractVersion>.+?))?( versioning=(?<versioning>.+?))?\\s+\\w+ = \"(?<currentValue>.+?)\";"
+        '# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>.+?)( extractVersion=(?<extractVersion>.+?))?( versioning=(?<versioning>.+?))?\\s+\\w+ = "(?<currentValue>.+?)";',
       ],
     },
     {
       description: "Docker image and tag classic helm values declaration",
       fileMatch: [".+\\.yaml$"],
       matchStrings: [
-        "image:\\s+repository: (?<depName>.+?)\\s+tag: (?<currentValue>.+?)\\s"
+        "image:\\s+repository: (?<depName>.+?)\\s+tag: (?<currentValue>.+?)\\s",
       ],
       datasourceTemplate: "docker",
-      versioningTemplate: "docker"
-    }
+      versioningTemplate: "docker",
+    },
   ],
 
   packageRules: [
     {
       matchPackagePatterns: ["mailu"],
-      groupName: "mailu"
+      groupName: "mailu",
     },
     {
       matchPackagePatterns: ["intel-gpu"],
-      groupName: "intel-gpu"
+      groupName: "intel-gpu",
     },
     {
       matchUpdateTypes: ["minor", "patch", "pin", "digest"],
       automerge: true,
     },
   ],
-
 }
