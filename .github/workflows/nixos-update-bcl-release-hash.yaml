@@ -42,7 +42,7 @@ jobs:
           echo "version=$VERSION"
 
           for platform in linux-amd64 linux-arm64 darwin-amd64 darwin-arm64; do
-            url="https://github.com/becloudless/becloudless/releases/download/cli-v${VERSION}/bcl-${platform}.tar.gz"
+            url="https://github.com/becloudless/becloudless/releases/download/v${VERSION}/bcl-${platform}.tar.gz"
             hash="$(nix store prefetch-file --hash-type sha256 --json "$url" | jq -r .hash)"
             echo "platform=$platform hash=$hash"
             sed -i "s|\"${platform}\"  *=.*|\"${platform}\" = \"${hash}\";|" "$FILE"
