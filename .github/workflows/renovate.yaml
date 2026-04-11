@@ -25,17 +25,21 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
-          cache: yarn
-          cache-dependency-path: renovate/yarn.lock
+          node-version: 24
+#          cache: yarn
+#          cache-dependency-path: renovate/yarn.lock
 
       - name: Install
         working-directory: renovate
-        run: yarn --frozen-lockfile --perfer-offline --link-duplicates
+#        run: yarn --frozen-lockfile --perfer-offline --link-duplicates
+        run: npm install yarn && node_modules/yarn/bin/yarn
 
       - name: Lint
         working-directory: renovate
-        run: yarn lint
+#        run: yarn lint
+        run: node_modules/yarn/bin/yarn lint
 
       - name: Test
         working-directory: renovate
-        run: yarn test
+#        run: yarn test
+        run: node_modules/yarn/bin/yarn test
