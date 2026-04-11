@@ -20,13 +20,14 @@ import (
 	"github.com/n0rad/go-erlog/logs"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/cli"
-	"helm.sh/helm/v3/pkg/cli/values"
-	"helm.sh/helm/v3/pkg/getter"
-	"helm.sh/helm/v3/pkg/repo"
-	"helm.sh/helm/v3/pkg/storage/driver"
+	helmchart "helm.sh/helm/v4/pkg/chart"
+	"helm.sh/helm/v4/pkg/action"
+	"helm.sh/helm/v4/pkg/chart/loader"
+	"helm.sh/helm/v4/pkg/cli"
+	"helm.sh/helm/v4/pkg/cli/values"
+	"helm.sh/helm/v4/pkg/getter"
+	repo "helm.sh/helm/v4/pkg/repo/v1"
+	"helm.sh/helm/v4/pkg/storage/driver"
 )
 
 func kubeBootstrapCmd() *cobra.Command {
@@ -425,9 +426,7 @@ func prepareAndApplyFluxHelmRelease(ctx kube.Context, hr flux.HelmRelease, resou
 	}
 
 	actionConfig := new(action.Configuration)
-	if err := actionConfig.Init(settings.RESTClientGetter(), hr.Metadata.Namespace, os.Getenv("HELM_DRIVER"), func(format string, v ...any) {
-		fmt.Printf(format+"\n", v...)
-	}); err != nil {
+	if err := actionConfig.Init(settings.RESTClientGetter(), hr.Metadata.Namespace, os.Getenv("HELM_DRIVER")); err != nil {
 		return errs.WithE(err, "Failed to initialize Helm action configuration")
 	}
 
@@ -467,8 +466,13 @@ func prepareAndApplyFluxHelmRelease(ctx kube.Context, hr flux.HelmRelease, resou
 		return errs.WithE(err, "Failed to load helm chart")
 	}
 
-	logs.WithField("chart", chart.Metadata.Name).
-		WithField("version", chart.Metadata.Version).
+	chartAc, err := helmchart.NewAccessor(chart)
+	if err != nil {
+		return errs.WithE(err, "Failed to create chart accessor")
+	}
+	chartVersion, _ := chartAc.MetadataAsMap()["Version"].(string)
+	logs.WithField("chart", chartAc.Name()).
+		WithField("version", chartVersion).
 		Info("Applying helm release")
 
 	if _, err := upgrade.Run(hr.Metadata.Name, chart, vals); err != nil {
