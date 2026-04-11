@@ -1,0 +1,24 @@
+{
+  "name": "renovate-config",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Renovate configuration files",
+  "scripts": {
+    "fmt": "prettier --write .",
+    "lint": "prettier --check .",
+    "test": "for i in **/*.json5; do echo $i; renovate-config-validator $i; done"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/becloudless/becloudless.git"
+  },
+  "keywords": [
+    "renovate"
+  ],
+  "author": "n0rad",
+  "license": "WTFPL",
+  "devDependencies": {
+    "prettier": "^3.0.0",
+    "renovate": "^37.0.0"
+  }
+}
