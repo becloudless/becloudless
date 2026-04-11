@@ -3,5 +3,5 @@
   "github-actions": {
     enabled: true,
     pinDigests: true,
-  }
+  },
 }

@@ -57,7 +57,7 @@ in
       kubectl krew kubernetes-helm k9s kubeseal stern fluxcd helm-ls cilium-cli kubelogin-oidc
       istioctl renovate # terraform # terraform-docs
       dgoss gcrane
-      go yarn gradle maven nodejs_22
+      go yarn gradle maven nodejs_24
 
       # Nix
       nixos-anywhere

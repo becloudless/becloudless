@@ -4,12 +4,8 @@
   packageRules: [
     {
       description: "reduce renovate itself update pressure",
-      matchPackageNames: [
-        "renovate"
-      ],
-      schedule: [
-        "before 2am"
-      ]
+      matchPackageNames: ["renovate"],
+      schedule: ["before 2am"],
     },
   ],
 }
