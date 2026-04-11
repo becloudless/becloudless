@@ -4,4 +4,13 @@
     "github>becloudless/becloudless//renovate/global.json5",
   ],
 
+  packageRules: [
+    {
+      description: "bump bcl right away. It's useful to bump cli in nixos",
+      matchPackageNames: [
+        "becloudless/becloudless"
+      ],
+      minimumReleaseAge: null
+    },
+  ]
 }
