@@ -1473,15 +1473,15 @@
   dependencies:
     tslib "^2.6.2"
 
-"@smithy/config-resolver@^4.4.13", "@smithy/config-resolver@^4.4.14":
-  version "4.4.14"
-  resolved "https://registry.yarnpkg.com/@smithy/config-resolver/-/config-resolver-4.4.14.tgz#6803498f1be96d88da3e6d88a244e4ec99fe3174"
-  integrity sha512-N55f8mPEccpzKetUagdvmAy8oohf0J5cuj9jLI1TaSceRlq0pJsIZepY3kmAXAhyxqXPV6hDerDQhqQPKWgAoQ==
+"@smithy/config-resolver@^4.4.13", "@smithy/config-resolver@^4.4.14", "@smithy/config-resolver@^4.4.15":
+  version "4.4.15"
+  resolved "https://registry.yarnpkg.com/@smithy/config-resolver/-/config-resolver-4.4.15.tgz#38c396181d7ac41f2906c8c72f557ce366254cef"
+  integrity sha512-BJdMBY5YO9iHh+lPLYdHv6LbX+J8IcPCYMl1IJdBt2KDWNHwONHrPVHk3ttYBqJd9wxv84wlbN0f7GlQzcQtNQ==
   dependencies:
     "@smithy/node-config-provider" "^4.3.13"
     "@smithy/types" "^4.14.0"
     "@smithy/util-config-provider" "^4.2.2"
-    "@smithy/util-endpoints" "^3.3.4"
+    "@smithy/util-endpoints" "^3.4.0"
     "@smithy/util-middleware" "^4.2.13"
     tslib "^2.6.2"
 
@@ -1853,11 +1853,11 @@
     tslib "^2.6.2"
 
 "@smithy/util-defaults-mode-node@^4.2.48", "@smithy/util-defaults-mode-node@^4.2.49":
-  version "4.2.49"
-  resolved "https://registry.yarnpkg.com/@smithy/util-defaults-mode-node/-/util-defaults-mode-node-4.2.49.tgz#fa443a16daedef503c0d41bbed22526c3e228cee"
-  integrity sha512-jlN6vHwE8gY5AfiFBavtD3QtCX2f7lM3BKkz7nFKSNfFR5nXLXLg6sqXTJEEyDwtxbztIDBQCfjsGVXlIru2lQ==
+  version "4.2.50"
+  resolved "https://registry.yarnpkg.com/@smithy/util-defaults-mode-node/-/util-defaults-mode-node-4.2.50.tgz#6893eeb9036cb73bcc1cd9ed5f50bdbcbd745cda"
+  integrity sha512-xpjncL5XozFA3No7WypTsPU1du0fFS8flIyO+Wh2nhCy7bpEapvU7BR55Bg+wrfw+1cRA+8G8UsTjaxgzrMzXg==
   dependencies:
-    "@smithy/config-resolver" "^4.4.14"
+    "@smithy/config-resolver" "^4.4.15"
     "@smithy/credential-provider-imds" "^4.2.13"
     "@smithy/node-config-provider" "^4.3.13"
     "@smithy/property-provider" "^4.2.13"
@@ -1865,10 +1865,10 @@
     "@smithy/types" "^4.14.0"
     tslib "^2.6.2"
 
-"@smithy/util-endpoints@^3.3.3", "@smithy/util-endpoints@^3.3.4":
-  version "3.3.4"
-  resolved "https://registry.yarnpkg.com/@smithy/util-endpoints/-/util-endpoints-3.3.4.tgz#e372596c9aebd7939a0452f6b8ec417cfac18f7c"
-  integrity sha512-BKoR/ubPp9KNKFxPpg1J28N1+bgu8NGAtJblBP7yHy8yQPBWhIAv9+l92SlQLpolGm71CVO+btB60gTgzT0wog==
+"@smithy/util-endpoints@^3.3.3", "@smithy/util-endpoints@^3.3.4", "@smithy/util-endpoints@^3.4.0":
+  version "3.4.0"
+  resolved "https://registry.yarnpkg.com/@smithy/util-endpoints/-/util-endpoints-3.4.0.tgz#e66c4b34ad4cc1ef52864e3ba667b5e7f9109456"
+  integrity sha512-QQHGPKkw6NPcU6TJ1rNEEa201srPtZiX4k61xL163vvs9sTqW/XKz+UEuJ00uvPqoN+5Rs4Ka1UJ7+Mp03IXJw==
   dependencies:
     "@smithy/node-config-provider" "^4.3.13"
     "@smithy/types" "^4.14.0"
@@ -3675,9 +3675,9 @@ lowercase-keys@^3.0.0:
   integrity sha512-ozCC6gdQ+glXOQsveKD0YsDy8DSQFjDTz4zyzEHNV5+JP5D62LmfDZ6o1cycFx9ouG940M5dE8C8CTewdj2YWQ==
 
 lru-cache@^11.0.0, lru-cache@^11.1.0, lru-cache@^11.2.1:
-  version "11.3.3"
-  resolved "https://registry.yarnpkg.com/lru-cache/-/lru-cache-11.3.3.tgz#d6c633c2a9657760fd30594d8d98da65330d9d78"
-  integrity sha512-JvNw9Y81y33E+BEYPr0U7omo+U9AySnsMsEiXgwT6yqd31VQWTLNQqmT4ou5eqPFUrTfIDFta2wKhB1hyohtAQ==
+  version "11.3.5"
+  resolved "https://registry.yarnpkg.com/lru-cache/-/lru-cache-11.3.5.tgz#29047d348c0b2793e3112a01c739bb7c6d855637"
+  integrity sha512-NxVFwLAnrd9i7KUBxC4DrUhmgjzOs+1Qm50D3oF1/oL+r1NpZ4gA7xvG0/zJ8evR7zIKn4vLf7qTNduWFtCrRw==
 
 luxon@3.7.2, luxon@^3.7.2:
   version "3.7.2"
