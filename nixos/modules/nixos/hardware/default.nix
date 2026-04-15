@@ -6,5 +6,9 @@
       type = lib.types.str;
       default = "";
     };
+    commons = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [];
+    };
   };
 }
