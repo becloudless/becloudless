@@ -24,7 +24,9 @@ in
     };
   };
 
-  config = lib.mkIf (config.bcl.role.name == "workstation") {
+  config = lib.mkMerge [
+    { bcl.role.knownRoles = [ "workstation" ]; }
+    (lib.mkIf (config.bcl.role.name == "workstation") {
     bcl.disk.encrypted = true;
     bcl.boot.plymouth = true;
     bcl.boot.quiet = true;
@@ -98,5 +100,6 @@ in
       LC_TIME = locale;
     };
 
-  };
+  })
+  ];
 }

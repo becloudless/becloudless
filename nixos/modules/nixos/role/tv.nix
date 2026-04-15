@@ -15,7 +15,9 @@
       };
   };
 
-  config = lib.mkIf (config.bcl.role.name == "tv") {
+  config = lib.mkMerge [
+    { bcl.role.knownRoles = [ "tv" ]; }
+    (lib.mkIf (config.bcl.role.name == "tv") {
     bcl.boot.quiet = true;
     bcl.sound.enable = true;
     bcl.wifi.enable = true;
@@ -183,5 +185,6 @@
         ];
       };
     };
-  };
+  })
+  ];
 }
