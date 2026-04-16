@@ -78,7 +78,7 @@ in
         {
           isNormalUser = true;
           group = "users";
-          extraGroups = ["adbusers" "keyd" "docker"];
+          extraGroups = ["adbusers" "keyd" "docker" "libvirtd"];
         } // lib.optionalAttrs (ucfg.sopsFile != null) {
           hashedPasswordFile = config.sops.secrets."users.${name}.hashedPassword".path;
         }
@@ -112,6 +112,16 @@ in
 
       home-manager.users = lib.mapAttrs (name: ucfg: { lib, pkgs, config, ... }: {
         imports = [ (inputs.impermanence + "/home-manager.nix") ];
+
+        dconf.settings = with lib.hm.gvariant; {
+          "org/virt-manager/virt-manager" = {
+            xmleditor-enabled = true;
+          };
+
+          "org/virt-manager/virt-manager/confirm" = {
+            forcepoweroff = false;
+          };
+        };
 
         # TODO better way to declare?
         home.file.".config/user-dirs.dirs".text = ''
