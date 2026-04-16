@@ -42,11 +42,22 @@ in
       enable = true;
     };
 
+    virtualisation.libvirtd = {
+      enable = true;
+      qemu = {
+        package = pkgs.qemu_kvm;
+        runAsRoot = true;
+        swtpm.enable = true;
+      };
+    };
+
     environment.systemPackages = with pkgs; [
       # System
       wavemon powertop htop iftop lsof dfc psmisc ncdu tree nmon
       s-tui stress
       gnupg libsecret sops kubeseal ssh-to-age
+
+      virtiofsd virt-manager
 
       # office
       libreoffice nemo
