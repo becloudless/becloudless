@@ -65,7 +65,7 @@ installHost() {
 	}
 
 	echo_brightred "## Checking result"
-	sleep 30
+	sleep 60
 	($5)
 
 	return 0
