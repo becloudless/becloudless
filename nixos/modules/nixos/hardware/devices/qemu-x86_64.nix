@@ -4,7 +4,6 @@
   config = lib.mkMerge [
     { bcl.hardware.knownDevices = [ "qemu-x86_64" ]; }
     (lib.mkIf (config.bcl.hardware.device == "qemu-x86_64") {
-    bcl.hardware.commons = [ "intel" ];
 
     bcl.boot.loader = "bios";
 
