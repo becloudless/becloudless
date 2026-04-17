@@ -13,6 +13,10 @@ in {
     ids = lib.mkOption {
       type = lib.types.str;
     };
+    hardware = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+    };
     devices = lib.mkOption {
       type = with lib.types; listOf str;
       default = [ ];
@@ -41,6 +45,9 @@ in {
       };
       boot = {
         enable = true;
+      };
+      hardware = {
+        device = cfg.hardware;
       };
       disk = {
         enable = true;
