@@ -3,7 +3,7 @@ let
   unstable = inputs.nixpkgs-unstable.legacyPackages.${pkgs.system};
 in
 {
-  config = lib.mkIf (builtins.elem config.bcl.hardware.device [ "orangepi5" "orangepi5plus" ]) {
+  config = lib.mkIf (builtins.elem "orangepi5-common" config.bcl.hardware.commons) {
 
     hardware = {
       firmware = [ unstable.linux-firmware ];

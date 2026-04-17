@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Create GitHub App Token
-        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         id: github-app-token
         with:
           app-id: ${{ secrets.BOT_APP_ID }}
@@ -30,7 +30,7 @@ jobs:
           ref: ${{ github.ref_name }}
           token: ${{ steps.github-app-token.outputs.token }}
 
-      - uses: cachix/install-nix-action@96951a368ba55167b55f1c916f7d416bac6505fe # v31.10.3
+      - uses: cachix/install-nix-action@616559265b40713947b9c190a8ff4b507b5df49b # v31.10.4
         with:
           nix_path: nixpkgs=channel:nixos-25.05
 
@@ -48,7 +48,7 @@ jobs:
             sed -i "s|\"${platform}\"  *=.*|\"${platform}\" = \"${hash}\";|" "$FILE"
           done
 
-      - uses: iarekylew00t/verified-bot-commit@4aeee0954ea68e4e91e5fd326e9a0827ebc5b19a # v2.2.2
+      - uses: iarekylew00t/verified-bot-commit@126a6a11889ab05bcff72ec2403c326cd249b84c # v2.3.0
         with:
           ref: ${{ github.ref_name }}
           token: ${{ steps.github-app-token.outputs.token }}

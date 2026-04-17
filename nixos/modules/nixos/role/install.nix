@@ -2,7 +2,9 @@
 let
   isInstall = config.bcl.role.name == "install";
 in {
-  config = lib.mkIf isInstall (
+  config = lib.mkMerge [
+    { bcl.role.knownRoles = [ "install" ]; }
+    (lib.mkIf isInstall (
     {
       bcl.wifi.enable = true;
       environment.systemPackages = with pkgs; [
@@ -52,5 +54,6 @@ in {
 #    "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
 ##            "${nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
     }
-  );
+  ))
+  ];
 }
