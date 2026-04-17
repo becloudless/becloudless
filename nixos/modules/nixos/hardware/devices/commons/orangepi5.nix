@@ -3,7 +3,9 @@ let
   unstable = inputs.nixpkgs-unstable.legacyPackages.${pkgs.system};
 in
 {
-  config = lib.mkIf (builtins.elem "orangepi5-common" config.bcl.hardware.commons) {
+  config = lib.mkMerge [
+    { bcl.hardware.knownCommons = [ "orangepi5" ]; }
+    (lib.mkIf (builtins.elem "orangepi5" config.bcl.hardware.commons) {
 
     hardware = {
       firmware = [ unstable.linux-firmware ];
@@ -43,5 +45,6 @@ in
         "console=tty1" # HDMI
       ];
     };
-  };
+  })
+  ];
 }

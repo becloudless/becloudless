@@ -1,0 +1,15 @@
+{ config, lib, pkgs, modulesPath, ... }:
+
+{
+  config = lib.mkMerge [
+    { bcl.hardware.knownDevices = [ "qemu-x86_64" ]; }
+    (lib.mkIf (config.bcl.hardware.device == "qemu-x86_64") {
+    bcl.hardware.commons = [ "intel" ];
+
+    bcl.boot.loader = "bios";
+
+    boot.initrd.availableKernelModules = [ "ata_piix" "ohci_pci" "ehci_pci" "ahci" "sd_mod" "sr_mod" "e1000e" "virtio_pci" "virtio_net" "e1000" ];
+    boot.initrd.kernelModules = [ "e1000" ];
+  })
+  ];
+}

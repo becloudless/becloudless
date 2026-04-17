@@ -1,11 +1,9 @@
 { inputs, config, lib, pkgs, ... }:
 {
-  imports = [ ./orangepi5-common.nix ];
-
   config = lib.mkMerge [
     { bcl.hardware.knownDevices = [ "orangepi5plus" ]; }
     (lib.mkIf (config.bcl.hardware.device == "orangepi5plus") {
-    bcl.hardware.commons = [ "orangepi5-common" ];
+    bcl.hardware.commons = [ "orangepi5" ];
 
     bcl.disk.ubootPackage = lib.mkIf (config.bcl.boot.loader == "uboot") pkgs.ubootOrangePi5Plus;
 
