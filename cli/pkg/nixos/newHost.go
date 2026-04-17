@@ -2,7 +2,7 @@ package nixos
 
 import (
 	"errors"
-	"github.com/charmbracelet/huh"
+	"charm.land/huh/v2"
 	"github.com/n0rad/go-erlog/errs"
 	"strings"
 )

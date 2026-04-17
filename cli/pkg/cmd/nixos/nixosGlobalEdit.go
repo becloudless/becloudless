@@ -3,7 +3,7 @@ package nixos
 import (
 	"fmt"
 	"github.com/becloudless/becloudless/pkg/generated/schema"
-	"github.com/charmbracelet/huh"
+	"charm.land/huh/v2"
 	"github.com/spf13/cobra"
 	"reflect"
 	"strings"
