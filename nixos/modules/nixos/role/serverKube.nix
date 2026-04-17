@@ -20,7 +20,9 @@ in
 
   ####################
 
-  config = lib.mkIf (config.bcl.role.name == "serverKube") {
+  config = lib.mkMerge [
+    { bcl.role.knownRoles = [ "serverKube" ]; }
+    (lib.mkIf (config.bcl.role.name == "serverKube") {
 
     bcl.disk.encrypted = true;
     bcl.boot.ssh = true; # give password for disk encryption on boot
@@ -347,5 +349,6 @@ in
         { directory = "/var/lib/etcd"; mode = "u=rwx,g=,o="; }
       ];
     };
-  };
+  })
+  ];
 }

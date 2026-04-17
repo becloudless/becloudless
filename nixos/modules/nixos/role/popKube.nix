@@ -7,7 +7,9 @@ in
     clusterName = lib.mkOption {type = lib.types.str;};
   };
 
-  config = lib.mkIf (config.bcl.role.name == "popKube") {
+  config = lib.mkMerge [
+    { bcl.role.knownRoles = [ "popKube" ]; }
+    (lib.mkIf (config.bcl.role.name == "popKube") {
     bcl.disk.encrypted = true;
     bcl.boot.ssh = true;
 
@@ -89,5 +91,6 @@ in
     };
 
 
-  };
+  })
+  ];
 }
