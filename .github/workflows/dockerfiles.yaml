@@ -4,14 +4,42 @@ name: Dockerfiles
 
 on:
   push:
+  workflow_call:
+    inputs:
+      registry:
+        description: "Container registry to push images to"
+        required: false
+        type: string
+        default: "ghcr.io"
+      registry_username:
+        description: "Username for the container registry"
+        required: false
+        type: string
+        default: ""
+      bcl_version:
+        description: "Version of the bcl CLI to use (defaults to version in nixos/packages/bcl/default.nix)"
+        required: false
+        type: string
+        default: ""
+      changes_paths:
+        description: |
+          Newline-separated list of path prefixes to check for changes.
+          Defaults to dockerfiles/ and .github/workflows/dockerfiles.yaml.
+        required: false
+        type: string
+        default: |
+          dockerfiles/
+          .github/workflows/dockerfiles.yaml
+    secrets:
+      registry_password:
+        description: "Password/token for the container registry"
+        required: false
 
 jobs:
   changes:
-    uses: ./.github/workflows/changes.yaml
+    uses: becloudless/becloudless/.github/workflows/changes.yaml@main
     with:
-      paths: |
-        dockerfiles/
-        .github/workflows/dockerfiles.yaml
+      paths: ${{ inputs.changes_paths || 'dockerfiles/\n.github/workflows/dockerfiles.yaml\n' }}
 
   build:
     needs: changes
@@ -31,16 +59,20 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
-      - name: Login to Docker Hub
+      - name: Login to container registry
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ${{ inputs.registry || 'ghcr.io' }}
+          username: ${{ inputs.registry_username || github.actor }}
+          password: ${{ secrets.registry_password || secrets.GITHUB_TOKEN }}
 
       - name: Download bcl
         run: |
-          VERSION="$(grep -E '^\s+version = ' nixos/packages/bcl/default.nix | sed 's/.*"\(.*\)".*/\1/')"
+          if [ -n "${{ inputs.bcl_version }}" ]; then
+            VERSION="${{ inputs.bcl_version }}"
+          else
+            VERSION="$(grep -E '^\s+version = ' nixos/packages/bcl/default.nix | sed 's/.*"\(.*\)".*/\1/')"
+          fi
           mkdir -p cli/dist
           curl -fsSL "https://github.com/becloudless/becloudless/releases/download/cli-v${VERSION}/bcl-linux-amd64.tar.gz" \
             | tar -xz -C cli/dist
