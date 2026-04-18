@@ -1,3 +1,11 @@
+{
+    lib,
+    inputs,
+    namespace,
+    pkgs,
+    mkShell,
+    ...
+}:
 
 # nix develop .#kernel
 # mkdir ~/kernel
