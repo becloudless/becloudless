@@ -42,7 +42,7 @@ jobs:
         run: |
           VERSION="$(grep -E '^\s+version = ' nixos/packages/bcl/default.nix | sed 's/.*"\(.*\)".*/\1/')"
           mkdir -p cli/dist
-          curl -fsSL "https://github.com/becloudless/becloudless/releases/download/cli-v${VERSION}/bcl-linux-amd64.tar.gz" \
+          curl -fsSL "https://github.com/becloudless/becloudless/releases/download/v${VERSION}/bcl-linux-amd64.tar.gz" \
             | tar -xz -C cli/dist
           chmod +x cli/dist/bcl-linux-amd64/bcl
 
