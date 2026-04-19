@@ -19,11 +19,30 @@ spec:
   rollback:
     cleanupOnFail: true
   values:
-    replicaCount: 1
+    replicaCount: 2
+    image:
+      rootless: true
+      pullPolicy: IfNotPresent
+    extraVolumes:
+      - name: forgejo-postgresql-app-tls
+        secret:
+          secretName: forgejo-postgresql-app-tls
+    extraContainerVolumeMounts:
+      - name: forgejo-postgresql-app-tls
+        mountPath: /dbcert
+        readOnly: true
+    postgresql:
+      enabled: false
+
     gitea:
-      additionalConfigSources:
-        - secret:
-            secretName: forgejo-postgresql-app
+      admin:
+        existingSecret: forgejo-admin
+      metrics:
+        enabled: true
+        serviceMonitor:
+          enabled: true
+
+
       config:
         APP_NAME: "${BCL_GLOBAL_NAME} forgejo"
         database:
@@ -62,14 +81,6 @@ spec:
           MAX_SIZE: 2000
         webhook:
           ALLOWED_HOST_LIST: '*'
-      admin:
-        username: ''
-        password: ''
-        email: ''
-      metrics:
-        enabled: true
-        serviceMonitor:
-          enabled: true
 #    persistence:
 #      enabled: true
 #      create: true
@@ -96,8 +107,6 @@ spec:
         nodes: 1
         replicas: 0
     postgresql-ha:
-      enabled: false
-    postgresql:
       enabled: false
 ---
 # in cluster ssh access
