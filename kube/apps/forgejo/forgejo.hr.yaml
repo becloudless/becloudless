@@ -5,10 +5,11 @@ metadata:
   namespace: forgejo
 spec:
   interval: 10m
+  timeout: 1m
   chart:
     spec:
       chart: forgejo
-      version: 6.1.0
+      version: 17.0.0
       sourceRef:
         kind: HelmRepository
         name: forgejo
@@ -17,15 +18,10 @@ spec:
       retries: 3
   rollback:
     cleanupOnFail: true
-  valuesFrom:
-    - kind: Secret
-      name: forgejo-skr
   values:
     replicaCount: 1
     gitea:
       additionalConfigSources:
-        - secret:
-            secretName: forgejo-conf
         - secret:
             secretName: forgejo-postgresql-app
       config:
@@ -74,12 +70,12 @@ spec:
         enabled: true
         serviceMonitor:
           enabled: true
-    persistence:
-      enabled: true
-      create: true
-      accessModes:
-        - ReadWriteMany
-      volumeName: forgejo-shared-storage
+#    persistence:
+#      enabled: true
+#      create: true
+#      accessModes:
+#        - ReadWriteMany
+#      volumeName: forgejo-shared-storage
     ingress:
       enabled: true
       hosts:
