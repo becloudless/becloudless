@@ -1,0 +1,9 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: forgejo-postgresql
+  namespace: forgejo
+spec:
+  ca:
+    secretName: forgejo-postgresql-ca
+

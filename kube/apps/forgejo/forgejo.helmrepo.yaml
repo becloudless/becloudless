@@ -1,0 +1,8 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: forgejo
+  namespace: forgejo
+spec:
+  url: https://codeberg.org/forgejo-contrib/forgejo-helm
+  interval: 10m

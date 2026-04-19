@@ -1,0 +1,27 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: forgejo-postgresql
+  namespace: forgejo
+spec:
+  secretName: forgejo-postgresql-tls
+  secretTemplate:
+    labels:
+      cnpg.io/reload: ""
+  dnsNames:
+    - forgejo-postgresql-rw
+    - forgejo-postgresql-rw.forgejo
+    - forgejo-postgresql-rw.forgejo.svc
+    - forgejo-postgresql-rw.forgejo.svc.cluster.local
+    - forgejo-postgresql-r
+    - forgejo-postgresql-r.forgejo
+    - forgejo-postgresql-r.forgejo.svc
+    - forgejo-postgresql-r.forgejo.svc.cluster.local
+    - forgejo-postgresql-ro
+    - forgejo-postgresql-ro.forgejo
+    - forgejo-postgresql-ro.forgejo.svc
+    - forgejo-postgresql-ro.forgejo.svc.cluster.local
+  issuerRef:
+    name: forgejo-postgresql
+    kind: Issuer
+

@@ -1,0 +1,17 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: forgejo-postgresql-replication
+  namespace: forgejo
+spec:
+  secretName: forgejo-postgresql-replication-tls
+  secretTemplate:
+    labels:
+      cnpg.io/reload: ""
+  usages:
+    - client auth
+  commonName: streaming_replica
+  issuerRef:
+    name: forgejo-postgresql
+    kind: Issuer
+

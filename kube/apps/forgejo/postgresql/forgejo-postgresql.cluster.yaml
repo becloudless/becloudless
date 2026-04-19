@@ -1,0 +1,41 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: forgejo-postgresql
+  namespace: forgejo
+spec:
+  instances: 2
+  postgresql:
+    parameters:
+      max_slot_wal_keep_size: "500MB"
+    pg_hba:
+      # https://cloudnative-pg.io/docs/1.28/ssl_connections
+      - hostssl app all all cert
+
+  certificates:
+    clientCASecret: forgejo-postgresql-ca
+    # replication is required so cnpg do not look for ca.key in the clientCASecret, which is not the format of cert-manager
+    replicationTLSSecret: forgejo-postgresql-replication-tls
+    serverTLSSecret: forgejo-postgresql-tls
+    serverCASecret: forgejo-postgresql-tls
+
+  storage:
+    storageClass: longhorn-single-local-replica
+    size: 5Gi
+
+#  bootstrap:
+#    recovery:
+#      volumeSnapshots:
+#        storage:
+#          name: <snapshot name>
+#          kind: VolumeSnapshot
+#          apiGroup: snapshot.storage.k8s.io
+# OR
+#      backup:
+#        name: backup-example
+
+  backup:
+    volumeSnapshot:
+      className: longhorn-backup-incremental
+      snapshotOwnerReference: backup # removing the Backup object, removes the VolumeSnapshot
+

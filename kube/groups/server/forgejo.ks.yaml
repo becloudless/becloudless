@@ -1,0 +1,15 @@
+namespace: bcl
+spec:
+  interval: 10m
+  timeout: 1m
+  path: ./kube/apps/forgejo
+  prune: false # could be hosting the repo itself
+  sourceRef:
+    kind: GitRepository
+    name: bcl
+  wait: true
+  postBuild:
+    substituteFrom:
+      - name: global-env
+        kind: ConfigMap
+

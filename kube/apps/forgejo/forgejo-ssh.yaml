@@ -1,0 +1,31 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: forgejo-ssh
+  namespace: forgejo
+spec:
+  entryPoints:
+    - websecure
+  routes:
+  - match: HostSNI(`ssh-forgejo.${BCL_GLOBAL_DOMAIN}`)
+    services:
+    - name: forgejo-ssh
+      port: 22
+  tls:
+    passthrough: false
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/tls-acme: "true"
+  name: forgejo-ssh
+  namespace: forgejo
+spec:
+  rules:
+  - host: ssh-forgejo.${BCL_GLOBAL_DOMAIN}
+  tls:
+  - hosts:
+    - ssh-forgejo.${BCL_GLOBAL_DOMAIN}
+    secretName: ssh-forgejo
+
