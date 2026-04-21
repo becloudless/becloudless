@@ -101,11 +101,6 @@ spec:
       annotations:
         kubernetes.io/tls-acme: "true"
         traefik.ingress.kubernetes.io/router.middlewares: traefik-body-limit-2g@kubernetescrd
-    valkey-cluster:
-      enabled: true
-      cluster:
-        nodes: 1
-        replicas: 0
     postgresql-ha:
       enabled: false
 ---
