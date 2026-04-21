@@ -1,28 +1,10 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.bcl.role.workstation;
-
-  localeMap = {
-    en = "en_US.UTF-8";
-    fr = "fr_FR.UTF-8";
-  };
-
-  locale = localeMap.${cfg.language} or "${cfg.language}";
+  cfg = config.bcl.role;
 in
 {
-  options.bcl.role.workstation = {
-    language = lib.mkOption {
-      type = lib.types.str;
-      default = "en";
-      description = "Language for the workstation (e.g. 'en', 'fr').";
-    };
-    keyboard = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ "us" ];
-      description = "Keyboard layouts for the workstation (e.g. [ 'us' ] or [ 'fr' 'us' ]). First layout will be used as default.";
-    };
-  };
+  options.bcl.role.workstation = { };
 
   config = lib.mkMerge [
     { bcl.role.knownRoles = [ "workstation" ]; }
@@ -93,22 +75,6 @@ in
 
     services.xserver = {
       enable = true;
-      xkb.layout = lib.concatStringsSep "," cfg.keyboard;
-    };
-
-    console.keyMap = builtins.head cfg.keyboard;
-    i18n.defaultLocale = lib.mkForce locale;
-
-    i18n.extraLocaleSettings = {
-      LC_ADDRESS = locale;
-      LC_IDENTIFICATION = locale;
-      LC_MEASUREMENT = locale;
-      LC_MONETARY = locale;
-      LC_NAME = locale;
-      LC_NUMERIC = locale;
-      LC_PAPER = locale;
-      LC_TELEPHONE = locale;
-      LC_TIME = locale;
     };
 
   })
