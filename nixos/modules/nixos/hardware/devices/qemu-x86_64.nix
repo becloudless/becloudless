@@ -8,7 +8,7 @@
     bcl.hardware.commons = [ "qemu-guest" ];
     bcl.boot.loader = "bios";
 
-    boot.initrd.availableKernelModules = [ "ata_piix" "ohci_pci" "ehci_pci" "ahci" "sd_mod" "sr_mod" "e1000e" "virtio_pci" "virtio_net" "e1000" ];
+    boot.initrd.availableKernelModules = [ "ata_piix" "ohci_pci" "ehci_pci" "ahci" "sd_mod" "sr_mod" "e1000e"  "e1000" ];
     boot.initrd.kernelModules = [ "e1000" ];
   })
   ];
