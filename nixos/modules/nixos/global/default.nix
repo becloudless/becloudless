@@ -89,8 +89,8 @@ in {
     let
       setAdminPasswordFlag = (config.bcl.role or { setAdminPassword = false; }).setAdminPassword;
     in {
-      time.timeZone = cfg.timeZone;
-      i18n.defaultLocale = cfg.locale;
+      time.timeZone = lib.mkDefault cfg.timeZone;
+      i18n.defaultLocale = lib.mkDefault cfg.locale;
       users.users = lib.optionalAttrs (cfg.admins != null) (lib.mapAttrs (name: userCfg: (
         let pk = userCfg.sshPublicKey; in {
           isNormalUser = true;
