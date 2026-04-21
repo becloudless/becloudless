@@ -21,7 +21,7 @@ spec:
       container:
         image:
           repository: b4bz/homer
-          tag: v26.4.1
+          tag: v26.4.2
 
       service:
         ports:
