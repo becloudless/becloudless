@@ -30,7 +30,7 @@
 
   config = lib.mkMerge [
     {
-      hardware.enableRedistributableFirmware = config.bcl.hardware.enableRedistributableFirmware;
+      hardware.enableRedistributableFirmware = lib.mkDefault config.bcl.hardware.enableRedistributableFirmware;
     }
     (lib.mkIf (config.bcl.hardware.device != "") {
          assertions = [
