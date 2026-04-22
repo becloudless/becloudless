@@ -1,4 +1,4 @@
-FROM gitea/act_runner:0.4.0
+FROM gitea/act_runner:0.4.1
 
 RUN apk add --no-cache nodejs docker
 
