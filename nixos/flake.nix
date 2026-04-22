@@ -61,6 +61,9 @@
           # List of package names (strings) to allow as unfree, e.g. [ "goland" ].
           # Merged with any allowUnfreePredicate already in channels-config.
           allowedUnfreePackages ? [],
+          # List of package names (strings) to allow as insecure, e.g. [ "openssl-1.0.2u" ].
+          # Merged with any allowInsecurePredicate already in channels-config.
+          allowedInsecurePackages ? [],
           ...
         }: let
           lib = bclInputs.snowfall-lib.mkLib {
@@ -70,17 +73,22 @@
           };
           nixpkgsLib = bclInputs.nixpkgs.lib;
           userChannelsConfig = flake-and-lib-options.channels-config or {};
-          unfreeConfig = bclInputs.nixpkgs.lib.optionalAttrs (allowedUnfreePackages != []) {
+          unfreeConfig = nixpkgsLib.optionalAttrs (allowedUnfreePackages != []) {
             allowUnfreePredicate = pkg:
               builtins.elem (nixpkgsLib.getName pkg) allowedUnfreePackages
               || (userChannelsConfig.allowUnfreePredicate or (_: false)) pkg;
           };
-          flake-options = builtins.removeAttrs flake-and-lib-options ["inputs" "src" "allowedUnfreePackages"];
+          insecureConfig = nixpkgsLib.optionalAttrs (allowedInsecurePackages != []) {
+            allowInsecurePredicate = pkg:
+              builtins.elem (nixpkgsLib.getName pkg) allowedInsecurePackages
+              || (userChannelsConfig.allowInsecurePredicate or (_: false)) pkg;
+          };
+          flake-options = builtins.removeAttrs flake-and-lib-options ["inputs" "src" "allowedUnfreePackages" "allowedInsecurePackages"];
         in
           lib.mkFlake (flake-options // {
             systems.modules.nixos = bclModules;
 
-            channels-config = userChannelsConfig // unfreeConfig;
+            channels-config = userChannelsConfig // unfreeConfig // insecureConfig;
 
             # Ensure downstream flakes see the bcl package namespace under pkgs.bcl
             overlays = [
