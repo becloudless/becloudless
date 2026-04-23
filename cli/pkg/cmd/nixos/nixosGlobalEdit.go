@@ -1,9 +1,9 @@
 package nixos
 
 import (
+	"charm.land/huh/v2"
 	"fmt"
 	"github.com/becloudless/becloudless/pkg/generated/schema"
-	"charm.land/huh/v2"
 	"github.com/spf13/cobra"
 	"reflect"
 	"strings"
