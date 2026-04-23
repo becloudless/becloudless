@@ -17,7 +17,11 @@ in
 
     environment.persistence = lib.mkMerge (
       lib.mapAttrsToList (name: ucfg:
-        lib.optionalAttrs (ucfg.syncthing.homeFolderId != "") {
+        {
+          "/nix" = {
+            hideMounts = true;
+            users."${name}".directories = [ ".local/state/cosmic" ];
+          };
           "/nix/syncthing/homes" = {
             hideMounts = true;
             users."${name}".directories = [ ".config/cosmic" ];
