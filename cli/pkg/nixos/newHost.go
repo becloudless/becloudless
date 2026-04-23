@@ -1,8 +1,8 @@
 package nixos
 
 import (
-	"errors"
 	"charm.land/huh/v2"
+	"errors"
 	"github.com/n0rad/go-erlog/errs"
 	"strings"
 )

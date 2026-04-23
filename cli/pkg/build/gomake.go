@@ -70,6 +70,7 @@ func versionHash(hash string) (string, error) {
 }
 
 func main() {
+	upxTrue := true
 	gomake.ProjectBuilder().
 		WithName("bcl").
 		WithVersionFunc(version).
@@ -90,7 +91,7 @@ func main() {
 			GithubRelease: true,
 			DefaultBranch: "main",
 			OsArchRelease: []string{"linux-amd64", "darwin-amd64", "linux-arm64", "darwin-arm64"},
-			Upx:           gomake.True,
+			Upx:           &upxTrue,
 			PostReleaseHook: func(release gomake.StepRelease) error {
 				//release.Version
 				//send somewhere

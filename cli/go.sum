@@ -569,6 +569,8 @@ github.com/n0rad/gomake v0.0.0-20260414085019-fc6aea9c8803 h1:w5C78VFQQwbwDjJjHb
 github.com/n0rad/gomake v0.0.0-20260414085019-fc6aea9c8803/go.mod h1:1xaDrrWtiIDob/tMRCv0OhPNz4qF8GP3Tk1PNOmSQTU=
 github.com/n0rad/gomake v0.0.0-20260422155511-b25fa333a5af h1:/Z1b/NnugrChcd2hyLsCGdaA3ScKjsiQQ7wS+qx7IkM=
 github.com/n0rad/gomake v0.0.0-20260422155511-b25fa333a5af/go.mod h1:1xaDrrWtiIDob/tMRCv0OhPNz4qF8GP3Tk1PNOmSQTU=
+github.com/n0rad/gomake v0.0.0-20260423115156-cb11feadac58 h1:Fx8AVMnIidK6KGFlZoZJq/XP1TXJFNppoZCWKNoTb4A=
+github.com/n0rad/gomake v0.0.0-20260423115156-cb11feadac58/go.mod h1:1xaDrrWtiIDob/tMRCv0OhPNz4qF8GP3Tk1PNOmSQTU=
 github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260120012428-7b6c2af7698a h1:wsDdGvvNzx3YDdOcp27UQPxusBUBZ+3lrvGPxM2mATk=
 github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260120012428-7b6c2af7698a/go.mod h1:tT713iWOG54jdpKbAbL9EhCbtcpBcT0ffEIS9EiaO7E=
 github.com/oklog/run v1.2.0 h1:O8x3yXwah4A73hJdlrwo/2X6J62gE5qTMusH0dvz60E=
