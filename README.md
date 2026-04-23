@@ -1,4 +1,4 @@
-[![Daily release](https://github.com/becloudless/becloudless/actions/workflows/daily-release.yaml/badge.svg)](https://github.com/becloudless/becloudless/actions/workflows/daily-release.yaml)
+[![Release](https://github.com/becloudless/becloudless/actions/workflows/daily-release.yaml/badge.svg)](https://github.com/becloudless/becloudless/actions/workflows/daily-release.yaml)
 
 # BeCloudLess
 
