@@ -43,7 +43,6 @@ in
 
       # office
       libreoffice nemo
-      ungoogled-chromium
       turbovnc
 
       # Dev
