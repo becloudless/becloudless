@@ -1,3 +1,5 @@
+[![Release](https://github.com/becloudless/becloudless/actions/workflows/daily-release.yaml/badge.svg)](https://github.com/becloudless/becloudless/actions/workflows/daily-release.yaml)
+
 # BeCloudLess
 
 Build and maintain your own infrastructure easily, from zero to enterprise level infrastructure using only free and open-source software.
