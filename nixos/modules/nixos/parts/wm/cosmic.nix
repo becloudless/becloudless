@@ -8,12 +8,19 @@ in
     services.displayManager.cosmic-greeter.enable = true;
     services.desktopManager.cosmic.enable = true;
     services.system76-scheduler.enable = true;
-#    services.xserver.xkb.layout = "fr";
 
     programs.firefox.preferences = {
         # disable libadwaita theming for Firefox
         "widget.gtk.libadwaita-colors.enabled" = false;
       };
+
+    system.activationScripts = lib.mapAttrs' (name: ucfg:
+      lib.nameValuePair "cosmic-initial-setup-done-${name}" {
+        text = ''
+          install -D -o ${name} -m 644 /dev/null /home/${name}/.config/cosmic-initial-setup-done
+        '';
+      }
+    ) cosmicUsers;
 
     environment.persistence = lib.mkMerge (
       lib.mapAttrsToList (name: ucfg:
@@ -21,6 +28,7 @@ in
           "/nix" = {
             hideMounts = true;
             users."${name}".directories = [ ".local/state/cosmic" ];
+
           };
           "/nix/syncthing/homes" = {
             hideMounts = true;
