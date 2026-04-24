@@ -5,6 +5,8 @@
     { bcl.hardware.knownDevices = [ "qemu-x86_64" ]; }
     (lib.mkIf (config.bcl.hardware.device == "qemu-x86_64") {
 
+    hardware.enableRedistributableFirmware = false; # VM do not need firmware
+
     bcl.hardware.commons = [ "qemu-guest" ];
     bcl.boot.loader = "bios";
 
