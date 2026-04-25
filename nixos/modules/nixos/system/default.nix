@@ -17,6 +17,10 @@ in {
       type = lib.types.str;
       default = "";
     };
+    secretFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+    };
     devices = lib.mkOption {
       type = with lib.types; listOf str;
       default = [ ];
@@ -36,6 +40,13 @@ in {
 
   config = lib.mkIf cfg.enable {
     environment.etc."ids.env".text = cfg.ids;
+
+    bcl.users = lib.mkIf (cfg.secretFile != null) (
+      lib.mapAttrs (_: _: {
+        syncthing.sopsFile = lib.mkDefault cfg.secretFile;
+      }) config.bcl.users
+    );
+
     bcl = {
       global = {
         enable = true;

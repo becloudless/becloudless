@@ -29,6 +29,11 @@ let
       };
       syncthing = {
         enable = lib.mkEnableOption "Enable syncthing for this user";
+        sopsFile = lib.mkOption {
+          type = lib.types.nullOr lib.types.path;
+          default = null;
+          description = "Path to the sops secrets file containing the syncthing cert and key. Required when syncthing is enabled.";
+        };
         remote = lib.mkOption {
           type = lib.types.submodule {
             options = {
@@ -74,6 +79,13 @@ in
         user = autoLoginUser;
       };
 
+      assertions = lib.concatLists (lib.mapAttrsToList (name: ucfg: [
+        {
+          assertion = !ucfg.syncthing.enable || ucfg.syncthing.sopsFile != null;
+          message = "bcl.users.${name}.syncthing.sopsFile must be set when syncthing is enabled.";
+        }
+      ]) cfg);
+
       users.users = lib.mapAttrs (name: ucfg:
         {
           isNormalUser = true;
@@ -99,12 +111,12 @@ in
         (lib.mapAttrsToList (name: ucfg: {
           "users.${name}.syncthing.cert" = {
             owner = name;
-            sopsFile = ucfg.sopsFile;
+            sopsFile = ucfg.syncthing.sopsFile;
             path = "/nix/home/${name}/.local/state/syncthing/cert.pem";
           };
           "users.${name}.syncthing.key" = {
             owner = name;
-            sopsFile = ucfg.sopsFile;
+            sopsFile = ucfg.syncthing.sopsFile;
             path = "/nix/home/${name}/.local/state/syncthing/key.pem";
           };
         }) stUsers)
