@@ -11,6 +11,7 @@
       };
 
       bcl.users.syncthing.auser = {
+        enable = true;
         sopsFile = ./default.secrets.yaml;
         homeFolderId = "home-4242";
       };

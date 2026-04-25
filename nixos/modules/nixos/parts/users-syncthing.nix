@@ -2,12 +2,13 @@
 
 let
   nixosConfig = config;
-  stUsers = config.bcl.users.syncthing;
+  stUsers = lib.filterAttrs (_: u: u.enable) config.bcl.users.syncthing;
 in
 {
   options.bcl.users.syncthing = lib.mkOption {
     type = lib.types.attrsOf (lib.types.submodule {
       options = {
+        enable = lib.mkEnableOption "Enable syncthing for this user";
         sopsFile = lib.mkOption {
           type = lib.types.nullOr lib.types.path;
           default = null;

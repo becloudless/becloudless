@@ -41,6 +41,11 @@ in {
   config = lib.mkIf cfg.enable {
     environment.etc."ids.env".text = cfg.ids;
 
+    bcl.users.syncthing = lib.mkIf (cfg.secretFile != null) (
+      lib.mapAttrs (_: _: {
+        sopsFile = lib.mkDefault cfg.secretFile;
+      }) config.bcl.users.users
+    );
 
     bcl = {
       global = {
