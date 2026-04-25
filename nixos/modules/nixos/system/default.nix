@@ -41,7 +41,6 @@ in {
   config = lib.mkIf cfg.enable {
     environment.etc."ids.env".text = cfg.ids;
 
-    bcl.users.syncthing.sopsFile = lib.mkIf (cfg.secretFile != null) cfg.secretFile;
 
     bcl = {
       global = {

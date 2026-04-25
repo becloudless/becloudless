@@ -2,7 +2,6 @@
 
 let
   cfg = config.bcl.users.users;
-  nixosConfig = config;
 
   userOpts = { name, config, ... }: {
     options = {
@@ -26,40 +25,6 @@ let
         default = false;
         description = "Whether to automatically log in as this user.";
       };
-      syncthing = {
-        enable = lib.mkEnableOption "Enable syncthing for this user";
-        sopsFile = lib.mkOption {
-          type = lib.types.nullOr lib.types.path;
-          default = null;
-          description = "Path to the sops secrets file containing the syncthing cert and key. Required when syncthing is enabled.";
-        };
-        remote = lib.mkOption {
-          type = lib.types.submodule {
-            options = {
-              id = lib.mkOption { type = lib.types.str; default = ""; };
-            };
-          };
-          default = {};
-        };
-        homeFolderId = lib.mkOption {
-          type = lib.types.str;
-          default = "";
-        };
-        folders = lib.mkOption {
-          type = lib.types.attrsOf (lib.types.submodule {
-            options = {
-              id = lib.mkOption { type = lib.types.str; };
-              key = lib.mkOption { type = lib.types.str; };
-              endpoint = lib.mkOption { type = lib.types.str; };
-            };
-          });
-          default = {};
-        };
-      };
-    };
-
-    config = {
-      syncthing.sopsFile = lib.mkDefault nixosConfig.bcl.users.syncthing.sopsFile;
     };
   };
 

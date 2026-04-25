@@ -1,32 +1,61 @@
 { config, lib, inputs, ... }:
 
 let
-  cfg = config.bcl.users.users;
   nixosConfig = config;
-  stUsers = lib.filterAttrs (_: u: u.syncthing.enable) cfg;
+  stUsers = config.bcl.users.syncthing;
 in
 {
-  options.bcl.users.syncthing.sopsFile = lib.mkOption {
-    type = lib.types.nullOr lib.types.path;
-    default = null;
-    description = "Default sops file for syncthing cert/key, applied to all users unless overridden.";
+  options.bcl.users.syncthing = lib.mkOption {
+    type = lib.types.attrsOf (lib.types.submodule {
+      options = {
+        sopsFile = lib.mkOption {
+          type = lib.types.nullOr lib.types.path;
+          default = null;
+          description = "Path to the sops secrets file containing the syncthing cert and key.";
+        };
+        remote = lib.mkOption {
+          type = lib.types.submodule {
+            options = {
+              id = lib.mkOption { type = lib.types.str; default = ""; };
+            };
+          };
+          default = {};
+        };
+        homeFolderId = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+        };
+        folders = lib.mkOption {
+          type = lib.types.attrsOf (lib.types.submodule {
+            options = {
+              id = lib.mkOption { type = lib.types.str; };
+              key = lib.mkOption { type = lib.types.str; };
+              endpoint = lib.mkOption { type = lib.types.str; };
+            };
+          });
+          default = {};
+        };
+      };
+    });
+    default = {};
+    description = "Syncthing per-user configuration, keyed by username.";
   };
 
   config = {
     assertions = lib.mapAttrsToList (name: ucfg: {
-      assertion = ucfg.syncthing.sopsFile != null;
-      message = "bcl.users.${name}.syncthing.sopsFile must be set when syncthing is enabled.";
+      assertion = ucfg.sopsFile != null;
+      message = "bcl.users.syncthing.${name}.sopsFile must be set.";
     }) stUsers;
 
     sops.secrets = lib.mkMerge (lib.mapAttrsToList (name: ucfg: {
       "users.${name}.syncthing.cert" = {
         owner = name;
-        sopsFile = ucfg.syncthing.sopsFile;
+        sopsFile = ucfg.sopsFile;
         path = "/nix/home/${name}/.local/state/syncthing/cert.pem";
       };
       "users.${name}.syncthing.key" = {
         owner = name;
-        sopsFile = ucfg.syncthing.sopsFile;
+        sopsFile = ucfg.sopsFile;
         path = "/nix/home/${name}/.local/state/syncthing/key.pem";
       };
     }) stUsers);
@@ -42,7 +71,7 @@ in
             listenAddresses = [ "relay://syncthing.${nixosConfig.bcl.global.domain}:22067/?id=${nixosConfig.bcl.global.syncthing.relayId}" ];
           };
           devices."${name}.syncthing.${nixosConfig.bcl.global.domain}" = {
-            id = ucfg.syncthing.remote.id;
+            id = ucfg.remote.id;
             autoAcceptFolders = false;
           };
           folders =
@@ -50,10 +79,10 @@ in
               id = v.id;
               path = "/nix/syncthing/home/${name}/${k}";
               devices = [ "${name}.syncthing.${nixosConfig.bcl.global.domain}" ];
-            }) ucfg.syncthing.folders)
-            // lib.optionalAttrs (ucfg.syncthing.homeFolderId != "") {
+            }) ucfg.folders)
+            // lib.optionalAttrs (ucfg.homeFolderId != "") {
               "Home" = {
-                id = ucfg.syncthing.homeFolderId;
+                id = ucfg.homeFolderId;
                 path = "/nix/syncthing/homes/home/${name}";
                 devices = [ "${name}.syncthing.${nixosConfig.bcl.global.domain}" ];
                 fsWatcherEnabled = false;
@@ -77,13 +106,11 @@ in
 
     environment.persistence = lib.mkMerge (lib.mapAttrsToList (name: ucfg:
       {
-        # keep on syncthing folders
         "/nix/syncthing" = {
           hideMounts = true;
-          users."${name}".directories = lib.attrNames ucfg.syncthing.folders;
+          users."${name}".directories = lib.attrNames ucfg.folders;
         };
-      } // lib.optionalAttrs (ucfg.syncthing.homeFolderId != "") {
-        # keep from home folder on syncthing 'Home' folder
+      } // lib.optionalAttrs (ucfg.homeFolderId != "") {
         "/nix/syncthing/homes" = {
           hideMounts = true;
           users."${name}" = {
@@ -91,28 +118,28 @@ in
               # ".viminfo"
               ".tmux"
               # ".lesshst" # less replace the file
-              ".docker" # must be the directory so it can mounted by bbc commands
+              ".docker"
               ".vscode-oss"
               ".config/chromium"
               ".config/Signal"
-              ".local/bin" # scripts and bbc
-              ".local/share/applications" # to keep plex chromium application
+              ".local/bin"
+              ".local/share/applications"
               ".local/share/desktop-directories"
               ".local/share/zoxide"
-              ".config/menus" # .desktop applications into menu
-              ".local/share/icons" # .desktop icons
+              ".config/menus"
+              ".local/share/icons"
               ".config/gcloud"
               ".config/sops" # TODO replace by static
               ".config/VSCodium"
               ".config/keepassxc"
               ".wine"
-              ".local/share/JetBrains/" # plugins and license
-              ".config/JetBrains" # looks required for license
+              ".local/share/JetBrains/"
+              ".config/JetBrains"
               ".java/.userPrefs/jetbrains"
             ];
             files = [
               ".z"
-              ".local/share/gnome-shell/application_state" # trusted .desktop applications
+              ".local/share/gnome-shell/application_state"
             ];
           };
         };
@@ -120,4 +147,3 @@ in
     ) stUsers);
   };
 }
-
