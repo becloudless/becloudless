@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cosmicUsers = lib.filterAttrs (name: ucfg: ucfg.wm == "cosmic") config.bcl.users;
+  cosmicUsers = lib.filterAttrs (name: ucfg: ucfg.wm == "cosmic") config.bcl.users.users;
 in
 {
   config = lib.mkIf (cosmicUsers != {}) {

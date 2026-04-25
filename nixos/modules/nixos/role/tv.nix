@@ -22,7 +22,7 @@
     bcl.sound.enable = true;
     bcl.wifi.enable = true;
 
-    bcl.users.tv = {
+    bcl.users.users.tv = {
       wm = "dwm";
       autoLogin = true;
     };

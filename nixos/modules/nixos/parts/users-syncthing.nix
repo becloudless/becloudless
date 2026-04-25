@@ -1,11 +1,17 @@
 { config, lib, inputs, ... }:
 
 let
-  cfg = config.bcl.users;
+  cfg = config.bcl.users.users;
   nixosConfig = config;
   stUsers = lib.filterAttrs (_: u: u.syncthing.enable) cfg;
 in
 {
+  options.bcl.users.syncthing.sopsFile = lib.mkOption {
+    type = lib.types.nullOr lib.types.path;
+    default = null;
+    description = "Default sops file for syncthing cert/key, applied to all users unless overridden.";
+  };
+
   assertions = lib.mapAttrsToList (name: ucfg: {
     assertion = ucfg.syncthing.sopsFile != null;
     message = "bcl.users.${name}.syncthing.sopsFile must be set when syncthing is enabled.";

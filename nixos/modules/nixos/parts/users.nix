@@ -1,7 +1,8 @@
 { config, lib, pkgs, inputs, ... }:
 
 let
-  cfg = config.bcl.users;
+  cfg = config.bcl.users.users;
+  nixosConfig = config;
 
   userOpts = { name, config, ... }: {
     options = {
@@ -56,14 +57,20 @@ let
         };
       };
     };
+
+    config = {
+      syncthing.sopsFile = lib.mkDefault nixosConfig.bcl.users.syncthing.sopsFile;
+    };
   };
 
 in
 {
-  options.bcl.users = lib.mkOption {
-    type = lib.types.attrsOf (lib.types.submodule userOpts);
-    default = {};
-    description = "Attribute set of users to create, keyed by username.";
+  options.bcl.users = {
+    users = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.submodule userOpts);
+      default = {};
+      description = "Attribute set of users to create, keyed by username.";
+    };
   };
 
   config =

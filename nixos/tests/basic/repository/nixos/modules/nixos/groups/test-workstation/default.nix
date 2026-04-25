@@ -5,7 +5,7 @@
     (lib.mkIf (config.bcl.group.name == "test-workstation") {
       bcl.role.name = "workstation";
       bcl.role.secretFile = ./default.secrets.yaml;
-      bcl.users.auser = {
+      bcl.users.users.auser = {
         sopsFile = ./default.secrets.yaml;
         wm = "gnome";
         syncthing = {
