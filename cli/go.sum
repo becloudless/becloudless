@@ -88,6 +88,8 @@ github.com/Masterminds/squirrel v1.5.4 h1:uUcX/aBc8O7Fg9kaISIUsHXdKuqehiXAMQTYX8
 github.com/Masterminds/squirrel v1.5.4/go.mod h1:NNaOrjSoIDfDA40n7sr2tPNZRfjzjA400rg+riTZj10=
 github.com/Mic92/ssh-to-age v0.0.0-20260316045310-18de616454b6 h1:ruOpQnPLBk5G1CQNbUMXADfWLmfstNI2y6Lz4rc9T64=
 github.com/Mic92/ssh-to-age v0.0.0-20260316045310-18de616454b6/go.mod h1:WWqnjV4InWeQWiYjUeCDdByfX1jygF6FXONf8FLPR/A=
+github.com/Mic92/ssh-to-age v1.2.0 h1:vb894jouVgmjB9M8FPRXVEujxWBZZAmqihIK0Mb1NEU=
+github.com/Mic92/ssh-to-age v1.2.0/go.mod h1:/HHRYnwdIQypqMNkL9nkIknxHXzvkDp3sWkYdimGd3w=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 h1:TngWCqHvy9oXAN6lEVMRuU21PR1EtLVZJmdB18Gu3Rw=
