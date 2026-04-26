@@ -127,6 +127,7 @@ in
             ".local/share/docker"                   # for rootless docker
             ".local/state/wireplumber"              # audio setup
             ".local/share/com.unicornsonlsd.finamp"
+            ".local/share/jellyfin-desktop"
             ".config/mozilla/firefox"
             ".config/VSCodium"
           ];
