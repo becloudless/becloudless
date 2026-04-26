@@ -107,6 +107,10 @@ in
 
     environment.persistence = lib.mkMerge (lib.mapAttrsToList (name: ucfg:
       {
+        "/nix" = {
+          hideMounts = true;
+          users."${name}".directories = [ ".local/state/syncthing" ]; # systemd user unit state
+        };
         "/nix/syncthing" = {
           hideMounts = true;
           users."${name}".directories = lib.attrNames ucfg.folders;
