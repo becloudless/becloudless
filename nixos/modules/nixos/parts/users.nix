@@ -133,7 +133,6 @@ in
         users = lib.mapAttrs (_: _: {
           directories = [
             ".cache"
-            "Tmp"
             ".local/share/docker"                   # for rootless docker
             ".local/state/wireplumber"              # audio setup
             ".local/state/syncthing"                # systemd user unit state

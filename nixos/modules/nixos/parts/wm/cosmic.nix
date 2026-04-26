@@ -90,8 +90,11 @@ in
         {
           "/nix" = {
             hideMounts = true;
-            users."${name}".directories = [ ".local/state/cosmic" ];
-
+            users."${name}".directories = [
+              ".local/share/flatpak"
+              ".local/state/cosmic"
+              ".local/state/cosmic-comp"  # monitor state
+            ];
           };
           "/nix/syncthing/homes" = {
             hideMounts = true;
