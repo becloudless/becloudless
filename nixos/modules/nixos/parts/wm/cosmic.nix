@@ -8,6 +8,7 @@ in
     services.displayManager.cosmic-greeter.enable = true;
     services.desktopManager.cosmic.enable = true;
     services.system76-scheduler.enable = true;
+    config.services.flatpak.enable = true;
 
     programs.firefox.preferences = {
         # disable libadwaita theming for Firefox
