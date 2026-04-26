@@ -25,7 +25,7 @@
 
   config = lib.mkMerge [
     {
-      hardware.enableRedistributableFirmware = true;
+      hardware.enableRedistributableFirmware = lib.mkDefault true;
     }
     (lib.mkIf (config.bcl.hardware.device != "") {
          assertions = [
