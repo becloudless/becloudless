@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.bcl.users;
+  cfg = config.bcl.users.users;
   zshUsers = lib.filterAttrs (_: u: u.shell == "zsh") cfg;
 in
 {

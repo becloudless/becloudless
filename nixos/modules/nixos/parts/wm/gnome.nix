@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  gnomeUsers = lib.filterAttrs (name: ucfg: ucfg.wm == "gnome") config.bcl.users;
+  gnomeUsers = lib.filterAttrs (name: ucfg: ucfg.wm == "gnome") config.bcl.users.users;
 in
 {
   config = lib.mkIf (gnomeUsers != {}) {

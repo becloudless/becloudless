@@ -1,6 +1,6 @@
 { config, lib, pkgs, ... }:
 let
-  dwmUsers = lib.filterAttrs (name: ucfg: ucfg.wm == "dwm") config.bcl.users;
+  dwmUsers = lib.filterAttrs (name: ucfg: ucfg.wm == "dwm") config.bcl.users.users;
 in
 {
 
