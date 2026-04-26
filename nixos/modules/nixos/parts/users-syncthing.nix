@@ -67,7 +67,7 @@ in
         settings = {
           options = {
             localAnnounceEnabled = false;
-            globalAnnounceEnabled = false;
+#            globalAnnounceEnabled = false;
             relaysEnabled = true;
             urAccepted = -1;
             listenAddresses = [ "relay://syncthing.${nixosConfig.bcl.global.domain}:22067/?id=${nixosConfig.bcl.global.syncthing.relayId}" ];
