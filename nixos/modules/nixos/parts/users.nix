@@ -129,7 +129,7 @@ in
             ".local/share/com.unicornsonlsd.finamp"
             ".local/share/jellyfin-desktop"
             #".config/mozilla/firefox"
-            ".config/VSCodium"
+            #".config/VSCodium"
           ];
         }) cfg;
       };
