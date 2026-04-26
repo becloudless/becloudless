@@ -124,9 +124,8 @@ in
         "d /nix/home/${name}/.local/state 0700 ${name} users"
         "d /nix/home/${name}/.local/state/wireplumber 0700 ${name} users"
         "d /nix/home/${name}/.config 0700 ${name} users"
-        "d /nix/home/${name}/.config/VirtualBox 0700 ${name} users"
         "d /nix/home/${name}/.cache 0700 ${name} users"
-        "d /nix/home/${name}/Tmp 0700 ${name} users"
+        "d /nix/home/${name}/Downloads 0700 ${name} users"
       ]) cfg);
 
       environment.persistence."/nix" = {
@@ -135,12 +134,12 @@ in
           directories = [
             ".cache"
             "Tmp"
-            ".local/share/docker" # for rootless docker
-            ".local/state/wireplumber" # audio setup
-            ".local/state/syncthing" # systemd user unit state
+            ".local/share/docker"                   # for rootless docker
+            ".local/state/wireplumber"              # audio setup
+            ".local/state/syncthing"                # systemd user unit state
             ".local/share/com.unicornsonlsd.finamp"
-            ".config/VirtualBox"
-            ".mozilla"  # firefox/ and native-messaging-hosts/ for keepassxc
+            ".config/mozilla/firefox"
+            ".config/VSCodium"
           ];
         }) cfg;
       };

@@ -120,8 +120,8 @@ in
               ".tmux"
               # ".lesshst" # less replace the file
               ".docker"
-              ".vscode-oss"
-              ".config/chromium"
+              #".vscode-oss"
+              #".config/chromium"
               ".config/Signal"
               ".local/bin"
               ".local/share/applications"
@@ -131,7 +131,7 @@ in
               ".local/share/icons"
               ".config/gcloud"
               ".config/sops" # TODO replace by static
-              ".config/VSCodium"
+              #".config/VSCodium"
               ".config/keepassxc"
               ".wine"
               ".local/share/JetBrains/"
