@@ -299,3 +299,7 @@ in
     }) gnomeUsers;
   };
 }
+
+
+#/org/gnome/settings-daemon/plugins/housekeeping/donation-reminder-last-shown
+#  int64 1777246459372216
