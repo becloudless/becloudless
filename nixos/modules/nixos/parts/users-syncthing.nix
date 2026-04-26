@@ -67,7 +67,7 @@ in
         settings = {
           options = {
             localAnnounceEnabled = false;
-#            globalAnnounceEnabled = false;
+            # globalAnnounceEnabled = false; TODO discovery looks required for relay to work
             relaysEnabled = true;
             urAccepted = -1;
             listenAddresses = [ "relay://syncthing.${nixosConfig.bcl.global.domain}:22067/?id=${nixosConfig.bcl.global.syncthing.relayId}" ];
@@ -125,7 +125,7 @@ in
               ".tmux"
               # ".lesshst" # less replace the file
               ".docker"
-              #".vscode-oss"
+              ".vscode-oss"
               #".config/chromium"
               ".config/Signal"
               ".local/bin"
@@ -136,12 +136,13 @@ in
               ".local/share/icons"
               ".config/gcloud"
               ".config/sops" # TODO replace by static
-              #".config/VSCodium"
+              ".config/VSCodium"
               ".config/keepassxc"
               ".wine"
               ".local/share/JetBrains/"
               ".config/JetBrains"
               ".java/.userPrefs/jetbrains"
+              ".mozilla"
             ];
             files = [
               ".z"
