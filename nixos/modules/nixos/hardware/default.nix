@@ -21,16 +21,11 @@
       default = [];
       description = "List of valid commons identifiers. Each common module registers itself here.";
     };
-    enableRedistributableFirmware = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Whether to enable redistributable firmware.";
-    };
   };
 
   config = lib.mkMerge [
     {
-      hardware.enableRedistributableFirmware = lib.mkDefault config.bcl.hardware.enableRedistributableFirmware;
+      hardware.enableRedistributableFirmware = lib.mkDefault true;
     }
     (lib.mkIf (config.bcl.hardware.device != "") {
          assertions = [
