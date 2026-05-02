@@ -2,13 +2,7 @@
 
 {
 
-  config = lib.mkIf (config.bcl.role.name != "" && false) { # TODO
-
-    sops.secrets."monitoring_password" = {
-      sopsFile = config.bcl.role.secretFile;
-      mode = "0600";
-    };
-
+  config = lib.mkIf (config.bcl.role.name != "") {
 
     systemd.services."prometheus-node-exporter-nixos" = {
       path = with pkgs; [ jq ];
@@ -42,11 +36,11 @@
     };
 
     systemd.services."prometheus-pushprox-client" = {
+      path = with pkgs; [ openssh coreutils ];
       script = ''
         username="pushprox-${config.bcl.group.name}"
-        password="$(cat ${config.sops.secrets."monitoring_password".path})"
+        password="$(sha256sum /nix/etc/ssh/ssh_host_ed25519_key | awk '{print $1}')"
         domain="pushprox.${config.bcl.global.domain}"
-
         ${pkgs.bcl.prometheus-pushprox}/bin/pushprox-client --proxy-url="https://$username:$password@$domain"
       '';
 
