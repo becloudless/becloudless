@@ -175,7 +175,7 @@ spec:
           groups_attribute_path: groups
           name_attribute_path: name
           use_pkce: true
-          role_attribute_path: contains(groups[*], 'admin') && 'Admin' || contains(groups[*], 'editor') && 'Editor' || 'Viewer'
+          role_attribute_path: contains(groups[*], 'role_admin') && 'Admin' || contains(groups[*], 'role_editor') && 'Editor' || 'Viewer'
       plugins:
         - grafana-piechart-panel
         - grafana-clock-panel
