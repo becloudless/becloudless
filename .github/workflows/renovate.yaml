@@ -17,9 +17,23 @@ jobs:
     if: needs.changes.outputs.changed == 'true'
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+
     steps:
+      - name: Create GitHub App Token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        id: github-app-token
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          ref: ${{ github.ref_name }}
+          token: ${{ steps.github-app-token.outputs.token }}
           fetch-depth: 0
 
       - name: Set up Node.js
@@ -38,10 +52,18 @@ jobs:
         working-directory: renovate
         run: node_modules/yarn/bin/yarn prettier --write .
 
-      - name: Commit lint fixes
-        uses: stefanzweifel/git-auto-commit-action@e348103e9026cc0eee72ae06630dbe30c8bf7a79 # v5.1.0
+      - uses: iarekylew00t/verified-bot-commit@126a6a11889ab05bcff72ec2403c326cd249b84c # v2.3.0
         with:
-          commit_message: "chore: auto-fix prettier formatting"
+          ref: ${{ github.ref_name }}
+          token: ${{ steps.github-app-token.outputs.token }}
+          message: "chore: auto-fix prettier formatting"
+          files: |
+            renovate/
+
+      - name: Lint
+        working-directory: renovate
+#        run: yarn lint
+        run: node_modules/yarn/bin/yarn lint
 
       - name: Test
         working-directory: renovate
