@@ -187,60 +187,58 @@ spec:
         hardware:
           node-exporter:
             gnetId: 1860
+            revision: 45
             datasource: Prometheus
           smart:
             gnetId: 20204
+            revision: 1
             datasource: Prometheus
-#          smart3:
-#            gnetId: 3992
-#            datasource: Prometheus
-#          smart2:
-#            gnetId: 10664
-#            datasource: Prometheus
-#          smart:
-#            gnetId: 10530
-#            datasource: Prometheus
-#          smart-error:
-#            gnetId: 10531
-#            datasource: Prometheus
-#          smart-data:
-#            gnetId: 13654
-#            datasource: Prometheus
         network:
           uptimerobot:
             gnetId: 9955
+            revision: 1
             datasource: Prometheus
           speedtest:
             gnetId: 12004
+            revision: 1
             datasource: Prometheus
           prometheus-blackbox:
             gnetId: 12275
+            revision: 1
             datasource: Prometheus
           icmp:
             gnetId: 12412
+            revision: 1
             datasource: Prometheus
           pdu:
             gnetId: 14309
+            revision: 1
             datasource: Prometheus
           ups:
             gnetId: 12340
+            revision: 1
             datasource: Prometheus
           mikrotik:
             gnetId: 13679
+            revision: 1
             datasource: Prometheus
           unbound:
             gnetId: 18077
+            revision: 1
             datasource: Prometheus
 
         default:
           kubernetes:
             gnetId: 6417
+            revision: 1
             datasource: Prometheus
           longhorn:
             gnetId: 17626
+            revision: 1
             datasource: Prometheus
           prometheus-stats:
             gnetId: 2
+            revision: 1
             datasource: Prometheus
       dashboardProviders:
         dashboardproviders.yaml:
