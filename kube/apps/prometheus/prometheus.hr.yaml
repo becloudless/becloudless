@@ -337,11 +337,6 @@ spec:
         additionalAlertRelabelConfigs:
           - action: labeldrop
             regex: replica
-        additionalScrapeConfigs:
-          - job_name: 'node-exporter'
-            proxy_url: http://pushprox:8080/
-            static_configs:
-              - targets: ['n0l2:9100']
 
         externalLabels:
           kubernetes_cluster: ${BCL_GLOBAL_NAME}
