@@ -58,7 +58,7 @@
     # https://nixos.org/manual/nixos/stable/#module-services-prometheus-exporters
     services.prometheus.exporters.node = {
       enable = true;
-      port = 9000;
+      port = 9100;
       # nixos declare host shortname on 127.0.0.2
       # prometheus scrape metrics through the proxy using the shortname
       listenAddress = "127.0.0.2";
