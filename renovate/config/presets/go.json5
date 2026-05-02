@@ -8,7 +8,7 @@
       fileMatch: [".*\\.go"],
       versioningTemplate: "{{#if versioning}}{{{versioning}}}{{else}}semver-coerced{{/if}}",
       matchStrings: [
-        'datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\sconst .*? = ".*?:(?<currentValue>[a-zA-Z0-9-.]*?)"\\s',
+        '//\\s*renovate:\\s*datasource=(?<datasource>.*?) depName=(?<depName>.*?)( extractVersion=(?<extractVersion>.*?))?( versioning=(?<versioning>.*?))?\\sconst .*? = "(?:.*?:)?(?<currentValue>[a-zA-Z0-9-.]+?)"',
       ],
     },
   ],
