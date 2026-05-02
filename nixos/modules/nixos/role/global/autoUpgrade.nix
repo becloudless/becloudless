@@ -37,5 +37,7 @@
       dates = "weekly";
     };
 
+    systemd.timers.nixos-upgrade.timerConfig.Persistent = lib.mkForce true; # so the timer fires even if the system was off at the scheduled time
+
   };
 }
