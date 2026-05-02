@@ -44,6 +44,13 @@
         ${pkgs.bcl.prometheus-pushprox}/bin/pushprox-client --proxy-url="https://$username:$password@$domain"
       '';
 
+      serviceConfig = {
+        Restart = "on-failure";
+        RestartSec = "600s";
+#        StartLimitIntervalSec = "600";
+#        StartLimitBurst = "3";
+      };
+
       after = [ "prometheus-node-exporter.service" ];
       requires = [ "prometheus-node-exporter.service" ];
       wantedBy = [ "multi-user.target" ];
