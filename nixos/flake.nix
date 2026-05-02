@@ -135,6 +135,7 @@
 
     impermanence = {
       url = "github:nix-community/impermanence";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     sops-nix = {
@@ -149,6 +150,7 @@
 
     yaml = {
       url = "github:jim3692/yaml.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 }
