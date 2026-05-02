@@ -339,8 +339,8 @@ spec:
         additionalScrapeConfigs:
           - job_name: 'node-exporter'
             proxy_url: http://pushprox:8080/
-            static_configs:
-              - targets: ['awd-ovh-pop2:9100']
+#            static_configs:
+#              - targets: ['awd-ovh-pop2:9100']
 #            dns_sd_configs:
 #              - names:
 #                  - '_obs._tcp.h.${BCL_GLOBAL_DOMAIN}.'
