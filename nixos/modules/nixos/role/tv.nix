@@ -178,12 +178,6 @@
             "version": 7
         }
       '';
-
-      home.persistence."/nix" = {
-        directories = [
-          ".local/share/jellyfin-desktop"
-        ];
-      };
     };
   })
   ];

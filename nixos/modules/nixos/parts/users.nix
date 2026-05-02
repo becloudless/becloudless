@@ -53,7 +53,7 @@ in
         {
           isNormalUser = true;
           group = "users";
-          extraGroups = ["adbusers" "keyd" "docker" "libvirtd"];
+          extraGroups = ["adbusers" "keyd" "docker"];
         } // lib.optionalAttrs (ucfg.sopsFile != null) {
           hashedPasswordFile = config.sops.secrets."users.${name}.hashedPassword".path;
         }
@@ -71,15 +71,6 @@ in
       home-manager.users = lib.mapAttrs (name: ucfg: { lib, pkgs, config, ... }: {
         imports = [ (inputs.impermanence + "/home-manager.nix") ];
 
-        dconf.settings = with lib.hm.gvariant; {
-          "org/virt-manager/virt-manager" = {
-            xmleditor-enabled = true;
-          };
-
-          "org/virt-manager/virt-manager/confirm" = {
-            forcepoweroff = false;
-          };
-        };
 
         # TODO better way to declare?
         home.file.".config/user-dirs.dirs".text = ''
@@ -94,26 +85,26 @@ in
         '';
 
 
-        # TODO move to keepassxc module
-        home.file.".config/autostart/org.keepassxc.KeePassXC.desktop".text = ''
-          [Desktop Entry]
-          Name=KeePassXC
-          GenericName=Password Manager
-          Exec=keepassxc
-          TryExec=keepassxc
-          Icon=keepassxc
-          StartupWMClass=keepassxc
-          StartupNotify=true
-          Terminal=false
-          Type=Application
-          Version=1.0
-          Categories=Utility;Security;Qt;
-          MimeType=application/x-keepass2;
-          X-GNOME-Autostart-enabled=true
-          X-GNOME-Autostart-Delay=2
-          X-KDE-autostart-after=panel
-          X-LXQt-Need-Tray=true
-        '';
+#        # TODO move to keepassxc module
+#        home.file.".config/autostart/org.keepassxc.KeePassXC.desktop".text = ''
+#          [Desktop Entry]
+#          Name=KeePassXC
+#          GenericName=Password Manager
+#          Exec=keepassxc
+#          TryExec=keepassxc
+#          Icon=keepassxc
+#          StartupWMClass=keepassxc
+#          StartupNotify=true
+#          Terminal=false
+#          Type=Application
+#          Version=1.0
+#          Categories=Utility;Security;Qt;
+#          MimeType=application/x-keepass2;
+#          X-GNOME-Autostart-enabled=true
+#          X-GNOME-Autostart-Delay=2
+#          X-KDE-autostart-after=panel
+#          X-LXQt-Need-Tray=true
+#        '';
 
         home.stateVersion = "23.11"; # never touch that
       }) cfg;
@@ -124,9 +115,8 @@ in
         "d /nix/home/${name}/.local/state 0700 ${name} users"
         "d /nix/home/${name}/.local/state/wireplumber 0700 ${name} users"
         "d /nix/home/${name}/.config 0700 ${name} users"
-        "d /nix/home/${name}/.config/VirtualBox 0700 ${name} users"
         "d /nix/home/${name}/.cache 0700 ${name} users"
-        "d /nix/home/${name}/Tmp 0700 ${name} users"
+        "d /nix/home/${name}/Downloads 0700 ${name} users"
       ]) cfg);
 
       environment.persistence."/nix" = {
@@ -134,13 +124,12 @@ in
         users = lib.mapAttrs (_: _: {
           directories = [
             ".cache"
-            "Tmp"
-            ".local/share/docker" # for rootless docker
-            ".local/state/wireplumber" # audio setup
-            ".local/state/syncthing" # systemd user unit state
+            ".local/share/docker"                   # for rootless docker
+            ".local/state/wireplumber"              # audio setup
             ".local/share/com.unicornsonlsd.finamp"
-            ".config/VirtualBox"
-            ".mozilla"  # firefox/ and native-messaging-hosts/ for keepassxc
+            ".local/share/jellyfin-desktop"
+            #".config/mozilla/firefox"
+            #".config/VSCodium"
           ];
         }) cfg;
       };

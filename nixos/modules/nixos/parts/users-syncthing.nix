@@ -67,6 +67,7 @@ in
         settings = {
           options = {
             localAnnounceEnabled = false;
+            # globalAnnounceEnabled = false; TODO discovery looks required for relay to work
             relaysEnabled = true;
             urAccepted = -1;
             listenAddresses = [ "relay://syncthing.${nixosConfig.bcl.global.domain}:22067/?id=${nixosConfig.bcl.global.syncthing.relayId}" ];
@@ -107,6 +108,10 @@ in
 
     environment.persistence = lib.mkMerge (lib.mapAttrsToList (name: ucfg:
       {
+        "/nix" = {
+          hideMounts = true;
+          users."${name}".directories = [ ".local/state/syncthing" ]; # systemd user unit state
+        };
         "/nix/syncthing" = {
           hideMounts = true;
           users."${name}".directories = lib.attrNames ucfg.folders;
@@ -121,7 +126,7 @@ in
               # ".lesshst" # less replace the file
               ".docker"
               ".vscode-oss"
-              ".config/chromium"
+              #".config/chromium"
               ".config/Signal"
               ".local/bin"
               ".local/share/applications"
@@ -137,6 +142,7 @@ in
               ".local/share/JetBrains/"
               ".config/JetBrains"
               ".java/.userPrefs/jetbrains"
+              ".mozilla"
             ];
             files = [
               ".z"
