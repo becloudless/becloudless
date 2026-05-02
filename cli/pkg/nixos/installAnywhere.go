@@ -174,7 +174,7 @@ func prepareHostSshKeys(repo *bcl.Infra, temp string, systemName string) error {
 
 	sopsRunner := runner.NewNixShellRunner(localRunner, "sops")
 
-	_, privAgeKey, err := security.Ed25519PrivateKeyFileToPublicAndPrivateAgeKeys(path.Join(bcl.BCL.Home, "secrets", bcl.PathEd25519KeyFile))
+	_, privAgeKey, err := security.Ed25519PrivateKeyFileToPublicAndPrivateAgeKeys(path.Join(bcl.BCL.ConfigFolder, "secrets", bcl.PathEd25519KeyFile))
 	if err != nil {
 		return errs.WithE(err, "Failed to load age key from ed25519 private key")
 	}

@@ -2,9 +2,10 @@ package version
 
 import (
 	"fmt"
+	"runtime/debug"
+
 	"github.com/becloudless/becloudless/pkg/bcl"
 	"github.com/spf13/cobra"
-	"runtime/debug"
 )
 
 func VersionCmd() *cobra.Command {
@@ -19,7 +20,8 @@ func VersionCmd() *cobra.Command {
 
 			fmt.Println("name:", bcl.BCL.Name)
 			fmt.Println("version:", bcl.BCL.Version)
-			fmt.Println("home:", bcl.BCL.Home)
+			fmt.Println("config:", bcl.BCL.ConfigFolder)
+			fmt.Println("cache:", bcl.BCL.CacheFolder)
 			fmt.Println()
 
 			info, _ := debug.ReadBuildInfo()

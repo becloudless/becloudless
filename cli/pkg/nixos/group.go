@@ -40,7 +40,7 @@ func CreateGroup(repo *bcl.Infra, name string) error {
 		return err
 	}
 
-	adminPub, _, err := security.Ed25519PrivateKeyFileToPublicAndPrivateAgeKeys(path.Join(bcl.BCL.Home, bcl.PathSecrets, bcl.PathEd25519KeyFile))
+	adminPub, _, err := security.Ed25519PrivateKeyFileToPublicAndPrivateAgeKeys(path.Join(bcl.BCL.ConfigFolder, bcl.PathSecrets, bcl.PathEd25519KeyFile))
 	if err != nil {
 		return err
 	}

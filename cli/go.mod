@@ -16,7 +16,7 @@ require (
 	github.com/go-git/go-git/v6 v6.0.0-alpha.2
 	github.com/gordonklaus/ineffassign v0.2.0
 	github.com/moby/buildkit v0.29.0
-	github.com/n0rad/go-app v0.0.0-20251227182329-c1d5e61b7561
+	github.com/n0rad/go-app v0.0.0-20260502170822-14ac9a7082c9
 	github.com/n0rad/go-erlog v0.0.0-20260115131226-fdddb793d4f1
 	github.com/n0rad/gomake v0.0.0-20260423115156-cb11feadac58
 	github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260120012428-7b6c2af7698a
