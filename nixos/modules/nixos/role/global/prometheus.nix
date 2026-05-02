@@ -59,7 +59,9 @@
     services.prometheus.exporters.node = {
       enable = true;
       port = 9000;
-      listenAddress = "[::1]"; # scrapped by pushprox locally
+      # nixos declare host shortname on 127.0.0.2
+      # prometheus scrape metrics through the proxy using the shortname
+      listenAddress = "127.0.0.2";
       # https://github.com/NixOS/nixpkgs/blob/nixos-24.05/nixos/modules/services/monitoring/prometheus/exporters.nix
       enabledCollectors = [
         "systemd"
