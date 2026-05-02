@@ -17,7 +17,6 @@ import (
 
 func RootCmd() *cobra.Command {
 	var logLevel string
-	var home string
 	completion := completionCmd()
 
 	cmd := &cobra.Command{
@@ -35,7 +34,7 @@ func RootCmd() *cobra.Command {
 				logs.SetLevel(level)
 			}
 
-			return bcl.BCL.Init(home)
+			return bcl.BCL.Init()
 		},
 	}
 
@@ -54,6 +53,6 @@ func RootCmd() *cobra.Command {
 	cmd.PersistentFlags().BoolP("help", "", false, "help for this command")
 
 	cmd.PersistentFlags().StringVarP(&logLevel, "log-level", "L", "info", "Set log level")
-	cmd.PersistentFlags().StringVarP(&home, "home", "H", bcl.BCL.App.DefaultHomeFolder(), "bcl home directory")
+	cmd.PersistentFlags().StringVarP(&bcl.BCL.ConfigFolder, "config", "C", bcl.BCL.App.DefaultConfigFolder(), "bcl config directory")
 	return cmd
 }

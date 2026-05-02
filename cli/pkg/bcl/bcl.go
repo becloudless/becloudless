@@ -3,8 +3,10 @@ package bcl
 import (
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/becloudless/becloudless/pkg/security"
+	"github.com/mitchellh/go-homedir"
 	"github.com/n0rad/go-app"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
@@ -24,13 +26,23 @@ func init() {
 
 type Bcl struct {
 	app.App
+	Cache string `yaml:"cache,omitempty"`
 	//Infra string `yaml:"repository,omitempty"`
 	//
 	//Repo *git.Infra
 }
 
-func (bcl *Bcl) Init(home string) error {
-	if err := bcl.App.Init(home, bcl); err != nil {
+func (bcl *Bcl) DefaultCacheFolder() string {
+	home, err := homedir.Dir()
+	if err != nil {
+		logs.WithE(err).Warn("Failed to find home directory")
+		home = os.TempDir()
+	}
+	return filepath.Join(home, ".cache", bcl.App.Name)
+}
+
+func (bcl *Bcl) Init() error {
+	if err := bcl.App.Init(bcl); err != nil {
 		return err
 	}
 
@@ -58,7 +70,7 @@ func (bcl *Bcl) Init(home string) error {
 	//	return err
 	//}
 
-	secretFolder := path.Join(bcl.Home, PathSecrets)
+	secretFolder := path.Join(bcl.ConfigFolder, PathSecrets)
 	// folder
 	if stat, err := os.Stat(secretFolder); os.IsNotExist(err) {
 		if err := os.MkdirAll(secretFolder, 0700); err != nil {
