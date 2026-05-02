@@ -48,7 +48,7 @@ spec:
 
     deployment:
 #      kind: DaemonSet
-      replicas: 1
+      replicas: 2
 
 #    service:
 #      spec:
