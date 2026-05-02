@@ -14,7 +14,7 @@ import (
 )
 
 // renovate: datasource=github-releases depName=hashicorp/terraform
-const terraformDefaultVersion = "1.0.8"
+const terraformDefaultVersion = "1.15.0"
 const terraformBinPath = "terraform-bin"
 
 type Client struct {
