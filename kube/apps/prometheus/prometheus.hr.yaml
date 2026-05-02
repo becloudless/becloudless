@@ -185,6 +185,9 @@ spec:
         - grafana-polystat-panel
       dashboards:
         hardware:
+          node-exporter:
+            gnetId: 1860
+            datasource: Prometheus
           smart:
             gnetId: 20204
             datasource: Prometheus
