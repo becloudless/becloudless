@@ -47,8 +47,8 @@
       serviceConfig = {
         Restart = "on-failure";
         RestartSec = "600s";
-#        StartLimitIntervalSec = "600";
-#        StartLimitBurst = "3";
+        StartLimitIntervalSec = "600";
+        StartLimitBurst = "1";
       };
 
       after = [ "prometheus-node-exporter.service" ];
