@@ -18,6 +18,7 @@ spec:
     cleanupOnFail: true
   values:
     mainWorkload:
+      type: singleton # TODO multiple pushprox pods makes connection lost in proxy discussion
       pod:
         securityContext:
           runAsUser: 65534
