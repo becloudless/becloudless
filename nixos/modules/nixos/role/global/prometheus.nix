@@ -2,13 +2,12 @@
 
 {
 
-  config = lib.mkIf (config.bcl.role.name != "" && false) { # TODO
+  config = lib.mkIf (config.bcl.role.name != "") {
 
     sops.secrets."monitoring_password" = {
       sopsFile = config.bcl.role.secretFile;
       mode = "0600";
     };
-
 
     systemd.services."prometheus-node-exporter-nixos" = {
       path = with pkgs; [ jq ];
@@ -46,7 +45,6 @@
         username="pushprox-${config.bcl.group.name}"
         password="$(cat ${config.sops.secrets."monitoring_password".path})"
         domain="pushprox.${config.bcl.global.domain}"
-
         ${pkgs.bcl.prometheus-pushprox}/bin/pushprox-client --proxy-url="https://$username:$password@$domain"
       '';
 
