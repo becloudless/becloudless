@@ -13,6 +13,7 @@ import (
 	"github.com/n0rad/go-erlog/logs"
 )
 
+// renovate: datasource=github-releases depName=hashicorp/terraform
 const terraformDefaultVersion = "1.0.8"
 const terraformBinPath = "terraform-bin"
 
@@ -36,7 +37,7 @@ func NewClient(wantedVersion *version.Version) (*Client, error) {
 
 	client := Client{
 		version: v,
-		binDir:  filepath.Join(bcl.BCL.Home, terraformBinPath),
+		binDir:  filepath.Join(bcl.BCL.CacheFolder, terraformBinPath),
 		runner:  runner.NewLocalRunner(),
 	}
 

@@ -26,7 +26,6 @@ func init() {
 
 type Bcl struct {
 	app.App
-	Cache string `yaml:"cache,omitempty"`
 	//Infra string `yaml:"repository,omitempty"`
 	//
 	//Repo *git.Infra
