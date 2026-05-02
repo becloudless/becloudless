@@ -36,7 +36,7 @@
     };
 
     systemd.services."prometheus-pushprox-client" = {
-      path = with pkgs; [ openssh coreutils ];
+      path = with pkgs; [ openssh coreutils gawk ];
       script = ''
         username="pushprox-${config.bcl.group.name}"
         password="$(sha256sum /nix/etc/ssh/ssh_host_ed25519_key | awk '{print $1}')"
