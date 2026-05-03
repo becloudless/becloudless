@@ -58,8 +58,6 @@ in
               esac
             done
       '';
-      after = [ "graphical-session-pre.target" "immich-photo-sync.service" ];
-      partOf = [ "graphical-session.target" ];
       wantedBy = [ "graphical-session.target" ];
       serviceConfig = {
         Restart = "on-failure";
