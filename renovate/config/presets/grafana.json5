@@ -7,11 +7,21 @@
       customType: "regex",
       fileMatch: [".+\\.yaml$"], // TODO filter more
       matchStrings: [
-        "gnetId: (?<depName>\\d+)\\s+revision: (?<currentValue>\\d+)",
+        "# renovate: depName=\"(?<depName>.+)\"\\s+gnetId: (?<packageName>\\d+)\\s+revision: (?<currentValue>\\d+)",
       ],
-      datasourceTemplate: "grafana-dashboards",
-      versioningTemplate: "numeric",
+      datasourceTemplate: "custom.grafana-dashboards",
+      versioningTemplate: "regex:^(?<major>\\d+)$",
     },
   ],
+
+  customDatasources: {
+    "grafana-dashboards": {
+      defaultRegistryUrlTemplate: "https://grafana.com/api/dashboards/{{packageName}}",
+      format: "json",
+      transformTemplates: [
+        '{"releases":[{"version": $string(revision)}]}',
+      ],
+    },
+  },
 }
 
