@@ -41,7 +41,7 @@
         username="pushprox-${config.bcl.group.name}"
         password="$(sha256sum /nix/etc/ssh/ssh_host_ed25519_key | awk '{print $1}')"
         domain="pushprox.${config.bcl.global.domain}"
-        ${pkgs.bcl.prometheus-pushprox}/bin/pushprox-client --proxy-url="https://$username:$password@$domain"
+        ${pkgs.bcl.prometheus-pushprox}/bin/pushprox-client --proxy-url="https://$username:$password@$domain" --log.level=warn
       '';
 
       after = [ "prometheus-node-exporter.service" ];
