@@ -72,6 +72,7 @@ in
       path = with pkgs; [ curl jq bash ];
       script = ''
         set -euo pipefail
+        set -x
 
         IMMICH_URL="https://immich.${config.bcl.global.domain}"
         IMMICH_API_KEY="$(cat ${config.sops.secrets."users.tv.immich.apiKey".path})"
