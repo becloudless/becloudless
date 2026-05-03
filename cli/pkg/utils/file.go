@@ -31,3 +31,13 @@ func CopyFile(src, dst string) error {
 
 	return os.Chmod(dst, srcInfo.Mode())
 }
+
+// FileExists return true if a file exists on the system
+// it returns false if the file does not exist or if it is a directory
+func FileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}

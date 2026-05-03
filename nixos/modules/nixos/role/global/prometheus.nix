@@ -36,12 +36,12 @@
     };
 
     systemd.services."prometheus-pushprox-client" = {
-      path = with pkgs; [ openssh coreutils gawk ];
+      path = with pkgs; [ openssh coreutils gawk gnused ];
       script = ''
         username="pushprox-${config.bcl.group.name}"
-        password="$(sha256sum /nix/etc/ssh/ssh_host_ed25519_key | awk '{print $1}')"
+        password="$(sed -e 's/[[:space:]]*$//' /nix/etc/ssh/ssh_host_ed25519_key | tr -d '\n' | sha256sum | awk '{print $1}')"
         domain="pushprox.${config.bcl.global.domain}"
-        ${pkgs.bcl.prometheus-pushprox}/bin/pushprox-client --proxy-url="https://$username:$password@$domain"
+        ${pkgs.bcl.prometheus-pushprox}/bin/pushprox-client --proxy-url="https://$username:$password@$domain" --log.level=warn
       '';
 
       after = [ "prometheus-node-exporter.service" ];
@@ -58,11 +58,14 @@
     # https://nixos.org/manual/nixos/stable/#module-services-prometheus-exporters
     services.prometheus.exporters.node = {
       enable = true;
-      port = 9000;
-      listenAddress = "[::1]"; # scrapped by pushprox locally
+      port = 9100;
+      # nixos declare host shortname on 127.0.0.2
+      # prometheus scrape metrics through the proxy using the shortname
+      listenAddress = "127.0.0.2";
       # https://github.com/NixOS/nixpkgs/blob/nixos-24.05/nixos/modules/services/monitoring/prometheus/exporters.nix
       enabledCollectors = [
         "systemd"
+        "processes"
       ];
       # /nix/store/zgsw0yx18v10xa58psanfabmg95nl2bb-node_exporter-1.8.1/bin/node_exporter  --help
       extraFlags = [

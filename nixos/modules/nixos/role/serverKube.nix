@@ -169,8 +169,8 @@ in
         # bootstrap at very first node, first boot, with: kubeadm init --skip-phases=preflight --config=/etc/kubernetes/kubeadm.yaml
         ${pkgs.kubernetes}/bin/kubeadm init --skip-phases=preflight,bootstrap-token,addon/coredns,show-join-command --config=/etc/kubernetes/kubeadm.yaml
       '';
-      after = [ "network-online.target" ];
-      wants = [ "network-online.target" ];
+      after = [ "network-online.target" "time-sync.target" ];
+      wants = [ "network-online.target" "time-sync.target" ];
       wantedBy = [ "multi-user.target" ];
     };
 

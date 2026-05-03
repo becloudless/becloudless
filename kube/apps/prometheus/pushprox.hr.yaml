@@ -18,6 +18,7 @@ spec:
     cleanupOnFail: true
   values:
     mainWorkload:
+      type: singleton # TODO multiple pushprox pods makes connection lost in proxy discussion
       pod:
         securityContext:
           runAsUser: 65534
@@ -34,7 +35,7 @@ spec:
 
       ingress:
         annotations:
-          traefik.ingress.kubernetes.io/router.middlewares: traefik-authelia-basic@kubernetescrd
+          traefik.ingress.kubernetes.io/router.middlewares: traefik-authelia@kubernetescrd
           kubernetes.io/tls-acme: "true"
         hosts:
           - host: pushprox.${BCL_GLOBAL_DOMAIN}

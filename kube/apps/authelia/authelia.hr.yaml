@@ -26,6 +26,7 @@ spec:
     #################
     pod:
       kind: Deployment
+      replicas: 2
       env:
         - name: TZ
           value: Europe/Paris
@@ -220,11 +221,11 @@ spec:
               rules:
                 - policy: two_factor
                   subject:
-                    - [ 'group:role_admin' ]
-                    - [ 'group:app_immich' ]
+                    - 'group:role_admin'
+                    - 'group:app_immich'
                 - policy: one_factor
                   subject:
-                    - [ 'group:app_immich_one_factor' ]
+                     'group:app_immich_one_factor'
 
           claims_policies:
             grafana:

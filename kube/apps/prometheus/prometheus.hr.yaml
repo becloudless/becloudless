@@ -10,7 +10,7 @@ spec:
   chart:
     spec:
       chart: kube-prometheus-stack
-      version: 84.3.0
+      version: 84.4.0
       sourceRef:
         kind: HelmRepository
         name: prometheus
@@ -175,7 +175,7 @@ spec:
           groups_attribute_path: groups
           name_attribute_path: name
           use_pkce: true
-          role_attribute_path: contains(groups[*], 'admin') && 'Admin' || contains(groups[*], 'editor') && 'Editor' || 'Viewer'
+          role_attribute_path: contains(groups[*], 'role_admin') && 'Admin' || contains(groups[*], 'role_editor') && 'Editor' || 'Viewer'
       plugins:
         - grafana-piechart-panel
         - grafana-clock-panel
@@ -185,59 +185,60 @@ spec:
         - grafana-polystat-panel
       dashboards:
         hardware:
+          node-exporter:
+            gnetId: 1860
+            revision: 45
+            datasource: Prometheus
           smart:
             gnetId: 20204
+            revision: 1
             datasource: Prometheus
-#          smart3:
-#            gnetId: 3992
-#            datasource: Prometheus
-#          smart2:
-#            gnetId: 10664
-#            datasource: Prometheus
-#          smart:
-#            gnetId: 10530
-#            datasource: Prometheus
-#          smart-error:
-#            gnetId: 10531
-#            datasource: Prometheus
-#          smart-data:
-#            gnetId: 13654
-#            datasource: Prometheus
         network:
           uptimerobot:
             gnetId: 9955
+            revision: 1
             datasource: Prometheus
           speedtest:
             gnetId: 12004
+            revision: 1
             datasource: Prometheus
           prometheus-blackbox:
             gnetId: 12275
+            revision: 1
             datasource: Prometheus
           icmp:
             gnetId: 12412
+            revision: 1
             datasource: Prometheus
           pdu:
             gnetId: 14309
+            revision: 1
             datasource: Prometheus
           ups:
             gnetId: 12340
+            revision: 1
             datasource: Prometheus
           mikrotik:
             gnetId: 13679
+            revision: 1
             datasource: Prometheus
           unbound:
             gnetId: 18077
+            revision: 1
             datasource: Prometheus
 
         default:
           kubernetes:
             gnetId: 6417
+            revision: 1
             datasource: Prometheus
           longhorn:
             gnetId: 17626
+            revision: 1
             datasource: Prometheus
           prometheus-stats:
             gnetId: 2
+            revision: 1
             datasource: Prometheus
       dashboardProviders:
         dashboardproviders.yaml:
@@ -328,6 +329,7 @@ spec:
         ruleSelectorNilUsesHelmValues: false
         serviceMonitorSelectorNilUsesHelmValues: false #scrape all namespaces. Single prom install
         podMonitorSelectorNilUsesHelmValues: false
+        scrapeConfigSelectorNilUsesHelmValues: false
         # etcd certs
 #        secrets:
 #          - etcd-certs
@@ -336,14 +338,6 @@ spec:
         additionalAlertRelabelConfigs:
           - action: labeldrop
             regex: replica
-        additionalScrapeConfigs:
-          - job_name: 'node-exporter'
-            proxy_url: http://pushprox:8080/
-            static_configs:
-              - targets: ['awd-ovh-pop2:9100']
-#            dns_sd_configs:
-#              - names:
-#                  - '_obs._tcp.h.${BCL_GLOBAL_DOMAIN}.'
 
         externalLabels:
           kubernetes_cluster: ${BCL_GLOBAL_NAME}
