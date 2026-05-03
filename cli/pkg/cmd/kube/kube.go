@@ -10,6 +10,7 @@ func KubeCmd() *cobra.Command {
 	cmd.AddCommand(
 		kubeBootstrapCmd(),
 		kubeContextCmd(),
+		kubeSecretCmd(),
 	)
 	return &cmd
 }
