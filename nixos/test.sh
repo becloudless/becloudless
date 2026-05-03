@@ -58,7 +58,7 @@ installHost() {
 	bclDebug=""
 	$DEBUG && bclDebug="-L trace"
 	pwd
-	$BCL_BIN $bclDebug -H ../ nix install --user=nixos --disk-password=qw -p 10022 -i ../secrets/ed25519 -h 127.0.0.1
+	$BCL_BIN $bclDebug -C ../ nix install --user=nixos --disk-password=qw -p 10022 -i ../secrets/ed25519 -h 127.0.0.1
 
 	$DEBUG && {
 		read -p "Waiting after install in debug. Enter to continue"
@@ -89,7 +89,7 @@ echo_brightred "## Check flake"
 (cd "$DIR/tests/basic/repository/nixos" && nix flake update && nix flake check)
 
 echo_brightred "## Prepare host"
-$BCL_BIN -H "$DIR/tests/basic" nixos prepare
+$BCL_BIN -C "$DIR/tests/basic" nixos prepare
 
 [ -f "$DIR/tests/basic/repository/nixos/result/iso/bcl.iso" ] || {
 	echo_brightred "## Building iso image"
@@ -104,7 +104,7 @@ $BCL_BIN -H "$DIR/tests/basic" nixos prepare
 #rm -Rf ./tests/new && mkdir -p ./tests/new
 
 #nix-shell -p expect --run expect <<EOF
-#	spawn ./dist/bcl-linux-amd64/bcl -H ./tests/new nixos global edit
+#	spawn ./dist/bcl-linux-amd64/bcl -C ./tests/new nixos global edit
 #
 #	expect "locale"
 #	send "mylocale\r\r" # locale
@@ -117,8 +117,8 @@ $BCL_BIN -H "$DIR/tests/basic" nixos prepare
 #  #interact -o -nobuffer -re $prompt return
 #EOF
 
-#./dist/bcl-*/bcl -H ./tests/new nixos prepare
-#./dist/bcl-*/bcl -H ./tests/new nixos groups create something
+#./dist/bcl-*/bcl -C ./tests/new nixos prepare
+#./dist/bcl-*/bcl -C ./tests/new nixos groups create something
 
 #exit 0
 
