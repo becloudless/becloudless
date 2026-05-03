@@ -14,17 +14,15 @@ in
     description = "virt-manager per-user configuration, keyed by username.";
   };
 
-    # virtualisation.libvirtd = {
-    #   enable = true;
-    #   qemu = {
-    #     package = pkgs.qemu_kvm;
-    #     runAsRoot = true;
-    #     swtpm.enable = true;
-    #   };
-    # };
-
   config = lib.mkIf (vmUsers != {}) {
-    virtualisation.libvirtd.enable = true;
+    virtualisation.libvirtd = {
+      enable = true;
+      qemu = {
+#        package = pkgs.qemu_kvm; # run only host archi
+#        runAsRoot = true;
+        swtpm.enable = true;
+      };
+    };
 
     users.groups.libvirtd.members = lib.attrNames vmUsers;
 
