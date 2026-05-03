@@ -80,8 +80,8 @@
                 },
                 "audio": {
                     "channels": "2.0",
-                    "device": "${config.bcl.tv.audioDevice}",
-                    "devicetype": "${config.bcl.tv.audioType}",
+                    "device": "${config.bcl.role.tv.audioDevice}",
+                    "devicetype": "${config.bcl.role.tv.audioType}",
                     "exclusive": false,
                     "normalize": false,
                     "passthrough.ac3": false,
@@ -121,7 +121,7 @@
                     "showPowerOptions": true,
                     "useOpenGL": false,
                     "useSystemVideoCodecs": false,
-                    "userWebClient": "${config.bcl.tv.jellyfinUrl}",
+                    "userWebClient": "${config.bcl.role.tv.jellyfinUrl}",
                     "webMode": "desktop"
                 },
                 "other": {
