@@ -44,7 +44,7 @@ in
         ############################
         sleep 5
         displayScreensaver
-        tail -fn0 ~/.local/share/jellyfinmediaplayer/logs/jellyfinmediaplayer.log \
+        tail -fn0 ~/.local/share/jellyfin-desktop/profiles/b6a136dc17a44b32a63eed3507a6f2d0/logs/jellyfin-desktop.log \
           | grep --line-buffered "Entering state:" \
           | while read line; do
               state=$(echo $line | sed 's/.* - Entering state: \([a-z]*\)/\1/')
