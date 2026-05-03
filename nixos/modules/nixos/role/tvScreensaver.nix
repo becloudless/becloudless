@@ -74,7 +74,7 @@ in
         set -euo pipefail
 
         IMMICH_URL="https://immich.${config.bcl.global.domain}"
-        IMMICH_API_KEY="$(cat ${config.sops.secrets."tv.immich.api-key".path})"
+        IMMICH_API_KEY="$(cat ${config.sops.secrets."users.tv.immich.apiKey".path})"
         ALBUM_ID="${cfg.albumId}"
         PHOTO_DIR="$HOME/.cache/screensaver-photos"
 
