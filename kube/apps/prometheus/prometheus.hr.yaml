@@ -186,57 +186,70 @@ spec:
       dashboards:
         hardware:
           node-exporter:
+            # renovate: depName="Node Exporter Full"
             gnetId: 1860
             revision: 45
             datasource: Prometheus
           smart:
+            # renovate: depName="SMART Disk Data Overview"
             gnetId: 20204
             revision: 1
             datasource: Prometheus
         network:
           uptimerobot:
+            # renovate: depName="UptimeRobot"
             gnetId: 9955
             revision: 1
             datasource: Prometheus
           speedtest:
+            # renovate: depName="Speedtest-Tracker"
             gnetId: 12004
             revision: 1
             datasource: Prometheus
           prometheus-blackbox:
+            # renovate: depName="Prometheus Blackbox Exporter"
             gnetId: 12275
             revision: 1
             datasource: Prometheus
           icmp:
+            # renovate: depName="ICMP Pings"
             gnetId: 12412
             revision: 1
             datasource: Prometheus
           pdu:
+            # renovate: depName="APC PDU"
             gnetId: 14309
             revision: 1
             datasource: Prometheus
           ups:
+            # renovate: depName="APC UPS"
             gnetId: 12340
             revision: 1
             datasource: Prometheus
           mikrotik:
+            # renovate: depName="MikroTik Router"
             gnetId: 13679
             revision: 1
             datasource: Prometheus
           unbound:
+            # renovate: depName="Unbound DNS"
             gnetId: 18077
             revision: 1
             datasource: Prometheus
 
         default:
           kubernetes:
+            # renovate: depName="Kubernetes cluster monitoring"
             gnetId: 6417
             revision: 1
             datasource: Prometheus
           longhorn:
+            # renovate: depName="Longhorn Example v1.6.0"
             gnetId: 17626
             revision: 1
             datasource: Prometheus
           prometheus-stats:
+            # renovate: depName="Prometheus Stats"
             gnetId: 2
             revision: 1
             datasource: Prometheus
