@@ -1,6 +1,6 @@
 { inputs, config, lib, pkgs, ... }:
 {
-  options.bcl.tv = {
+  options.bcl.role.tv = {
     audioType = lib.mkOption {
          type = lib.types.str;
          default = "basic";

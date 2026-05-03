@@ -1,26 +1,21 @@
 { config, lib, pkgs, ... }:
 let
-  cfg = config.bcl.tv.screensaver;
+  cfg = config.bcl.role.tv.screensaver;
 in
 {
-  options.bcl.tv.screensaver = {
+  options.bcl.role.tv.screensaver = {
     albumId = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
       description = "Immich album UUID to display as screensaver. Feature is disabled when null.";
-    };
-    sopsFile = lib.mkOption {
-      type = lib.types.nullOr lib.types.path;
-      default = null;
-      description = "Sops secrets file containing the 'tv.immich.api-key' secret.";
     };
   };
 
   config = lib.mkIf (config.bcl.role.name == "tv" && cfg.albumId != null) {
     environment.systemPackages = with pkgs; [ feh curl jq ];
 
-    sops.secrets."tv.immich.api-key" = {
-      sopsFile = cfg.sopsFile;
+    sops.secrets."users.tv.immich.apiKey" = {
+      sopsFile = config.bcl.role.secretFile;
       owner = "tv";
     };
 
