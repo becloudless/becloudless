@@ -225,7 +225,7 @@ spec:
                     - 'group:app_immich'
                 - policy: one_factor
                   subject:
-                     'group:app_immich_one_factor'
+                    - 'group:app_immich_one_factor'
 
           claims_policies:
             grafana:
