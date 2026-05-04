@@ -69,7 +69,7 @@ func InstallNixLocally(sudoPassword *memguarded.Service) error {
 	}
 
 	localRun := runner.NewLocalRunner()
-	run, err := runner.NewSudoRunner(localRun, sudoPassword)
+	run, err := runner.NewSudoRunnerWithPassword(localRun, sudoPassword)
 	if err != nil {
 		return errs.WithE(err, "Failed to prepare sudo runner")
 	}
