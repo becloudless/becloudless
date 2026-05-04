@@ -77,7 +77,7 @@ spec:
         ldap:
           enabled: true
           implementation: lldap
-          address: ldaps://lldap.lldap.svc.cluster.local:6360
+          address: ldaps://lldaps.${BCL_GLOBAL_DOMAIN}:443
           base_dn: ${BCL_GLOBAL_LDAPDN}
           user: 'UID=authelia,OU=people,${BCL_GLOBAL_LDAPDN}'
           password: {}
