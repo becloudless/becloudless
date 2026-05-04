@@ -19,12 +19,12 @@ spec:
     cleanupOnFail: true
   values:
     mainWorkload:
-      container:
-        pod:
-          securityContext:
-            runAsUser: 1000
-            runAsGroup: 1000
+      pod:
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
 
+      container:
         image:
           repository: lldap/lldap
           # renovate: datasource=docker depName=lldap/lldap versioning=regex:^(?<major>\d{4})-(?<minor>\d{2})-(?<patch>\d{2})$
