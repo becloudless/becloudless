@@ -109,7 +109,6 @@ spec:
 
       ingress:
         annotations:
-          traefik.ingress.kubernetes.io/router.middlewares: traefik-authelia@kubernetescrd
           kubernetes.io/tls-acme: "true"
         hosts:
           - host: lldap.${BCL_GLOBAL_DOMAIN}
@@ -119,11 +118,27 @@ spec:
                   name: lldap
                   port: 17170
         tls:
-          - secretName: tls-lldap
+          - secretName: tls-lldap-http
             hosts:
               - lldap.${BCL_GLOBAL_DOMAIN}
 
     resources:
+      ingresses:
+        ldaps:
+          annotations:
+            kubernetes.io/tls-acme: "true"
+          hosts:
+            - host: _ldaps._tcp.${BCL_GLOBAL_DOMAIN}
+              paths:
+                - path: /
+                  service:
+                    name: lldap
+                    port: 6360
+          tls:
+            - secretName: tls-lldap-ldaps
+              hosts:
+                - _ldaps._tcp.${BCL_GLOBAL_DOMAIN}
+
       configMaps:
         data:
           data:
