@@ -18,51 +18,17 @@ spec:
   rollback:
     cleanupOnFail: true
   values:
-    workloads:
-      cron:
-        type: CronJob
-        container:
-          env:
-            LLDAP_URL: http://lldap:17170
-            LLDAP_ADMIN_USERNAME:
-              secretKeyRef:
-                name: lldap-generated
-                key: LLDAP_LDAP_USER_DN
-            LLDAP_ADMIN_PASSWORD:
-              secretKeyRef:
-                name: lldap-generated
-                key: LLDAP_LDAP_USER_PASS
-            DO_CLEANUP: "true"
-          command: [ /usr/bin/env, bash ]
-          args: 
-            - -c
-            - |
-              mkdir /tmp/{groups,users,users-schema,groups-schema}
-              cp /data/users.json /tmp/users
-              cp /data/users-schema.json /tmp/users-schema
-              cp /data/groups.json /tmp/groups
-              cp /data/groups-schema.json /tmp/groups-schema
-              export USER_CONFIGS_DIR=/tmp/users
-              export USER_SCHEMAS_DIR=/tmp/users-schema
-              export GROUP_CONFIGS_DIR=/tmp/groups
-              export GROUP_SCHEMAS_DIR=/tmp/groups-schema
-              /app/bootstrap.sh
-        cronJob:
-          schedule: "*/5 * * * *"
-          concurrencyPolicy: Forbid
-          backoffLimit: 0
-        
-        volumes:
-          data:
-            type: secret
-            name: lldap-data
-
-    ##
     mainWorkload:
       container:
+        pod:
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+
         image:
           repository: lldap/lldap
-          tag: "2025-11-20" # TODO renovate
+          # renovate: datasource=docker depName=lldap/lldap versioning=regex:^(?<major>\d{4})-(?<minor>\d{2})-(?<patch>\d{2})$
+          tag: "2025-11-20"
         envFrom:
           - secretRef:
               name: lldap-generated
@@ -96,7 +62,7 @@ spec:
           name: lldap-postgresql-app-tls
         cert:
           type: secret
-          name: lldap-internal
+          name: tls-lldaps
         data:
           type: configMap
 
@@ -118,27 +84,11 @@ spec:
                   name: lldap
                   port: 17170
         tls:
-          - secretName: tls-lldap-http
+          - secretName: tls-lldap
             hosts:
               - lldap.${BCL_GLOBAL_DOMAIN}
 
     resources:
-      ingresses:
-        ldaps:
-          annotations:
-            kubernetes.io/tls-acme: "true"
-          hosts:
-            - host: _ldaps._tcp.${BCL_GLOBAL_DOMAIN}
-              paths:
-                - path: /
-                  service:
-                    name: lldap
-                    port: 6360
-          tls:
-            - secretName: tls-lldap-ldaps
-              hosts:
-                - _ldaps._tcp.${BCL_GLOBAL_DOMAIN}
-
       configMaps:
         data:
           data:
@@ -153,15 +103,3 @@ spec:
               enabled=true
               key_file="/cert/tls.key"
               cert_file="/cert/tls.crt"
-
-    chartDefaults:
-      workload:
-        pod:
-          securityContext:
-            runAsUser: 1000
-            runAsGroup: 1000
-
-        container:
-          image:
-            repository: lldap/lldap
-            tag: "2025-11-20" # TODO renovate
