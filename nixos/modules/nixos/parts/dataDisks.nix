@@ -64,6 +64,11 @@ in {
           default = "rw";
           description = "Mount mode used for the underlying /disks/* mounts (ro/rw).";
         };
+        location = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+          description = "Physical location of the disk.";
+        };
       };
     }));
     default = {};
