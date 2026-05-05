@@ -8,7 +8,7 @@ let
     name = "/disks/${name}";
     value = {
       device = "/dev/mapper/${name}";
-      fsType = "btrfs";
+      fsType = "auto";
       options = [ (diskModes.${name}) "defaults" "nofail" ];
     };
   }) disks);
