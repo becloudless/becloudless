@@ -1,13 +1,11 @@
 package nixos
 
 import (
-	"os"
 	"path/filepath"
 
 	"github.com/becloudless/becloudless/pkg/git"
 	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/n0rad/go-erlog/errs"
-	"github.com/n0rad/memguarded"
 	"github.com/spf13/cobra"
 )
 
@@ -29,21 +27,24 @@ func nixosUpgradeCmd() *cobra.Command {
 				return errs.WithE(err, "failed to add changes to git")
 			}
 
-			run := runner.Runner(runner.NewLocalRunner())
-			if os.Geteuid() != 0 {
-				// Running sudo internally to prevent root modification of git state during add
-				var password *memguarded.Service
-				if err := runner.IsSudoRunnableWithoutPassword(run); err != nil {
-					password = memguarded.NewService()
-					if err := password.AskSecret(false, "Sudo password to run upgrade"); err != nil {
-						return errs.WithE(err, "Failed to get sudo password")
-					}
-				}
-				run, err = runner.NewSudoRunner(run, password)
-				if err != nil {
-					return errs.WithE(err, "Failed to create sudo runner")
-				}
+			run, err := runner.NewSudoRunner(runner.Runner(runner.NewLocalRunner()))
+			if err != nil {
+				return err
 			}
+			//if os.Geteuid() != 0 {
+			// Running sudo internally to prevent root modification of git state during add
+			//var password *memguarded.Service
+			//if err := runner.IsSudoRunnableWithoutPassword(run); err != nil {
+			//	password = memguarded.NewService()
+			//	if err := password.AskSecret(false, "Sudo password to run upgrade"); err != nil {
+			//		return errs.WithE(err, "Failed to get sudo password")
+			//	}
+			//}
+			//run, err = runner.NewSudoRunner(run)
+			//if err != nil {
+			//	return errs.WithE(err, "Failed to create sudo runner")
+			//}
+			//}
 
 			return run.ExecCmd("nixos-rebuild", action, "--flake", filepath.Join(repository.Root, "nixos"))
 		},

@@ -11,7 +11,6 @@ import (
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
-	"github.com/n0rad/memguarded"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -24,7 +23,6 @@ func nixosIsoBuildCmd() *cobra.Command {
 	var device string
 	var typeAndSystem string
 	var rebuild bool
-	sudoPassword := memguarded.NewService()
 
 	cmd := &cobra.Command{
 		Use:   "build",
@@ -112,7 +110,7 @@ func nixosIsoBuildCmd() *cobra.Command {
 				return errs.WithEF(err, data.WithField("device", device), "Target device does not exist or is not accessible")
 			}
 
-			sudoRun, err := runner.NewSudoRunner(run, sudoPassword)
+			sudoRun, err := runner.NewSudoRunner(run)
 			if err != nil {
 				return errs.WithE(err, "Failed to create sudo runner to write iso to device")
 			}
@@ -129,7 +127,7 @@ func nixosIsoBuildCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&typeAndSystem, "system", "s", "iso/install", "kind and target system configuration name")
 	cmd.Flags().StringVarP(&device, "device", "d", "", "Target device to write the iso to")
-	cmd.Flags().BoolVarP(&rebuild, "rebuild", "r", false, "Rebuild iso even if file is already available")
+	cmd.Flags().BoolVarP(&rebuild, "rebuild", "r", true, "Rebuild iso even if file is already available")
 
 	_ = cmd.RegisterFlagCompletionFunc("system", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		infra, err := bcl.FindInfraFromPath(".")
@@ -142,8 +140,6 @@ func nixosIsoBuildCmd() *cobra.Command {
 		}
 		return systems, cobra.ShellCompDirectiveNoFileComp
 	})
-
-	withSudoPasswordFlag(cmd, sudoPassword)
 
 	return cmd
 }

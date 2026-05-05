@@ -34,7 +34,7 @@ func InstallAnywhere(sshConfig *runner.SshConnectionConfig, diskPassword string)
 
 	var finalRunner runner.Runner = sshRunner
 	if sshConfig.User != "root" {
-		sshSudoRunner, err := runner.NewSudoRunner(sshRunner, sshConfig.Password)
+		sshSudoRunner, err := runner.NewSudoRunnerWithPassword(sshRunner, sshConfig.Password)
 		if err != nil {
 			return errs.WithE(err, "Sudo cannot be run successfully on host to install")
 		}
