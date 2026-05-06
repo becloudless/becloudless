@@ -49,12 +49,47 @@ let
     content = fsContent name diskCfg;
   };
 
+  # Only disks with disko = true are handed to disko
+  diskoCfgs    = lib.filterAttrs (_: diskCfg:  diskCfg.disko) cfg;
+  nonDiskoCfgs = lib.filterAttrs (_: diskCfg: !diskCfg.disko) cfg;
+
   allDiskEntries =
     builtins.foldl' (acc: e: acc // e) {}
-      (lib.mapAttrsToList mkDiskEntries cfg);
+      (lib.mapAttrsToList mkDiskEntries diskoCfgs);
 
-  raidConfigs  = lib.filterAttrs (_: diskCfg: isRaid diskCfg) cfg;
+  raidConfigs  = lib.filterAttrs (_: diskCfg: isRaid diskCfg) diskoCfgs;
   mdadmEntries = lib.mapAttrs mkMdadmEntry raidConfigs;
+
+  # ── non-disko: manual fstab / crypttab / mdadm ──────────────────────────
+
+  # Underlying block device for a non-disko disk (before optional LUKS)
+  underlyingDevice = name: diskCfg:
+    if isRaid diskCfg then "/dev/md/${name}"
+    else builtins.head diskCfg.devices;
+
+  # fileSystems entries
+  nonDiskoFileSystems = lib.mapAttrs' (name: diskCfg: {
+    name  = diskCfg.path;
+    value = {
+      device  = if diskCfg.encrypted
+                then "/dev/mapper/${name}"
+                else underlyingDevice name diskCfg;
+      fsType  = diskCfg.format;
+      options = [ "defaults" "nofail" ];
+    };
+  }) nonDiskoCfgs;
+
+  # crypttab entries for encrypted non-disko disks
+  encryptedNonDisko  = lib.filterAttrs (_: diskCfg: diskCfg.encrypted) nonDiskoCfgs;
+  crypttabLines      = lib.concatStringsSep "\n" (lib.mapAttrsToList (name: diskCfg:
+    "${name}  ${underlyingDevice name diskCfg}  none  luks"
+  ) encryptedNonDisko);
+
+  # mdadm.conf entries for multi-device non-disko disks
+  raidNonDisko       = lib.filterAttrs (_: diskCfg: isRaid diskCfg) nonDiskoCfgs;
+  mdadmConfLines     = lib.concatStringsSep "\n" (lib.mapAttrsToList (name: diskCfg:
+    "ARRAY /dev/md/${name} level=raid${toString diskCfg.raidMode} num-devices=${toString (builtins.length diskCfg.devices)} devices=${lib.concatStringsSep "," diskCfg.devices}"
+  ) raidNonDisko);
 
 in {
   options.bcl.disks = lib.mkOption {
@@ -98,13 +133,39 @@ in {
           type        = lib.types.listOf lib.types.str;
           description = "Ordered list of block-device paths that make up this volume.";
         };
+        disko = lib.mkOption {
+          type        = lib.types.bool;
+          default     = true;
+          description = "Whether this disk should be managed by disko (partitioning + formatting). Set to false if the disk is pre-formatted and only needs fstab/crypttab/mdadm wiring.";
+        };
       };
     }));
   };
 
-  config = lib.mkIf (cfg != {}) {
-    disko.devices =
-      { disk = allDiskEntries; }
-      // lib.optionalAttrs (raidConfigs != {}) { mdadm = mdadmEntries; };
-  };
+  config = lib.mkIf (cfg != {}) (lib.mkMerge [
+
+    # disko-managed disks
+    (lib.mkIf (diskoCfgs != {}) {
+      disko.devices =
+        { disk = allDiskEntries; }
+        // lib.optionalAttrs (raidConfigs != {}) { mdadm = mdadmEntries; };
+    })
+
+    # non-disko: fstab
+    (lib.mkIf (nonDiskoCfgs != {}) {
+      fileSystems = nonDiskoFileSystems;
+    })
+
+    # non-disko: crypttab (types.lines → auto-concatenated across modules)
+    (lib.mkIf (encryptedNonDisko != {}) {
+      environment.etc.crypttab.text = crypttabLines + "\n";
+    })
+
+    # non-disko: mdadm RAID arrays
+    (lib.mkIf (raidNonDisko != {}) {
+      boot.swraid.enable    = true;
+      boot.swraid.mdadmConf = mdadmConfLines + "\n";
+    })
+
+  ]);
 }

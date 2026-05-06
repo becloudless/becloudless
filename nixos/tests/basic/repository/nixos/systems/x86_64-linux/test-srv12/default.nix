@@ -10,10 +10,6 @@
 
     disks = {
       ssd1 = {
-        path=/disks/ssd1;
-        encrypted = true;
-        format = "btrfs";
-        mode = "raid0";
         devices = ["/dev/disks/by-id/xxx" "/dev/disks/by-id/yyy"];
       };
     };
