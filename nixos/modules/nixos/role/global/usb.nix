@@ -2,6 +2,7 @@
 {
   services.usbguard = {
     enable = true;
+    presentDevicePolicy = lib.mkDefault "keep";
   };
 
   # All declared users can handle USB access
