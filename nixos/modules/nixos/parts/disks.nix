@@ -121,6 +121,11 @@ in {
           default     = "btrfs";
           description = "Filesystem type passed to mkfs (e.g. ext4, btrfs, xfs).";
         };
+        location = lib.mkOption {
+          type        = lib.types.str;
+          default     = "";
+          description = "Physical location of the disk(s), e.g. for inventory purposes. No functional effect.";
+        };
         raidMode = lib.mkOption {
           type        = lib.types.int;
           default     = 0;
