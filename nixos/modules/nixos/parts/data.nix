@@ -14,22 +14,19 @@ let
   }) disks);
   crypttabText = lib.concatStringsSep "\n" (lib.mapAttrsToList (name: path: "${name}  ${path}          none luks") disks);
 
-  dataTypes = [ "Backups" "Audio" "Videos" "Images" "Games" "Software" "Caches" ];
-  mkMergeData = type: {
-    name = "/data/${type}";
-    value = {
+  mergerfsFileSystem = {
+    "/data" = {
       device = "/var/empty";
       fsType = "fuse.mergerfs";
       options = [ "rw" "minfreespace=50G" "category.create=msplfs" "defaults" "allow_other" ];
     };
   };
-  mergerfsFileSystems = builtins.listToAttrs (map mkMergeData dataTypes);
 
   # Services to add disks to mergerfs when mounted
   dataMergerServices = builtins.listToAttrs (lib.mapAttrsToList (name: _: {
     name = "data-merger@${name}";
     value = {
-      description = "Merge data directories from ${name} into mergerfs pools";
+      description = "Merge /disks/${name} into mergerfs pool at /data";
       after = [ "disks-${name}.mount" ];
       requires = [ "disks-${name}.mount" ];
       wantedBy = [ "disks-${name}.mount" ];
@@ -39,15 +36,9 @@ let
         RemainAfterExit = true;
       };
       script = ''
-        DISK_MOUNT=/disks/${name}
         # https://trapexit.github.io/mergerfs/latest/runtime_interface/#setting
-
-        for type in ${lib.concatStringsSep " " dataTypes}; do
-          if [ -d "$DISK_MOUNT/$type" ]; then
-            echo "Adding $DISK_MOUNT/$type to mergerfs"
-            setfattr -n user.mergerfs.branches -v "+>$DISK_MOUNT/$type=RW" /data/$type/.mergerfs
-          fi
-        done
+        echo "Adding /disks/${name} to mergerfs"
+        setfattr -n user.mergerfs.branches -v "+>/disks/${name}=RW" /data/.mergerfs
       '';
     };
   }) disks);
@@ -90,7 +81,7 @@ in {
     { fileSystems = fileSystemsEntries; }
     (lib.mkIf (cfg.encryption && crypttabText != "") { environment.etc.crypttab.text = crypttabText + "\n"; })
     (lib.mkIf (disks != {}) {
-      fileSystems = mergerfsFileSystems;
+      fileSystems = mergerfsFileSystem;
       systemd.services = dataMergerServices;
     })
   ];
