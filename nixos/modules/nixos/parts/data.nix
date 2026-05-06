@@ -5,7 +5,7 @@ let
   # Per-entry helpers
   mkEntryConfig = dataName: entryCfg:
     let
-      mountPoint = if entryCfg.mount != "" then entryCfg.mount else "/data/${dataName}";
+      mountPoint = entryCfg.mount;
       devices = lib.mapAttrs (_: v: v.path) (lib.filterAttrs (_: v: v.path != "") entryCfg.devices);
       deviceModes = lib.mapAttrs (_: v: v.mode or "rw") entryCfg.devices;
 
@@ -60,11 +60,11 @@ let
   anyCryptab    = lib.any (e: e.crypttabLines != []) allEntries;
   anyDevices    = lib.any (e: e.mergerfsFileSystem != {}) allEntries;
 
-  entrySubmodule = { ... }: {
+  entrySubmodule = { name, ... }: {
     options = {
       mount = lib.mkOption {
         type = lib.types.str;
-        default = "";
+        default = "/data/${name}";
         description = "Override the mergerfs mount point. Defaults to /data/<name>.";
       };
 
