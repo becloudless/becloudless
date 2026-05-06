@@ -140,7 +140,7 @@ in {
         };
         disko = lib.mkOption {
           type        = lib.types.bool;
-          default     = true;
+          default     = false;
           description = "Whether this disk should be managed by disko (partitioning + formatting). Set to false if the disk is pre-formatted and only needs fstab/crypttab/mdadm wiring.";
         };
       };
