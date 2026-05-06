@@ -64,12 +64,13 @@
           # List of package names (strings) to allow as insecure, e.g. [ "openssl-1.0.2u" ].
           # Merged with any allowInsecurePredicate already in channels-config.
           allowedInsecurePackages ? [],
+          snowfall ? {},
           ...
         }: let
           lib = bclInputs.snowfall-lib.mkLib {
             inherit src;
             inputs = bclInputs // inputs;
-            snowfall.namespace = "infra";
+            snowfall = { namespace = "infra"; } // snowfall;
           };
           nixpkgsLib = bclInputs.nixpkgs.lib;
           userChannelsConfig = flake-and-lib-options.channels-config or {};
@@ -83,7 +84,7 @@
               builtins.elem (nixpkgsLib.getName pkg) allowedInsecurePackages
               || (userChannelsConfig.allowInsecurePredicate or (_: false)) pkg;
           };
-          flake-options = builtins.removeAttrs flake-and-lib-options ["inputs" "src" "allowedUnfreePackages" "allowedInsecurePackages"];
+          flake-options = builtins.removeAttrs flake-and-lib-options ["inputs" "src" "allowedUnfreePackages" "allowedInsecurePackages" "snowfall"];
         in
           lib.mkFlake (flake-options // {
             systems.modules.nixos = bclModules;
