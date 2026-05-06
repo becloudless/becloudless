@@ -1,13 +1,13 @@
 { lib, config, pkgs, ... }:
 let
-  cfg = config.bcl.dataDisks;
+  cfg = config.bcl.data;
   # Accept attrset with { path, mode } and normalize to maps of paths and modes
-  disks = lib.mapAttrs (_: v: v.path) (lib.filterAttrs (_: v: v.path != "") cfg);
-  diskModes = lib.mapAttrs (_: v: v.mode or "rw") cfg;
-  fileSystemsEntries = builtins.listToAttrs (lib.mapAttrsToList (name: _: {
+  disks = lib.mapAttrs (_: v: v.path) (lib.filterAttrs (_: v: v.path != "") cfg.disks);
+  diskModes = lib.mapAttrs (_: v: v.mode or "rw") cfg.disks;
+  fileSystemsEntries = builtins.listToAttrs (lib.mapAttrsToList (name: path: {
     name = "/disks/${name}";
     value = {
-      device = "/dev/mapper/${name}";
+      device = if cfg.encryption then "/dev/mapper/${name}" else path;
       fsType = "auto";
       options = [ (diskModes.${name}) "defaults" "nofail" ];
     };
@@ -52,35 +52,43 @@ let
     };
   }) disks);
 in {
-  options.bcl.dataDisks = lib.mkOption {
-    type = lib.types.attrsOf (lib.types.submodule ({ ... }: {
-      options = {
-        path = lib.mkOption {
-          type = lib.types.str;
-          description = "Underlying block device path for the encrypted data disk.";
+  options.bcl.data = {
+    encryption = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Whether disks are LUKS-encrypted. When enabled, devices are opened via /dev/mapper and registered in crypttab.";
+    };
+
+    disks = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.submodule ({ ... }: {
+        options = {
+          path = lib.mkOption {
+            type = lib.types.str;
+            description = "Underlying block device path for the data disk.";
+          };
+          mode = lib.mkOption {
+            type = lib.types.enum [ "ro" "rw" ];
+            default = "rw";
+            description = "Mount mode used for the underlying /disks/* mounts (ro/rw).";
+          };
+          location = lib.mkOption {
+            type = lib.types.str;
+            default = "";
+            description = "Physical location of the disk.";
+          };
         };
-        mode = lib.mkOption {
-          type = lib.types.enum [ "ro" "rw" ];
-          default = "rw";
-          description = "Mount mode used for the underlying /disks/* mounts (ro/rw).";
-        };
-        location = lib.mkOption {
-          type = lib.types.str;
-          default = "";
-          description = "Physical location of the disk.";
-        };
+      }));
+      default = {};
+      example = {
+        nvme1 = { path = "/dev/disk/by-id/nvme-dsfsdfs00"; mode = "rw"; };
+        hdd1 = { path = "/dev/disk/by-id/ata-sdfdsQBJW8L1T"; mode = "ro"; };
       };
-    }));
-    default = {};
-    example = {
-      nvme1 = { path = "/dev/disk/by-id/nvme-dsfsdfs00"; mode = "rw"; };
-      hdd1 = { path = "/dev/disk/by-id/ata-sdfdsQBJW8L1T"; mode = "ro"; };
     };
   };
 
   config = lib.mkMerge [
     { fileSystems = fileSystemsEntries; }
-    (lib.mkIf (crypttabText != "") { environment.etc.crypttab.text = crypttabText + "\n"; })
+    (lib.mkIf (cfg.encryption && crypttabText != "") { environment.etc.crypttab.text = crypttabText + "\n"; })
     (lib.mkIf (disks != {}) {
       fileSystems = mergerfsFileSystems;
       systemd.services = dataMergerServices;
