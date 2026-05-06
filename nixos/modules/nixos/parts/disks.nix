@@ -2,14 +2,6 @@
 let
   cfg = config.bcl.disks;
 
-  modeToLevel = {
-    raid0  =  0;
-    raid1  =  1;
-    raid5  =  5;
-    raid6  =  6;
-    raid10 = 10;
-  };
-
   isRaid = diskCfg: builtins.length diskCfg.devices > 1;
 
   # Filesystem (or LUKS-wrapped filesystem) content leaf
@@ -53,7 +45,7 @@ let
   # One disko mdadm entry per RAID disk
   mkMdadmEntry = name: diskCfg: {
     type    = "mdadm";
-    level   = modeToLevel.${diskCfg.mode};
+    level   = diskCfg.raidMode;
     content = fsContent name diskCfg;
   };
 
@@ -73,19 +65,20 @@ in {
         path      = "/disks/ssd1";
         encrypted = true;
         format    = "btrfs";
-        mode      = "raid0";       # default, used when devices > 1
+        raidMode  = 0;             # default, used when devices > 1
         devices   = [ "/dev/disk/by-id/xxx" "/dev/disk/by-id/yyy" ];
       };
     };
-    type = lib.types.attrsOf (lib.types.submodule ({ ... }: {
+    type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
       options = {
         path = lib.mkOption {
           type        = lib.types.str;
-          description = "Mount point for the assembled volume (e.g. /disks/ssd1).";
+          default     = "/disks/${name}";
+          description = "Mount point for the assembled volume. Defaults to /disks/<name>.";
         };
         encrypted = lib.mkOption {
           type        = lib.types.bool;
-          default     = false;
+          default     = true;
           description = "Wrap the filesystem in a LUKS container.";
         };
         format = lib.mkOption {
@@ -93,9 +86,9 @@ in {
           default     = "btrfs";
           description = "Filesystem type passed to mkfs (e.g. ext4, btrfs, xfs).";
         };
-        mode = lib.mkOption {
-          type        = lib.types.enum [ "raid0" "raid1" "raid5" "raid6" "raid10" ];
-          default     = "raid0";
+        raidMode = lib.mkOption {
+          type        = lib.types.int;
+          default     = 0;
           description = ''
             mdadm RAID level to use when multiple devices are provided.
             Ignored when only a single device is specified.
