@@ -2963,9 +2963,9 @@ fast-glob@^3.2.12, fast-glob@^3.2.2:
     micromatch "^4.0.8"
 
 fast-xml-builder@^1.1.5:
-  version "1.1.8"
-  resolved "https://registry.yarnpkg.com/fast-xml-builder/-/fast-xml-builder-1.1.8.tgz#7bbc0c3957587f3c44d13c10fa1fdf8d4bcc328b"
-  integrity sha512-sDVBc2gg8pSKvcbE8rBmOyjSGQf0AdsbqvHeIOv3D/uYNoV4eCReQXyDF8Pdv8+m1FHazACypSz2hR7O2S1LLw==
+  version "1.1.9"
+  resolved "https://registry.yarnpkg.com/fast-xml-builder/-/fast-xml-builder-1.1.9.tgz#96bf8de1e3a5f560149b6092844db4e6fd0ee38f"
+  integrity sha512-jcyKVSEX13iseJqg7n/KWw+xnu/7fdrZ333Fac54KjHDIELVCfDDJXYIm6DTJ0Su4gSzrhqiK0DzY/wZbF40mw==
   dependencies:
     path-expression-matcher "^1.1.3"
 
@@ -3068,10 +3068,19 @@ fs-extra@11.3.0:
     jsonfile "^6.0.1"
     universalify "^2.0.0"
 
-fs-extra@11.3.4, fs-extra@^11.3.4:
+fs-extra@11.3.4:
   version "11.3.4"
   resolved "https://registry.yarnpkg.com/fs-extra/-/fs-extra-11.3.4.tgz#ab6934eca8bcf6f7f6b82742e33591f86301d6fc"
   integrity sha512-CTXd6rk/M3/ULNQj8FBqBWHYBVYybQ3VPBw0xGKFe3tuH7ytT6ACnvzpIQ3UZtB8yvUKC2cXn1a+x+5EVQLovA==
+  dependencies:
+    graceful-fs "^4.2.0"
+    jsonfile "^6.0.1"
+    universalify "^2.0.0"
+
+fs-extra@^11.3.4:
+  version "11.3.5"
+  resolved "https://registry.yarnpkg.com/fs-extra/-/fs-extra-11.3.5.tgz#07a44eff40bea53e719909a532f91a23bf0769ff"
+  integrity sha512-eKpRKAovdpZtR1WopLHxlBWvAgPny3c4gX1G5Jhwmmw4XJj0ifSD5qB5TOo8hmA0wlRKDAOAhEE1yVPgs6Fgcg==
   dependencies:
     graceful-fs "^4.2.0"
     jsonfile "^6.0.1"
@@ -4283,9 +4292,9 @@ neotraverse@0.6.18:
   integrity sha512-Z4SmBUweYa09+o6pG+eASabEpP6QkQ70yHj351pQoEXIs8uHbaU2DWVmzBANKgflPa47A50PtB2+NgRpQvr7vA==
 
 node-abi@^3.3.0:
-  version "3.90.0"
-  resolved "https://registry.yarnpkg.com/node-abi/-/node-abi-3.90.0.tgz#5aca953aa58deb903738adf14a33fb79a32c48f3"
-  integrity sha512-pZNQT7UnYlMwMBy5N1lV5X/YLTbZM5ncytN3xL7CHEzhDN8uVe0u55yaPUJICIJjaCW8NrM5BFdqr7HLweStNA==
+  version "3.92.0"
+  resolved "https://registry.yarnpkg.com/node-abi/-/node-abi-3.92.0.tgz#18e2214677499b8dda81ffcd095afc763d5a9802"
+  integrity sha512-KdHvFWZjEKDf0cakgFjebl371GPsISX2oZHcuyKqM7DtogIsHrqKeLTo8wBHxaXRAQlY2PsPlZmfo+9ZCxEREQ==
   dependencies:
     semver "^7.3.5"
 
