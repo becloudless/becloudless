@@ -5,6 +5,7 @@ let
   # Per-entry helpers
   mkEntryConfig = dataName: entryCfg:
     let
+      mountPoint = if entryCfg.mount != "" then entryCfg.mount else "/data/${dataName}";
       devices = lib.mapAttrs (_: v: v.path) (lib.filterAttrs (_: v: v.path != "") entryCfg.devices);
       deviceModes = lib.mapAttrs (_: v: v.mode or "rw") entryCfg.devices;
 
@@ -20,7 +21,7 @@ let
       crypttabLines = lib.mapAttrsToList (name: path: "${name}  ${path}          none luks") devices;
 
       mergerfsFileSystem = lib.optionalAttrs (devices != {}) {
-        "/data/${dataName}" = {
+        "${mountPoint}" = {
           device = "/var/empty";
           fsType = "fuse.mergerfs";
           options = [ "rw" "minfreespace=50G" "category.create=msplfs" "defaults" "allow_other" ];
@@ -30,7 +31,7 @@ let
       mergerServices = lib.mapAttrs' (name: _: {
         name = "data-${dataName}-merger@${name}";
         value = {
-          description = "Merge /disks/${name} into mergerfs pool at /data/${dataName}";
+          description = "Merge /disks/${name} into mergerfs pool at ${mountPoint}";
           after = [ "disks-${name}.mount" ];
           requires = [ "disks-${name}.mount" ];
           wantedBy = [ "disks-${name}.mount" ];
@@ -42,7 +43,7 @@ let
           script = ''
             # https://trapexit.github.io/mergerfs/latest/runtime_interface/#setting
             echo "Adding /disks/${name} to mergerfs"
-            setfattr -n user.mergerfs.branches -v "+>/disks/${name}=RW" /data/${dataName}/.mergerfs
+            setfattr -n user.mergerfs.branches -v "+>/disks/${name}=RW" ${mountPoint}/.mergerfs
           '';
         };
       }) devices;
@@ -61,6 +62,12 @@ let
 
   entrySubmodule = { ... }: {
     options = {
+      mount = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = "Override the mergerfs mount point. Defaults to /data/<name>.";
+      };
+
       encryption = lib.mkOption {
         type = lib.types.bool;
         default = true;
