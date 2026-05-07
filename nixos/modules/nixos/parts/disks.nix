@@ -16,7 +16,7 @@ let
       device  = if diskCfg.encrypted
                 then "/dev/mapper/${name}"
                 else underlyingDevice name diskCfg;
-      fsType  = diskCfg.format;
+      fsType  = "auto";
       options = [ "defaults" "nofail" ];
     };
   }) cfg;
@@ -40,7 +40,6 @@ in {
     example     = {
       ssd1 = {
         encrypted = true;
-        format    = "btrfs";
         raidMode  = 1;
         devices   = [ "/dev/disk/by-id/xxx" "/dev/disk/by-id/yyy" ];
       };
@@ -57,11 +56,6 @@ in {
           default     = true;
           description = "Wrap the filesystem in a LUKS container.";
         };
-        format = lib.mkOption {
-          type        = lib.types.str;
-          default     = "btrfs";
-          description = "Filesystem type passed to mkfs (e.g. ext4, btrfs, xfs).";
-        };
         location = lib.mkOption {
           type        = lib.types.str;
           default     = "";
@@ -69,15 +63,16 @@ in {
         };
         raidMode = lib.mkOption {
           type        = lib.types.int;
-          default     = 0;
+          default     = 1;
           description = ''
             mdadm RAID level to use when multiple devices are provided.
             Ignored when only a single device is specified.
           '';
         };
         devices = lib.mkOption {
-          type        = lib.types.listOf lib.types.str;
-          description = "Ordered list of block-device paths that make up this volume.";
+          type        = lib.types.either lib.types.str (lib.types.listOf lib.types.str);
+          apply       = d: if builtins.isString d then [ d ] else d;
+          description = "Block-device path(s) that make up this volume. A single string is accepted for the single-device case.";
         };
       };
     }));
