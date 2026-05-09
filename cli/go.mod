@@ -13,8 +13,12 @@ require (
 	github.com/fzipp/gocyclo v0.6.0
 	github.com/getsops/sops/v3 v3.12.2
 	github.com/go-bindata/go-bindata/v3 v3.1.3
-	github.com/go-git/go-git/v6 v6.0.0-alpha.2
+	github.com/go-git/go-git/v6 v6.0.0-alpha.3
 	github.com/gordonklaus/ineffassign v0.2.0
+	github.com/hashicorp/go-version v1.9.0
+	github.com/hashicorp/hc-install v0.9.5
+	github.com/hashicorp/terraform-config-inspect v0.0.0-20260224005459-813a97530220
+	github.com/mitchellh/go-homedir v1.1.0
 	github.com/moby/buildkit v0.29.0
 	github.com/n0rad/go-app v0.0.0-20260502170822-14ac9a7082c9
 	github.com/n0rad/go-erlog v0.0.0-20260115131226-fdddb793d4f1
@@ -132,7 +136,7 @@ require (
 	github.com/go-bindata/go-bindata v3.1.2+incompatible // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-git/gcfg/v2 v2.0.2 // indirect
-	github.com/go-git/go-billy/v6 v6.0.0-20260328065524-593ae452e14d // indirect
+	github.com/go-git/go-billy/v6 v6.0.0-20260424211911-732291493fb8 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
@@ -177,11 +181,8 @@ require (
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.2.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.7 // indirect
-	github.com/hashicorp/go-version v1.9.0 // indirect
-	github.com/hashicorp/hc-install v0.9.5 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-7 // indirect
 	github.com/hashicorp/hcl/v2 v2.20.1 // indirect
-	github.com/hashicorp/terraform-config-inspect v0.0.0-20260224005459-813a97530220 // indirect
 	github.com/hashicorp/vault/api v1.22.0 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.187 // indirect
@@ -203,7 +204,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.20 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
@@ -219,7 +219,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
-	github.com/pjbgf/sha1cd v0.5.0 // indirect
+	github.com/pjbgf/sha1cd v0.6.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
