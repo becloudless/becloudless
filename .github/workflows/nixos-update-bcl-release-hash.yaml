@@ -48,7 +48,7 @@ jobs:
             sed -i "s|\"${platform}\"  *=.*|\"${platform}\" = \"${hash}\";|" "$FILE"
           done
 
-      - uses: iarekylew00t/verified-bot-commit@126a6a11889ab05bcff72ec2403c326cd249b84c # v2.3.0
+      - uses: iarekylew00t/verified-bot-commit@b17b2c2fe487f8465872a5f04be8076cbace39a6 # v2.3.1
         with:
           ref: ${{ github.ref_name }}
           token: ${{ steps.github-app-token.outputs.token }}
