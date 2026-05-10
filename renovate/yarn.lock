@@ -3584,9 +3584,9 @@ jsonata@2.1.0:
   integrity sha512-OCzaRMK8HobtX8fp37uIVmL8CY1IGc/a6gLsDqz3quExFR09/U78HUzWYr7T31UEB6+Eu0/8dkVD5fFDOl9a8w==
 
 jsonc-morph@^0.3.3:
-  version "0.3.3"
-  resolved "https://registry.yarnpkg.com/jsonc-morph/-/jsonc-morph-0.3.3.tgz#ecf4e381b6416a380135fa2c9c54ac0971bf85c8"
-  integrity sha512-YljoHRXfZacx4utaktqGlz8p9xJJaV12WxciEpf4+g+8jVk0QNmxpxStkXVwjTnJZr9EAK4TT5TzdCO5M2i7rw==
+  version "0.3.4"
+  resolved "https://registry.yarnpkg.com/jsonc-morph/-/jsonc-morph-0.3.4.tgz#9206e5e22e0633e1a8ffe3954faf65b832eefd1b"
+  integrity sha512-tY9H0tplGdRZ0O/7N0qQGr8RuiwuAqGZfO1NCcy986qdMf2gcWTQnr2YF+Q3VkaCBKN2+mTPSZzewg3V4rWXQg==
 
 jsonc-weaver@0.2.4:
   version "0.2.4"
