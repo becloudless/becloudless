@@ -4473,11 +4473,10 @@ protobufjs@8.0.1:
     long "^5.0.0"
 
 protobufjs@^8.0.1:
-  version "8.2.0"
-  resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-8.2.0.tgz#b062ced7379d1363180473093aeac9a8048e30e7"
-  integrity sha512-oI+GC9iPxrQEr6wragljFKH46/r3rNsm6eg7F2fp6kBUMnf6/mesDRdBuF4gK+OyaKJ8N4C1B9s9cCeYdqFikg==
+  version "8.3.0"
+  resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-8.3.0.tgz#c4f07a327c7293a6a6d8df7b6ade18b66102531e"
+  integrity sha512-JpJpFaR7yKNb6WqKvJJ1MLbiuIQWQnbUUb06nDtf2/i8YWYYLEfP6xf9BwSJoJQg1wAy61EQB8dssQg64oX4aA==
   dependencies:
-    "@types/node" ">=13.7.0"
     long "^5.0.0"
 
 protocols@^2.0.0, protocols@^2.0.1:
