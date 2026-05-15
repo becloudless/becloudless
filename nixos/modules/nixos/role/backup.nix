@@ -20,14 +20,25 @@
             while true; do
                 ((count=$count+1))
 
+                loggedInCount=$(who | wc -l)
+                sshConnCount=$(ss -t -a | grep ssh | grep ESTAB | wc -l)
+
                 scrubActive=0
                 if systemctl list-units --type=service --state=running --no-legend 'disk-scrub-*.service' | grep -q .; then
                     scrubActive=1
                 fi
 
-                if [[ $(who | wc -l) -gt 0 ]] || [[ $(ss -t -a | grep ssh | grep ESTAB | wc -l) -gt 0 ]] || [[ $scrubActive -eq 1 ]]; then
+                if [[ $loggedInCount -gt 0 ]] || [[ $sshConnCount -gt 0 ]] || [[ $scrubActive -eq 1 ]]; then
+                    if [[ $count -gt 0 ]]; then
+                        reason=""
+                        if [[ $loggedInCount -gt 0 ]]; then reason+="logged-in users=${loggedInCount}; "; fi
+                        if [[ $sshConnCount -gt 0 ]]; then reason+="active ssh sessions=${sshConnCount}; "; fi
+                        if [[ $scrubActive -eq 1 ]]; then reason+="disk scrub in progress; "; fi
+                        echo "Skipping auto-shutdown: ${reason}"
+                    fi
                     count=0
                 fi
+
                 if [[ $count -gt $maxInterval ]]; then
                     echo "No connection since $((count*intervalSecond)) sec, powering off"
                     systemctl poweroff
