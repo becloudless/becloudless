@@ -19,7 +19,7 @@ let
         Type = "oneshot";
         User = "root";
       };
-      path = with pkgs; [ wol openssh rsync iputils gocryptfs fuse gawk ];
+      path = with pkgs; [ wol openssh rsync iputils gocryptfs fuse gawk util-linux ];
       script = ''
         set -euo pipefail
 
@@ -56,9 +56,9 @@ let
         echo "[backup-${name}] Mounting gocryptfs reverse view of ${backup.source} at $MOUNT_DIR..."
         if [ ! -f "${backup.source}/.gocryptfs.reverse.conf" ]; then
           echo "[backup-${name}] No gocryptfs config found, initialising..."
-          gocryptfs -reverse -init -passfile "$PASS_FILE" "${backup.source}"
+          gocryptfs -reverse -init -nosyslog -passfile "$PASS_FILE" "${backup.source}"
         fi
-        gocryptfs -reverse -passfile "$PASS_FILE" "${backup.source}" "$MOUNT_DIR"
+        gocryptfs -reverse -nosyslog -passfile "$PASS_FILE" "${backup.source}" "$MOUNT_DIR"
 
         echo "[backup-${name}] Starting rsync..."
         rsync -avz --delete \
