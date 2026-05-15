@@ -29,6 +29,7 @@ let
       path = with pkgs; [ wol openssh rsync iputils gocryptfs fuse gawk util-linux ];
       script = ''
         set -euo pipefail
+        set -x
 
         ${lib.optionalString (backup.targetMac != null) ''
           echo "[backup-${name}] Waking up ${host} via WOL (${backup.targetMac})..."
