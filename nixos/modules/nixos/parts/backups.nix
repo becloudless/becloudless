@@ -4,12 +4,14 @@ let
 
   enabledBackups = lib.filterAttrs (_: b: b.enable) cfg;
 
-  # Extract IP/hostname from "host:/path"
+  # Extract IP/hostname and path from "host:/path"
   targetHost = target: builtins.head (lib.splitString ":" target);
+  targetPath = target: builtins.elemAt (lib.splitString ":" target) 1;
 
   mkBackupService = name: backup:
     let
       host        = targetHost backup.target;
+      path        = targetPath backup.target;
       # Build "-exclude-wildcard '!foo' -exclude-wildcard '!bar' -exclude-wildcard '*'"
       # so that only the listed patterns are included in the encrypted view.
       excludeArgs = lib.optionalString (backup.sourceIncludes != []) (
@@ -27,7 +29,6 @@ let
       path = with pkgs; [ wol openssh rsync iputils gocryptfs fuse gawk util-linux ];
       script = ''
         set -euo pipefail
-        set -x
 
         ${lib.optionalString (backup.targetMac != null) ''
           echo "[backup-${name}] Waking up ${host} via WOL (${backup.targetMac})..."
@@ -53,7 +54,7 @@ let
         trap '
           echo "[backup-${name}] Unmounting $MOUNT_DIR"
           fusermount -u "$MOUNT_DIR" && rmdir "$MOUNT_DIR"
-          rm -f "$PASS_FILE"
+          rm -f "$PASS_FILE" "$RSYNC_STDERR"
         ' EXIT
 
         echo "[backup-${name}] Deriving gocryptfs passphrase from SSH key..."
@@ -67,10 +68,22 @@ let
         gocryptfs -reverse -nosyslog ${excludeArgs} -passfile "$PASS_FILE" "${backup.source}" "$MOUNT_DIR"
 
         echo "[backup-${name}] Starting rsync..."
+        RSYNC_STDERR=$(mktemp /run/backup-${name}-rsync-err-XXXXXX)
+        set +e
         rsync -avz --delete \
           -e "ssh -i /nix/etc/ssh/ssh_host_ed25519_key -o StrictHostKeyChecking=no" \
           "$MOUNT_DIR/" \
-          "root@${backup.target}/"
+          "root@${backup.target}/" \
+          2>"$RSYNC_STDERR"
+        RSYNC_EXIT=$?
+        set -e
+        # Ignore "failed to set times" only on the root destination folder
+        REAL_ERRORS=$(grep -v 'failed to set times on "${path}/.": Operation not permitted' "$RSYNC_STDERR" || true)
+        rm -f "$RSYNC_STDERR"
+        if [ -n "$REAL_ERRORS" ]; then
+          echo "$REAL_ERRORS" >&2
+          exit $RSYNC_EXIT
+        fi
 
         echo "[backup-${name}] Backup complete"
       '';
@@ -94,8 +107,8 @@ in {
         enable       = true;
         source       = "/data/Audio";
         sourceIncludes = [ "*.flac" "*.mp3" ];
-        target       = "192.168.40.49:/data/week";
-        targetMac    = "00:d8:61:6f:e8:6e";
+        target       = "192.168.0.1:/data/week";
+        targetMac    = "00:d8:61:6f:f4:6e";
         timer        = "Mon 02:00";
       };
     };
