@@ -60,7 +60,7 @@ in {
       hardware = {
         device = cfg.hardware;
       };
-      disk = {
+      diskSystem = {
         enable = true;
         devices = cfg.devices;
       };

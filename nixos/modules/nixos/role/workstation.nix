@@ -9,7 +9,7 @@ in
   config = lib.mkMerge [
     { bcl.role.knownRoles = [ "workstation" ]; }
     (lib.mkIf (config.bcl.role.name == "workstation") {
-    bcl.disk.encrypted = true;
+    bcl.diskSystem.encrypted = true;
     bcl.boot.plymouth = true;
     bcl.boot.quiet = true;
     bcl.bluetooth.enable = true;
