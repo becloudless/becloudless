@@ -19,7 +19,7 @@ let
         Type = "oneshot";
         User = "root";
       };
-      path = with pkgs; [ wol openssh rsync iputils gocryptfs fuse awk ];
+      path = with pkgs; [ wol openssh rsync iputils gocryptfs fuse gawk ];
       script = ''
         set -euo pipefail
 
