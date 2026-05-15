@@ -4,15 +4,13 @@ let
 
   enabledBackups = lib.filterAttrs (_: b: b.enable) cfg;
 
-  # Extract IP/hostname and path from "host:/path"
+  # Extract IP/hostname from "host:/path"
   targetHost = target: builtins.head (lib.splitString ":" target);
-  targetPath = target: builtins.elemAt (lib.splitString ":" target) 1;
 
   mkBackupService = name: backup:
     let
       host        = targetHost backup.target;
-      path        = targetPath backup.target;
-      # Build "-exclude-wildcard '!foo' -exclude-wildcard '!bar' -exclude-wildcard '*'"
+      # Build "-exclude-wildcard '*' -exclude-wildcard '!foo' ..."
       # so that only the listed patterns are included in the encrypted view.
       excludeArgs = lib.optionalString (backup.sourceIncludes != []) (
         "-exclude-wildcard '*' "
@@ -55,7 +53,7 @@ let
         trap '
           echo "[backup-${name}] Unmounting $MOUNT_DIR"
           fusermount -u "$MOUNT_DIR" && rmdir "$MOUNT_DIR"
-          rm -f "$PASS_FILE" "$RSYNC_STDERR"
+          rm -f "$PASS_FILE"
         ' EXIT
 
         echo "[backup-${name}] Deriving gocryptfs passphrase from SSH key..."
@@ -69,25 +67,10 @@ let
         gocryptfs -reverse -nosyslog -allow_other ${excludeArgs} -passfile "$PASS_FILE" "${backup.source}" "$MOUNT_DIR"
 
         echo "[backup-${name}] Starting rsync..."
-        RSYNC_STDERR=$(mktemp /run/backup-${name}-rsync-err-XXXXXX)
-        set +e
-        rsync -avz --delete --ignore-errors \
+        rsync -avzO --delete \
           -e "ssh -i /nix/etc/ssh/ssh_host_ed25519_key -o StrictHostKeyChecking=no" \
           "$MOUNT_DIR/" \
-          "root@${backup.target}/" \
-          2>"$RSYNC_STDERR"
-        RSYNC_EXIT=$?
-        set -e
-        # Ignore "failed to set times" only on the root destination folder
-        # Ignore gocryptfs longname sidecar .name file readlink errors (known FUSE/gocryptfs reverse-mode quirk)
-        REAL_ERRORS=$(grep -v 'failed to set times on "${path}/.": Operation not permitted' "$RSYNC_STDERR" \
-          | grep -v 'readlink_stat(.*\.name.*): Operation not permitted' \
-          || true)
-        rm -f "$RSYNC_STDERR"
-        if [ -n "$REAL_ERRORS" ]; then
-          echo "$REAL_ERRORS" >&2
-          exit $RSYNC_EXIT
-        fi
+          "root@${backup.target}/"
 
         echo "[backup-${name}] Backup complete"
       '';
