@@ -145,6 +145,9 @@ in {
             OnCalendar = diskCfg.scrubInterval;
             # Run on next boot if the scheduled time was missed (machine was off)
             Persistent = true;
+            # Add stable jitter to avoid all hosts scrubbing simultaneously
+            RandomizedDelaySec = "1d";
+            FixedRandomDelay = true;
             Unit       = "${safeName}.service";
           };
         }

@@ -19,7 +19,13 @@
             maxInterval=60
             while true; do
                 ((count=$count+1))
-                if [[ $(who | wc -l) -gt 0 ]] || [[ $(ss -t -a | grep ssh | grep ESTAB | wc -l) -gt 0 ]]; then
+
+                scrubActive=0
+                if systemctl list-units --type=service --state=running --no-legend 'disk-scrub-*.service' | grep -q .; then
+                    scrubActive=1
+                fi
+
+                if [[ $(who | wc -l) -gt 0 ]] || [[ $(ss -t -a | grep ssh | grep ESTAB | wc -l) -gt 0 ]] || [[ $scrubActive -eq 1 ]]; then
                     count=0
                 fi
                 if [[ $count -gt $maxInterval ]]; then
