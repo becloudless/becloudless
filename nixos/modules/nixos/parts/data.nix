@@ -6,7 +6,11 @@ let
   mountUnitName = path:
     (builtins.replaceStrings [ "/" ] [ "-" ] (lib.removePrefix "/" path)) + ".mount";
 
-  singleSource = dataCfg: builtins.length dataCfg.sourceFolders == 1;
+  singleSource = dataCfg:
+    dataCfg.sourceFoldersPattern == null && builtins.length dataCfg.sourceFolders == 1;
+
+  usesMergerfs = dataCfg:
+    dataCfg.sourceFoldersPattern != null || builtins.length dataCfg.sourceFolders > 1;
 
   fileSystemsEntries = lib.mapAttrs' (name: dataCfg: {
     name  = dataCfg.path;
@@ -31,7 +35,7 @@ let
     };
   }) cfg;
 
-  multiSourceCfg = lib.filterAttrs (_: dataCfg: !(singleSource dataCfg)) cfg;
+  multiSourceCfg = lib.filterAttrs (_: dataCfg: usesMergerfs dataCfg) cfg;
 
   dataSourceServices = lib.mapAttrs' (name: dataCfg: {
     name = "data-sources-${name}";
@@ -45,18 +49,33 @@ let
         Type            = "oneshot";
         RemainAfterExit = true;
       };
-      script = ''
-        for src in ${lib.concatStringsSep " " dataCfg.sourceFolders}; do
-          if [ -d "$src" ]; then
-            echo "Adding $src to mergerfs at ${dataCfg.path}"
-            setfattr -n user.mergerfs.branches \
-              -v "+>$src=${if dataCfg.mode == "rw" then "RW" else "RO"}" \
-              "${dataCfg.path}/.mergerfs"
-          else
-            echo "Skipping $src (not found)"
-          fi
-        done
-      '';
+      script =
+        let
+          branchMode = if dataCfg.mode == "rw" then "RW" else "RO";
+          addBranch = ''
+            add_branch() {
+              local src="$1"
+              if [ -d "$src" ]; then
+                echo "Adding $src to mergerfs at ${dataCfg.path}"
+                setfattr -n user.mergerfs.branches \
+                  -v "+>$src=${branchMode}" \
+                  "${dataCfg.path}/.mergerfs"
+              else
+                echo "Skipping $src (not found)"
+              fi
+            }
+          '';
+          staticPart = lib.optionalString (dataCfg.sourceFolders != []) ''
+            for src in ${lib.concatStringsSep " " dataCfg.sourceFolders}; do
+              add_branch "$src"
+            done
+          '';
+          patternPart = lib.optionalString (dataCfg.sourceFoldersPattern != null) ''
+            for src in ${dataCfg.sourceFoldersPattern}; do
+              add_branch "$src"
+            done
+          '';
+        in addBranch + staticPart + patternPart;
     };
   }) multiSourceCfg;
 
@@ -78,8 +97,14 @@ in {
         };
         sourceFolders = lib.mkOption {
           type        = lib.types.either lib.types.str (lib.types.listOf lib.types.str);
+          default     = [];
           apply       = s: if builtins.isString s then [ s ] else s;
           description = "Source folder(s) to merge. A single string is accepted for the single-source case.";
+        };
+        sourceFoldersPattern = lib.mkOption {
+          type        = lib.types.nullOr lib.types.str;
+          default     = null;
+          description = "Shell glob pattern evaluated at runtime to discover source folders (e.g. \"/disks/*/Videos\"). Always uses mergerfs + systemd service.";
         };
         mode = lib.mkOption {
           type        = lib.types.enum [ "rw" "ro" ];
@@ -91,6 +116,10 @@ in {
   };
 
   config = lib.mkIf (cfg != {}) {
+    assertions = lib.mapAttrsToList (name: dataCfg: {
+      assertion = dataCfg.sourceFolders != [] || dataCfg.sourceFoldersPattern != null;
+      message   = "bcl.data.${name}: at least one of sourceFolders or sourceFoldersPattern must be set.";
+    }) cfg;
     fileSystems      = fileSystemsEntries;
     systemd.services = dataSourceServices;
   };
