@@ -31,7 +31,7 @@ let
         echo "[backup-${name}] Waiting for SSH on ${host}..."
         timeout=300
         elapsed=0
-        until ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes \
+        until ssh -i /nix/etc/ssh/ssh_host_ed25519_key -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes \
               root@${host} true 2>/dev/null; do
           if [ "$elapsed" -ge "$timeout" ]; then
             echo "[backup-${name}] Timeout waiting for SSH on ${host}" >&2
@@ -60,7 +60,7 @@ let
         echo "[backup-${name}] Starting rsync..."
         rsync -avz --delete \
           ${filterArgs} \
-          -e "ssh -o StrictHostKeyChecking=no" \
+          -e "ssh -i /nix/etc/ssh/ssh_host_ed25519_key -o StrictHostKeyChecking=no" \
           "$MOUNT_DIR/" \
           "root@${backup.target}/"
 
