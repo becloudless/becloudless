@@ -19,13 +19,13 @@ let
         Type = "oneshot";
         User = "root";
       };
-      path = with pkgs; [ etherwake openssh rsync iputils gocryptfs fuse ];
+      path = with pkgs; [ wol openssh rsync iputils gocryptfs fuse ];
       script = ''
         set -euo pipefail
 
         ${lib.optionalString (backup.targetMac != null) ''
           echo "[backup-${name}] Waking up ${host} via WOL (${backup.targetMac})..."
-          etherwake ${backup.targetMac}
+          wol ${backup.targetMac}
         ''}
 
         echo "[backup-${name}] Waiting for SSH on ${host}..."
