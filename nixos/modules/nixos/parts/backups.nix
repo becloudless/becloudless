@@ -13,8 +13,8 @@ let
       # Build "-exclude-wildcard '!foo' -exclude-wildcard '!bar' -exclude-wildcard '*'"
       # so that only the listed patterns are included in the encrypted view.
       excludeArgs = lib.optionalString (backup.sourceIncludes != []) (
-        lib.concatMapStringsSep " " (p: "-exclude-wildcard ${lib.escapeShellArg "!${p}"}") backup.sourceIncludes
-        + " -exclude-wildcard '*'"
+        "-exclude-wildcard '*' "
+        + lib.concatMapStringsSep " " (p: "-exclude-wildcard ${lib.escapeShellArg "!${p}"}") backup.sourceIncludes
       );
     in {
       description = "Backup ${name}: ${backup.source} -> ${backup.target}";
@@ -111,7 +111,7 @@ in {
         sourceIncludes = lib.mkOption {
           type        = lib.types.listOf lib.types.str;
           default     = [];
-          description = "Plaintext wildcard patterns to include in the gocryptfs reverse mount. Everything else is excluded. Implemented as: -exclude-wildcard '!pat1' -exclude-wildcard '!pat2' -exclude-wildcard '*'. Empty list includes everything.";
+          description = "Plaintext wildcard patterns to include in the gocryptfs reverse mount. Everything else is excluded. Implemented as: -exclude-wildcard '*' -exclude-wildcard '!pat1' -exclude-wildcard '!pat2'. Empty list includes everything.";
         };
 
         target = lib.mkOption {
