@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 let
   cfg = config.bcl.disks;
 
@@ -79,6 +79,18 @@ in {
           apply       = d: if builtins.isString d then [ d ] else d;
           description = "Block-device path(s) that make up this volume. A single string is accepted for the single-device case.";
         };
+        scrubInterval = lib.mkOption {
+          type        = lib.types.nullOr lib.types.str;
+          default     = null;
+          example     = "monthly";
+          description = ''
+            systemd OnCalendar expression for periodic BTRFS scrubs (e.g. "weekly",
+            "monthly", "*-*-01 02:00:00"). null disables scrubbing.
+            The timer is persistent: if the machine is off at the scheduled time the
+            scrub runs on the next boot. An interrupted scrub is resumed rather than
+            restarted from scratch.
+          '';
+        };
       };
     }));
   };
@@ -97,6 +109,46 @@ in {
     (lib.mkIf (raidCfgs != {}) {
       boot.swraid.enable    = true;
       boot.swraid.mdadmConf = mdadmConfLines + "\n";
+    })
+
+    # BTRFS scrub timers (one timer+service pair per disk with scrubInterval set)
+    (let
+      scrubDisks = lib.filterAttrs (_: d: d.scrubInterval != null) cfg;
+    in lib.mkIf (scrubDisks != {}) {
+      environment.systemPackages = [ pkgs.btrfs-progs ];
+
+      systemd.services = lib.mapAttrs' (name: diskCfg:
+        let safeName = "disk-scrub-${name}";
+        in lib.nameValuePair safeName {
+          description = "BTRFS scrub for ${diskCfg.path}";
+          after        = [ "local-fs.target" ];
+
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = pkgs.writeShellScript "btrfs-scrub-${name}" ''
+              # Resume an interrupted scrub; fall back to a fresh one
+              if ! ${pkgs.btrfs-progs}/bin/btrfs scrub resume -B ${diskCfg.path} 2>/dev/null; then
+                echo "Starting fresh scrub for ${diskCfg.path}"
+                ${pkgs.btrfs-progs}/bin/btrfs scrub start -B ${diskCfg.path}
+              fi
+            '';
+          };
+        }
+      ) scrubDisks;
+
+      systemd.timers = lib.mapAttrs' (name: diskCfg:
+        let safeName = "disk-scrub-${name}";
+        in lib.nameValuePair safeName {
+          description = "Periodic BTRFS scrub timer for ${diskCfg.path}";
+          wantedBy    = [ "timers.target" ];
+          timerConfig = {
+            OnCalendar = diskCfg.scrubInterval;
+            # Run on next boot if the scheduled time was missed (machine was off)
+            Persistent = true;
+            Unit       = "${safeName}.service";
+          };
+        }
+      ) scrubDisks;
     })
 
   ]);
