@@ -17,7 +17,7 @@ let
                 then "/dev/mapper/${name}"
                 else underlyingDevice name diskCfg;
       fsType  = "auto";
-      options = [ "defaults" "nofail" ];
+      options = [ diskCfg.mode "defaults" "nofail" ];
     };
   }) cfg;
 
@@ -55,6 +55,11 @@ in {
           type        = lib.types.bool;
           default     = true;
           description = "Wrap the filesystem in a LUKS container.";
+        };
+        mode = lib.mkOption {
+          type        = lib.types.enum [ "rw" "ro" ];
+          default     = "rw";
+          description = "Mount mode: rw (read-write) or ro (read-only).";
         };
         location = lib.mkOption {
           type        = lib.types.str;
