@@ -31,10 +31,10 @@
                 if [[ $loggedInCount -gt 0 ]] || [[ $sshConnCount -gt 0 ]] || [[ $scrubActive -eq 1 ]]; then
                     if [[ $count -gt 0 ]]; then
                         reason=""
-                        if [[ $loggedInCount -gt 0 ]]; then reason+="logged-in users=${loggedInCount}; "; fi
-                        if [[ $sshConnCount -gt 0 ]]; then reason+="active ssh sessions=${sshConnCount}; "; fi
+                        if [[ $loggedInCount -gt 0 ]]; then reason+="logged-in users=$loggedInCount; "; fi
+                        if [[ $sshConnCount -gt 0 ]]; then reason+="active ssh sessions=$sshConnCount; "; fi
                         if [[ $scrubActive -eq 1 ]]; then reason+="disk scrub in progress; "; fi
-                        echo "Skipping auto-shutdown: ${reason}"
+                        echo "Skipping auto-shutdown: $reason"
                     fi
                     count=0
                 fi
