@@ -28,8 +28,9 @@ let
         "use_ino"
         "cache.files=partial"
         "dropcacheonclose=true"
-        "category.create=msplfs"
-        "minfreespace=50G"
+        "category.create=msplfs" # most shared path, least free space
+        "moveonenospc=mspmfs" # writing to a disk full, move the file using most shared path, most free space
+        "minfreespace=10G"
         "nofail"
       ];
     };
