@@ -81,14 +81,12 @@ in {
         };
         scrubInterval = lib.mkOption {
           type        = lib.types.nullOr lib.types.str;
-          default     = null;
-          example     = "monthly";
+          default     = "monthly";
+          example     = "weekly";
           description = ''
-            systemd OnCalendar expression for periodic BTRFS scrubs (e.g. "weekly",
-            "monthly", "*-*-01 02:00:00"). null disables scrubbing.
-            The timer is persistent: if the machine is off at the scheduled time the
-            scrub runs on the next boot. An interrupted scrub is resumed rather than
-            restarted from scratch.
+            systemd OnCalendar expression for periodic scrubs.
+            Defaults to "monthly". Set to null to disable scrubbing for this disk.
+            Scrub runs only when the mounted filesystem is BTRFS.
           '';
         };
       };
@@ -126,6 +124,12 @@ in {
           serviceConfig = {
             Type = "oneshot";
             ExecStart = pkgs.writeShellScript "btrfs-scrub-${name}" ''
+              fstype=$(${pkgs.util-linux}/bin/findmnt -n -o FSTYPE --target ${diskCfg.path} 2>/dev/null || true)
+              if [[ "$fstype" != "btrfs" ]]; then
+                echo "Skipping scrub for ${diskCfg.path}: filesystem is '$fstype'"
+                exit 0
+              fi
+
               # Resume an interrupted scrub; fall back to a fresh one
               if ! ${pkgs.btrfs-progs}/bin/btrfs scrub resume -B ${diskCfg.path} 2>/dev/null; then
                 echo "Starting fresh scrub for ${diskCfg.path}"
@@ -146,7 +150,7 @@ in {
             # Run on next boot if the scheduled time was missed (machine was off)
             Persistent = true;
             # Add stable jitter to avoid all hosts scrubbing simultaneously
-            RandomizedDelaySec = "1d";
+            RandomizedDelaySec = "7d";
             FixedRandomDelay = true;
             Unit       = "${safeName}.service";
           };
