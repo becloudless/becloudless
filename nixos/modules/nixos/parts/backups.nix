@@ -65,7 +65,7 @@ let
           echo "[backup-${name}] No gocryptfs config found, initialising..."
           gocryptfs -reverse -init -nosyslog -passfile "$PASS_FILE" "${backup.source}"
         fi
-        gocryptfs -reverse -nosyslog ${excludeArgs} -passfile "$PASS_FILE" "${backup.source}" "$MOUNT_DIR"
+        gocryptfs -reverse -nosyslog -allow_other ${excludeArgs} -passfile "$PASS_FILE" "${backup.source}" "$MOUNT_DIR"
 
         echo "[backup-${name}] Starting rsync..."
         RSYNC_STDERR=$(mktemp /run/backup-${name}-rsync-err-XXXXXX)
