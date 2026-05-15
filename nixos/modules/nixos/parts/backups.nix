@@ -9,8 +9,13 @@ let
 
   mkBackupService = name: backup:
     let
-      host       = targetHost backup.target;
-      filterArgs = lib.concatMapStringsSep " " (f: "--filter=${lib.escapeShellArg f}") backup.sourceFilter;
+      host        = targetHost backup.target;
+      # Build "-exclude-wildcard '!foo' -exclude-wildcard '!bar' -exclude-wildcard '*'"
+      # so that only the listed patterns are included in the encrypted view.
+      excludeArgs = lib.optionalString (backup.sourceIncludes != []) (
+        lib.concatMapStringsSep " " (p: "-exclude-wildcard ${lib.escapeShellArg "!${p}"}") backup.sourceIncludes
+        + " -exclude-wildcard '*'"
+      );
     in {
       description = "Backup ${name}: ${backup.source} -> ${backup.target}";
       after    = [ "network-online.target" ];
@@ -22,6 +27,7 @@ let
       path = with pkgs; [ wol openssh rsync iputils gocryptfs fuse gawk util-linux ];
       script = ''
         set -euo pipefail
+        set -x
 
         ${lib.optionalString (backup.targetMac != null) ''
           echo "[backup-${name}] Waking up ${host} via WOL (${backup.targetMac})..."
@@ -58,11 +64,10 @@ let
           echo "[backup-${name}] No gocryptfs config found, initialising..."
           gocryptfs -reverse -init -nosyslog -passfile "$PASS_FILE" "${backup.source}"
         fi
-        gocryptfs -reverse -nosyslog -passfile "$PASS_FILE" "${backup.source}" "$MOUNT_DIR"
+        gocryptfs -reverse -nosyslog ${excludeArgs} -passfile "$PASS_FILE" "${backup.source}" "$MOUNT_DIR"
 
         echo "[backup-${name}] Starting rsync..."
         rsync -avz --delete \
-          ${filterArgs} \
           -e "ssh -i /nix/etc/ssh/ssh_host_ed25519_key -o StrictHostKeyChecking=no" \
           "$MOUNT_DIR/" \
           "root@${backup.target}/"
@@ -88,7 +93,7 @@ in {
       week = {
         enable       = true;
         source       = "/data/Audio";
-        sourceFilter = [ "- *.tmp" ];
+        sourceIncludes = [ "*.flac" "*.mp3" ];
         target       = "192.168.40.49:/data/week";
         targetMac    = "00:d8:61:6f:e8:6e";
         timer        = "Mon 02:00";
@@ -103,10 +108,10 @@ in {
           description = "Local source directory to back up.";
         };
 
-        sourceFilter = lib.mkOption {
+        sourceIncludes = lib.mkOption {
           type        = lib.types.listOf lib.types.str;
           default     = [];
-          description = "List of rsync --filter rules (e.g. [ \"- *.tmp\" \"+ important/\" ]).";
+          description = "Plaintext wildcard patterns to include in the gocryptfs reverse mount. Everything else is excluded. Implemented as: -exclude-wildcard '!pat1' -exclude-wildcard '!pat2' -exclude-wildcard '*'. Empty list includes everything.";
         };
 
         target = lib.mkOption {
