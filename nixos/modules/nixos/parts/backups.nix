@@ -70,7 +70,7 @@ let
         echo "[backup-${name}] Starting rsync..."
         RSYNC_STDERR=$(mktemp /run/backup-${name}-rsync-err-XXXXXX)
         set +e
-        rsync -avz --delete \
+        rsync -avz --delete --ignore-errors \
           -e "ssh -i /nix/etc/ssh/ssh_host_ed25519_key -o StrictHostKeyChecking=no" \
           "$MOUNT_DIR/" \
           "root@${backup.target}/" \
@@ -78,7 +78,10 @@ let
         RSYNC_EXIT=$?
         set -e
         # Ignore "failed to set times" only on the root destination folder
-        REAL_ERRORS=$(grep -v 'failed to set times on "${path}/.": Operation not permitted' "$RSYNC_STDERR" || true)
+        # Ignore gocryptfs longname sidecar .name file readlink errors (known FUSE/gocryptfs reverse-mode quirk)
+        REAL_ERRORS=$(grep -v 'failed to set times on "${path}/.": Operation not permitted' "$RSYNC_STDERR" \
+          | grep -v 'readlink_stat(.*\.name.*): Operation not permitted' \
+          || true)
         rm -f "$RSYNC_STDERR"
         if [ -n "$REAL_ERRORS" ]; then
           echo "$REAL_ERRORS" >&2
