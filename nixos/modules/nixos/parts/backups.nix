@@ -54,8 +54,11 @@ let
         sha512sum /nix/etc/ssh/ssh_host_ed25519_key | awk '{print $1}' > "$PASS_FILE"
 
         echo "[backup-${name}] Mounting gocryptfs reverse view of ${backup.source} at $MOUNT_DIR..."
-        gocryptfs -reverse -passfile "$PASS_FILE" \
-          "${backup.source}" "$MOUNT_DIR"
+        if [ ! -f "${backup.source}/.gocryptfs.reverse.conf" ]; then
+          echo "[backup-${name}] No gocryptfs config found, initialising..."
+          gocryptfs -reverse -init -passfile "$PASS_FILE" "${backup.source}"
+        fi
+        gocryptfs -reverse -passfile "$PASS_FILE" "${backup.source}" "$MOUNT_DIR"
 
         echo "[backup-${name}] Starting rsync..."
         rsync -avz --delete \
