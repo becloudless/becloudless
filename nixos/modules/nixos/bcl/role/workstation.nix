@@ -10,7 +10,7 @@ in
     { bcl.role.knownRoles = [ "workstation" ]; }
     (lib.mkIf (config.bcl.role.name == "workstation") {
     bcl.diskSystem.encrypted = true;
-    bcl.boot.plymouth = true;
+    bcl.boot.plymouth.enable = true;
     bcl.boot.quiet = true;
     bcl.bluetooth.enable = true;
     bcl.sound.enable = true;

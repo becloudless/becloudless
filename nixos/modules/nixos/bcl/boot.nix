@@ -11,7 +11,25 @@ in {
   options.bcl.boot = {
     enable = lib.mkEnableOption "Enable the default settings?";
     quiet = lib.mkEnableOption "Stay quiet";
-    plymouth = lib.mkEnableOption "Enable plymouth";
+    plymouth = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          enable = lib.mkEnableOption "Enable plymouth";
+          theme = lib.mkOption {
+            type = lib.types.str;
+            default = "bcl";
+            description = ''Plymouth theme name.'';
+          };
+          themePackages = lib.mkOption {
+            type = lib.types.listOf lib.types.package;
+            default = [];
+            description = ''Plymouth theme packages to include.'';
+          };
+        };
+      };
+      default = {};
+      description = ''Plymouth bootsplash configuration.'';
+    };
     ssh = lib.mkEnableOption "Enable";
     initrdSSHPrivateKey = lib.mkOption {
       type = lib.types.str;
@@ -40,7 +58,7 @@ in {
 
     boot = {
       consoleLogLevel = if cfg.quiet then 0 else 4;
-      kernelParams = if cfg.plymouth && cfg.quiet then
+      kernelParams = if cfg.plymouth.enable && cfg.quiet then
           [
             "splash"
             "quiet"
@@ -107,9 +125,9 @@ in {
         # '';
       };
       plymouth = {
-        enable = cfg.plymouth;
-#        theme = "bcl";
-#        themePackages = with pkgs; [ bcl.plymouth-bcl ];
+        enable = cfg.plymouth.enable;
+        theme = lib.mkIf (cfg.plymouth.theme != "") cfg.plymouth.theme;
+        themePackages = [ pkgs.bcl.plymouth-bcl ] ++ cfg.plymouth.themePackages;
       };
     };
 
