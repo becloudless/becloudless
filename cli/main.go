@@ -16,7 +16,7 @@ import (
 var Embedded embed.FS
 var Version = "0.0.0"
 
-//go:generate ./dist-tools/go-jsonschema -p schema --schema-root-type global=Global ../nixos/modules/nixos/global/default.schema.json -o pkg/generated/schema/schema.go
+//go:generate ./dist-tools/go-jsonschema -p schema --schema-root-type global=Global ../nixos/modules/nixos/bcl/global.schema.json -o pkg/generated/schema/schema.go
 func main() {
 	bcl.BCL.Embedded = &Embedded
 	bcl.BCL.Version = Version
