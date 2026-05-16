@@ -32,9 +32,9 @@ let
         # try to keep files to the same disk. Filling biggest disks space first
         "category.create=mspmfs"
         # most free space
-        # pick next biggest space
+        # move current write file that cannot fit to next biggest space disk
         "moveonenospc=mfs"
-        "minfreespace=10G"
+        "minfreespace=4G"
         "nofail"
       ];
     };
