@@ -49,6 +49,10 @@ func CiDockerCmd() *cobra.Command {
 				if err != nil {
 					return errs.WithEF(err, data.WithField("file", s), "Failed to find dockerfile folder from file")
 				}
+				if file == "" {
+					logs.WithField("change", s).Debug("Skip change in root folder")
+					continue
+				}
 
 				toBuild[file] = struct{}{}
 			}
