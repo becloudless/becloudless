@@ -28,8 +28,12 @@ let
         "use_ino"
         "cache.files=partial"
         "dropcacheonclose=true"
-        "category.create=msplfs" # most shared path, least free space
-        "moveonenospc=mspmfs" # writing to a disk full, move the file using most shared path, most free space
+        # most shared path, most free space
+        # try to keep files to the same disk. Filling biggest disks space first
+        "category.create=mspmfs"
+        # most free space
+        # pick next biggest space
+        "moveonenospc=mfs"
         "minfreespace=10G"
         "nofail"
       ];
