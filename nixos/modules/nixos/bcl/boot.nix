@@ -63,14 +63,14 @@ in {
         [];
       loader = {
         timeout = lib.mkForce (if cfg.quiet then 0 else 1);
-        systemd-boot = lib.mkIf (cfg.loader == "efi" && (builtins.length config.bcl.disk.devices) == 1) {
+        systemd-boot = lib.mkIf (cfg.loader == "efi" && (builtins.length config.bcl.diskSystem.devices) == 1) {
           enable = true;
           configurationLimit = 10;
         };
-        grub = if (cfg.loader == "bios" || (cfg.loader == "efi" && (builtins.length config.bcl.disk.devices) > 1)) then {
+        grub = if (cfg.loader == "bios" || (cfg.loader == "efi" && (builtins.length config.bcl.diskSystem.devices) > 1)) then {
           enable = true;
           efiSupport = cfg.loader == "efi";
-          efiInstallAsRemovable = lib.mkIf (cfg.loader == "efi") ((builtins.length config.bcl.disk.devices) > 1); # required to install on multiple disks
+          efiInstallAsRemovable = lib.mkIf (cfg.loader == "efi") ((builtins.length config.bcl.diskSystem.devices) > 1); # required to install on multiple disks
           configurationLimit = 10;
 #          device = "nodev";
 #          theme = "${pkgs.grub-cyberexs}/share/grub/themes/CyberEXS";
@@ -81,7 +81,7 @@ in {
           enable = true;
           configurationLimit = 10;
         };
-        efi.canTouchEfiVariables = lib.mkIf (cfg.loader != "uboot") ((builtins.length config.bcl.disk.devices) <= 1);
+        efi.canTouchEfiVariables = lib.mkIf (cfg.loader != "uboot") ((builtins.length config.bcl.diskSystem.devices) <= 1);
       };
       initrd = {
         verbose = !cfg.quiet;

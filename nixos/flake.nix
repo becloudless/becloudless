@@ -41,11 +41,7 @@
     lib = bclInputs.nixpkgs.lib;
 
     bclModules = [
-        bclFlake.nixosModules.global
-        bclFlake.nixosModules.group
-        bclFlake.nixosModules.hardware
-        bclFlake.nixosModules.role
-        bclFlake.nixosModules.system
+        bclFlake.nixosModules.bcl
 
         bclInputs.nixos-facter-modules.nixosModules.facter
         bclInputs.sops-nix.nixosModules.sops

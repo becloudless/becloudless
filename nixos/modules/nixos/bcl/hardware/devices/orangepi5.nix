@@ -5,7 +5,7 @@
     (lib.mkIf (config.bcl.hardware.device == "orangepi5") {
     bcl.hardware.commons = [ "orangepi5" ];
 
-    bcl.disk.ubootPackage = lib.mkIf (config.bcl.boot.loader == "uboot") pkgs.ubootOrangePi5;
+    bcl.diskSystem.ubootPackage = lib.mkIf (config.bcl.boot.loader == "uboot") pkgs.ubootOrangePi5;
 
     hardware.deviceTree = {
       name = "rockchip/rk3588-orangepi-5.dtb";

@@ -6,10 +6,10 @@
 }:
 with lib.bcl;
 let
-  cfg = config.bcl.disk;
+  cfg = config.bcl.diskSystem;
   isMultiDevice = (builtins.length cfg.devices) > 1;
 in {
-  options.bcl.disk = {
+  options.bcl.diskSystem = {
     enable = lib.mkEnableOption "Enable the default settings?";
     encrypted = lib.mkEnableOption "Encrypt disk";
     gpt = lib.mkOption {

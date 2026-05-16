@@ -10,7 +10,7 @@ in
   config = lib.mkMerge [
     { bcl.role.knownRoles = [ "popKube" ]; }
     (lib.mkIf (config.bcl.role.name == "popKube") {
-    bcl.disk.encrypted = true;
+    bcl.diskSystem.encrypted = true;
     bcl.boot.ssh = true;
 
     security.sudo.wheelNeedsPassword = false;

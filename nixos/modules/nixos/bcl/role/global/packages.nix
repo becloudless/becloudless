@@ -5,6 +5,7 @@ in
 {
   config = lib.mkIf (config.bcl.role.name != "") {
     environment.systemPackages = with pkgs; [
+      btrfs-progs
       pciutils usbutils
       cryptsetup
       ethtool socat conntrack-tools iputils iproute2
