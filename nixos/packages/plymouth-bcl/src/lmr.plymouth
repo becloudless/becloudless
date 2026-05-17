@@ -1,9 +1,0 @@
-[Plymouth Theme]
-Name=bcl
-Description=bcl logo
-Comment=created By n0rad
-ModuleName=script
-
-[script]
-ImageDir=/usr/share/plymouth/themes/bcl
-ScriptFile=/usr/share/plymouth/themes/bcl/bcl.script

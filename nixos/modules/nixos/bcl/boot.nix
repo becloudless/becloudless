@@ -127,7 +127,7 @@ in {
       plymouth = {
         enable = cfg.plymouth.enable;
         theme = lib.mkIf (cfg.plymouth.theme != "") cfg.plymouth.theme;
-        themePackages = [ pkgs.bcl.plymouth-bcl ] ++ cfg.plymouth.themePackages;
+        themePackages = [ pkgs.bcl.plymouth-bcl-theme ] ++ cfg.plymouth.themePackages;
       };
     };
 
