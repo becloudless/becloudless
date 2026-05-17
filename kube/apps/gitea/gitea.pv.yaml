@@ -9,8 +9,8 @@ spec:
     storage: 20Gi
   volumeMode: Filesystem
   accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Delete
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
   storageClassName: longhorn
   csi:
     driver: driver.longhorn.io
