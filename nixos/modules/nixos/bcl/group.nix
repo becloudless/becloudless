@@ -15,7 +15,6 @@ in
       default = [];
       description = "List of valid group names. Each group module registers itself here.";
     };
-    secretFile = lib.mkOption { type = lib.types.path;};
   };
 
   config = lib.mkIf (cfg.name != "") {
