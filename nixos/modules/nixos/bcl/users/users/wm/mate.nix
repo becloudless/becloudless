@@ -1,6 +1,6 @@
 { config, lib, pkgs, ... }:
 let
-  mateUsers = lib.filterAttrs (name: ucfg: ucfg.wm == "mate") config.bcl.users.users;
+  mateUsers = lib.filterAttrs (name: ucfg: ucfg.wm.name == "mate") config.bcl.users.users;
 in
 {
   config = lib.mkIf (mateUsers != {}) {

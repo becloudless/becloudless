@@ -16,9 +16,29 @@ let
         description = "Shell to use for this user.";
       };
       wm = lib.mkOption {
-        type = lib.types.str;
-        default = "";
-        description = "Window manager / desktop environment to configure for this user (e.g. \"gnome\").";
+        type = lib.types.submodule {
+          options = {
+            name = lib.mkOption {
+              type = lib.types.str;
+              default = "";
+              description = "Window manager / desktop environment to configure for this user (e.g. \"gnome\").";
+            };
+            gnome.nightLight = {
+              enable = lib.mkOption {
+                type = lib.types.bool;
+                default = true;
+                description = "Enable GNOME Night Light for this user.";
+              };
+              temperature = lib.mkOption {
+                type = lib.types.ints.between 1000 10000;
+                default = 3700;
+                description = "GNOME Night Light color temperature in kelvin.";
+              };
+            };
+          };
+        };
+        default = {};
+        description = "Window manager and desktop-specific settings.";
       };
       autoLogin = lib.mkOption {
         type = lib.types.bool;

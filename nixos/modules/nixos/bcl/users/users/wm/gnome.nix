@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  gnomeUsers = lib.filterAttrs (name: ucfg: ucfg.wm == "gnome") config.bcl.users.users;
+  gnomeUsers = lib.filterAttrs (name: ucfg: ucfg.wm.name == "gnome") config.bcl.users.users;
 in
 {
   config = lib.mkIf (gnomeUsers != {}) {
@@ -192,8 +192,8 @@ in
           natural-scroll = false;
         };
         "org/gnome/settings-daemon/plugins/color" = {
-          night-light-enabled = true;
-          night-light-temperature = mkUint32 3700;
+          night-light-enabled = ucfg.wm.gnome.nightLight.enable;
+          night-light-temperature = mkUint32 ucfg.wm.gnome.nightLight.temperature;
         };
         "org/gnome/settings-daemon/plugins/power" = {
           power-button-action = "nothing";

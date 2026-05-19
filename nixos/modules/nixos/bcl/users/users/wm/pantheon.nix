@@ -1,6 +1,6 @@
 { config, lib, pkgs, ... }:
 let
-  pantheonUsers = lib.filterAttrs (name: ucfg: ucfg.wm == "pantheon") config.bcl.users.users;
+  pantheonUsers = lib.filterAttrs (name: ucfg: ucfg.wm.name == "pantheon") config.bcl.users.users;
 in
 {
   config = lib.mkIf (pantheonUsers != {}) {

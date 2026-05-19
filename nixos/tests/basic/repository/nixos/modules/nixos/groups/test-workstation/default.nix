@@ -7,7 +7,7 @@
       bcl.role.secretFile = ./default.secrets.yaml;
       bcl.users.users.auser = {
         sopsFile = ./default.secrets.yaml;
-        wm = "gnome";
+        wm.name = "gnome";
       };
 
       bcl.users.syncthing.auser = {

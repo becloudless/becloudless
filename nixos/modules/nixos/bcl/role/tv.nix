@@ -23,7 +23,7 @@
     bcl.wifi.enable = true;
 
     bcl.users.users.tv = {
-      wm = "dwm";
+      wm.name = "dwm";
       autoLogin = true;
     };
 
