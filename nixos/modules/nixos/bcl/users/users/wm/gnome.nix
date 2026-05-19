@@ -200,6 +200,9 @@ in
           sleep-inactive-battery-timeout = 1800;
           sleep-inactive-ac-type = "nothing";
         };
+        "org/gnome/settings-daemon/plugins/housekeeping" = {
+          donation-reminder-last-shown = mkInt64 9223372036854775807;
+        };
         "org/gnome/desktop/interface" = {
           color-scheme = "prefer-dark";
           enable-hot-corners = false;
@@ -299,7 +302,3 @@ in
     }) gnomeUsers;
   };
 }
-
-
-#/org/gnome/settings-daemon/plugins/housekeeping/donation-reminder-last-shown
-#  int64 1777246459372216
