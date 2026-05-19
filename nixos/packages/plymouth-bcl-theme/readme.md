@@ -1,0 +1,4 @@
+- convert the svg to apng with https://ezgif.com/svg-to-apng, 50x50, 25fps, 12s
+- then use the split function split
+- convert filenames
+- keep only the 0-59 images
