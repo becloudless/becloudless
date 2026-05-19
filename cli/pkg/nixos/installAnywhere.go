@@ -156,21 +156,22 @@ func prepareHostSshKeys(repo *bcl.Infra, temp string, systemName string) error {
 		return errs.WithE(err, "Failed to create ssh host folder")
 	}
 
-	groupName, err := localRunner.ExecCmdGetStdout(
+	secretFilePath, err := localRunner.ExecCmdGetStdout(
 		"nix",
 		"--extra-experimental-features", "nix-command flakes",
-		"eval", repo.GetNixosDir()+"#nixosConfigurations."+systemName+".config.bcl.group.name",
+		"eval", repo.GetNixosDir()+"#nixosConfigurations."+systemName+".config.bcl.role.secretFile",
 		"--raw")
 	if err != nil {
-		return errs.WithE(err, "Failed to find group name of system")
-	}
-
-	if groupName == "" {
-		logs.WithField("name", systemName).Warn("System does not have a group, skipping ssh host key preparation")
+		logs.WithField("system", systemName).Warn("System does not define bcl.role.secretFile, skipping ssh host key preparation")
 		return nil
 	}
 
-	logs.WithField("system", systemName).WithField("group", groupName).Info("Extracting host ssh key for group")
+	if secretFilePath == "" {
+		logs.WithField("system", systemName).Warn("System has an empty bcl.role.secretFile, skipping ssh host key preparation")
+		return nil
+	}
+
+	logs.WithField("system", systemName).WithField("secretFile", secretFilePath).Info("Extracting host ssh key from role secret file")
 
 	sopsRunner := runner.NewNixShellRunner(localRunner, "sops")
 
@@ -181,7 +182,7 @@ func prepareHostSshKeys(repo *bcl.Infra, temp string, systemName string) error {
 
 	envs := []string{"SOPS_AGE_KEY=" + privAgeKey}
 	var stdout bytes.Buffer
-	if _, err := sopsRunner.Exec(&envs, os.Stdin, &stdout, os.Stderr, "sops", "-d", path.Join(repo.GetNixosDir(), "modules", "nixos", "groups", groupName, "default.secrets.yaml")); err != nil {
+	if _, err := sopsRunner.Exec(&envs, os.Stdin, &stdout, os.Stderr, "sops", "-d", secretFilePath); err != nil {
 		return errs.WithE(err, "Failed to extract group secrets")
 	}
 
