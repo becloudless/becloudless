@@ -292,20 +292,21 @@ func findSystem(repo *bcl.Infra, localRunner *runner.LocalRunner, info SystemInf
 		return "", errs.WithE(err, "Failed to list nixos configurations")
 	}
 
-	for confName, _ := range flake.NixosConfigurations {
-		ids, err := localRunner.ExecCmdGetStdout(
+	for confName := range flake.NixosConfigurations {
+		idJSON, err := localRunner.ExecCmdGetStdout(
 			"nix",
 			"--extra-experimental-features", "nix-command flakes",
-			"eval", repo.GetNixosDir()+"#nixosConfigurations."+confName+".config.environment.etc.\"ids.env\".text",
-			"--raw")
+			"eval", repo.GetNixosDir()+"#nixosConfigurations."+confName+".config.bcl.system.id",
+			"--json")
 		if err != nil {
 			logs.WithField("system", confName).Warn("system config is probably broken")
 			continue
 		}
 
-		current, err := SystemInfoFromEnvVars(ids)
-		if err != nil {
-			return "", errs.WithE(err, "Failed to parse ids from system config")
+		var current SystemInfo
+		if err := json.Unmarshal([]byte(idJSON), &current); err != nil {
+			logs.WithField("system", confName).WithField("id", idJSON).Warn("failed to parse bcl.system.id")
+			continue
 		}
 
 		if current.Matches(info) {
