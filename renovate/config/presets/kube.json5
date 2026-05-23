@@ -1,18 +1,15 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  extends: [
-    "github>becloudless/becloudless//renovate/config/global.json5",
-  ],
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
 
-  packageRules: [
-    {
-      description: "bump bcl right away. It's useful to bump cli in nixos",
-      matchPackageNames: [
-        "becloudless/becloudless"
-      ],
-      minimumReleaseAge: null
-    },
-  ],
+  flux: {
+    fileMatch: [".+\\.yaml$"],
+  },
+  "helm-values": {
+    fileMatch: [".+\\.yaml$"],
+  },
+  kubernetes: {
+    fileMatch: [".+\\.yaml$"],
+  },
 
   customManagers: [
     {
@@ -24,5 +21,7 @@
       ],
       datasourceTemplate: "docker",
     },
-  ]
+  ],
 }
+
+

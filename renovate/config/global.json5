@@ -8,6 +8,8 @@
     "customManagers:dockerfileVersions",
     "github>becloudless/becloudless//renovate/config/presets/bcl.json5",
     "github>becloudless/becloudless//renovate/config/presets/go.json5",
+    "github>becloudless/becloudless//renovate/config/presets/kube.json5",
+    "github>becloudless/becloudless//renovate/config/presets/nixos.json5",
     "github>becloudless/becloudless//renovate/config/presets/githubAction.json5",
     "github>becloudless/becloudless//renovate/config/presets/semanticCommits.json5",
     "github>becloudless/becloudless//renovate/config/presets/groups.json5",
@@ -27,47 +29,8 @@
   minimumReleaseAgeBehaviour: "timestamp-optional", // timestamp-required makes renovate never creating PR for packages without timestamp
   labels: ["dependencies"],
 
-  flux: {
-    fileMatch: [".+\\.yaml$"],
-  },
-  "helm-values": {
-    fileMatch: [".+\\.yaml$"],
-  },
-  kubernetes: {
-    fileMatch: [".+\\.yaml$"],
-  },
-  nix: {
-    enabled: true,
-  },
-
-  regexManagers: [
-    {
-      description: "Update versions annotated with # renovate: in .nix files",
-      fileMatch: [".+\\.nix$"],
-      matchStrings: [
-        '# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>.+?)( extractVersion=(?<extractVersion>.+?))?( versioning=(?<versioning>.+?))?\\s+\\w+ = "(?<currentValue>.+?)";',
-      ],
-    },
-    {
-      description: "Docker image and tag classic helm values declaration",
-      fileMatch: [".+\\.yaml$"],
-      matchStrings: [
-        "image:\\s+repository: (?<depName>.+?)\\s+tag: (?<currentValue>.+?)\\s",
-      ],
-      datasourceTemplate: "docker",
-      versioningTemplate: "docker",
-    },
-  ],
 
   packageRules: [
-    {
-      matchPackagePatterns: ["mailu"],
-      groupName: "mailu",
-    },
-    {
-      matchPackagePatterns: ["intel-gpu"],
-      groupName: "intel-gpu",
-    },
     {
       matchUpdateTypes: ["minor", "patch", "pin", "digest"],
       automerge: true,
