@@ -20,14 +20,14 @@ const memory = "memory"
 const isInstaller = "isInstaller"
 
 type SystemInfo struct {
-	MotherboardUuid string
-	CpuSerial       string
-	NetworkMacs     []string
-	NetworkIps      []string
-	Disks           []string
-	EFI             bool
-	Memory          int
-	IsInstaller     bool
+	MotherboardUuid string   `json:"motherboardUuid"`
+	CpuSerial       string   `json:"cpuSerial"`
+	NetworkMacs     []string `json:"networkMacs"`
+	NetworkIps      []string `json:"networkIps"`
+	Disks           []string `json:"disks"`
+	EFI             bool     `json:"efi"`
+	Memory          int      `json:"memory"`
+	IsInstaller     bool     `json:"isInstaller"`
 }
 
 func (s SystemInfo) Matches(other SystemInfo) bool {
