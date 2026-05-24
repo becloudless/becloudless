@@ -54,7 +54,7 @@
       managerFilePatterns: ["**/*.yaml"],
       versioningTemplate: "{{#if versioning}}{{{versioning}}}{{else}}docker{{/if}}",
       matchStrings: [
-        "image:\\s+repository:\\s*(?<depName>.+?)\\s+(#\\s*renovate:\\s*versioning=(?<versioning>.+?)\\s*)?tag:\\s*\\\"?(?<currentValue>[^\\\"\\s]+)\\\"?\\s",
+        'image:\\s+repository:\\s*(?<depName>.+?)\\s+(#\\s*renovate:\\s*versioning=(?<versioning>.+?)\\s*)?tag:\\s*\\"?(?<currentValue>[^\\"\\s]+)\\"?\\s',
       ],
       datasourceTemplate: "docker",
     },
