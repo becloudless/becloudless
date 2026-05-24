@@ -28,7 +28,7 @@ spec:
         image:
           repository: lldap/lldap
           # renovate: versioning=loose
-          tag: "2025-11-20"
+          tag: "2026-05-05-debian-rootless"
         envFrom:
           - secretRef:
               name: lldap-generated
