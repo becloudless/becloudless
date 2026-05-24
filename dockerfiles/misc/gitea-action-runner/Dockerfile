@@ -9,3 +9,4 @@ ENV DOCKER_CERT_PATH="/certs/client"
 
 ADD start.sh /
 ENTRYPOINT ["/start.sh"]
+
