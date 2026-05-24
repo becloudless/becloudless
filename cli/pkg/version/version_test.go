@@ -130,6 +130,12 @@ func setupTestRepo(t *testing.T, path string) {
 	repo, err := git.PlainInit(path, false)
 	require.NoError(t, err)
 
+	// Disable GPG signing locally to avoid issues with system git config
+	cfg, err := repo.Config()
+	require.NoError(t, err)
+	cfg.Raw.Section("commit").SetOption("gpgsign", "false")
+	require.NoError(t, repo.SetConfig(cfg))
+
 	testFile := filepath.Join(path, "test.txt")
 	err = os.WriteFile(testFile, []byte("test content"), 0644)
 	require.NoError(t, err)

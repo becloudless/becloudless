@@ -121,11 +121,7 @@ func (b *BuildConfig) Init() error {
 	}
 
 	if b.Tag == "" {
-		tag, err := version.GenerateVersionFromDateAndGitState(1, b.DockerfilePath)
-		if err != nil {
-			return err
-		}
-		b.Tag = tag
+		b.Tag = version.GenerateVersion(1)
 	}
 
 	if b.Name == "" {

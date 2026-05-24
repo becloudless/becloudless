@@ -10,6 +10,7 @@ spec:
     spec:
       chart: base-template
       version: 1.250501.709-Heffe9b6
+      version: 1.250501.709-Heffe9b6
       sourceRef:
         kind: HelmRepository
         name: base
@@ -172,6 +173,7 @@ spec:
               image:
                 repository: ghcr.io/becloudless/alpine
                 # renovate: versioning=loose
+                tag: 1.260202.1736-H7074dbd
                 tag: 1.260202.1736-H7074dbd
               command: ["sh"]
               args:
