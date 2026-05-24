@@ -6,16 +6,6 @@
     ":semanticCommits",
     ":timezone(Europe/Paris)", // TODO
     "customManagers:dockerfileVersions",
-    "local>renovate/config/presets/bcl.json5",
-    "local>renovate/config/presets/go.json5",
-    "local>renovate/config/presets/kube.json5",
-    "local>renovate/config/presets/nixos.json5",
-    "local>renovate/config/presets/githubAction.json5",
-    "local>renovate/config/presets/semanticCommits.json5",
-    "local>renovate/config/presets/groups.json5",
-    "local>renovate/config/presets/lockFileMaintenance.json5",
-    "local>renovate/config/presets/renovate.json5",
-    "local>renovate/config/presets/grafana.json5",
   ],
   suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
 
@@ -29,8 +19,154 @@
   minimumReleaseAgeBehaviour: "timestamp-optional", // timestamp-required makes renovate never creating PR for packages without timestamp
   labels: ["dependencies"],
 
+  // from: githubAction.json5
+  "github-actions": {
+    enabled: true,
+    pinDigests: true,
+  },
+
+  // from: kube.json5
+  flux: {
+    fileMatch: [".+\\.yaml$"],
+  },
+  "helm-values": {
+    fileMatch: [".+\\.yaml$"],
+  },
+  kubernetes: {
+    fileMatch: [".+\\.yaml$"],
+  },
+
+  // from: nixos.json5
+  nix: {
+    enabled: true,
+  },
+
+  // from: lockFileMaintenance.json5
+  lockFileMaintenance: {
+    enabled: true,
+    automerge: true,
+    extends: ["schedule:daily"],
+  },
+
+  // from: go.json5
+  postUpdateOptions: ["gomodTidy"],
+
+  customManagers: [
+    // from: kube.json5
+    {
+      customType: "regex",
+      description: "Docker image and tag classic helm values declaration",
+      managerFilePatterns: ["**/*.yaml"],
+      versioningTemplate: "{{#if versioning}}{{{versioning}}}{{else}}docker{{/if}}",
+      matchStrings: [
+        "image:\\s+repository:\\s*(?<depName>.+?)\\s+(#\\s*renovate:\\s*versioning=(?<versioning>.+?)\\s*)?tag:\\s*\\\"?(?<currentValue>[^\\\"\\s]+)\\\"?\\s",
+      ],
+      datasourceTemplate: "docker",
+    },
+    // from: grafana.json5
+    {
+      description: "Update Grafana dashboard revisions from grafana.com",
+      customType: "regex",
+      fileMatch: [".+\\.yaml$"], // TODO filter more
+      matchStrings: [
+        "gnetId: (?<depName>\\d+)\\s+revision: (?<currentValue>\\d+)",
+      ],
+      datasourceTemplate: "grafana-dashboards",
+      versioningTemplate: "numeric",
+    },
+    // from: go.json5
+    {
+      customType: "regex",
+      fileMatch: [".*\\.go"],
+      versioningTemplate: "{{#if versioning}}{{{versioning}}}{{else}}semver-coerced{{/if}}",
+      matchStrings: [
+        '//\\s*renovate:\\s*datasource=(?<datasource>.*?) depName=(?<depName>.*?)( extractVersion=(?<extractVersion>.*?))?( versioning=(?<versioning>.*?))?\\sconst .*? = "(?:.*?:)?(?<currentValue>[a-zA-Z0-9-.]+?)"',
+      ],
+    },
+    // from: nixos.json5
+    {
+      customType: "regex",
+      description: "Update versions annotated with # renovate: in .nix files",
+      fileMatch: [".+\\.nix$"],
+      matchStrings: [
+        '# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>.+?)( extractVersion=(?<extractVersion>.+?))?( versioning=(?<versioning>.+?))?\\s+\\w+ = "(?<currentValue>.+?)";',
+      ],
+    },
+  ],
 
   packageRules: [
+    // from: bcl.json5
+    {
+      description: "bump bcl version fast",
+      matchPackageNames: ["becloudless/becloudless"],
+      minimumReleaseAge: "1 day",
+      ignoreUnstable: false,
+      versioning: "semver",
+    },
+    // from: groups.json5
+    {
+      matchPackagePatterns: ["mailu"],
+      groupName: "mailu",
+    },
+    {
+      matchPackagePatterns: ["intel-gpu"],
+      groupName: "intel-gpu",
+    },
+    {
+      matchPackageNames: ["becloudless/becloudless", "bcl"],
+      groupName: "becloudless",
+    },
+    // from: renovate.json5 (preset)
+    {
+      description: "reduce renovate itself update pressure",
+      matchPackageNames: ["renovate"],
+      schedule: ["before 2am"],
+    },
+    // from: semanticCommits.json5
+    {
+      matchUpdateTypes: ["major"],
+      semanticCommitType: "feat",
+      commitMessagePrefix: "{{semanticCommitType}}({{semanticCommitScope}})!:",
+      commitMessageExtra: "( {{currentVersion}} ➔ {{newVersion}} )",
+    },
+    {
+      matchUpdateTypes: ["minor"],
+      semanticCommitType: "feat",
+      commitMessageExtra: "( {{currentVersion}} ➔ {{newVersion}} )",
+    },
+    {
+      matchUpdateTypes: ["patch"],
+      semanticCommitType: "fix",
+      commitMessageExtra: "( {{currentVersion}} ➔ {{newVersion}} )",
+    },
+    {
+      matchUpdateTypes: ["digest"],
+      semanticCommitType: "chore",
+      commitMessageExtra: "( {{currentDigestShort}} ➔ {{newDigestShort}} )",
+    },
+    {
+      matchManagers: ["github-actions"],
+      semanticCommitType: "ci",
+      semanticCommitScope: "github-action",
+      commitMessageTopic: "action {{depName}}",
+    },
+    {
+      matchDatasources: ["github-releases"],
+      semanticCommitScope: "github-release",
+      commitMessageTopic: "release {{depName}}",
+    },
+    // from: go.json5
+    {
+      matchDatasources: ["golang-version"],
+      rangeStrategy: "bump",
+    },
+    {
+      // Do not update gomod go version for compatibility. Update toolchain instead.
+      matchDepTypes: ["golang"],
+      matchDepNames: ["go"],
+      enabled: false,
+    },
+    // global
     {
       matchUpdateTypes: ["minor", "patch", "pin", "digest"],
       automerge: true,
