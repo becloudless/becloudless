@@ -1,8 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  extends: [
-    "github>becloudless/becloudless//renovate/config/global.json5",
-  ],
+//  extends: [
+//    "github>becloudless/becloudless//renovate/config/global.json5",
+//  ],
 
   packageRules: [
     {
