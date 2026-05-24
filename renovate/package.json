@@ -7,8 +7,8 @@
     "node": "^24.14.0"
   },
   "scripts": {
-    "fmt": "prettier --write .",
-    "lint": "prettier --check .",
+    "fmt": "prettier --write config/**/*.json5",
+    "lint": "prettier --check config/**/*.json5",
     "test": "for i in **/*.json5; do echo $i; renovate-config-validator $i; done"
   },
   "repository": {

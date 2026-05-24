@@ -27,7 +27,7 @@ spec:
       container:
         image:
           repository: lldap/lldap
-          # renovate: datasource=docker depName=lldap/lldap versioning=regex:^(?<major>\d{4})-(?<minor>\d{2})-(?<patch>\d{2})$
+          # renovate: versioning=loose
           tag: "2025-11-20"
         envFrom:
           - secretRef:

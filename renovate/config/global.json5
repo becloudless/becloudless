@@ -6,14 +6,6 @@
     ":semanticCommits",
     ":timezone(Europe/Paris)", // TODO
     "customManagers:dockerfileVersions",
-    "github>becloudless/becloudless//renovate/config/presets/bcl.json5",
-    "github>becloudless/becloudless//renovate/config/presets/go.json5",
-    "github>becloudless/becloudless//renovate/config/presets/githubAction.json5",
-    "github>becloudless/becloudless//renovate/config/presets/semanticCommits.json5",
-    "github>becloudless/becloudless//renovate/config/presets/groups.json5",
-    "github>becloudless/becloudless//renovate/config/presets/lockFileMaintenance.json5",
-    "github>becloudless/becloudless//renovate/config/presets/renovate.json5",
-    "github>becloudless/becloudless//renovate/config/presets/grafana.json5",
   ],
   suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
 
@@ -27,11 +19,15 @@
   minimumReleaseAgeBehaviour: "timestamp-optional", // timestamp-required makes renovate never creating PR for packages without timestamp
   labels: ["dependencies"],
 
+  "github-actions": {
+    enabled: true,
+    pinDigests: true,
+  },
   flux: {
     fileMatch: [".+\\.yaml$"],
   },
   "helm-values": {
-    fileMatch: [".+\\.yaml$"],
+    enabled: false, // handled by a custom manager which supports renovate comments
   },
   kubernetes: {
     fileMatch: [".+\\.yaml$"],
@@ -40,26 +36,67 @@
     enabled: true,
   },
 
-  regexManagers: [
+  // from: lockFileMaintenance.json5
+  lockFileMaintenance: {
+    enabled: true,
+    automerge: true,
+    extends: ["schedule:daily"],
+  },
+
+  // from: go.json5
+  postUpdateOptions: ["gomodTidy"],
+
+  customManagers: [
+    // from: kube.json5
     {
+      customType: "regex",
+      description: "Docker image and tag classic helm values declaration",
+      managerFilePatterns: ["**/*.yaml"],
+      versioningTemplate: "{{#if versioning}}{{{versioning}}}{{else}}docker{{/if}}",
+      matchStrings: [
+        'image:\\s+repository:\\s*(?<depName>.+?)\\s+(#\\s*renovate:\\s*versioning=(?<versioning>.+?)\\s*)?tag:\\s*\\"?(?<currentValue>[^\\"\\s]+)\\"?\\s',
+      ],
+      datasourceTemplate: "docker",
+    },
+    // from: grafana.json5
+    {
+      description: "Update Grafana dashboard revisions from grafana.com",
+      customType: "regex",
+      managerFilePatterns: ["**/*.yaml"], // TODO filter more
+      matchStrings: [
+        "gnetId: (?<depName>\\d+)\\s+revision: (?<currentValue>\\d+)",
+      ],
+      datasourceTemplate: "grafana-dashboards",
+      versioningTemplate: "numeric",
+    },
+    // from: go.json5
+    {
+      customType: "regex",
+      managerFilePatterns: ["**/*.go"],
+      versioningTemplate: "{{#if versioning}}{{{versioning}}}{{else}}semver-coerced{{/if}}",
+      matchStrings: [
+        '//\\s*renovate:\\s*datasource=(?<datasource>.*?) depName=(?<depName>.*?)( extractVersion=(?<extractVersion>.*?))?( versioning=(?<versioning>.*?))?\\sconst .*? = "(?:.*?:)?(?<currentValue>[a-zA-Z0-9-.]+?)"',
+      ],
+    },
+    // from: nixos.json5
+    {
+      customType: "regex",
       description: "Update versions annotated with # renovate: in .nix files",
-      fileMatch: [".+\\.nix$"],
+      managerFilePatterns: ["**/*.nix"],
       matchStrings: [
         '# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>.+?)( extractVersion=(?<extractVersion>.+?))?( versioning=(?<versioning>.+?))?\\s+\\w+ = "(?<currentValue>.+?)";',
       ],
     },
-    {
-      description: "Docker image and tag classic helm values declaration",
-      fileMatch: [".+\\.yaml$"],
-      matchStrings: [
-        "image:\\s+repository: (?<depName>.+?)\\s+tag: (?<currentValue>.+?)\\s",
-      ],
-      datasourceTemplate: "docker",
-      versioningTemplate: "docker",
-    },
   ],
 
   packageRules: [
+    {
+      description: "bump bcl version fast",
+      matchPackageNames: ["becloudless/becloudless"],
+      minimumReleaseAge: "1 day",
+      ignoreUnstable: false, // having the hash after the dash means unstable, which is wrong
+      versioning: "semver",
+    },
     {
       matchPackagePatterns: ["mailu"],
       groupName: "mailu",
@@ -67,6 +104,57 @@
     {
       matchPackagePatterns: ["intel-gpu"],
       groupName: "intel-gpu",
+    },
+    {
+      matchPackageNames: ["becloudless/becloudless", "bcl"],
+      groupName: "becloudless",
+    },
+    {
+      description: "reduce renovate itself update pressure",
+      matchPackageNames: ["renovate"],
+      schedule: ["before 2am"],
+    },
+    {
+      matchUpdateTypes: ["major"],
+      semanticCommitType: "feat",
+      commitMessagePrefix: "{{semanticCommitType}}({{semanticCommitScope}})!:",
+      commitMessageExtra: "( {{currentVersion}} ➔ {{newVersion}} )",
+    },
+    {
+      matchUpdateTypes: ["minor"],
+      semanticCommitType: "feat",
+      commitMessageExtra: "( {{currentVersion}} ➔ {{newVersion}} )",
+    },
+    {
+      matchUpdateTypes: ["patch"],
+      semanticCommitType: "fix",
+      commitMessageExtra: "( {{currentVersion}} ➔ {{newVersion}} )",
+    },
+    {
+      matchUpdateTypes: ["digest"],
+      semanticCommitType: "chore",
+      commitMessageExtra: "( {{currentDigestShort}} ➔ {{newDigestShort}} )",
+    },
+    {
+      matchManagers: ["github-actions"],
+      semanticCommitType: "ci",
+      semanticCommitScope: "github-action",
+      commitMessageTopic: "action {{depName}}",
+    },
+    {
+      matchDatasources: ["github-releases"],
+      semanticCommitScope: "github-release",
+      commitMessageTopic: "release {{depName}}",
+    },
+    {
+      matchDatasources: ["golang-version"],
+      rangeStrategy: "bump",
+    },
+    {
+      // Do not update gomod go version for compatibility. Update toolchain instead.
+      matchDepTypes: ["golang"],
+      matchDepNames: ["go"],
+      enabled: false,
     },
     {
       matchUpdateTypes: ["minor", "patch", "pin", "digest"],
