@@ -9,8 +9,8 @@ on:
         description: |
           Newline-separated list of path prefixes to check for changes against origin/main.
           Example:
-            dockerfiles/
-            .github/workflows/dockerfiles.yaml
+            docker/
+            .github/workflows/docker.yaml
         required: true
         type: string
     outputs:
