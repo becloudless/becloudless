@@ -56,16 +56,6 @@ jobs:
             echo "should_release=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Install Nix
-        if: steps.changed.outputs.should_release == 'true'
-        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
-        with:
-          nix_path: nixpkgs=channel:nixos-25.05
-
-      - name: Install UPX
-        if: steps.changed.outputs.should_release == 'true'
-        run: sudo apt-get update && sudo apt-get install -y upx-ucl
-
       - name: Create release
         if: steps.changed.outputs.should_release == 'true'
         env:
