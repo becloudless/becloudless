@@ -2,7 +2,7 @@
 
 let
   # renovate: datasource=github-releases depName=becloudless/becloudless
-  version = "0.260523.752-Ha6c533e";
+  version = "0.260524.903";
 
   # Map Nix system to Go platform (GOOS-GOARCH format)
   platform = {
