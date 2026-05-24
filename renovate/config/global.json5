@@ -90,12 +90,11 @@
   ],
 
   packageRules: [
-    // from: bcl.json5
     {
       description: "bump bcl version fast",
       matchPackageNames: ["becloudless/becloudless"],
       minimumReleaseAge: "1 day",
-      ignoreUnstable: false,
+      ignoreUnstable: false, // having the hash after the dash means unstable, which is wrong
       versioning: "semver",
     },
     {
