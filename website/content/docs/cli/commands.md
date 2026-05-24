@@ -53,7 +53,7 @@ Build artifacts (container images, packages).
 
 | Command | Description |
 |---|---|
-| `bcl build image <name>` | Build and push a container image from `dockerfiles/` |
+| `bcl build image <name>` | Build and push a container image from `docker/` |
 
 ---
 

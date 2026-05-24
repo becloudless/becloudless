@@ -37,7 +37,7 @@ func CiDockerCmd() *cobra.Command {
 
 			toBuild := make(map[string]struct{})
 			for s, changeType := range changes {
-				if !strings.HasPrefix(s, "dockerfiles/") {
+				if !strings.HasPrefix(s, "docker/") {
 					continue
 				}
 

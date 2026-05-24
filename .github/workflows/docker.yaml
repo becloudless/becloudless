@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 
-name: Dockerfiles
+name: Docker
 
 on:
   push:
@@ -10,8 +10,8 @@ jobs:
     uses: ./.github/workflows/changes.yaml
     with:
       paths: |
-        dockerfiles/
-        .github/workflows/dockerfiles.yaml
+        docker/
+        .github/workflows/docker.yaml
 
   build:
     needs: changes
