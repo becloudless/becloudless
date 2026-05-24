@@ -2,6 +2,7 @@
 
 buildGoModule rec {
   pname = "prometheus-pushprox";
+  # renovate: datasource=github-releases depName=prometheus-community/PushProx
   version = "0.2.0";
   rev = "v${version}";
 
