@@ -35,6 +35,11 @@ let
                 description = "GNOME Night Light color temperature in kelvin.";
               };
             };
+            gnome.numWorkspaces = lib.mkOption {
+              type = lib.types.ints.positive;
+              default = 2;
+              description = "Number of GNOME workspaces for this user.";
+            };
           };
         };
         default = {};

@@ -211,6 +211,7 @@ in
         };
         "org/gnome/desktop/wm/preferences" = {
           workspace-names = [ "Main" ];
+          num-workspaces = ucfg.wm.gnome.numWorkspaces;
           action-middle-click-titlebar = "lower";
           button-layout = "appmenu:minimize,maximize,close";
         };
