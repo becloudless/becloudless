@@ -28,9 +28,6 @@ in
           for i in ~/.zshrc.d/*.zsh; do
             . $i
           done
-          for i in ~/.zshrc.d2/*.zsh; do
-            . $i
-          done
         '';
       };
       programs.zoxide.enable = true;
