@@ -101,7 +101,7 @@ in
         text = ''
           mkdir -p /var/lib/AccountsService/{icons,users}
           echo -e "[User]\nSession=gnome\nIcon=/var/lib/AccountsService/icons/${name}\n" > /var/lib/AccountsService/users/${name}
-          cp /nix/syncthing/home/${name}/Pictures/face.png /var/lib/AccountsService/icons/${name} || true
+          cp /nix/home/${name}/.face /var/lib/AccountsService/icons/${name} || true
         '';
       };
     }) stUsers);
