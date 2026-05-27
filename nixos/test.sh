@@ -16,7 +16,7 @@ echo_blue() { echo_stderr "\033[0;34m$*\033[0m";}
 
 
 clean_up () {
-	[ -z "$(find "$DIR/tests/work" -type f -name '*.pid')" ] || pkill -F $DIR/tests/work/*.pid
+	[ -z "$(find "$HOME/.cache/bcl-build" -type f -name '*.pid')" ] || pkill -F $HOME/.cache/bcl-build/*.pid
 }
 trap clean_up EXIT
 
@@ -28,8 +28,8 @@ installHost() {
 	validation=$5
 
 	echo_brightred "## Creating $host disk image"
-	mkdir -p $DIR/tests/work
-	qemu-img create -f qcow2 "$DIR/tests/work/$host.cow" $diskSize
+	mkdir -p $HOME/.cache/bcl-build
+	qemu-img create -f qcow2 "$HOME/.cache/bcl-build/$host.cow" $diskSize
 
 	echo_brightred "## Starting VM"
 	display="-display none"
@@ -43,10 +43,10 @@ installHost() {
 		-net nic \
 		-net user,hostfwd=tcp::10022-:22 \
 		-cdrom $DIR/tests/basic/repository/nixos/result/iso/bcl.iso \
-		-pidfile $DIR/tests/work/$host.pid \
+		-pidfile $HOME/.cache/bcl-build/$host.pid \
 		-daemonize \
 		$display \
-		$DIR/tests/work/$host.cow
+		$HOME/.cache/bcl-build/$host.cow
 	#	-drive file=../..//work/test-tv.cow,if=virtio,format=raw,cache=none,aio=native \
 
 	$DEBUG && {
@@ -79,10 +79,10 @@ if compgen -G "$DIR/../cli/dist/bcl-*/bcl" > /dev/null 2>&1; then
 else
 	echo_brightred "## Downloading bcl from GitHub release"
 	VERSION="$(grep -E '^\s+version = ' "$DIR/packages/bcl/default.nix" | sed 's/.*"\(.*\)".*/\1/')"
-	mkdir -p ./work
+	mkdir -p $HOME/.cache/bcl-build
 	curl -fsSL "https://github.com/becloudless/becloudless/releases/download/v${VERSION}/bcl-linux-amd64.tar.gz" \
-		| tar -xz -C ./work
-	BCL_BIN=$(realpath "$PWD/work/bcl-linux-amd64/bcl")
+		| tar -xz -C $HOME/.cache/bcl-build
+	BCL_BIN=$(realpath "$HOME/.cache/bcl-build/bcl-linux-amd64/bcl")
 fi
 
 echo_brightred "## Check flake"
