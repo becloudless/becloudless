@@ -90,6 +90,7 @@ in
   #      gnomeExtensions.appindicator
         gnomeExtensions.quake-terminal
         # gnomeExtensions.smart-auto-move
+        
       ];
 
       # dconf watch /
@@ -274,6 +275,14 @@ in
         };
         "org/gnome/shell/extensions/wsmatrix" = {
           show-popup = false;
+        };
+        "org/gnome/shell/extensions/quake-terminal" = {
+          terminal-id = "org.gnome.Console.desktop";
+          terminal-shortcut = ["<Super>x"];
+          animation-time = 50;
+          vertical-size = 90;
+          always-on-top = true;
+          render-on-current-monitor = true;
         };
         "org/gnome/shell" = {
           disable-user-extensions = false;
