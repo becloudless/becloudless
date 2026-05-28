@@ -303,6 +303,7 @@ in
             "system-monitor-next@paradoxxx.zero.gmail.com"
             "wsmatrix@martin.zurowietz.de"
             "workspace-indicator@gnome-shell-extensions.gcampax.github.com"
+            "quake-terminal@diegodario88.github.io"
   #          "appindicatorsupport@rgcjonas.gmail.com"
             "azwallpaper@azwallpaper.gitlab.com"
             # "smart-auto-move@khimaros.com"
