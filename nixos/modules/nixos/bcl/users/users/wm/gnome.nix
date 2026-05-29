@@ -20,6 +20,7 @@ in
 
     environment.systemPackages = with pkgs; [
       gnome-tweaks dconf-editor
+      bcl.live-lock-screen
     ];
 
     environment.gnome.excludePackages = (with pkgs; [
@@ -49,7 +50,6 @@ in
       partOf = [ "graphical-session.target" ];
       wantedBy = [ "graphical-session.target" ];
     };
-
 
     # systemd.user.services."saved-windows" = {
     #   enable = true;
@@ -88,7 +88,6 @@ in
         gnomeExtensions.workspace-indicator
         gnomeExtensions.wallpaper-slideshow
         gnomeExtensions.quake-terminal
-        pkgs.bcl.live-lock-screen
         # gnomeExtensions.smart-auto-move
         
       ];
