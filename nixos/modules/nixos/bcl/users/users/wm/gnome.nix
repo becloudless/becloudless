@@ -279,10 +279,11 @@ in
           # terminal-id = "org.gnome.Console.desktop";
           terminal-id = "kitty.desktop";
           terminal-shortcut = ["<Super>x"];
-          animation-time = 50;
+          animation-time = 0;
           vertical-size = 90;
           always-on-top = true;
           render-on-current-monitor = true;
+          auto-hide-window = false;
         };
         "org/gnome/shell" = {
           disable-user-extensions = false;
