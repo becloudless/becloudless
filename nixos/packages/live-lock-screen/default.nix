@@ -13,7 +13,7 @@ stdenv.mkDerivation {
     owner = "nick-redwill";
     repo = "LiveLockScreen";
     rev = "v${version}";
-    hash = "sha256-s/Rj2PKfqW9iBS482SyJqI9k6FKlMt7oWH8/dSz0b2Y=";
+    hash = "sha256-ufUNfF750iy8vYpc3tZlR/HAuHth9KxiUERwAAjAVaQ=";
   };
 
   nativeBuildInputs = [ glib ];
@@ -24,8 +24,7 @@ stdenv.mkDerivation {
     runHook preInstall
     mkdir -p $out/share/gnome-shell/extensions/live-lockscreen@nick-redwill
     cp -r . $out/share/gnome-shell/extensions/live-lockscreen@nick-redwill/
-    glib-compile-schemas schemas/
-    cp -r schemas $out/share/gnome-shell/extensions/live-lockscreen@nick-redwill/
+    glib-compile-schemas $out/share/gnome-shell/extensions/live-lockscreen@nick-redwill/schemas
     runHook postInstall
   '';
 
