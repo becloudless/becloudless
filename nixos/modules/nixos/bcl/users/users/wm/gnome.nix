@@ -20,6 +20,7 @@ in
 
     environment.systemPackages = with pkgs; [
       gnome-tweaks dconf-editor
+      gjs # required by live-lock-screen extension (spawns gjs subprocess for video player)
       gst_all_1.gst-plugins-rs # gtk4paintablesink for live-lock-screen extension
       gst_all_1.gst-plugins-good
       gst_all_1.gst-plugins-bad
