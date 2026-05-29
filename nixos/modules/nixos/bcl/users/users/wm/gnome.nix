@@ -77,7 +77,9 @@ in
     #   wantedBy = [ "graphical-session.target" ];
     # };
 
-    home-manager.users = lib.mapAttrs (name: ucfg: { lib, pkgs, ... }: {
+    home-manager.users = lib.mapAttrs (name: ucfg:
+      let liveLockScreen = pkgs.bcl.live-lock-screen; in
+      { lib, pkgs, ... }: {
 
       home.packages = with pkgs; [
         gnomeExtensions.dash-to-panel
@@ -88,7 +90,7 @@ in
         gnomeExtensions.wallpaper-slideshow
         gnomeExtensions.quake-terminal
         # gnomeExtensions.smart-auto-move
-        bcl.live-lock-screen
+        liveLockScreen
       ];
 
       # dconf watch /
