@@ -13,7 +13,7 @@ stdenv.mkDerivation {
     owner = "nick-redwill";
     repo = "LiveLockScreen";
     rev = "aae99ffb9087e8eca7ee04b27f2c890f577b1074";
-    hash = "sha256-xj9ppjgw/r0wall39XHlSSZLUYYSW+tpLpSxLEoBD/s=";
+    hash = "sha256-wX8mo1ZC7AYf44p3F14L03X0wjNPjDOZ+zof6mWS0ds=";
   };
 
   nativeBuildInputs = [ glib ];
