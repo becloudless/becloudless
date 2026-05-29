@@ -20,7 +20,7 @@ in
 
     environment.systemPackages = with pkgs; [
       gnome-tweaks dconf-editor
-      bcl.live-lock-screen
+      # bcl.live-lock-screen
     ];
 
     environment.gnome.excludePackages = (with pkgs; [
@@ -89,6 +89,7 @@ in
         gnomeExtensions.wallpaper-slideshow
         gnomeExtensions.quake-terminal
         # gnomeExtensions.smart-auto-move
+        bcl.live-lock-screen
       ];
 
       # dconf watch /
@@ -303,9 +304,9 @@ in
             "wsmatrix@martin.zurowietz.de"
             "workspace-indicator@gnome-shell-extensions.gcampax.github.com"
             "quake-terminal@diegodario88.github.io"
-            "live-lockscreen@nick-redwill"
             "azwallpaper@azwallpaper.gitlab.com"
             # "smart-auto-move@khimaros.com"
+            "live-lockscreen@nick-redwill"
           ];
         };
       };
