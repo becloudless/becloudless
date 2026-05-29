@@ -2,7 +2,7 @@
 
 let
   # renovate: datasource=github-releases depName=nick-redwill/LiveLockScreen
-  version = "3.1.0";
+  version = "3.1.0-unstable-2026-05-29";
 in
 
 stdenv.mkDerivation {
@@ -12,8 +12,8 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "nick-redwill";
     repo = "LiveLockScreen";
-    rev = "v${version}";
-    hash = "sha256-ufUNfF750iy8vYpc3tZlR/HAuHth9KxiUERwAAjAVaQ=";
+    rev = "aae99ffb9087e8eca7ee04b27f2c890f577b1074";
+    hash = "sha256-xj9ppjgw/r0wall39XHlSSZLUYYSW+tpLpSxLEoBD/s=";
   };
 
   nativeBuildInputs = [ glib ];
