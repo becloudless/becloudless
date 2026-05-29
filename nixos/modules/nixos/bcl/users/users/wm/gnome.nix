@@ -20,6 +20,10 @@ in
 
     environment.systemPackages = with pkgs; [
       gnome-tweaks dconf-editor
+      gst_all_1.gst-plugins-rs # gtk4paintablesink for live-lock-screen extension
+      gst_all_1.gst-plugins-good
+      gst_all_1.gst-plugins-bad
+      gst_all_1.gst-plugins-ugly
     ];
 
     environment.gnome.excludePackages = (with pkgs; [
