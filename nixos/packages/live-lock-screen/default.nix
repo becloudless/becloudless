@@ -8,7 +8,7 @@ stdenv.mkDerivation {
     owner = "nick-redwill";
     repo = "LiveLockScreen";
     rev = "main";
-    sha256 = lib.fakeSha256;
+    sha256 = "sha256-wX8mo1ZC7AYf44p3F14L03X0wjNPjDOZ+zof6mWS0ds=";
   };
 
   installPhase = ''
