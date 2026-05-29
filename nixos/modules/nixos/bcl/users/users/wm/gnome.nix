@@ -88,7 +88,7 @@ in
         gnomeExtensions.workspace-indicator
         gnomeExtensions.wallpaper-slideshow
         gnomeExtensions.quake-terminal
-        liveLockScreen
+        bcl.liveLockScreen
         # gnomeExtensions.smart-auto-move
         
       ];
