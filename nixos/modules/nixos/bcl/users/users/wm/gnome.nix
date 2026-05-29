@@ -87,8 +87,8 @@ in
         gnomeExtensions.workspace-matrix
         gnomeExtensions.workspace-indicator
         gnomeExtensions.wallpaper-slideshow
-  #      gnomeExtensions.appindicator
         gnomeExtensions.quake-terminal
+        liveLockScreen
         # gnomeExtensions.smart-auto-move
         
       ];
@@ -305,7 +305,7 @@ in
             "wsmatrix@martin.zurowietz.de"
             "workspace-indicator@gnome-shell-extensions.gcampax.github.com"
             "quake-terminal@diegodario88.github.io"
-  #          "appindicatorsupport@rgcjonas.gmail.com"
+            "live-lockscreen@nick-redwill"
             "azwallpaper@azwallpaper.gitlab.com"
             # "smart-auto-move@khimaros.com"
           ];
