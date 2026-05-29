@@ -1,6 +1,6 @@
-{ lib, stdenv, fetchFromGitHub, gnome-shell }:
+{ lib, stdenv, fetchFromGitHub }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation {
   pname = "live-lock-screen";
   version = "unstable-2024";
 
