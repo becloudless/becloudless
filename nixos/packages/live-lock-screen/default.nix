@@ -1,7 +1,7 @@
 { lib, stdenv, fetchFromGitHub, gnome-shell }:
 
 stdenv.mkDerivation rec {
-  pname = "gnome-shell-extension-live-lockscreen";
+  pname = "live-lock-screen";
   version = "unstable-2024";
 
   src = fetchFromGitHub {
