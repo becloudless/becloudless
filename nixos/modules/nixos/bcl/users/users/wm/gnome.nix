@@ -89,7 +89,6 @@ in
         gnomeExtensions.wallpaper-slideshow
         gnomeExtensions.quake-terminal
         # gnomeExtensions.smart-auto-move
-        
       ];
 
       # dconf watch /

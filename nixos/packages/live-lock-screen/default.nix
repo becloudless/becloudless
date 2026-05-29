@@ -1,6 +1,6 @@
-{ lib, stdenv, fetchFromGitHub }:
+{ lib, buildGnomeExtension, fetchFromGitHub }:
 
-stdenv.mkDerivation {
+buildGnomeExtension {
   pname = "live-lock-screen";
   version = "unstable-2024";
 
@@ -10,14 +10,6 @@ stdenv.mkDerivation {
     rev = "main";
     sha256 = "sha256-wX8mo1ZC7AYf44p3F14L03X0wjNPjDOZ+zof6mWS0ds=";
   };
-
-  installPhase = ''
-    runHook preInstall
-    extDir="$out/share/gnome-shell/extensions/live-lockscreen@nick-redwill"
-    mkdir -p "$extDir"
-    cp -r . "$extDir"
-    runHook postInstall
-  '';
 
   meta = with lib; {
     description = "Live Lock Screen GNOME Shell Extension";
