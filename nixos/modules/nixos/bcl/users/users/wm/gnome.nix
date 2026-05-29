@@ -26,6 +26,14 @@ in
       gst_all_1.gst-plugins-ugly
     ];
 
+    # Make gtk4paintablesink (from gst-plugins-rs) discoverable by GNOME Shell
+    # Use GST_PLUGIN_PATH to append without replacing the system path set by NixOS
+    environment.variables.GST_PLUGIN_PATH = lib.makeSearchPathOutput "lib" "lib/gstreamer-1.0" (with pkgs.gst_all_1; [
+      gst-plugins-rs
+      gst-plugins-bad
+      gst-plugins-ugly
+    ]);
+
     environment.gnome.excludePackages = (with pkgs; [
       # gnome-photos
       gnome-tour
