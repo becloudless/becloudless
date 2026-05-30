@@ -224,6 +224,7 @@ in
         "org/gnome/mutter" = {
           edge-tiling = true;
           workspaces-only-on-primary = false;
+          dynamic-workspaces = false;
         };
         "org/gnome/shell/app-switcher" = {
           current-workspace-only = true;
@@ -237,7 +238,7 @@ in
         "org/gnome/desktop/screensaver" = {
           lock-delay = 30;
         };
-        "org/gnome/shell/extensions/system-monitor" = {
+        "org/gnome/shell/extensions/system-monitor-next-applet" = {
           icon-display = false;
           cpu-show-text = false;
           cpu-graph-width = 70;
@@ -289,6 +290,7 @@ in
         "org/gnome/shell" = {
           disable-user-extensions = false;
           welcome-dialog-last-shown-version = "99.0";
+          always-show-log-out = true;
 
           favorite-apps = [
             "firefox.desktop"
