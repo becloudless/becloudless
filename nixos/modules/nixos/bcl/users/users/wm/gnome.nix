@@ -109,12 +109,13 @@ in
 
       # Electron apps read GTK3 settings.ini directly and ignore dconf color-scheme.
       # Override the desktop entry to force the dark variant only for jellyfin-desktop.
-      xdg.desktopEntries.jellyfin-desktop = {
-        name = "Jellyfin Desktop";
-        exec = "env GTK_THEME=Adwaita:dark jellyfin-desktop %U";
-        icon = "jellyfin-desktop";
-        comment = "Jellyfin Desktop Client";
-        categories = [ "AudioVideo" "Video" "Player" ];
+      xdg.desktopEntries."org.jellyfin.JellyfinDesktop" = {
+        name = "Jellyfin";
+        exec = "env GTK_THEME=Adwaita:dark jellyfin-desktop";
+        icon = "org.jellyfin.JellyfinDesktop";
+        comment = "Desktop client for Jellyfin";
+        categories = [ "AudioVideo" "Video" "Player" "TV" ];
+        terminal = false;
       };
 
       # dconf watch /
