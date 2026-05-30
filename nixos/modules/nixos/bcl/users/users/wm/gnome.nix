@@ -107,12 +107,6 @@ in
         liveLockScreen
       ];
 
-      # Electron apps (e.g. jellyfin-desktop) read GTK3 settings.ini directly
-      # and do not honour dconf color-scheme, so force the dark variant explicitly.
-      home.sessionVariables = {
-        GTK_THEME = "Adwaita:dark";
-      };
-
       # dconf watch /
       dconf.settings = with lib.hm.gvariant; {
         "org/nemo/window-state" = {
