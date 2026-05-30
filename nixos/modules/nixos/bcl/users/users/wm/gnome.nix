@@ -272,6 +272,9 @@ in
           disk-graph-width = 70;
           disk-show-text = false;
           disk-refresh-time = 2000;
+          battery-display = true;
+          battery-show-text = false;
+          battery-time = true;
         };
         "org/gnome/shell/extensions/dash-to-panel" = {
           extension-version = (builtins.fromJSON (builtins.readFile "${pkgs.gnomeExtensions.dash-to-panel}/share/gnome-shell/extensions/dash-to-panel@jderose9.github.com/metadata.json")).version;
