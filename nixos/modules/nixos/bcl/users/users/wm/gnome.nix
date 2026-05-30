@@ -282,8 +282,9 @@ in
           animation-time = 0;
           vertical-size = 90;
           always-on-top = true;
-          render-on-current-monitor = true;
+          render-on-current-monitor = false;
           auto-hide-window = false;
+          monitor-screen = 0;
         };
         "org/gnome/shell" = {
           disable-user-extensions = false;
