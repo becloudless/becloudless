@@ -285,8 +285,7 @@ in
           show-popup = false;
         };
         "org/gnome/shell/extensions/quake-terminal" = {
-          # terminal-id = "org.gnome.Console.desktop";
-          terminal-id = "kitty.desktop";
+          terminal-id = "Alacritty.desktop"; # "kitty.desktop", "org.gnome.Console.desktop"
           terminal-shortcut = ["<Super>x"];
           animation-time = 0;
           vertical-size = 90;
