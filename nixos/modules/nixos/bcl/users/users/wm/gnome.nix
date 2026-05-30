@@ -103,6 +103,7 @@ in
         gnomeExtensions.wallpaper-slideshow
         gnomeExtensions.quake-terminal
         gnomeExtensions.smart-auto-move-ng
+        gnomeExtensions.no-overview
         liveLockScreen
       ];
 
@@ -310,6 +311,7 @@ in
             "quake-terminal@diegodario88.github.io"
             "azwallpaper@azwallpaper.gitlab.com"
             "SmartAutoMoveNG@lauinger-clan.de"
+            "no-overview@fthx"
             "live-lockscreen@nick-redwill"
           ];
         };
