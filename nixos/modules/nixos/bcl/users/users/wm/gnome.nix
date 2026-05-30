@@ -63,32 +63,32 @@ in
       wantedBy = [ "graphical-session.target" ];
     };
 
-    # systemd.user.services."saved-windows" = {
-    #   enable = true;
-    #   path = with pkgs; [
-    #     bash
-    #     dconf
-    #   ];
-    #   script = ''
-    #     dconfPath=/org/gnome/shell/extensions/smart-auto-move/saved-windows
-    #     filePath=/nix/home/$USER/Home/home/$USER/.config/saved-windows
+    systemd.user.services."saved-windows" = {
+      enable = true;
+      path = with pkgs; [
+        bash
+        dconf
+      ];
+      script = ''
+        dconfPath=/org/gnome/shell/extensions/SmartAutoMoveNG/saved-windows
+        filePath=/nix/home/$USER/.config/saved-windows
 
-    #     cat $filePath | ${pkgs.dconf}/bin/dconf load /org/gnome/shell/extensions/smart-auto-move/ || true
+        cat $filePath | ${pkgs.dconf}/bin/dconf load /org/gnome/shell/extensions/SmartAutoMoveNG/ || true
 
-    #     ${pkgs.dconf}/bin/dconf watch $dconfPath | while read line; do
-    #       if [ "$line" = "$dconfPath" ]; then
-    #         continue
-    #       fi
-    #       if [ "$line" = "" ]; then
-    #         continue
-    #       fi
-    #       ${pkgs.dconf}/bin/dconf dump /org/gnome/shell/extensions/smart-auto-move/ > $filePath
-    #     done
-    #   '';
-    #   after = [ "graphical-session-pre.target" ];
-    #   partOf = [ "graphical-session.target" ];
-    #   wantedBy = [ "graphical-session.target" ];
-    # };
+        ${pkgs.dconf}/bin/dconf watch $dconfPath | while read line; do
+          if [ "$line" = "$dconfPath" ]; then
+            continue
+          fi
+          if [ "$line" = "" ]; then
+            continue
+          fi
+          ${pkgs.dconf}/bin/dconf dump /org/gnome/shell/extensions/SmartAutoMoveNG/ > $filePath
+        done
+      '';
+      after = [ "graphical-session-pre.target" ];
+      partOf = [ "graphical-session.target" ];
+      wantedBy = [ "graphical-session.target" ];
+    };
 
     home-manager.users = lib.mapAttrs (name: ucfg:
       let liveLockScreen = pkgs.bcl.live-lock-screen; in
@@ -260,6 +260,7 @@ in
           disk-refresh-time = 2000;
         };
         "org/gnome/shell/extensions/dash-to-panel" = {
+          extension-version = (builtins.fromJSON (builtins.readFile "${pkgs.gnomeExtensions.dash-to-panel}/share/gnome-shell/extensions/dash-to-panel@jderose9.github.com/metadata.json")).version;
           panel-positions = ''{"0":"TOP","1":"TOP","2":"TOP","3":"TOP"}'';
           panel-sizes = ''{"0":24,"1":24,"2":24,"3":24}'';
           appicon-margin = 4;
