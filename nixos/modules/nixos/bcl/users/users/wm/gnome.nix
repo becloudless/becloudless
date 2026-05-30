@@ -102,7 +102,7 @@ in
         gnomeExtensions.workspace-indicator
         gnomeExtensions.wallpaper-slideshow
         gnomeExtensions.quake-terminal
-        # gnomeExtensions.smart-auto-move
+        gnomeExtensions.smart-auto-move
         liveLockScreen
       ];
 
@@ -309,7 +309,7 @@ in
             "workspace-indicator@gnome-shell-extensions.gcampax.github.com"
             "quake-terminal@diegodario88.github.io"
             "azwallpaper@azwallpaper.gitlab.com"
-            # "smart-auto-move@khimaros.com"
+            "smart-auto-move@khimaros.com"
             "live-lockscreen@nick-redwill"
           ];
         };
