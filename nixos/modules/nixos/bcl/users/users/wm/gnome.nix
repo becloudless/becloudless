@@ -20,20 +20,7 @@ in
 
     environment.systemPackages = with pkgs; [
       gnome-tweaks dconf-editor
-      gjs # required by live-lock-screen extension (spawns gjs subprocess for video player)
-      gst_all_1.gst-plugins-rs # gtk4paintablesink for live-lock-screen extension
-      gst_all_1.gst-plugins-good
-      gst_all_1.gst-plugins-bad
-      gst_all_1.gst-plugins-ugly
     ];
-
-    # Make gtk4paintablesink (from gst-plugins-rs) discoverable by GNOME Shell
-    # Use GST_PLUGIN_PATH to append without replacing the system path set by NixOS
-    environment.variables.GST_PLUGIN_PATH = lib.makeSearchPathOutput "lib" "lib/gstreamer-1.0" (with pkgs.gst_all_1; [
-      gst-plugins-rs
-      gst-plugins-bad
-      gst-plugins-ugly
-    ]);
 
     # Set date format for calendar to "Day 31 May" instead of "May 31"
     environment.variables.LC_TIME = lib.mkForce "en_GB.UTF-8";
@@ -94,7 +81,6 @@ in
     };
 
     home-manager.users = lib.mapAttrs (name: ucfg:
-      let liveLockScreen = pkgs.bcl.live-lock-screen; in
       { lib, pkgs, ... }: {
 
       home.packages = with pkgs; [
@@ -107,7 +93,6 @@ in
         gnomeExtensions.quake-terminal
         gnomeExtensions.smart-auto-move-ng
         gnomeExtensions.no-overview
-        liveLockScreen
       ];
 
       # Electron apps read GTK3 settings.ini directly and ignore dconf color-scheme.
@@ -345,7 +330,6 @@ in
             "azwallpaper@azwallpaper.gitlab.com"
             "SmartAutoMoveNG@lauinger-clan.de"
             "no-overview@fthx"
-            "live-lockscreen@nick-redwill"
           ];
         };
       };
