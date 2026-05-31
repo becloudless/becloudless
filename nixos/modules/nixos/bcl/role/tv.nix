@@ -27,6 +27,8 @@
       autoLogin = true;
     };
 
+    services.speechd.enable = false; # remove mbrola-voices dependency that is huge
+
     security.sudo.wheelNeedsPassword = false;
 
     environment.systemPackages = with pkgs; [

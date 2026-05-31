@@ -23,22 +23,30 @@ let
               default = "";
               description = "Window manager / desktop environment to configure for this user (e.g. \"gnome\").";
             };
-            gnome.nightLight = {
-              enable = lib.mkOption {
-                type = lib.types.bool;
-                default = true;
-                description = "Enable GNOME Night Light for this user.";
+            gnome = lib.mkOption {
+              type = lib.types.submodule {
+                options = {
+                  nightLight = {
+                    enable = lib.mkOption {
+                      type = lib.types.bool;
+                      default = true;
+                      description = "Enable GNOME Night Light for this user.";
+                    };
+                    temperature = lib.mkOption {
+                      type = lib.types.ints.between 1000 10000;
+                      default = 3700;
+                      description = "GNOME Night Light color temperature in kelvin.";
+                    };
+                  };
+                  numWorkspaces = lib.mkOption {
+                    type = lib.types.ints.positive;
+                    default = 2;
+                    description = "Number of GNOME workspaces for this user.";
+                  };
+                };
               };
-              temperature = lib.mkOption {
-                type = lib.types.ints.between 1000 10000;
-                default = 3700;
-                description = "GNOME Night Light color temperature in kelvin.";
-              };
-            };
-            gnome.numWorkspaces = lib.mkOption {
-              type = lib.types.ints.positive;
-              default = 2;
-              description = "Number of GNOME workspaces for this user.";
+              default = {};
+              description = "GNOME-specific settings for this user.";
             };
           };
         };

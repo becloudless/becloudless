@@ -20,7 +20,23 @@ in
 
     environment.systemPackages = with pkgs; [
       gnome-tweaks dconf-editor
+      gjs # required by live-lock-screen extension (spawns gjs subprocess for video player)
+      gst_all_1.gst-plugins-rs # gtk4paintablesink for live-lock-screen extension
+      gst_all_1.gst-plugins-good
+      gst_all_1.gst-plugins-bad
+      gst_all_1.gst-plugins-ugly
     ];
+
+    # Make gtk4paintablesink (from gst-plugins-rs) discoverable by GNOME Shell
+    # Use GST_PLUGIN_PATH to append without replacing the system path set by NixOS
+    environment.variables.GST_PLUGIN_PATH = lib.makeSearchPathOutput "lib" "lib/gstreamer-1.0" (with pkgs.gst_all_1; [
+      gst-plugins-rs
+      gst-plugins-bad
+      gst-plugins-ugly
+    ]);
+
+    # Set date format for calendar to "Day 31 May" instead of "May 31"
+    environment.variables.LC_TIME = "en_GB.UTF-8";
 
     environment.gnome.excludePackages = (with pkgs; [
       # gnome-photos
@@ -50,35 +66,36 @@ in
       wantedBy = [ "graphical-session.target" ];
     };
 
+    systemd.user.services."saved-windows" = {
+      enable = true;
+      path = with pkgs; [
+        bash
+        dconf
+      ];
+      script = ''
+        dconfPath=/org/gnome/shell/extensions/SmartAutoMoveNG/saved-windows
+        filePath=/nix/home/$USER/.config/saved-windows
 
-    # systemd.user.services."saved-windows" = {
-    #   enable = true;
-    #   path = with pkgs; [
-    #     bash
-    #     dconf
-    #   ];
-    #   script = ''
-    #     dconfPath=/org/gnome/shell/extensions/smart-auto-move/saved-windows
-    #     filePath=/nix/home/$USER/Home/home/$USER/.config/saved-windows
+        cat $filePath | ${pkgs.dconf}/bin/dconf load /org/gnome/shell/extensions/SmartAutoMoveNG/ || true
 
-    #     cat $filePath | ${pkgs.dconf}/bin/dconf load /org/gnome/shell/extensions/smart-auto-move/ || true
+        ${pkgs.dconf}/bin/dconf watch $dconfPath | while read line; do
+          if [ "$line" = "$dconfPath" ]; then
+            continue
+          fi
+          if [ "$line" = "" ]; then
+            continue
+          fi
+          ${pkgs.dconf}/bin/dconf dump /org/gnome/shell/extensions/SmartAutoMoveNG/ > $filePath
+        done
+      '';
+      after = [ "graphical-session-pre.target" ];
+      partOf = [ "graphical-session.target" ];
+      wantedBy = [ "graphical-session.target" ];
+    };
 
-    #     ${pkgs.dconf}/bin/dconf watch $dconfPath | while read line; do
-    #       if [ "$line" = "$dconfPath" ]; then
-    #         continue
-    #       fi
-    #       if [ "$line" = "" ]; then
-    #         continue
-    #       fi
-    #       ${pkgs.dconf}/bin/dconf dump /org/gnome/shell/extensions/smart-auto-move/ > $filePath
-    #     done
-    #   '';
-    #   after = [ "graphical-session-pre.target" ];
-    #   partOf = [ "graphical-session.target" ];
-    #   wantedBy = [ "graphical-session.target" ];
-    # };
-
-    home-manager.users = lib.mapAttrs (name: ucfg: { lib, pkgs, ... }: {
+    home-manager.users = lib.mapAttrs (name: ucfg:
+      let liveLockScreen = pkgs.bcl.live-lock-screen; in
+      { lib, pkgs, ... }: {
 
       home.packages = with pkgs; [
         gnomeExtensions.dash-to-panel
@@ -87,10 +104,25 @@ in
         gnomeExtensions.workspace-matrix
         gnomeExtensions.workspace-indicator
         gnomeExtensions.wallpaper-slideshow
-  #      gnomeExtensions.appindicator
         gnomeExtensions.quake-terminal
-        # gnomeExtensions.smart-auto-move
+        gnomeExtensions.smart-auto-move-ng
+        gnomeExtensions.no-overview
+        liveLockScreen
       ];
+
+      # Electron apps read GTK3 settings.ini directly and ignore dconf color-scheme.
+      # Override the desktop entry to force the dark variant only for jellyfin-desktop.
+      home.file.".local/share/applications/org.jellyfin.JellyfinDesktop.desktop".text = ''
+        [Desktop Entry]
+        Categories=AudioVideo;Video;Player;TV;
+        Comment=Desktop client for Jellyfin
+        Exec=env GTK_THEME=Adwaita:dark jellyfin-desktop %U
+        Icon=org.jellyfin.JellyfinDesktop
+        Name=Jellyfin
+        Terminal=false
+        Type=Application
+        Version=1.0
+      '';
 
       # dconf watch /
       dconf.settings = with lib.hm.gvariant; {
@@ -134,6 +166,11 @@ in
           xkb-options = ["terminate:ctcorbrl_alt_bksp" "lv3:ralt_switch" "ctrl:nocaps"];
         };
 
+        # Rebind IBus emoji picker to avoid conflict with Super+period shortcuts.
+        "org/freedesktop/ibus/panel/emoji" = {
+          hotkey = ["<Control><Shift>e"];
+        };
+
         "org/gnome/shell/extensions/azwallpaper" = {
           slideshow-directory = "/home/${name}/Pictures/Wallpapers/3840x2160";
           slideshow-slide-duration = mkTuple [ 4 0 0 ];
@@ -171,20 +208,6 @@ in
         "org/gnome/GWeather4" = {
           temperature-unit = "centigrade";
         };
-    # hardware.printers = {
-    #   ensurePrinters = [
-    #     {
-    #       name = "ip2700";
-    #       location = "Home";
-    #       deviceUri = "usb://Canon/iP2700%20series?serial=F8241F";
-    #       model = "gutenprint.${lib.versions.majorMinor (lib.getVersion pkgs.gutenprint)}://brother-hl-5140/expert";
-    #       ppdOptions = {
-    #         PageSize = "A4";
-    #       };
-    #     }
-    #   ];
-    #   ensureDefaultPrinter = "ip2700";
-    # };
 
         "org/gnome/desktop/peripherals/touchpad" = {
           speed = 0.62790697674418605;
@@ -219,11 +242,16 @@ in
           show-in-lock-screen = false;
         };
         "org/gnome/desktop/search-providers" = {
-          disable-external = true;
+          disable-external = false;
+          disabled = [
+            "org.gnome.Epiphany.desktop"
+            "org.gnome.Weather.desktop"
+          ];
         };
         "org/gnome/mutter" = {
           edge-tiling = true;
           workspaces-only-on-primary = false;
+          dynamic-workspaces = false;
         };
         "org/gnome/shell/app-switcher" = {
           current-workspace-only = true;
@@ -234,10 +262,14 @@ in
         "org/gnome/desktop/input-sources" = {
           show-all-sources = true;
         };
+        "org/gnome/desktop/calendar" = {
+          week-start-day = "monday";
+          show-weekdate = true;
+        };
         "org/gnome/desktop/screensaver" = {
           lock-delay = 30;
         };
-        "org/gnome/shell/extensions/system-monitor" = {
+        "org/gnome/shell/extensions/system-monitor-next-applet" = {
           icon-display = false;
           cpu-show-text = false;
           cpu-graph-width = 70;
@@ -256,8 +288,12 @@ in
           disk-graph-width = 70;
           disk-show-text = false;
           disk-refresh-time = 2000;
+          battery-display = true;
+          battery-show-text = false;
+          battery-time = true;
         };
         "org/gnome/shell/extensions/dash-to-panel" = {
+          extension-version = (builtins.fromJSON (builtins.readFile "${pkgs.gnomeExtensions.dash-to-panel}/share/gnome-shell/extensions/dash-to-panel@jderose9.github.com/metadata.json")).version;
           panel-positions = ''{"0":"TOP","1":"TOP","2":"TOP","3":"TOP"}'';
           panel-sizes = ''{"0":24,"1":24,"2":24,"3":24}'';
           appicon-margin = 4;
@@ -275,9 +311,20 @@ in
         "org/gnome/shell/extensions/wsmatrix" = {
           show-popup = false;
         };
+        "org/gnome/shell/extensions/quake-terminal" = {
+          terminal-id = "Alacritty.desktop"; # "kitty.desktop", "org.gnome.Console.desktop"
+          terminal-shortcut = ["<Super>x"];
+          animation-time = 0;
+          vertical-size = 90;
+          always-on-top = true;
+          render-on-current-monitor = false;
+          auto-hide-window = false;
+          monitor-screen = 0;
+        };
         "org/gnome/shell" = {
           disable-user-extensions = false;
           welcome-dialog-last-shown-version = "99.0";
+          always-show-log-out = true;
 
           favorite-apps = [
             "firefox.desktop"
@@ -294,9 +341,11 @@ in
             "system-monitor-next@paradoxxx.zero.gmail.com"
             "wsmatrix@martin.zurowietz.de"
             "workspace-indicator@gnome-shell-extensions.gcampax.github.com"
-  #          "appindicatorsupport@rgcjonas.gmail.com"
+            "quake-terminal@diegodario88.github.io"
             "azwallpaper@azwallpaper.gitlab.com"
-            # "smart-auto-move@khimaros.com"
+            "SmartAutoMoveNG@lauinger-clan.de"
+            "no-overview@fthx"
+            "live-lockscreen@nick-redwill"
           ];
         };
       };

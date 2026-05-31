@@ -36,7 +36,6 @@ in {
   };
 
   config = mkIf cfg.enable {
-    networking.wireless.enable = false;
     networking.networkmanager.enable = true;
 
     # Declare SOPS secrets for wifi passwords derived from keys in the secret file
