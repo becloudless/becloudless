@@ -35,6 +35,9 @@ in
       gst-plugins-ugly
     ]);
 
+    # Set date format for calendar to "Day 31 May" instead of "May 31"
+    environment.variables.LC_TIME = "en_GB.UTF-8";
+
     environment.gnome.excludePackages = (with pkgs; [
       # gnome-photos
       gnome-tour
@@ -239,7 +242,11 @@ in
           show-in-lock-screen = false;
         };
         "org/gnome/desktop/search-providers" = {
-          disable-external = true;
+          disable-external = false;
+          disabled = [
+            "org.gnome.Epiphany.desktop"
+            "org.gnome.Weather.desktop"
+          ];
         };
         "org/gnome/mutter" = {
           edge-tiling = true;
@@ -254,6 +261,10 @@ in
         };
         "org/gnome/desktop/input-sources" = {
           show-all-sources = true;
+        };
+        "org/gnome/desktop/calendar" = {
+          week-start-day = "monday";
+          show-weekdate = true;
         };
         "org/gnome/desktop/screensaver" = {
           lock-delay = 30;
