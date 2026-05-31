@@ -21,4 +21,3 @@ with all needed services to be independent of well known companies, like google,
 Yes, open source is so powerful that you can be your own Google. 
 
 # Architecture
-

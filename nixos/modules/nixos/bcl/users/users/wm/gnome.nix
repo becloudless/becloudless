@@ -163,6 +163,11 @@ in
           xkb-options = ["terminate:ctcorbrl_alt_bksp" "lv3:ralt_switch" "ctrl:nocaps"];
         };
 
+        # Rebind IBus emoji picker to avoid conflict with Super+period shortcuts.
+        "org/freedesktop/ibus/panel/emoji" = {
+          hotkey = ["<Control><Shift>e"];
+        };
+
         "org/gnome/shell/extensions/azwallpaper" = {
           slideshow-directory = "/home/${name}/Pictures/Wallpapers/3840x2160";
           slideshow-slide-duration = mkTuple [ 4 0 0 ];
