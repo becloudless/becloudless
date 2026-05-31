@@ -13,9 +13,10 @@ func nixosUpgradeCmd() *cobra.Command {
 	var action string
 
 	cmd := &cobra.Command{
-		Use:   "upgrade",
-		Short: "upgrade NixOS system from local git state",
-		Long:  "Small wrapper around nixos-rebuild to upgrade NixOS system from current infra git repo",
+		Use:     "upgrade",
+		Aliases: []string{"update", "up"},
+		Short:   "upgrade NixOS system",
+		Long:    "Small wrapper around nixos-rebuild to upgrade NixOS system from current infra git repo",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repository, err := git.OpenRepository(".")
 			if err != nil {
