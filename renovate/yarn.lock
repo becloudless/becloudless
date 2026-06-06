@@ -2715,10 +2715,10 @@ lowercase-keys@^4.0.1:
   resolved "https://registry.npmjs.org/lowercase-keys/-/lowercase-keys-4.0.1.tgz"
   integrity sha512-wI9Nui/L8VfADa/cr/7NQruaASk1k23/Uh1khQ02BCVYiiy8F4AhOGnQzJy3Fl/c44GnYSbZHv8g7EcG3kJ1Qg==
 
-lru-cache@11.5.0, lru-cache@^11.0.0, lru-cache@^11.1.0:
-  version "11.5.0"
-  resolved "https://registry.npmjs.org/lru-cache/-/lru-cache-11.5.0.tgz"
-  integrity sha512-5YgH9UJd7wVb9hIouI2adWpgqrrICkt070Dnj8EUY1+B4B2P9eRLPAkAAo6NICA7CEhOIeBHl46u9zSNpNu7zA==
+lru-cache@11.5.1, lru-cache@^11.0.0, lru-cache@^11.1.0:
+  version "11.5.1"
+  resolved "https://registry.npmjs.org/lru-cache/-/lru-cache-11.5.1.tgz"
+  integrity sha512-RPimw/7aMdv2oqRrxKwvZXcPfwBrn/JZ2xYcY9Hus/6LaS3VOAKVWKWgNLCFSiOm1ESXinjsDlidVU7JlnCN2A==
 
 luxon@3.7.2, luxon@^3.7.2:
   version "3.7.2"
@@ -3701,10 +3701,10 @@ remark@15.0.1:
     remark-stringify "^11.0.0"
     unified "^11.0.0"
 
-renovate@43.209.1:
-  version "43.209.1"
-  resolved "https://registry.npmjs.org/renovate/-/renovate-43.209.1.tgz"
-  integrity sha512-4pQp8et0eq6aVIJlwVs+yQ/ZnhPpcWO362vEe5DZQl3D9FY4CINOvAnhPcySxWP4Duok3Dhs2O8QnGnPIfXypg==
+renovate@43.210.2:
+  version "43.210.2"
+  resolved "https://registry.npmjs.org/renovate/-/renovate-43.210.2.tgz"
+  integrity sha512-QsyBGKS/fEAdPrRQr5+7GFz+LZ0EFxoY7su3XDN1tQHjCsu2q5H39klxA9bxQbRdnstitHUZ5yUtXfE/1c9U/A==
   dependencies:
     "@aws-sdk/client-codecommit" "3.1053.0"
     "@aws-sdk/client-ec2" "3.1053.0"
@@ -3785,7 +3785,7 @@ renovate@43.209.1:
     jsonata "2.2.1"
     jsonc-weaver "0.2.4"
     klona "2.0.6"
-    lru-cache "11.5.0"
+    lru-cache "11.5.1"
     luxon "3.7.2"
     markdown-it "14.2.0"
     markdown-table "3.0.4"
