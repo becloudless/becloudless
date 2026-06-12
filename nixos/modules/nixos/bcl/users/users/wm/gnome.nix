@@ -152,7 +152,7 @@ in
         };
 
         # Rebind IBus emoji picker to avoid conflict with Super+period shortcuts.
-        "org/freedesktop/ibus/panel/emoji" = {
+        "desktop/ibus/panel/emoji" = {
           hotkey = ["<Control><Shift>e"];
         };
 
