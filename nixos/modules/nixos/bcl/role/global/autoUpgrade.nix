@@ -38,6 +38,7 @@
     };
 
     systemd.timers.nixos-upgrade.timerConfig.Persistent = lib.mkForce true; # so the timer fires even if the system was off at the scheduled time
+    systemd.timers.nixos-upgrade.timerConfig.FixedRandomDelay = lib.mkForce true; # without this, the random delay resets on every reboot, preventing Persistent from ever catching up on systems that are up from time to time
 
   };
 }
