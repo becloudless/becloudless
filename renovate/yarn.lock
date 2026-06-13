@@ -3574,9 +3574,9 @@ prettier@3.8.1:
   resolved "https://registry.npmjs.org/prettier/-/prettier-3.8.1.tgz"
   integrity sha512-UOnG6LftzbdaHZcKoPFtOcCKztrQ57WkHDeRD9t/PTQtmT0NHSeWWepj6pS0z/N7+08BHFDQVUrfmfMRcZwbMg==
 
-prettier@^3.8.4:
+prettier@^3.0.0:
   version "3.8.4"
-  resolved "https://registry.yarnpkg.com/prettier/-/prettier-3.8.4.tgz#f334f013ac04a96676f24dabc23c1c4ae1bae411"
+  resolved "https://registry.npmjs.org/prettier/-/prettier-3.8.4.tgz"
   integrity sha512-N2MylSdi48+5N/6S5j+maeHbUSIzzZ5uOcX5Hm4QpV8Dkb1HFjfAKTKX6yNPJQD9AhcT3ifHNB66tWTTJDi11Q==
 
 proc-log@^6.0.0:
@@ -3701,10 +3701,10 @@ remark@15.0.1:
     remark-stringify "^11.0.0"
     unified "^11.0.0"
 
-renovate@43.216.1:
-  version "43.216.1"
-  resolved "https://registry.npmjs.org/renovate/-/renovate-43.216.1.tgz"
-  integrity sha512-qlb7aFLa8OKdvEWrTuu/wN9B+F/iLkFYxAOfT/elb5S9TR5GNF0lyTbaT08dPoZybWKhdH6345eP+xWmuXWEFQ==
+renovate@43.218.0:
+  version "43.218.0"
+  resolved "https://registry.npmjs.org/renovate/-/renovate-43.218.0.tgz"
+  integrity sha512-hLRnKypMeo3o1cwY+VjxgCw/SpRWmGm4bpeD8VdOe4SEzlUZ4gOW+q43yJGxwfFasZwIyXiBq5e8LFxCoHwNRg==
   dependencies:
     "@aws-sdk/client-codecommit" "3.1053.0"
     "@aws-sdk/client-ec2" "3.1053.0"
