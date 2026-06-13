@@ -173,7 +173,7 @@ spec:
               image:
                 repository: ghcr.io/becloudless/alpine
                 # renovate: versioning=loose
-                tag: 1.260524.1011
+                tag: 1.260613.656
                 tag: 1.260202.1736-H7074dbd
               command: ["sh"]
               args:
