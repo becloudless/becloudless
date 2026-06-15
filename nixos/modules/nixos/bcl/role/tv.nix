@@ -23,17 +23,29 @@
     bcl.wifi.enable = true;
 
     bcl.users.users.tv = {
-      wm.name = "dwm";
-      autoLogin = true;
+      wm.name = "";
+      autoLogin = false;
     };
+
+    users.users.tv.extraGroups = [ "video" "render" "audio" ];
 
     services.speechd.enable = false; # remove mbrola-voices dependency that is huge
 
     security.sudo.wheelNeedsPassword = false;
 
+    # cage: minimal Wayland kiosk compositor - runs jellyfin-desktop fullscreen.
+    # Wayland uses EGL natively, giving libmpv proper VA-API context (no xcb_egl hack needed).
+    services.greetd = {
+      enable = true;
+      settings.default_session = {
+        command = "${pkgs.cage}/bin/cage -s -- jellyfin-desktop";
+        user = "tv";
+      };
+    };
+
     environment.systemPackages = with pkgs; [
       jellyfin-media-player
-      xdotool # move mouse
+      cage
       pulseaudio
     ];
 
@@ -48,24 +60,17 @@
 
       imports = [ (inputs.impermanence + "/home-manager.nix") ];
 
-      home.file.".xprofile".text = ''
-        if [ -z $_XPROFILE_SOURCED ]; then
-          export _XPROFILE_SOURCED=1
+      # Wayland environment for cage: EGL is native, VA-API works for libmpv.
+      # QTWEBENGINE_CHROMIUM_FLAGS: VA-API decode in Chromium for HLS content.
+      home.file.".config/environment.d/jellyfin.conf".text = ''
+        QTWEBENGINE_CHROMIUM_FLAGS=--enable-features=VaapiVideoDecoder,VaapiVideoDecodeLinuxGL
+      '';
 
-          xsetroot -solid black # black background
-          xset -dpms      # disable xorg screen going to sleep
-          xset s off      # disable xorg screensaver
-          # xdotool mousemove 100 100 && xdotool click 1
-
-          # TODO this is a hack
-          pactl set-sink-volume @DEFAULT_SINK@ 100%
-          pactl set-sink-volume alsa_output.pci-0000_00_0e.0.hdmi-stereo 100% # TODO
-
-          # TODO wait for network
-          # while ! ping -c 1 -W 1 192.168.40.12; do sleep 1; done;
-          bash -c "while true; do jellyfin-desktop; sleep 5; done" &
-          bash -c "sleep 20; xdotool mousemove 100 100; xdotool click 1; amixer set Master 95%;" &
-        fi
+      # Force WirePlumber to use the HDMI sink as the default audio output
+      xdg.configFile."wireplumber/wireplumber.conf.d/50-hdmi-default.conf".text = ''
+        wireplumber.settings = {
+          default.audio.sink = "alsa_output.pci-0000_00_0e.0.hdmi-stereo"
+        }
       '';
 
       home.file.".local/share/jellyfin-desktop/profiles.json".text = ''
@@ -163,12 +168,12 @@
                     "debug.force_vo": "",
                     "default_playback_speed": 1,
                     "deinterlace": false,
-                    "force_transcode_4k": true,
+                    "force_transcode_4k": false,
                     "force_transcode_av1": true,
                     "force_transcode_dovi": true,
-                    "force_transcode_hdr": true,
-                    "force_transcode_hevc": true,
-                    "force_transcode_hi10p": true,
+                    "force_transcode_hdr": false,
+                    "force_transcode_hevc": false,
+                    "force_transcode_hi10p": false,
                     "hardwareDecoding": "enabled",
                     "prefer_transcode_to_h265": false,
                     "refreshrate.auto_switch": true,
