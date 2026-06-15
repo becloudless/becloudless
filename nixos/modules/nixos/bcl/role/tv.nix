@@ -34,16 +34,15 @@
     security.sudo.wheelNeedsPassword = false;
 
     # cage: minimal Wayland kiosk compositor - runs jellyfin-desktop fullscreen.
-    # Wayland uses EGL natively, giving libmpv proper VA-API context (no xcb_egl hack needed).
     services.greetd = {
       enable = true;
       settings.default_session = {
-        # QSG_RENDER_LOOP=basic: use single-threaded QML render loop so Qt calls
-        # mpv_render_context_render() synchronously. The threaded loop (default on
-        # Wayland) never fires the mpv render callback, leaving the MpvVideoItem
-        # black and opaque over the htmlvideoplayer <video> element → no video.
-        # QT_OPENGL=egl: ensure Qt uses EGL (not GLX via Xwayland) for its GL context.
-        command = "${pkgs.cage}/bin/cage -s -- env QSG_RENDER_LOOP=basic QT_OPENGL=egl jellyfin-desktop";
+        # QT_QPA_PLATFORM=xcb: force Qt to use X11 via cage's built-in Xwayland.
+        # Native Wayland (QPA=wayland) causes black video: Qt6's Wayland/EGL video
+        # chain requires protocol support (NativeSkiaOutputDevice, dmabuf, etc.)
+        # that cage doesn't fully implement. X11/Xwayland works reliably.
+        # QT_XCB_GL_INTEGRATION is NOT set, so Qt uses GLX (not xcb_egl → no crash).
+        command = "${pkgs.cage}/bin/cage -s -- env QT_QPA_PLATFORM=xcb jellyfin-desktop";
         user = "tv";
       };
     };
