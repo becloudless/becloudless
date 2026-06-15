@@ -38,10 +38,11 @@
     services.greetd = {
       enable = true;
       settings.default_session = {
-        # QTWEBENGINE_CHROMIUM_FLAGS: enable VA-API decode in Chromium/QtWebEngine
-        # for HLS content played via HtmlVideoPlayer (HDR/transcoded streams).
-        # Set here because cage doesn't source systemd user environment.d files.
-        command = "${pkgs.cage}/bin/cage -s -- env QTWEBENGINE_CHROMIUM_FLAGS='--enable-features=VaapiVideoDecoder,VaapiVideoDecodeLinuxGL' jellyfin-desktop";
+        # QTWEBENGINE_CHROMIUM_FLAGS: disable GPU in QtWebEngine/Chromium to avoid
+        # black video with audio when playing HLS-transcoded content via HtmlVideoPlayer.
+        # Under Wayland/cage, GPU compositing of the <video> element fails silently.
+        # --disable-gpu forces software decode+compositing which displays correctly.
+        command = "${pkgs.cage}/bin/cage -s -- env QTWEBENGINE_CHROMIUM_FLAGS='--disable-gpu' jellyfin-desktop";
         user = "tv";
       };
     };
