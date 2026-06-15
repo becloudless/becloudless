@@ -51,7 +51,7 @@ func nixosIsoBuildCmd() *cobra.Command {
 			_, err = os.Stat(isoPath)
 			if err != nil || rebuild {
 
-				sopsFile := infra.GetNixosDir() + "/modules/nixos/groups/install/default.secrets.yaml"
+				sopsFile := infra.GetNixosDir() + "/modules/nixos/lmr/groups/install/default.secrets.yaml"
 				logs.WithField("file", sopsFile).Info("Extracting install host key from group")
 
 				content, err := security.DecryptSopsYAMLWithAgeKey(sopsFile, "")
