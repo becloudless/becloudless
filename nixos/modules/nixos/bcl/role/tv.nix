@@ -38,7 +38,10 @@
     services.greetd = {
       enable = true;
       settings.default_session = {
-        command = "${pkgs.cage}/bin/cage -s -- jellyfin-desktop";
+        # QTWEBENGINE_CHROMIUM_FLAGS: enable VA-API decode in Chromium/QtWebEngine
+        # for HLS content played via HtmlVideoPlayer (HDR/transcoded streams).
+        # Set here because cage doesn't source systemd user environment.d files.
+        command = "${pkgs.cage}/bin/cage -s -- env QTWEBENGINE_CHROMIUM_FLAGS='--enable-features=VaapiVideoDecoder,VaapiVideoDecodeLinuxGL' jellyfin-desktop";
         user = "tv";
       };
     };
