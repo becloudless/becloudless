@@ -38,11 +38,12 @@
     services.greetd = {
       enable = true;
       settings.default_session = {
-        # QTWEBENGINE_CHROMIUM_FLAGS: disable GPU in QtWebEngine/Chromium to avoid
-        # black video with audio when playing HLS-transcoded content via HtmlVideoPlayer.
-        # Under Wayland/cage, GPU compositing of the <video> element fails silently.
-        # --disable-gpu forces software decode+compositing which displays correctly.
-        command = "${pkgs.cage}/bin/cage -s -- env QTWEBENGINE_CHROMIUM_FLAGS='--disable-gpu' jellyfin-desktop";
+        # QSG_RENDER_LOOP=basic: use single-threaded QML render loop so Qt calls
+        # mpv_render_context_render() synchronously. The threaded loop (default on
+        # Wayland) never fires the mpv render callback, leaving the MpvVideoItem
+        # black and opaque over the htmlvideoplayer <video> element → no video.
+        # QT_OPENGL=egl: ensure Qt uses EGL (not GLX via Xwayland) for its GL context.
+        command = "${pkgs.cage}/bin/cage -s -- env QSG_RENDER_LOOP=basic QT_OPENGL=egl jellyfin-desktop";
         user = "tv";
       };
     };
