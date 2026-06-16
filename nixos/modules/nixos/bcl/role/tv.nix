@@ -41,7 +41,7 @@
         # Native Wayland QPA causes black video (NativeSkiaOutputDevice failure in cage).
         # vblank_mode=3: force Mesa GLX vsync for mpv (GL_*_swap_control missing on Xwayland).
         # QTWEBENGINE_CHROMIUM_FLAGS: VA-API GPU decode in Chromium for HLS/htmlvideoplayer.
-        command = "${pkgs.cage}/bin/cage -s -- env QT_QPA_PLATFORM=xcb vblank_mode=3 QTWEBENGINE_CHROMIUM_FLAGS='--enable-features=VaapiVideoDecoder,VaapiVideoDecodeLinuxGL' jellyfin-desktop";
+        command = "${pkgs.cage}/bin/cage -s -- env QT_QPA_PLATFORM=xcb vblank_mode=3 QTWEBENGINE_CHROMIUM_FLAGS='--use-gl=desktop --enable-features=VaapiVideoDecoder,VaapiVideoDecodeLinuxGL' jellyfin-desktop";
         user = "tv";
       };
     };
