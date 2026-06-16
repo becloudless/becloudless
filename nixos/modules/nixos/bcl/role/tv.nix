@@ -48,7 +48,7 @@
     };
 
     environment.systemPackages = with pkgs; [
-      jellyfin-media-player
+      jellyfin-desktop
       cage
       pulseaudio
     ];
