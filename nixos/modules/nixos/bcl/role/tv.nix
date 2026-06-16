@@ -41,7 +41,7 @@
         # Native Wayland QPA causes black video (NativeSkiaOutputDevice failure in cage).
         # vblank_mode=3: force Mesa GLX vsync for mpv (GL_*_swap_control missing on Xwayland).
         # QTWEBENGINE_CHROMIUM_FLAGS: VA-API GPU decode in Chromium for HLS/htmlvideoplayer.
-        command = "${pkgs.cage}/bin/cage -s -- env QT_QPA_PLATFORM=xcb vblank_mode=3 QTWEBENGINE_CHROMIUM_FLAGS='--use-gl=desktop --enable-features=VaapiVideoDecoder,VaapiVideoDecodeLinuxGL' jellyfin-desktop";
+        # command = "${pkgs.cage}/bin/cage -s -- env QT_QPA_PLATFORM=xcb vblank_mode=3 QTWEBENGINE_CHROMIUM_FLAGS='--use-gl=desktop --enable-features=VaapiVideoDecoder,VaapiVideoDecodeLinuxGL' jellyfin-desktop";
         user = "tv";
       };
     };
@@ -65,9 +65,9 @@
 
       # Wayland environment for cage: EGL is native, VA-API works for libmpv.
       # QTWEBENGINE_CHROMIUM_FLAGS: VA-API decode in Chromium for HLS content.
-      home.file.".config/environment.d/jellyfin.conf".text = ''
-        QTWEBENGINE_CHROMIUM_FLAGS=--enable-features=VaapiVideoDecoder,VaapiVideoDecodeLinuxGL
-      '';
+      # home.file.".config/environment.d/jellyfin.conf".text = ''
+      #   QTWEBENGINE_CHROMIUM_FLAGS=--enable-features=VaapiVideoDecoder,VaapiVideoDecodeLinuxGL
+      # '';
 
       # Force WirePlumber to use the HDMI sink as the default audio output
       xdg.configFile."wireplumber/wireplumber.conf.d/50-hdmi-default.conf".text = ''
