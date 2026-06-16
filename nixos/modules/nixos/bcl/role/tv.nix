@@ -38,11 +38,10 @@
       enable = true;
       settings.default_session = {
         # QT_QPA_PLATFORM=xcb: force Qt to use X11 via cage's built-in Xwayland.
-        # Native Wayland (QPA=wayland) causes black video: Qt6's Wayland/EGL video
-        # chain requires protocol support (NativeSkiaOutputDevice, dmabuf, etc.)
-        # that cage doesn't fully implement. X11/Xwayland works reliably.
-        # QT_XCB_GL_INTEGRATION is NOT set, so Qt uses GLX (not xcb_egl → no crash).
-        command = "${pkgs.cage}/bin/cage -s -- env QT_QPA_PLATFORM=xcb jellyfin-desktop";
+        # Native Wayland QPA causes black video (NativeSkiaOutputDevice failure in cage).
+        # vblank_mode=3: force Mesa GLX vsync for mpv (GL_*_swap_control missing on Xwayland).
+        # QTWEBENGINE_CHROMIUM_FLAGS: VA-API GPU decode in Chromium for HLS/htmlvideoplayer.
+        command = "${pkgs.cage}/bin/cage -s -- env QT_QPA_PLATFORM=xcb vblank_mode=3 QTWEBENGINE_CHROMIUM_FLAGS='--enable-features=VaapiVideoDecoder,VaapiVideoDecodeLinuxGL' jellyfin-desktop";
         user = "tv";
       };
     };
