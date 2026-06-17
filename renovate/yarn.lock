@@ -976,10 +976,10 @@
   resolved "https://registry.npmjs.org/@renovatebot/pep440/-/pep440-5.0.0.tgz"
   integrity sha512-91cFM32/pnOAvC7W1W1kPPI9QM2y6OrYCeomz7pop4A+3Ksh2XnZXGznUMlzR7YbOQlg7X/MNlF27s9Yt9hhTA==
 
-"@renovatebot/pgp@1.3.12":
-  version "1.3.12"
-  resolved "https://registry.npmjs.org/@renovatebot/pgp/-/pgp-1.3.12.tgz"
-  integrity sha512-3glRBjBTgoFHdFedUsxcQWw7C0LfHYhCKzTo9+jqjoI+kk5YD/g7GWJ2hsPSG6WTQqJqD8VGiM0h2j3xqTS4Qw==
+"@renovatebot/pgp@1.3.14":
+  version "1.3.14"
+  resolved "https://registry.npmjs.org/@renovatebot/pgp/-/pgp-1.3.14.tgz"
+  integrity sha512-H2BBZmyMHdGNW4LXLHbDXBymeHjwbWZk9vE57Nd6TJCSPTKmf1nz13vzuZHqwF/BCyLSuzMfL8/eOHYgtymUwg==
 
 "@renovatebot/ruby-semver@5.0.0":
   version "5.0.0"
@@ -2256,10 +2256,10 @@ globalthis@^1.0.1:
     define-properties "^1.2.1"
     gopd "^1.0.1"
 
-google-auth-library@10.6.2:
-  version "10.6.2"
-  resolved "https://registry.npmjs.org/google-auth-library/-/google-auth-library-10.6.2.tgz"
-  integrity sha512-e27Z6EThmVNNvtYASwQxose/G57rkRuaRbQyxM2bvYLLX/GqWZ5chWq2EBoUchJbCc57eC9ArzO5wMsEmWftCw==
+google-auth-library@10.7.0:
+  version "10.7.0"
+  resolved "https://registry.npmjs.org/google-auth-library/-/google-auth-library-10.7.0.tgz"
+  integrity sha512-QpTAbNJ36TliZLx3TTtahR8HG0hN9RllL1e3FymOvQSIKK8JmgV58H924ub2wa2DsS3ANjjP1Aw1N+Ramc8hqQ==
   dependencies:
     base64-js "^1.3.0"
     ecdsa-sig-formatter "^1.0.11"
@@ -3406,10 +3406,10 @@ onetime@^6.0.0:
   dependencies:
     mimic-fn "^4.0.0"
 
-openpgp@6.3.0:
-  version "6.3.0"
-  resolved "https://registry.npmjs.org/openpgp/-/openpgp-6.3.0.tgz"
-  integrity sha512-pLzCU8IgyKXPSO11eeharQkQ4GzOKNWhXq79pQarIRZEMt1/ssyr+MIuWBv1mNoenJLg04gvPx+fi4gcKZ4bag==
+openpgp@6.3.1:
+  version "6.3.1"
+  resolved "https://registry.npmjs.org/openpgp/-/openpgp-6.3.1.tgz"
+  integrity sha512-7oSPvmlKPojxFoyelT5DWPIAVmqWZh4qU/5pO6bdoShEtRpCw9Sye9IXUQj6EFM3XpgGssqccAr705YtTcLNQw==
 
 p-all@5.0.1:
   version "5.0.1"
@@ -3584,10 +3584,10 @@ proc-log@^6.0.0:
   resolved "https://registry.npmjs.org/proc-log/-/proc-log-6.1.0.tgz"
   integrity sha512-iG+GYldRf2BQ0UDUAd6JQ/RwzaQy6mXmsk/IzlYyal4A4SNFw54MeH4/tLkF4I5WoWG9SQwuqWzS99jaFQHBuQ==
 
-protobufjs@8.5.0:
-  version "8.5.0"
-  resolved "https://registry.npmjs.org/protobufjs/-/protobufjs-8.5.0.tgz"
-  integrity sha512-df1jWDPA5VIBNRtuAHjqr09f2qN5D4Vke1wYqOQg1XJ7ZDpA7BD6L7E4tyChgGRLB5hqk2m79Zsy0WHwV9a84A==
+protobufjs@8.6.1:
+  version "8.6.1"
+  resolved "https://registry.npmjs.org/protobufjs/-/protobufjs-8.6.1.tgz"
+  integrity sha512-s4qQPr4pU0W95iYnUInh95skjIg+3aM2sakYsw60QYanU+qWRDY2zQxOAQV6zU7ROJpSNDG9B+VSmk4dqdWWSA==
   dependencies:
     long "^5.3.2"
 
@@ -3701,10 +3701,10 @@ remark@15.0.1:
     remark-stringify "^11.0.0"
     unified "^11.0.0"
 
-renovate@43.220.0:
-  version "43.220.0"
-  resolved "https://registry.npmjs.org/renovate/-/renovate-43.220.0.tgz"
-  integrity sha512-q3bkIyhnAV+oPirFeiI6jKIjN5IE1sbO7DHiAZgkfjCX68enwNsvm9N9dKYUBqo/GLdPhca9dERm4X0QP7LmvA==
+renovate@43.222.1:
+  version "43.222.1"
+  resolved "https://registry.npmjs.org/renovate/-/renovate-43.222.1.tgz"
+  integrity sha512-rNYfr0wyvPcb2klwdgxfvAc4ocz6dWDVcPUkq7UxsAWU3i8q2Azl326hUs6sEYPLsCl7lMYLd/CV9rNYBwep+Q==
   dependencies:
     "@aws-sdk/client-codecommit" "3.1053.0"
     "@aws-sdk/client-ec2" "3.1053.0"
@@ -3738,7 +3738,7 @@ renovate@43.220.0:
     "@renovatebot/good-enough-parser" "2.0.1"
     "@renovatebot/osv-offline" "3.0.3"
     "@renovatebot/pep440" "5.0.0"
-    "@renovatebot/pgp" "1.3.12"
+    "@renovatebot/pgp" "1.3.14"
     "@renovatebot/ruby-semver" "5.0.0"
     "@sindresorhus/is" "8.1.0"
     "@yarnpkg/core" "4.8.0"
@@ -3773,7 +3773,7 @@ renovate@43.220.0:
     github-url-from-git "1.5.0"
     glob "13.0.6"
     global-agent "3.0.0"
-    google-auth-library "10.6.2"
+    google-auth-library "10.7.0"
     got "14.6.6"
     graph-data-structure "4.5.0"
     handlebars "4.7.9"
@@ -3800,14 +3800,14 @@ renovate@43.220.0:
     p-throttle "8.1.0"
     parse-link-header "2.0.0"
     prettier "3.8.1"
-    protobufjs "8.5.0"
+    protobufjs "8.6.1"
     punycode "2.3.1"
     remark "15.0.1"
     remark-gfm "4.0.1"
     remark-github "12.0.0"
     safe-stable-stringify "2.5.0"
     sax "1.6.0"
-    semver "7.8.1"
+    semver "7.8.2"
     semver-stable "3.0.0"
     semver-utils "1.1.4"
     shlex "3.0.0"
@@ -3824,7 +3824,7 @@ renovate@43.220.0:
     yaml "2.9.0"
     zod "4.4.3"
   optionalDependencies:
-    openpgp "6.3.0"
+    openpgp "6.3.1"
     re2 "1.24.1"
 
 require-in-the-middle@^8.0.0:
@@ -3922,10 +3922,10 @@ semver-utils@1.1.4:
   resolved "https://registry.npmjs.org/semver-utils/-/semver-utils-1.1.4.tgz"
   integrity sha512-EjnoLE5OGmDAVV/8YDoN5KiajNadjzIp9BAHOhYeQHt7j0UWxjmgsx4YD48wp4Ue1Qogq38F1GNUJNqF1kKKxA==
 
-semver@7.8.1, semver@^7.0.0, semver@^7.1.2, semver@^7.3.2, semver@^7.3.5, semver@^7.7.4:
-  version "7.8.1"
-  resolved "https://registry.npmjs.org/semver/-/semver-7.8.1.tgz"
-  integrity sha512-rkVq3IXh+4FDGch+KwzX3aV9W3kO54GyEgpvBzSyctDA6Xtd7RJQV1xmXbeQp5v7+VzLOfVqiutSE6GICgPFvg==
+semver@7.8.2, semver@^7.0.0, semver@^7.1.2, semver@^7.3.2, semver@^7.3.5, semver@^7.7.4:
+  version "7.8.2"
+  resolved "https://registry.npmjs.org/semver/-/semver-7.8.2.tgz"
+  integrity sha512-c8jsqUZm3omBOI66G90z1Dyw5z622G8oLG+omfsHBJf3CWQTlOcwOjvOG6wtiNfW6anKm/eA39LMwMtMez2TiQ==
 
 semver@^6.3.0:
   version "6.3.1"
