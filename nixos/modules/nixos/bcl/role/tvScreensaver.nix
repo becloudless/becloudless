@@ -38,7 +38,7 @@ in
             echo "No photos available in $PHOTO_DIR, waiting for sync..."
             return
           fi
-          feh --recursive --randomize --full-screen -Z --slideshow-delay 30 --hide-pointer --draw-tinted -e yudit/20 --info "echo '%n'" "$PHOTO_DIR" &
+          feh --recursive --randomize --full-screen -Z --slideshow-delay 30 --hide-pointer --draw-tinted -e yudit/20 --info "echo '%N'" "$PHOTO_DIR" &
         }
 
         ############################
