@@ -67,7 +67,7 @@ in
 
     # Sync photos from an Immich album to a local cache directory
     systemd.user.services."immich-photo-sync" = {
-      path = with pkgs; [ curl jq bash ];
+      path = with pkgs; [ curl jq bash coreutils ];
       script = ''
         set -euo pipefail
         set -x
@@ -83,15 +83,16 @@ in
         assets=$(curl -sf \
           -H "x-api-key: $IMMICH_API_KEY" \
           "$IMMICH_URL/api/albums/$ALBUM_ID" \
-          | jq -r '.assets[] | [.id, .originalFileName] | @tsv')
+          | jq -r '.assets[] | [.id, .originalFileName, (.localDateTime | split("T")[0])] | @tsv')
 
-        # Track current IDs to remove stale photos
-        current_ids=""
+        # Track current short hashes to remove stale photos
+        current_hashes=""
 
-        while IFS=$'\t' read -r asset_id original_name; do
+        while IFS=$'\t' read -r asset_id original_name photo_date; do
           ext="''${original_name##*.}"
-          dest="$PHOTO_DIR/''${asset_id}.''${ext}"
-          current_ids="$current_ids $asset_id"
+          short_hash=$(echo "$asset_id" | sha256sum | cut -c1-8)
+          dest="$PHOTO_DIR/''${short_hash}_''${photo_date}.''${ext}"
+          current_hashes="$current_hashes $short_hash"
           if [ ! -f "$dest" ]; then
             echo "Downloading $original_name ($asset_id)..."
             curl -sf \
@@ -104,9 +105,9 @@ in
         # Remove photos no longer in the album
         for f in "$PHOTO_DIR"/*; do
           [ -f "$f" ] || continue
-          fid="''${f##*/}"
-          fid="''${fid%%.*}"
-          if ! echo "$current_ids" | grep -qw "$fid"; then
+          fname="''${f##*/}"
+          fhash="''${fname%%_*}"
+          if ! echo "$current_hashes" | grep -qw "$fhash"; then
             echo "Removing stale photo $f"
             rm -f "$f"
           fi
@@ -119,7 +120,7 @@ in
       };
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
-      wantedBy = [ "default.target" ];
+      wantedBy = [ "default.targefeh --recursive --randomize --full-screen -Z --slideshow-delay 30 --hide-pointer --draw-tinted -e yudit/20 --info 'echo '\''%n'\''' /home/tv/.cache/screensaver-photost" ];
     };
 
     systemd.user.timers."immich-photo-sync" = {
