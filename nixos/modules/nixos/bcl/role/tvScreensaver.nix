@@ -45,15 +45,12 @@ in
         sleep 5
         displayScreensaver
         tail -fn0 ~/.local/share/jellyfin-desktop/profiles/b6a136dc17a44b32a63eed3507a6f2d0/logs/jellyfin-desktop.log \
-          | grep --line-buffered "Entering state:" \
+          | grep --line-buffered "nowplaying event:" \
           | while read line; do
-              state=$(echo $line | sed 's/.* - Entering state: \([a-z]*\)/\1/')
+              state=$(echo $line | sed 's/.* - nowplaying event: \([a-z]*\)/\1/')
               case $state in
-                buffering) disableScreensaver;;
-                playing) disableScreensaver;;
-                paused) displayScreensaver;;
-                canceled) displayScreensaver;;
-                finished) displayScreensaver;;
+                playbackstart) disableScreensaver;;
+                playbackstop) displayScreensaver;;
                 *) echo "Unknown state $state";;
               esac
             done
