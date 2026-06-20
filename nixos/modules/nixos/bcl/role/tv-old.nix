@@ -1,20 +1,5 @@
 { inputs, config, lib, pkgs, ... }:
 {
-  options.bcl.role.tv = {
-    audioType = lib.mkOption {
-         type = lib.types.str;
-         default = "basic";
-      };
-    audioDevice = lib.mkOption {
-         type = lib.types.str;
-         default = "auto";
-      };
-    jellyfinUrl = lib.mkOption {
-         type = lib.types.str;
-         default = "https://jellyfin.${config.bcl.global.domain}";
-      };
-  };
-
   config = lib.mkMerge [
     { bcl.role.knownRoles = [ "tv-old" ]; }
     (lib.mkIf (config.bcl.role.name == "tv-old") {
