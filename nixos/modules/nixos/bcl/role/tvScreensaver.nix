@@ -120,7 +120,7 @@ in
       };
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
-      wantedBy = [ "default.targefeh --recursive --randomize --full-screen -Z --slideshow-delay 30 --hide-pointer --draw-tinted -e yudit/20 --info 'echo '\''%n'\''' /home/tv/.cache/screensaver-photost" ];
+      wantedBy = [ "default.target" ];
     };
 
     systemd.user.timers."immich-photo-sync" = {
