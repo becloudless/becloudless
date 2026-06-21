@@ -42,7 +42,10 @@
     security.sudo.wheelNeedsPassword = false;
 
     # Configure nix-flatpak
-    xdg.portal.enable = true;
+    xdg.portal = {
+      enable = true;
+      wlr.enable = true;
+    };
     services.flatpak = {
       enable = true;
       packages = [
