@@ -11,7 +11,7 @@ in
     };
   };
 
-  config = lib.mkIf (config.bcl.role.name == "tv" && cfg.albumId != null) {
+  config = lib.mkIf ((config.bcl.role.name == "tv" || config.bcl.role.name == "tv-old") && cfg.albumId != null) {
     environment.systemPackages = with pkgs; [ feh curl jq ];
 
     sops.secrets."users.tv.immich.apiKey" = {
