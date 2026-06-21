@@ -51,8 +51,8 @@
                 ${pkgs.flatpak}/bin/flatpak install --user -y "$INSTALL_DIR"/*.flatpak
               fi
 
-              exec ${pkgs.cage}/bin/cage -s -- ${pkgs.xterm}/bin/xterm
-              #exec ${pkgs.cage}/bin/cage -s -- ${pkgs.flatpak}/bin/flatpak run "$FLATPAK_ID"
+              #exec ${pkgs.cage}/bin/cage -s -- ${pkgs.xterm}/bin/xterm
+              exec ${pkgs.cage}/bin/cage -s -- ${pkgs.flatpak}/bin/flatpak run "$FLATPAK_ID"
             '';
           in
             "${script}";
