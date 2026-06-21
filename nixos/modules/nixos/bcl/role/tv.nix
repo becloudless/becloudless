@@ -32,7 +32,29 @@
     services.greetd = {
       enable = true;
       settings.default_session = {
-        command = "${pkgs.cage}/bin/cage -s -- env QT_WAYLAND_DISABLE_WINDOWDECORATION=1 jellyfin-desktop";
+        command =
+          let
+            script = pkgs.writeShellScript "jellyfin-flatpak-launch" ''
+              FLATPAK_ID="org.jellyfin.JellyfinDesktop"
+              ZIP_PATH="/nix/linux-flatpak-x86_64.zip"
+              INSTALL_DIR="/nix/jellyfin-flatpak"
+
+              if ! ${pkgs.flatpak}/bin/flatpak info --user "$FLATPAK_ID" > /dev/null 2>&1; then
+                if [ ! -f "$ZIP_PATH" ]; then
+                  ${pkgs.curl}/bin/curl -L -o "$ZIP_PATH" \
+                    "https://nightly.link/jellyfin/jellyfin-desktop/workflows/build-linux-flatpak/main/linux-flatpak-x86_64.zip"
+                fi
+                mkdir -p "$INSTALL_DIR"
+                ${pkgs.unzip}/bin/unzip -o "$ZIP_PATH" -d "$INSTALL_DIR"
+                ${pkgs.flatpak}/bin/flatpak remote-add --user --if-not-exists flathub \
+                  "https://flathub.org/repo/flathub.flatpakrepo"
+                ${pkgs.flatpak}/bin/flatpak install --user -y "$INSTALL_DIR"/*.flatpak
+              fi
+
+              exec ${pkgs.cage}/bin/cage -s -- ${pkgs.flatpak}/bin/flatpak run "$FLATPAK_ID"
+            '';
+          in
+            "${script}";
         user = "tv";
       };
     };
