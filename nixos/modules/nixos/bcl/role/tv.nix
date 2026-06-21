@@ -1,5 +1,10 @@
 { inputs, config, lib, pkgs, ... }:
 {
+
+  imports = [
+    "${inputs.nix-flatpak}/modules/nixos.nix"
+  ];
+
   options.bcl.role.tv = {
     audioType = lib.mkOption {
          type = lib.types.str;
@@ -36,8 +41,15 @@
 
     security.sudo.wheelNeedsPassword = false;
 
+    # Configure nix-flatpak
+    services.flatpak = {
+      enable = true;
+      packages = [
+        "org.freedesktop.Platform/x86_64/25.08"
+      ];
+    };
+
     environment.systemPackages = with pkgs; [
-      jellyfin-desktop
       cage
       pulseaudio
     ];
