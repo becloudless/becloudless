@@ -36,8 +36,8 @@
           let
             script = pkgs.writeShellScript "jellyfin-flatpak-launch" ''
               FLATPAK_ID="org.jellyfin.JellyfinDesktop"
-              ZIP_PATH="/nix/linux-flatpak-x86_64.zip"
-              INSTALL_DIR="/nix/jellyfin-flatpak"
+              ZIP_PATH="/nix/home/tv/linux-flatpak-x86_64.zip"
+              INSTALL_DIR="/nix/home/tv/jellyfin-flatpak"
 
               if ! ${pkgs.flatpak}/bin/flatpak info --user "$FLATPAK_ID" > /dev/null 2>&1; then
                 if [ ! -f "$ZIP_PATH" ]; then
