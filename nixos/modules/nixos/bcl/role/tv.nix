@@ -32,200 +32,24 @@
     services.greetd = {
       enable = true;
       settings.default_session = {
-        command =
-          let
-            script = pkgs.writeShellScript "jellyfin-flatpak-launch" ''
-              FLATPAK_ID="org.jellyfin.JellyfinDesktop"
-              ZIP_PATH="/nix/home/tv/linux-flatpak-x86_64.zip"
-              INSTALL_DIR="/nix/home/tv/jellyfin-flatpak"
-
-              if ! ${pkgs.flatpak}/bin/flatpak info --user "$FLATPAK_ID" > /dev/null 2>&1; then
-                if [ ! -f "$ZIP_PATH" ]; then
-                  ${pkgs.curl}/bin/curl -L -o "$ZIP_PATH" \
-                    "https://nightly.link/jellyfin/jellyfin-desktop/workflows/build-linux-flatpak/main/linux-flatpak-x86_64.zip"
-                fi
-                mkdir -p "$INSTALL_DIR"
-                ${pkgs.unzip}/bin/unzip -o "$ZIP_PATH" -d "$INSTALL_DIR"
-                ${pkgs.flatpak}/bin/flatpak remote-add --user --if-not-exists flathub \
-                  "https://flathub.org/repo/flathub.flatpakrepo"
-                ${pkgs.flatpak}/bin/flatpak install --user -y "$INSTALL_DIR"/*.flatpak
-              fi
-
-              exec ${pkgs.cage}/bin/cage -s -- ${pkgs.xterm}/bin/xterm
-              # exec ${pkgs.cage}/bin/cage -s -- ${pkgs.flatpak}/bin/flatpak run "$FLATPAK_ID"
-            '';
-          in
-            "${script}";
+        command = "${pkgs.cage}/bin/cage -s -- ${pkgs.bcl.jellyfin-desktop}/bin/jellyfin-desktop";
         user = "tv";
       };
     };
 
     services.speechd.enable = false; # remove mbrola-voices dependency that is huge
-
     security.sudo.wheelNeedsPassword = false;
-
-    # Configure nix-flatpak
-    xdg.portal = {
-      enable = true;
-      wlr.enable = true;
-    };
-    services.flatpak = {
-      enable = true;
-      packages = [
-        "org.freedesktop.Platform/x86_64/25.08"
-      ];
-    };
 
     environment.systemPackages = with pkgs; [
       cage
       pulseaudio
-      xterm
+      bcl.jellyfin-desktop
     ];
 
     systemd.tmpfiles.rules = [
       "d /nix/home/tv 0700 tv users"
     ];
 
-    home-manager.users.tv = { lib, pkgs, ... }: {
-      home = {
-        stateVersion = "23.11"; # never touch that
-      };
-
-      imports = [ (inputs.impermanence + "/home-manager.nix") ];
-
-      home.file.".xprofile".text = ''
-        if [ -z $_XPROFILE_SOURCED ]; then
-          export _XPROFILE_SOURCED=1
-
-          xsetroot -solid black # black background
-          xset -dpms      # disable xorg screen going to sleep
-          xset s off      # disable xorg screensaver
-          # xdotool mousemove 100 100 && xdotool click 1
-
-          # TODO this is a hack
-          pactl set-sink-volume @DEFAULT_SINK@ 100%
-          pactl set-sink-volume alsa_output.pci-0000_00_0e.0.hdmi-stereo 100% # TODO
-
-          # TODO wait for network
-          # while ! ping -c 1 -W 1 192.168.40.12; do sleep 1; done;
-          bash -c "while true; do jellyfin-desktop; sleep 5; done" &
-          bash -c "sleep 20; xdotool mousemove 100 100; xdotool click 1; amixer set Master 95%;" &
-        fi
-      '';
-
-      home.file.".local/share/jellyfin-desktop/profiles.json".text = ''
-        {
-            "defaultProfile": "b6a136dc17a44b32a63eed3507a6f2d0"
-        }
-      '';
-
-      home.file.".local/share/jellyfin-desktop/profiles/b6a136dc17a44b32a63eed3507a6f2d0/jellyfin-desktop.conf".text = ''
-        {
-            "sections": {
-                "appleremote": {
-                    "emulatepht": true
-                },
-                "audio": {
-                    "channels": "2.0",
-                    "device": "${config.bcl.role.tv.audioDevice}",
-                    "devicetype": "${config.bcl.role.tv.audioType}",
-                    "exclusive": false,
-                    "normalize": false,
-                    "passthrough.ac3": false,
-                    "passthrough.dts": false,
-                    "passthrough.dts-hd": false,
-                    "passthrough.eac3": false,
-                    "passthrough.truehd": false
-                },
-                "cec": {
-                    "activatesource": true,
-                    "enable": true,
-                    "hdmiport": 0,
-                    "poweroffonstandby": false,
-                    "suspendonstandby": false,
-                    "usekeyupdown": false,
-                    "verbose_logging": false
-                },
-                "main": {
-                    "allowBrowserZoom": true,
-                    "alwaysOnTop": false,
-                    "autodetectCertBundle": true,
-                    "checkForUpdates": false,
-                    "disablemouse": false,
-                    "enableInputRepeat": true,
-                    "enableMPV": true,
-                    "enableWindowsMediaIntegration": true,
-                    "enableWindowsTaskbarIntegration": true,
-                    "forceAlwaysFS": false,
-                    "forceFSScreen": "",
-                    "fullscreen": true,
-                    "hdmi_poweron": false,
-                    "ignoreSSLErrors": false,
-                    "layout": "desktop",
-                    "logLevel": "debug",
-                    "minimizeOnDefocus": false,
-                    "sdlEnabled": true,
-                    "showPowerOptions": true,
-                    "useOpenGL": false,
-                    "useSystemVideoCodecs": false,
-                    "userWebClient": "${config.bcl.role.tv.jellyfinUrl}",
-                    "webMode": "desktop"
-                },
-                "other": {
-                    "other_conf": ""
-                },
-                "path": {
-                    "startupurl_desktop": "bundled",
-                    "startupurl_extension": "bundled"
-                },
-                "subtitles": {
-                    "ass_scale_border_and_shadow": true,
-                    "ass_style_override": "",
-                    "background_color": "",
-                    "background_transparency": "",
-                    "border_color": "",
-                    "border_size": -1,
-                    "color": "",
-                    "font": "sans-serif",
-                    "placement": "",
-                    "size": -1
-                },
-                "system": {
-                    "lircd_enabled": false,
-                    "smbd_enabled": false,
-                    "sshd_enabled": false,
-                    "systemname": "JellyfinDesktop"
-                },
-                "video": {
-                    "allow_transcode_to_hevc": false,
-                    "always_force_transcode": false,
-                    "aspect": "normal",
-                    "audio_delay.24hz": 0,
-                    "audio_delay.25hz": 0,
-                    "audio_delay.50hz": 0,
-                    "audio_delay.normal": 0,
-                    "cache": 500,
-                    "debug.force_vo": "",
-                    "default_playback_speed": 1,
-                    "deinterlace": false,
-                    "force_transcode_4k": true,
-                    "force_transcode_av1": true,
-                    "force_transcode_dovi": true,
-                    "force_transcode_hdr": true,
-                    "force_transcode_hevc": true,
-                    "force_transcode_hi10p": true,
-                    "hardwareDecoding": "enabled",
-                    "prefer_transcode_to_h265": false,
-                    "refreshrate.auto_switch": true,
-                    "refreshrate.avoid_25hz_30hz": true,
-                    "refreshrate.delay": 3,
-                    "sync_mode": "audio"
-                }
-            },
-            "version": 7
-        }
-      '';
-    };
   })
   ];
 }
