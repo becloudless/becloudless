@@ -50,6 +50,12 @@
       "d /nix/home/tv 0700 tv users"
     ];
 
+    environment.persistence."/nix" = {
+      users."tv".directories = [
+        ".config/jellyfin-desktop"
+      ];
+    };
+
   })
   ];
 }
