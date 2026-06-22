@@ -48,7 +48,7 @@ in
       nixos-anywhere
 
       # Media
-      finamp ffmpeg x264 x265 flac
+      finamp jellyfin-desktop ffmpeg x264 x265 flac
       # mplayer mpv vlc
       gimp imagemagick ghostscript
 
