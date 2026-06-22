@@ -47,7 +47,7 @@ in
         tail -fn0 ~/.local/share/jellyfin-desktop/profiles/b6a136dc17a44b32a63eed3507a6f2d0/logs/jellyfin-desktop.log \
           | grep --line-buffered "nowplaying event:" \
           | while read line; do
-              state=$(echo $line | sed 's/.* - nowplaying event: \([a-z]*\)/\1/')
+              state=$(echo $line | sed 's/.* nowplaying event: \([a-z]*\)/\1/')
               case $state in
                 playbackstart) disableScreensaver;;
                 playbackstop) displayScreensaver;;
