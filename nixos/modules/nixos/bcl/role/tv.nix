@@ -32,7 +32,7 @@
     services.greetd = {
       enable = true;
       settings.default_session = {
-        command = "${pkgs.cage}/bin/cage -s -- ${pkgs.bcl.jellyfin-desktop}/bin/jellyfin-desktop";
+        command = "${pkgs.bcl.cage}/bin/cage -s -- ${pkgs.bcl.jellyfin-desktop}/bin/jellyfin-desktop";
         user = "tv";
       };
     };
@@ -41,7 +41,7 @@
     security.sudo.wheelNeedsPassword = false;
 
     environment.systemPackages = with pkgs; [
-      cage
+      bcl.cage
       pulseaudio
       bcl.jellyfin-desktop
     ];
