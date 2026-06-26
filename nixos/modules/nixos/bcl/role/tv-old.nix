@@ -37,16 +37,13 @@
         if [ -z $_XPROFILE_SOURCED ]; then
           export _XPROFILE_SOURCED=1
 
-          # Wait for HDMI output to become connected, then activate it
-          bash -c "
-            for i in \$(seq 1 30); do
-              if grep -q connected /sys/class/drm/*/status 2>/dev/null; then
-                xrandr --auto
-                break
-              fi
-              sleep 1
-            done
-          " &
+          while true; do
+            if grep -q connected /sys/class/drm/*/status 2>/dev/null; then
+              xrandr --auto
+              break
+            fi
+            sleep 1
+          done
 
           xsetroot -solid black # black background
           xset -dpms      # disable xorg screen going to sleep
