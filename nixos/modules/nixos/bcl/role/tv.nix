@@ -26,31 +26,42 @@
     bcl.boot.quiet = true;
     bcl.sound.enable = true;
     bcl.wifi.enable = true;
+    services.speechd.enable = false; # remove mbrola-voices dependency that is huge
+    security.sudo.wheelNeedsPassword = false;
+
 
     bcl.users.users.tv = {
       wm.name = "dwm";
       autoLogin = true;
     };
 
-    home.file.".xprofile".text = ''
-      if [ -z $_XPROFILE_SOURCED ]; then
-        export _XPROFILE_SOURCED=1
+    home-manager.users.tv = { lib, pkgs, ... }: {
+      home = {
+        stateVersion = "23.11"; # never touch that
+      };
 
-        xsetroot -solid black # black background
-        xset -dpms      # disable xorg screen going to sleep
-        xset s off      # disable xorg screensaver
-        # xdotool mousemove 100 100 && xdotool click 1
+      imports = [ (inputs.impermanence + "/home-manager.nix") ];
 
-        # TODO this is a hack
-        pactl set-sink-volume @DEFAULT_SINK@ 100%
-        pactl set-sink-volume alsa_output.pci-0000_00_0e.0.hdmi-stereo 100% # TODO
+      home.file.".xprofile".text = ''
+        if [ -z $_XPROFILE_SOURCED ]; then
+          export _XPROFILE_SOURCED=1
 
-        # TODO wait for network
-        # while ! ping -c 1 -W 1 192.168.40.12; do sleep 1; done;
-        bash -c "while true; do jellyfin-desktop; sleep 5; done" &
-        bash -c "sleep 20; xdotool mousemove 100 100; xdotool click 1; amixer set Master 95%;" &
-      fi
-    '';
+          xsetroot -solid black # black background
+          xset -dpms      # disable xorg screen going to sleep
+          xset s off      # disable xorg screensaver
+          # xdotool mousemove 100 100 && xdotool click 1
+
+          # TODO this is a hack
+          pactl set-sink-volume @DEFAULT_SINK@ 100%
+          pactl set-sink-volume alsa_output.pci-0000_00_0e.0.hdmi-stereo 100% # TODO
+
+          # TODO wait for network
+          # while ! ping -c 1 -W 1 192.168.40.12; do sleep 1; done;
+          bash -c "while true; do jellyfin-desktop; sleep 5; done" &
+          bash -c "sleep 20; xdotool mousemove 100 100; xdotool click 1; amixer set Master 95%;" &
+        fi
+      '';
+    };
 
 
     # services.greetd = {
@@ -61,8 +72,6 @@
     #   };
     # };
 
-    services.speechd.enable = false; # remove mbrola-voices dependency that is huge
-    security.sudo.wheelNeedsPassword = false;
 
     environment.systemPackages = with pkgs; [
       cage
