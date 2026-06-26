@@ -67,8 +67,6 @@
                 },
                 "audio": {
                     "channels": "2.0",
-                    "device": "${config.bcl.role.tv.audioDevice}",
-                    "devicetype": "${config.bcl.role.tv.audioType}",
                     "exclusive": false,
                     "normalize": false,
                     "passthrough.ac3": false,
