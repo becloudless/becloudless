@@ -27,15 +27,39 @@
     bcl.sound.enable = true;
     bcl.wifi.enable = true;
 
-    bcl.users.users.tv = {};
-
-    services.greetd = {
-      enable = true;
-      settings.default_session = {
-        command = "${pkgs.cage}/bin/cage -s -- ${pkgs.bcl.jellyfin-desktop}/bin/jellyfin-desktop";
-        user = "tv";
-      };
+    bcl.users.users.tv = {
+      wm.name = "dwm";
+      autoLogin = true;
     };
+
+    home.file.".xprofile".text = ''
+      if [ -z $_XPROFILE_SOURCED ]; then
+        export _XPROFILE_SOURCED=1
+
+        xsetroot -solid black # black background
+        xset -dpms      # disable xorg screen going to sleep
+        xset s off      # disable xorg screensaver
+        # xdotool mousemove 100 100 && xdotool click 1
+
+        # TODO this is a hack
+        pactl set-sink-volume @DEFAULT_SINK@ 100%
+        pactl set-sink-volume alsa_output.pci-0000_00_0e.0.hdmi-stereo 100% # TODO
+
+        # TODO wait for network
+        # while ! ping -c 1 -W 1 192.168.40.12; do sleep 1; done;
+        bash -c "while true; do jellyfin-desktop; sleep 5; done" &
+        bash -c "sleep 20; xdotool mousemove 100 100; xdotool click 1; amixer set Master 95%;" &
+      fi
+    '';
+
+
+    # services.greetd = {
+    #   enable = true;
+    #   settings.default_session = {
+    #     command = "${pkgs.cage}/bin/cage -s -- ${pkgs.bcl.jellyfin-desktop}/bin/jellyfin-desktop";
+    #     user = "tv";
+    #   };
+    # };
 
     services.speechd.enable = false; # remove mbrola-voices dependency that is huge
     security.sudo.wheelNeedsPassword = false;
