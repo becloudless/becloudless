@@ -31,7 +31,7 @@
 
 
     bcl.users.users.tv = {
-      wm.name = "dwm";
+      wm.name = "gnome";
       autoLogin = true;
     };
 
