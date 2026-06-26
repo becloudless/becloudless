@@ -45,6 +45,8 @@
             done
           " &
 
+          sleep 5
+
           xsetroot -solid black # black background
           xset -dpms      # disable xorg screen going to sleep
           xset s off      # disable xorg screensaver
