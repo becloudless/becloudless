@@ -1,5 +1,22 @@
 { inputs, config, lib, pkgs, ... }:
 {
+
+  options.bcl.role.tv = {
+    audioType = lib.mkOption {
+         type = lib.types.str;
+         default = "basic";
+      };
+    audioDevice = lib.mkOption {
+         type = lib.types.str;
+         default = "auto";
+      };
+    jellyfinUrl = lib.mkOption {
+         type = lib.types.str;
+         default = "https://jellyfin.${config.bcl.global.domain}";
+      };
+  };
+
+
   config = lib.mkMerge [
     { bcl.role.knownRoles = [ "tv" ]; }
     (lib.mkIf (config.bcl.role.name == "tv") {
@@ -67,6 +84,8 @@
                 },
                 "audio": {
                     "channels": "2.0",
+                    "device": "${config.bcl.role.tv.audioDevice}",
+                    "devicetype": "${config.bcl.role.tv.audioType}",
                     "exclusive": false,
                     "normalize": false,
                     "passthrough.ac3": false,
