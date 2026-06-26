@@ -32,7 +32,20 @@
     services.greetd = {
       enable = true;
       settings.default_session = {
-        command = "${pkgs.bcl.cage}/bin/cage -s -- ${pkgs.bcl.jellyfin-desktop}/bin/jellyfin-desktop";
+        command =
+          let
+            dwmSession = pkgs.writeShellScript "dwm-session" ''
+              ${pkgs.xorg.xsetroot}/bin/xsetroot -solid black
+              ${pkgs.xorg.xset}/bin/xset -dpms
+              ${pkgs.xorg.xset}/bin/xset s off
+              while true; do
+                ${pkgs.bcl.jellyfin-desktop}/bin/jellyfin-desktop
+                sleep 5
+              done &
+              exec ${pkgs.dwm}/bin/dwm
+            '';
+          in
+          "${pkgs.xorg.xinit}/bin/startx ${dwmSession} -- :0 vt1";
         user = "tv";
       };
     };
@@ -40,10 +53,15 @@
     services.speechd.enable = false; # remove mbrola-voices dependency that is huge
     security.sudo.wheelNeedsPassword = false;
 
+    services.xserver.enable = true;
+
     environment.systemPackages = with pkgs; [
-      bcl.cage
+      dwm
       pulseaudio
       bcl.jellyfin-desktop
+      xorg.xinit
+      xorg.xsetroot
+      xorg.xset
     ];
 
     systemd.tmpfiles.rules = [
