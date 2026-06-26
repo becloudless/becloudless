@@ -34,7 +34,7 @@
     security.sudo.wheelNeedsPassword = false;
 
     environment.systemPackages = with pkgs; [
-      bcl.jellyfin-media-player
+      bcl.jellyfin-desktop
       xdotool # move mouse
       pulseaudio
     ];
