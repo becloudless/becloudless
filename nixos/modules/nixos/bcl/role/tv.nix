@@ -26,7 +26,7 @@
     bcl.boot.quiet = true;
     bcl.sound.enable = true;
     bcl.wifi.enable = true;
-    services.speechd.enable = lib.mkforce false; # remove mbrola-voices dependency that is huge
+    services.speechd.enable = lib.mkForce false; # remove mbrola-voices dependency that is huge
     security.sudo.wheelNeedsPassword = false;
 
 
