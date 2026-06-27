@@ -31,8 +31,8 @@
 
 
     bcl.users.users.tv = {
-      wm.name = "dwm";
-      autoLogin = true;
+      # wm.name = "dwm";
+      # autoLogin = true;
     };
 
     home-manager.users.tv = { lib, pkgs, ... }: {
@@ -51,6 +51,8 @@
           xset s off      # disable xorg screensaver
           # xdotool mousemove 100 100 && xdotool click 1
 
+          picom --backend glx -b # compositor required for jellyfin-desktop CEF overlays (video rendering)
+
           # TODO this is a hack
           pactl set-sink-volume @DEFAULT_SINK@ 100%
           pactl set-sink-volume alsa_output.pci-0000_00_0e.0.hdmi-stereo 100% # TODO
@@ -64,17 +66,18 @@
     };
 
 
-    # services.greetd = {
-    #   enable = true;
-    #   settings.default_session = {
-    #     command = "${pkgs.cage}/bin/cage -s -- ${pkgs.bcl.jellyfin-desktop}/bin/jellyfin-desktop";
-    #     user = "tv";
-    #   };
-    # };
+    services.greetd = {
+      enable = true;
+      settings.default_session = {
+        command = "${pkgs.cage}/bin/cage -s -- ${pkgs.bcl.jellyfin-desktop}/bin/jellyfin-desktop";
+        user = "tv";
+      };
+    };
 
 
     environment.systemPackages = with pkgs; [
       cage
+      picom
       pulseaudio
       bcl.jellyfin-desktop
     ];
