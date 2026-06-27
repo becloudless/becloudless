@@ -29,9 +29,7 @@
     services.speechd.enable = lib.mkForce false; # remove mbrola-voices dependency that is huge
     security.sudo.wheelNeedsPassword = false;
 
-
     bcl.users.users.tv = {};
-    users.users.tv.extraGroups = [ "seat" "video" ];
 
     programs.sway = {
       enable = true;
@@ -60,6 +58,7 @@
           startScript = pkgs.writeShellScript "start-jellyfin" ''
             mkdir -p ~/.config/jellyfin-desktop
             cp ${jellyfinSettings} ~/.config/jellyfin-desktop/settings.json
+            rm -f ~/.cache/jellyfin-desktop/SingletonLock ~/.cache/jellyfin-desktop/SingletonCookie # just in case the systen is renamed
             randr_out=$(${pkgs.wlr-randr}/bin/wlr-randr 2>/dev/null) || true
             output=$(echo "$randr_out" | grep -m1 '^[A-Za-z]' | awk '{print $1}')
             resolution=$(echo "$randr_out" | grep -m1 'current' | awk '{print $1}')
