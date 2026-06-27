@@ -90,12 +90,8 @@
                     env = { "WAYLAND_DISPLAY=" .. wayland, "XDG_RUNTIME_DIR=" .. (os.getenv("XDG_RUNTIME_DIR") or "") },
                     capture_stdout = true, capture_stderr = true,
                   })
-                  original_mode = (r.stdout or ""):match("(%d+x%d+) px, (%S+) Hz %(preferred, current%)")
-                  if original_mode then
-                    -- combine into WxH@Hz format for restore
-                    local w, hz = (r.stdout or ""):match("(%d+x%d+) px, (%S+) Hz %(preferred, current%)")
-                    original_mode = w and (w .. "@" .. hz) or nil
-                  end
+                  local w, hz = (r.stdout or ""):match("(%d+x%d+) px, (%S+) Hz %(preferred, current%)")
+                  original_mode = w and (w .. "@" .. hz) or nil
                 end
               end
               -- format: WxH@Hz (e.g. 3840x2160@23.976)
