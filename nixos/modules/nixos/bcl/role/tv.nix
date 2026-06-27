@@ -49,63 +49,6 @@
       enable = true;
       settings.default_session = {
         command = let
-          modeSwitch = pkgs.writeText "mode-switch.lua" ''
-            local sway_display_file = "/tmp/tv-sway-wayland-display"
-            local wlr_randr_bin = "${pkgs.wlr-randr}/bin/wlr-randr"
-            local original_mode = nil
-
-            local function read_file(path)
-              local f = io.open(path, "r")
-              if not f then return nil end
-              local s = f:read("*l")
-              f:close()
-              return s
-            end
-
-            local function wlr_randr(args)
-              local wayland = read_file(sway_display_file)
-              if not wayland then return end
-              local cmd = { wlr_randr_bin }
-              for _, v in ipairs(args) do cmd[#cmd+1] = v end
-              mp.command_native({
-                name = "subprocess",
-                args = cmd,
-                env = { "WAYLAND_DISPLAY=" .. wayland, "XDG_RUNTIME_DIR=" .. (os.getenv("XDG_RUNTIME_DIR") or "") },
-                capture_stdout = true,
-                capture_stderr = true,
-              })
-            end
-
-            mp.register_event("file-loaded", function()
-              local fps    = mp.get_property_number("container-fps")
-              local width  = mp.get_property_number("width")
-              local height = mp.get_property_number("height")
-              if not (fps and width and height) then return end
-              if not original_mode then
-                local wayland = read_file(sway_display_file)
-                if wayland then
-                  local r = mp.command_native({
-                    name = "subprocess",
-                    args = { wlr_randr_bin },
-                    env = { "WAYLAND_DISPLAY=" .. wayland, "XDG_RUNTIME_DIR=" .. (os.getenv("XDG_RUNTIME_DIR") or "") },
-                    capture_stdout = true, capture_stderr = true,
-                  })
-                  local w, hz = (r.stdout or ""):match("(%d+x%d+) px, (%S+) Hz %(preferred, current%)")
-                  original_mode = w and (w .. "@" .. hz) or nil
-                end
-              end
-              -- format: WxH@Hz (e.g. 3840x2160@23.976)
-              local mode = string.format("%dx%d@%.3f", width, height, fps)
-              wlr_randr({ "--output", "HDMI-A-1", "--mode", mode })
-            end)
-
-            mp.register_event("end-file", function()
-              if original_mode then
-                wlr_randr({ "--output", "HDMI-A-1", "--mode", original_mode })
-                original_mode = nil
-              end
-            end)
-          '';
           jellyfinSettings = pkgs.writeText "jellyfin-desktop-settings.json" (builtins.toJSON {
             serverUrl = config.bcl.role.tv.jellyfinUrl;
             windowMaximized = true;
@@ -117,10 +60,10 @@
             windowDecorations = "server";
           });
           startScript = pkgs.writeShellScript "start-jellyfin" ''
-            mkdir -p ~/.config/jellyfin-desktop ~/.config/mpv/scripts
+            mkdir -p ~/.config/jellyfin-desktop
             cp ${jellyfinSettings} ~/.config/jellyfin-desktop/settings.json
-            cp ${modeSwitch} ~/.config/mpv/scripts/mode-switch.lua
-            echo "$WAYLAND_DISPLAY" > /tmp/tv-sway-wayland-display
+            output=$(${pkgs.wlr-randr}/bin/wlr-randr | grep -m1 '^[A-Za-z]' | awk '{print $1}')
+            ${pkgs.wlr-randr}/bin/wlr-randr --output "$output" --mode 3840x2160@23.976
             jellyfin-desktop
             swaymsg exit
           '';
