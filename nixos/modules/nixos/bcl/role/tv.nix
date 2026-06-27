@@ -65,7 +65,10 @@
             randr_out=$(${pkgs.wlr-randr}/bin/wlr-randr)
             output=$(echo "$randr_out" | grep -m1 '^[A-Za-z]' | awk '{print $1}')
             resolution=$(echo "$randr_out" | grep -m1 'current' | awk '{print $1}')
-            ${pkgs.wlr-randr}/bin/wlr-randr --output "$output" --mode "$resolution"@23.976  # TODO workaround waiting for https://github.com/jellyfin/jellyfin-desktop/issues/247
+            # Only switch to 23.976 if both the output and mode are actually available (TODO: https://github.com/jellyfin/jellyfin-desktop/issues/247)
+            if [ -n "$output" ] && [ -n "$resolution" ] && echo "$randr_out" | grep -q "${resolution}.*23\.97"; then
+              ${pkgs.wlr-randr}/bin/wlr-randr --output "$output" --mode "$resolution"@23.976
+            fi
             jellyfin-desktop
             swaymsg exit
           '';
