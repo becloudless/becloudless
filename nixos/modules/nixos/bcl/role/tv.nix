@@ -57,6 +57,7 @@
             windowHeight = 2160;
             windowLogicalWidth = 3840;
             windowLogicalHeight = 2160;
+            windowDecorations = "server";
           });
           startScript = pkgs.writeShellScript "start-jellyfin" ''
             mkdir -p ~/.config/jellyfin-desktop
@@ -69,7 +70,6 @@
           default_border none
           default_floating_border none
           seat * hide_cursor 3000
-          for_window [app_id=\".*\"] fullscreen enable
           exec ${startScript}
         ''}";
         user = "tv";
