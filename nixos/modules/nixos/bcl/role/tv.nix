@@ -38,7 +38,9 @@
     services.greetd = {
       enable = true;
       settings.default_session = {
-        command = "${pkgs.cage}/bin/cage -- xterm";
+        command = "${pkgs.cage}/bin/cage -s -- ${pkgs.writeShellScript "start-jellyfin-desktop" ''
+          exec env -u WAYLAND_DISPLAY jellyfin-desktop
+        ''}";
         user = "tv";
       };
     };
