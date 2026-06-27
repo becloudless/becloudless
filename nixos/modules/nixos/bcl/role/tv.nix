@@ -30,10 +30,8 @@
     security.sudo.wheelNeedsPassword = false;
 
 
-    bcl.users.users.tv = {
-      # wm.name = "dwm";
-      # autoLogin = true;
-    };
+    bcl.users.users.tv = {};
+    users.users.tv.extraGroups = [ "seat" "video" ];
 
     programs.sway = {
       enable = true;
