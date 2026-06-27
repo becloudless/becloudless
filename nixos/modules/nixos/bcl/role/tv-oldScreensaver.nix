@@ -3,14 +3,6 @@ let
   cfg = config.bcl.role.tv.screensaver;
 in
 {
-  options.bcl.role.tv.screensaver = {
-    albumId = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "Immich album UUID to display as screensaver. Feature is disabled when null.";
-    };
-  };
-
   config = lib.mkIf (config.bcl.role.name == "tv-old" && cfg.albumId != null) {
     environment.systemPackages = with pkgs; [ feh curl jq ];
 
