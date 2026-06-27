@@ -51,13 +51,12 @@
         command = let
           jellyfinSettings = pkgs.writeText "jellyfin-desktop-settings.json" (builtins.toJSON {
             serverUrl = config.bcl.role.tv.jellyfinUrl;
-            windowMaximized = true;
-
-            # "windowScale": 1.0,
-            # "windowWidth": 3840,
-            # "windowHeight": 2160,
-            # "windowLogicalWidth": 3840,
-            # "windowLogicalHeight": 2160,
+            windowMaximized = false;
+            windowScale = 1.0;
+            windowWidth = 3840;
+            windowHeight = 2160;
+            windowLogicalWidth = 3840;
+            windowLogicalHeight = 2160;
           });
           startScript = pkgs.writeShellScript "start-jellyfin" ''
             mkdir -p ~/.config/jellyfin-desktop
@@ -66,7 +65,7 @@
             swaymsg exit
           '';
         in "${pkgs.sway}/bin/sway --config ${pkgs.writeText "sway-jellyfin-kiosk.conf" ''
-          output * bg #000000 solid_color scale 2
+          output * bg #000000 solid_color
           default_border none
           default_floating_border none
           seat * hide_cursor 3000
