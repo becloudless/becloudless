@@ -46,12 +46,23 @@
         command = "${pkgs.sway}/bin/sway --config ${pkgs.writeText "sway-jellyfin-kiosk.conf" ''
           output * bg #000000 solid_color
           default_border none
+          default_floating_border none
           seat * hide_cursor 3000
-          for_window [app_id=\".*\"] fullscreen enable
           exec sh -c 'jellyfin-desktop; swaymsg exit'
         ''}";
         user = "tv";
       };
+    };
+
+
+    home-manager.users.tv = { lib, pkgs, ... }: {
+      home.file.".config/jellyfin-desktop/settings.json".text = ''
+        {
+          "serverUrl": "${config.bcl.role.tv.jellyfinUrl}",
+          "windowScale": 1.0,
+          "windowMaximized": true
+        }
+      '';
     };
 
 
