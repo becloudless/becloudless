@@ -48,11 +48,6 @@
           jellyfinSettings = pkgs.writeText "jellyfin-desktop-settings.json" (builtins.toJSON {
             serverUrl = config.bcl.role.tv.jellyfinUrl;
             windowMaximized = true;
-            windowScale = 1.0;
-            windowWidth = 3840;
-            windowHeight = 2160;
-            windowLogicalWidth = 3840;
-            windowLogicalHeight = 2160;
             windowDecorations = "server";
           });
           startScript = pkgs.writeShellScript "start-jellyfin" ''
