@@ -40,29 +40,40 @@
       wrapperFeatures.gtk = true;
     };
 
+    systemd.services.greetd = {
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+    };
+
     services.greetd = {
       enable = true;
       settings.default_session = {
-        command = "${pkgs.sway}/bin/sway --config ${pkgs.writeText "sway-jellyfin-kiosk.conf" ''
-          output * bg #000000 solid_color
+        command = let
+          jellyfinSettings = pkgs.writeText "jellyfin-desktop-settings.json" (builtins.toJSON {
+            serverUrl = config.bcl.role.tv.jellyfinUrl;
+            windowMaximized = true;
+
+            # "windowScale": 1.0,
+            # "windowWidth": 3840,
+            # "windowHeight": 2160,
+            # "windowLogicalWidth": 3840,
+            # "windowLogicalHeight": 2160,
+          });
+          startScript = pkgs.writeShellScript "start-jellyfin" ''
+            mkdir -p ~/.config/jellyfin-desktop
+            cp ${jellyfinSettings} ~/.config/jellyfin-desktop/settings.json
+            jellyfin-desktop
+            swaymsg exit
+          '';
+        in "${pkgs.sway}/bin/sway --config ${pkgs.writeText "sway-jellyfin-kiosk.conf" ''
+          output * bg #000000 solid_color scale 2
           default_border none
           default_floating_border none
           seat * hide_cursor 3000
-          exec sh -c 'jellyfin-desktop; swaymsg exit'
+          exec ${startScript}
         ''}";
         user = "tv";
       };
-    };
-
-
-    home-manager.users.tv = { lib, pkgs, ... }: {
-      home.file.".config/jellyfin-desktop/settings.json".text = ''
-        {
-          "serverUrl": "${config.bcl.role.tv.jellyfinUrl}",
-          "windowScale": 1.0,
-          "windowMaximized": true
-        }
-      '';
     };
 
 
