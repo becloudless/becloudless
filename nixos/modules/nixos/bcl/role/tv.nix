@@ -38,7 +38,7 @@
     services.greetd = {
       enable = true;
       settings.default_session = {
-        command = "${pkgs.cage}/bin/cage -s -- xterm";
+        command = "${pkgs.cage}/bin/cage -- jellyfin-desktop";
         user = "tv";
       };
     };
