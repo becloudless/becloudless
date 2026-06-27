@@ -4,6 +4,9 @@ let
 in
 {
   config = lib.mkIf (xfceUsers != {}) {
-    services.xserver.desktopManager.xfce.enable = true;
+    services.xserver.desktopManager.xfce = {
+      enable = true;
+      enableWaylandSession = true;
+    };
   };
 }
