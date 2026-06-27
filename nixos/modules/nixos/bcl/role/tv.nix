@@ -61,6 +61,7 @@
             if [ -n "$output" ] && [ -n "$resolution" ] && echo "$randr_out" | grep -q "$resolution.*23\.97"; then
               ${pkgs.wlr-randr}/bin/wlr-randr --output "$output" --mode "$resolution"@23.976 || true
             fi
+            export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
             jellyfin-desktop
             swaymsg exit
           '';
@@ -69,7 +70,8 @@
           default_border none
           default_floating_border none
           seat * hide_cursor 3000
-          for_window [title="Jellyfin Desktop"] fullscreen enable
+          for_window [app_id=".*"] fullscreen enable
+          for_window [title=".*"] fullscreen enable
           exec ${startScript}
         ''}";
         user = "tv";
