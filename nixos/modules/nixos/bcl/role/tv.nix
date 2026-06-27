@@ -63,7 +63,7 @@
             mkdir -p ~/.config/jellyfin-desktop
             cp ${jellyfinSettings} ~/.config/jellyfin-desktop/settings.json
             output=$(${pkgs.wlr-randr}/bin/wlr-randr | grep -m1 '^[A-Za-z]' | awk '{print $1}')
-            ${pkgs.wlr-randr}/bin/wlr-randr --output "$output" --mode 3840x2160@23.976
+            ${pkgs.wlr-randr}/bin/wlr-randr --output "$output" --mode 3840x2160@23.976  # TODO workaround waiting for https://github.com/jellyfin/jellyfin-desktop/issues/247
             jellyfin-desktop
             swaymsg exit
           '';
