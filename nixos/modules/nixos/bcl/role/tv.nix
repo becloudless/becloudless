@@ -35,11 +35,20 @@
       # autoLogin = true;
     };
 
+    programs.sway = {
+      enable = true;
+      wrapperFeatures.gtk = true;
+    };
+
     services.greetd = {
       enable = true;
       settings.default_session = {
-        command = "${pkgs.cage}/bin/cage -s -- ${pkgs.writeShellScript "start-jellyfin-desktop" ''
-          exec env -u WAYLAND_DISPLAY jellyfin-desktop
+        command = "${pkgs.sway}/bin/sway --config ${pkgs.writeText "sway-jellyfin-kiosk.conf" ''
+          output * bg #000000 solid_color
+          default_border none
+          seat * hide_cursor 3000
+          for_window [app_id=\".*\"] fullscreen enable
+          exec sh -c 'jellyfin-desktop; swaymsg exit'
         ''}";
         user = "tv";
       };
@@ -47,10 +56,8 @@
 
 
     environment.systemPackages = with pkgs; [
-      cage
       pulseaudio
       bcl.jellyfin-desktop
-      xterm
     ];
 
     systemd.tmpfiles.rules = [
