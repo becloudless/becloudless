@@ -51,7 +51,7 @@
         command = let
           jellyfinSettings = pkgs.writeText "jellyfin-desktop-settings.json" (builtins.toJSON {
             serverUrl = config.bcl.role.tv.jellyfinUrl;
-            windowMaximized = false;
+            windowMaximized = true;
             windowScale = 1.0;
             windowWidth = 3840;
             windowHeight = 2160;
