@@ -51,6 +51,7 @@
         command = let
           modeSwitch = pkgs.writeText "mode-switch.lua" ''
             local sway_display_file = "/tmp/tv-sway-wayland-display"
+            local wlr_randr_bin = "${pkgs.wlr-randr}/bin/wlr-randr"
             local original_mode = nil
 
             local function read_file(path)
@@ -64,7 +65,7 @@
             local function wlr_randr(args)
               local wayland = read_file(sway_display_file)
               if not wayland then return end
-              local cmd = { "${pkgs.wlr-randr}/bin/wlr-randr" }
+              local cmd = { wlr_randr_bin }
               for _, v in ipairs(args) do cmd[#cmd+1] = v end
               mp.command_native({
                 name = "subprocess",
@@ -85,15 +86,20 @@
                 if wayland then
                   local r = mp.command_native({
                     name = "subprocess",
-                    args = { "${pkgs.wlr-randr}/bin/wlr-randr" },
+                    args = { wlr_randr_bin },
                     env = { "WAYLAND_DISPLAY=" .. wayland, "XDG_RUNTIME_DIR=" .. (os.getenv("XDG_RUNTIME_DIR") or "") },
                     capture_stdout = true, capture_stderr = true,
                   })
-                  original_mode = (r.stdout or ""):match("(%d+x%d+ px, %S+ Hz) %(preferred, current%)")
+                  original_mode = (r.stdout or ""):match("(%d+x%d+) px, (%S+) Hz %(preferred, current%)")
+                  if original_mode then
+                    -- combine into WxH@Hz format for restore
+                    local w, hz = (r.stdout or ""):match("(%d+x%d+) px, (%S+) Hz %(preferred, current%)")
+                    original_mode = w and (w .. "@" .. hz) or nil
+                  end
                 end
               end
-              -- try exact fps first, then rounded
-              local mode = string.format("%dx%d px, %.6f Hz", width, height, fps)
+              -- format: WxH@Hz (e.g. 3840x2160@23.976)
+              local mode = string.format("%dx%d@%.3f", width, height, fps)
               wlr_randr({ "--output", "HDMI-A-1", "--mode", mode })
             end)
 
