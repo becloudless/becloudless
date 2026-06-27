@@ -49,6 +49,12 @@
             serverUrl = config.bcl.role.tv.jellyfinUrl;
             windowMaximized = true;
             windowDecorations = "server";
+
+            windowScale = 1.0;
+            windowWidth = 3840;
+            windowHeight = 2160;
+            windowLogicalWidth = 3840;
+            windowLogicalHeight = 2160;
           });
           startScript = pkgs.writeShellScript "start-jellyfin" ''
             mkdir -p ~/.config/jellyfin-desktop
@@ -61,6 +67,7 @@
             if [ -n "$output" ] && [ -n "$resolution" ] && echo "$randr_out" | grep -q "$resolution.*23\.97"; then
               ${pkgs.wlr-randr}/bin/wlr-randr --output "$output" --mode "$resolution"@23.976 || true
             fi
+            export JELLYFIN_DESKTOP_LOG_LEVEL=debug
             export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
             jellyfin-desktop
             swaymsg exit
