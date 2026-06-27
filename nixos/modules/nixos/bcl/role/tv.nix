@@ -69,6 +69,7 @@
           default_border none
           default_floating_border none
           seat * hide_cursor 3000
+          for_window [title="Jellyfin Desktop"] fullscreen enable
           exec ${startScript}
         ''}";
         user = "tv";
