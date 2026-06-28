@@ -30,7 +30,6 @@
     security.sudo.wheelNeedsPassword = false;
 
     bcl.users.users.tv = {};
-    users.users.tv.linger = true;
 
     systemd.services.greetd = {
       after = [ "network-online.target" ];
@@ -71,7 +70,6 @@
         user = "tv";
       };
     };
-
 
     home-manager.users.tv = { lib, pkgs, ... }: {
       home.file.".config/labwc/rc.xml".text = ''
