@@ -54,7 +54,7 @@
               </core>
               <windowRules>
                 <windowRule title="*">
-                  <action name="Fullscreen"/>
+                  <action name="ToggleFullscreen"/>
                 </windowRule>
               </windowRules>
             </labwc_config>
