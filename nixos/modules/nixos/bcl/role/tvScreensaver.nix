@@ -55,7 +55,7 @@ in
               esac
             done
       '';
-      wantedBy = [ "default.target" ];
+      wantedBy = [ "graphical-session.target" ];
       serviceConfig = {
         Restart = "on-failure";
         RestartSec = 10;
