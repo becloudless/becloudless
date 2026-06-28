@@ -62,7 +62,7 @@
             export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
             jellyfin-desktop
           '';
-          startScript = "${pkgs.labwc}/bin/labwc -s ${jellyfinScript}";
+          startScript = "${pkgs.uwsm}/bin/uwsm start ${pkgs.labwc}/bin/labwc -- -s ${jellyfinScript}";
         in "${startScript}";
         user = "tv";
       };
@@ -88,6 +88,7 @@
       pulseaudio
       wlr-randr
       labwc
+      uwsm
       bcl.jellyfin-desktop
     ];
 
