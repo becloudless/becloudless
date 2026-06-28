@@ -44,7 +44,7 @@
           jellyfinSettings = pkgs.writeText "jellyfin-desktop-settings.json" (builtins.toJSON {
             serverUrl = config.bcl.role.tv.jellyfinUrl;
             windowMaximized = true;
-            windowDecorations = "server";
+            windowDecorations = "csd";
           });
           labwcRc = pkgs.writeText "labwc-rc.xml" ''
             <?xml version="1.0"?>
@@ -71,6 +71,7 @@
             if [ -n "$output" ] && [ -n "$resolution" ] && echo "$randr_out" | grep -q "$resolution.*23\.97"; then
               ${pkgs.wlr-randr}/bin/wlr-randr --output "$output" --mode "$resolution"@23.976 || true
             fi
+            sleep 5
             jellyfin-desktop
           '';
         in "${pkgs.labwc}/bin/labwc -s ${startScript}";
