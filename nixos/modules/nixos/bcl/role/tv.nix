@@ -55,7 +55,7 @@
             fi
 
             cat > ~/.config/jellyfin-desktop/settings.json <<EOF
-            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"server","disableGpuCompositing":${lib.boolToString config.bcl.role.tv.disableGpuCompositing},"windowWidth":''${width:-1920},"windowHeight":''${height:-1080},"windowLogicalWidth":''${width:-1920},"windowLogicalHeight":''${height:-1080}}
+            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"server","windowWidth":''${width:-1920},"windowHeight":''${height:-1080},"windowLogicalWidth":''${width:-1920},"windowLogicalHeight":''${height:-1080}}
             EOF
             export JELLYFIN_DESKTOP_LOG_LEVEL=debug
             export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
@@ -63,7 +63,7 @@
 
             # Wait for network before starting jellyfin
             until ${pkgs.networkmanager}/bin/nm-online -q 2>/dev/null; do sleep 2; done
-            jellyfin-desktop
+            jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"}
           '';
           startScript = "${pkgs.labwc}/bin/labwc -s ${jellyfinScript}";
         in "${startScript}";
