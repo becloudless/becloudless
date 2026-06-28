@@ -60,8 +60,9 @@
             </labwc_config>
           '';
           jellyfinScript = pkgs.writeShellScript "start-jellyfin" ''
-            echo "=== jellyfin startup ===" >> /tmp/tv-startup.log
             rm -f ~/.cache/jellyfin-desktop/SingletonLock ~/.cache/jellyfin-desktop/SingletonCookie
+            mkdir -p ~/.config/mpv
+            echo "fullscreen=yes" > ~/.config/mpv/mpv.conf
             randr_out=$(${pkgs.wlr-randr}/bin/wlr-randr 2>/dev/null) || true
             output=$(echo "$randr_out" | grep -m1 '^[A-Za-z]' | awk '{print $1}')
             resolution=$(echo "$randr_out" | grep -m1 'current' | awk '{print $1}')
@@ -75,10 +76,7 @@
             mkdir -p ~/.config/jellyfin-desktop ~/.config/labwc
             cp ${jellyfinSettings} ~/.config/jellyfin-desktop/settings.json
             cp ${labwcRc} ~/.config/labwc/rc.xml
-            echo "=== rc.xml ===" > /tmp/tv-startup.log
-            cat ~/.config/labwc/rc.xml >> /tmp/tv-startup.log
-            echo "=== labwc start ===" >> /tmp/tv-startup.log
-            exec ${pkgs.labwc}/bin/labwc -d -s ${jellyfinScript} >> /tmp/tv-startup.log 2>&1
+            exec ${pkgs.labwc}/bin/labwc -s ${jellyfinScript}
           '';
         in "${startScript}";
         user = "tv";
