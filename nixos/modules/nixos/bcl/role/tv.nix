@@ -30,11 +30,7 @@
     security.sudo.wheelNeedsPassword = false;
 
     bcl.users.users.tv = {};
-
-    programs.sway = {
-      enable = true;
-      wrapperFeatures.gtk = true;
-    };
+    users.users.tv.linger = true;
 
     systemd.services.greetd = {
       after = [ "network-online.target" ];
@@ -49,17 +45,25 @@
             serverUrl = config.bcl.role.tv.jellyfinUrl;
             windowMaximized = true;
             windowDecorations = "server";
-
-            windowScale = 1.0;
-            windowWidth = 3840;
-            windowHeight = 2160;
-            windowLogicalWidth = 3840;
-            windowLogicalHeight = 2160;
           });
+          labwcRc = pkgs.writeText "labwc-rc.xml" ''
+            <?xml version="1.0"?>
+            <labwc_config>
+              <core>
+                <decoration>server</decoration>
+              </core>
+              <windowRules>
+                <windowRule title="*" matchOnce="true">
+                  <action name="Maximize"/>
+                </windowRule>
+              </windowRules>
+            </labwc_config>
+          '';
           startScript = pkgs.writeShellScript "start-jellyfin" ''
-            mkdir -p ~/.config/jellyfin-desktop
+            mkdir -p ~/.config/jellyfin-desktop ~/.config/labwc
             cp ${jellyfinSettings} ~/.config/jellyfin-desktop/settings.json
-            rm -f ~/.cache/jellyfin-desktop/SingletonLock ~/.cache/jellyfin-desktop/SingletonCookie # just in case the systen is renamed
+            cp ${labwcRc} ~/.config/labwc/rc.xml
+            rm -f ~/.cache/jellyfin-desktop/SingletonLock ~/.cache/jellyfin-desktop/SingletonCookie
             randr_out=$(${pkgs.wlr-randr}/bin/wlr-randr 2>/dev/null) || true
             output=$(echo "$randr_out" | grep -m1 '^[A-Za-z]' | awk '{print $1}')
             resolution=$(echo "$randr_out" | grep -m1 'current' | awk '{print $1}')
@@ -67,20 +71,9 @@
             if [ -n "$output" ] && [ -n "$resolution" ] && echo "$randr_out" | grep -q "$resolution.*23\.97"; then
               ${pkgs.wlr-randr}/bin/wlr-randr --output "$output" --mode "$resolution"@23.976 || true
             fi
-            export JELLYFIN_DESKTOP_LOG_LEVEL=debug
-            export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
             jellyfin-desktop
-            swaymsg exit
           '';
-        in "${pkgs.sway}/bin/sway --config ${pkgs.writeText "sway-jellyfin-kiosk.conf" ''
-          output * bg #000000 solid_color
-          default_border none
-          default_floating_border none
-          seat * hide_cursor 3000
-          for_window [app_id=".*"] fullscreen enable
-          for_window [title=".*"] fullscreen enable
-          exec ${startScript}
-        ''}";
+        in "${pkgs.labwc}/bin/labwc -s ${startScript}";
         user = "tv";
       };
     };
@@ -89,6 +82,7 @@
     environment.systemPackages = with pkgs; [
       pulseaudio
       wlr-randr
+      labwc
       bcl.jellyfin-desktop
     ];
 
