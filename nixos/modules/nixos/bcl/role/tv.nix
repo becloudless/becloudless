@@ -61,6 +61,9 @@
             export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
             systemctl --user start screensaver.service || true
 
+            # Volume to 100%
+            pactl set-sink-volume @DEFAULT_SINK@ 100%
+
             # Wait for network before starting jellyfin
             until ${pkgs.networkmanager}/bin/nm-online -q 2>/dev/null; do sleep 2; done
             jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"}
