@@ -60,7 +60,6 @@
             </labwc_config>
           '';
           startScript = pkgs.writeShellScript "start-jellyfin" ''
-            export WAYLAND_DISPLAY=""
             mkdir -p ~/.config/jellyfin-desktop ~/.config/labwc
             cp ${jellyfinSettings} ~/.config/jellyfin-desktop/settings.json
             cp ${labwcRc} ~/.config/labwc/rc.xml
