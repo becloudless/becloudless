@@ -50,7 +50,7 @@
             <?xml version="1.0"?>
             <labwc_config>
               <core>
-                <decoration>server</decoration>
+                <decoration>none</decoration>
               </core>
               <windowRules>
                 <windowRule title="*" matchOnce="true">
@@ -59,10 +59,7 @@
               </windowRules>
             </labwc_config>
           '';
-          startScript = pkgs.writeShellScript "start-jellyfin" ''
-            mkdir -p ~/.config/jellyfin-desktop ~/.config/labwc
-            cp ${jellyfinSettings} ~/.config/jellyfin-desktop/settings.json
-            cp ${labwcRc} ~/.config/labwc/rc.xml
+          jellyfinScript = pkgs.writeShellScript "start-jellyfin" ''
             rm -f ~/.cache/jellyfin-desktop/SingletonLock ~/.cache/jellyfin-desktop/SingletonCookie
             randr_out=$(${pkgs.wlr-randr}/bin/wlr-randr 2>/dev/null) || true
             output=$(echo "$randr_out" | grep -m1 '^[A-Za-z]' | awk '{print $1}')
@@ -71,10 +68,15 @@
             if [ -n "$output" ] && [ -n "$resolution" ] && echo "$randr_out" | grep -q "$resolution.*23\.97"; then
               ${pkgs.wlr-randr}/bin/wlr-randr --output "$output" --mode "$resolution"@23.976 || true
             fi
-            sleep 5
             jellyfin-desktop
           '';
-        in "${pkgs.labwc}/bin/labwc -s ${startScript}";
+          startScript = pkgs.writeShellScript "start-labwc" ''
+            mkdir -p ~/.config/jellyfin-desktop ~/.config/labwc
+            cp ${jellyfinSettings} ~/.config/jellyfin-desktop/settings.json
+            cp ${labwcRc} ~/.config/labwc/rc.xml
+            exec ${pkgs.labwc}/bin/labwc -s ${jellyfinScript}
+          '';
+        in "${startScript}";
         user = "tv";
       };
     };
