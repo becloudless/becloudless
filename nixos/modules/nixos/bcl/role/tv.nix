@@ -64,6 +64,7 @@
             systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP || true
             systemctl --user start graphical-session.target || true
             jellyfin-desktop
+            systemctl --user stop graphical-session.target || true
           '';
           startScript = "${pkgs.labwc}/bin/labwc -s ${jellyfinScript}";
         in "${startScript}";
