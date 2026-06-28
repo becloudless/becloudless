@@ -86,7 +86,7 @@
             <decoration>none</decoration>
           </core>
           <mouse>
-            <cursorHideTimeout>1000</cursorHideTimeout>
+            <cursorHideTimeout>1</cursorHideTimeout>
           </mouse>
           <windowRules>
             <windowRule title="*">
