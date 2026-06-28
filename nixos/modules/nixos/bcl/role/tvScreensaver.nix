@@ -47,7 +47,7 @@ in
         tail -fn0 ~/.config/jellyfin-desktop/jellyfin-desktop.log \
           | grep --line-buffered "Firing signal:" \
           | while read line; do
-              state=$(echo $line | sed 's/.*Firing signal:: \([a-z]*\)/\1/')
+              state=$(echo $line | sed 's/.*Firing signal: \([a-z]*\)/\1/')
               case $state in
                 playing) disableScreensaver;;
                 canceled) displayScreensaver;;
