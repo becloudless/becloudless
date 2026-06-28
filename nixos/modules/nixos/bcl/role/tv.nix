@@ -44,7 +44,7 @@
           jellyfinSettings = pkgs.writeText "jellyfin-desktop-settings.json" (builtins.toJSON {
             serverUrl = config.bcl.role.tv.jellyfinUrl;
             windowMaximized = true;
-            windowDecorations = "csd";
+            windowDecorations = "server";
           });
           labwcRc = pkgs.writeText "labwc-rc.xml" ''
             <?xml version="1.0"?>
