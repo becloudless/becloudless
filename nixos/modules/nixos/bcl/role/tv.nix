@@ -62,6 +62,7 @@
             systemctl --user start screensaver.service || true
 
             # Volume to 100%
+            until pactl info >/dev/null 2>&1; do sleep 0.5; done
             pactl set-sink-volume @DEFAULT_SINK@ 100%
 
             # Wait for network before starting jellyfin
