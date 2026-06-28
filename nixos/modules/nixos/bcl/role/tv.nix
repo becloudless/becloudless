@@ -85,6 +85,9 @@
           <core>
             <decoration>none</decoration>
           </core>
+          <mouse>
+            <cursorHideTimeout>1000</cursorHideTimeout>
+          </mouse>
           <windowRules>
             <windowRule title="*">
               <action name="ToggleFullscreen"/>
