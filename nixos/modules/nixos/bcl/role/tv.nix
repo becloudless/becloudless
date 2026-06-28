@@ -58,7 +58,7 @@
             systemctl --user start screensaver.service || true
 
             # Wait for network before starting jellyfin
-            until systemctl is-active --quiet network-online.target 2>/dev/null; do sleep 2; done
+            until ${pkgs.networkmanager}/bin/nm-online -q 2>/dev/null; do sleep 2; done
             jellyfin-desktop
           '';
           startScript = "${pkgs.labwc}/bin/labwc -s ${jellyfinScript}";
