@@ -31,11 +31,6 @@
 
     bcl.users.users.tv = {};
 
-    systemd.services.greetd = {
-      after = [ "network-online.target" ];
-      wants = [ "network-online.target" ];
-    };
-
     services.greetd = {
       enable = true;
       settings.default_session = {
@@ -60,9 +55,13 @@
             EOF
             export JELLYFIN_DESKTOP_LOG_LEVEL=debug
             export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
+            systemctl --user start screensaver.service || true
+
+            # Wait for network before starting jellyfin
+            until systemctl is-active --quiet network-online.target 2>/dev/null; do sleep 2; done
             jellyfin-desktop
           '';
-          startScript = "${pkgs.uwsm}/bin/uwsm start ${pkgs.labwc}/bin/labwc -- -s ${jellyfinScript}";
+          startScript = "${pkgs.labwc}/bin/labwc -s ${jellyfinScript}";
         in "${startScript}";
         user = "tv";
       };
@@ -88,7 +87,6 @@
       pulseaudio
       wlr-randr
       labwc
-      uwsm
       bcl.jellyfin-desktop
     ];
 
