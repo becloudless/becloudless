@@ -41,19 +41,6 @@
       enable = true;
       settings.default_session = {
         command = let
-          labwcRc = pkgs.writeText "labwc-rc.xml" ''
-            <?xml version="1.0"?>
-            <labwc_config>
-              <core>
-                <decoration>none</decoration>
-              </core>
-              <windowRules>
-                <windowRule title="*">
-                  <action name="ToggleFullscreen"/>
-                </windowRule>
-              </windowRules>
-            </labwc_config>
-          '';
           jellyfinScript = pkgs.writeShellScript "start-jellyfin" ''
             # lock contain machine name, cleanup any previous lock files to support renamed system 
             rm -f ~/.cache/jellyfin-desktop/SingletonLock ~/.cache/jellyfin-desktop/SingletonCookie
@@ -74,17 +61,32 @@
             EOF
             export JELLYFIN_DESKTOP_LOG_LEVEL=debug
             export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
+            systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP || true
+            systemctl --user start graphical-session.target || true
             jellyfin-desktop
           '';
-          startScript = pkgs.writeShellScript "start-labwc" ''
-            cp ${labwcRc} ~/.config/labwc/rc.xml
-            exec ${pkgs.labwc}/bin/labwc -s ${jellyfinScript}
-          '';
+          startScript = "${pkgs.labwc}/bin/labwc -s ${jellyfinScript}";
         in "${startScript}";
         user = "tv";
       };
     };
 
+
+    home-manager.users.tv = { lib, pkgs, ... }: {
+      home.file.".config/labwc/rc.xml".text = ''
+        <?xml version="1.0"?>
+        <labwc_config>
+          <core>
+            <decoration>none</decoration>
+          </core>
+          <windowRules>
+            <windowRule title="*">
+              <action name="ToggleFullscreen"/>
+            </windowRule>
+          </windowRules>
+        </labwc_config>
+      '';
+    };
 
     environment.systemPackages = with pkgs; [
       pulseaudio
