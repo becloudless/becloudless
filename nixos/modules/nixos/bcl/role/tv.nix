@@ -52,11 +52,6 @@
               <core>
                 <decoration>none</decoration>
               </core>
-              <windowRules>
-                <windowRule title="*">
-                  <action name="ToggleFullscreen"/>
-                </windowRule>
-              </windowRules>
             </labwc_config>
           '';
           jellyfinScript = pkgs.writeShellScript "start-jellyfin" ''
