@@ -50,7 +50,7 @@
             <?xml version="1.0"?>
             <labwc_config>
               <core>
-                <decoration>none</decoration>
+                <decoration>server</decoration>
               </core>
               <windowRules>
                 <windowRule title="*" matchOnce="true">
