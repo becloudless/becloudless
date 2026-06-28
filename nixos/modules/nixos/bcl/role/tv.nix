@@ -55,16 +55,20 @@
             </labwc_config>
           '';
           jellyfinScript = pkgs.writeShellScript "start-jellyfin" ''
+            # lock contain machine name, cleanup any previous lock files to support renamed system 
             rm -f ~/.cache/jellyfin-desktop/SingletonLock ~/.cache/jellyfin-desktop/SingletonCookie
+
             randr_out=$(${pkgs.wlr-randr}/bin/wlr-randr 2>/dev/null) || true
             output=$(echo "$randr_out" | grep -m1 '^[A-Za-z]' | awk '{print $1}')
             resolution=$(echo "$randr_out" | grep -m1 'current' | awk '{print $1}')
             width=$(echo "$resolution" | cut -dx -f1)
             height=$(echo "$resolution" | cut -dx -f2)
+
             # Only switch to 23.976 if both the output and mode are actually available (TODO: https://github.com/jellyfin/jellyfin-desktop/issues/247)
             if [ -n "$output" ] && [ -n "$resolution" ] && echo "$randr_out" | grep -q "$resolution.*23\.97"; then
               ${pkgs.wlr-randr}/bin/wlr-randr --output "$output" --mode "$resolution"@23.976 || true
             fi
+
             cat > ~/.config/jellyfin-desktop/settings.json <<EOF
             {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"server","windowWidth":''${width:-1920},"windowHeight":''${height:-1080},"windowLogicalWidth":''${width:-1920},"windowLogicalHeight":''${height:-1080}}
             EOF
@@ -73,8 +77,6 @@
             jellyfin-desktop
           '';
           startScript = pkgs.writeShellScript "start-labwc" ''
-            mkdir -p ~/.config/jellyfin-desktop ~/.config/jellyfin-desktop/mpv ~/.config/labwc
-            echo "fullscreen=yes" > ~/.config/jellyfin-desktop/mpv/mpv.conf
             cp ${labwcRc} ~/.config/labwc/rc.xml
             exec ${pkgs.labwc}/bin/labwc -s ${jellyfinScript}
           '';
