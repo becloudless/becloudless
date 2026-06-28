@@ -77,7 +77,7 @@
             cp ${jellyfinSettings} ~/.config/jellyfin-desktop/settings.json
             echo "fullscreen=yes" > ~/.config/jellyfin-desktop/mpv/mpv.conf
             cp ${labwcRc} ~/.config/labwc/rc.xml
-            exec ${pkgs.labwc}/bin/labwc -s ${jellyfinScript}
+            exec ${pkgs.labwc}/bin/labwc -d -s ${jellyfinScript} > /tmp/tv-labwc.log 2>&1
           '';
         in "${startScript}";
         user = "tv";
