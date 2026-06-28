@@ -54,7 +54,7 @@
               </core>
               <windowRules>
                 <windowRule title="*" matchOnce="true">
-                  <action name="Maximize"/>
+                  <action name="Fullscreen"/>
                 </windowRule>
               </windowRules>
             </labwc_config>
