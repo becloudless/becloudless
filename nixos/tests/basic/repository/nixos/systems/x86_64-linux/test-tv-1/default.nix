@@ -8,4 +8,5 @@
       devices = [ "/dev/sda" ];
     };
   };
+  bcl.role.tv.disableGpuCompositing = true;
 }
