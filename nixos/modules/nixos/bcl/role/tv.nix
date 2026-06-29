@@ -43,6 +43,10 @@
             # lock contain machine name, cleanup any previous lock files to support renamed system 
             rm -f ~/.cache/jellyfin-desktop/SingletonLock ~/.cache/jellyfin-desktop/SingletonCookie
 
+            # Wait for the TV to be ready (wlr-randr shows an active resolution)
+            until ${pkgs.wlr-randr}/bin/wlr-randr 2>/dev/null | grep -q 'current'; do
+              sleep 1
+            done
             randr_out=$(${pkgs.wlr-randr}/bin/wlr-randr 2>/dev/null) || true
             output=$(echo "$randr_out" | grep -m1 '^[A-Za-z]' | awk '{print $1}')
             resolution=$(echo "$randr_out" | grep -m1 'current' | awk '{print $1}')
@@ -59,15 +63,16 @@
             pactl set-sink-volume @DEFAULT_SINK@ 100%
 
             # Wait for network before starting jellyfin
-            until ${pkgs.networkmanager}/bin/nm-online -q 2>/dev/null; do sleep 2; done
+            until ${pkgs.networkmanager}/bin/nm-online -q 2>/dev/null; do sleep 1; done
 
-            # Start screensaver just before jellyfin to be hover jellyfin window
-            # screensaver takes time to start and will arrive after jellyfin
             cat > ~/.config/jellyfin-desktop/settings.json <<EOF
             {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"server","windowWidth":''${width:-1920},"windowHeight":''${height:-1080},"windowLogicalWidth":''${width:-1920},"windowLogicalHeight":''${height:-1080}}
             EOF
             export JELLYFIN_DESKTOP_LOG_LEVEL=debug
             export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
+
+            # Start screensaver just before jellyfin to be hover jellyfin window
+            # screensaver takes time to start and will arrive after jellyfin
             systemctl --user start screensaver.service || true
 
             jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"}
