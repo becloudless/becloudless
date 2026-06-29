@@ -111,13 +111,8 @@
       url = "github:nixos/nixpkgs/nixpkgs-unstable";
     };
 
-    nix-flatpak = {
-      url = "github:gmodena/nix-flatpak/?ref=v0.7.0";
-    };
-
     # TODO: Temporary until nixpkgs is updated
     cef-update.url = "github:r-ryantm/nixpkgs/auto-update/cef-binary";
-
 
     snowfall-lib = {
       url = "github:snowfallorg/lib";

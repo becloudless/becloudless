@@ -1,10 +1,5 @@
-{ inputs, config, lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 {
-
-  imports = [
-    "${inputs.nix-flatpak}/modules/nixos.nix"
-  ];
-
   options.bcl.role.tv = {
     audioType = lib.mkOption {
          type = lib.types.str;
