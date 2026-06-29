@@ -40,6 +40,9 @@
       settings.default_session = {
         command = let
           jellyfinScript = pkgs.writeShellScript "start-jellyfin" ''
+            exec > ~/.config/jellyfin-desktop/start-jellyfin.log 2>&1
+            set -x
+
             # lock contain machine name, cleanup any previous lock files to support renamed system 
             rm -f ~/.cache/jellyfin-desktop/SingletonLock ~/.cache/jellyfin-desktop/SingletonCookie
 
