@@ -38,7 +38,7 @@ in
             echo "No playlist available at $PLAYLIST, waiting for sync..."
             return
           fi
-          cvlc --fullscreen --loop --random --image-duration 30 --no-video-title-show "$PLAYLIST" &
+          cvlc --vout xcb_x11 --fullscreen --autoscale --loop --random --image-duration 30 --no-video-title-show "$PLAYLIST" &
         }
 
         ############################
@@ -59,6 +59,7 @@ in
       serviceConfig = {
         Restart = "on-failure";
         RestartSec = 10;
+        Environment = "DISPLAY=:0";
       };
     };
 
@@ -81,9 +82,13 @@ in
         curl -sf \
           -H "x-api-key: $IMMICH_API_KEY" \
           "$IMMICH_URL/api/albums/$ALBUM_ID" \
-          | jq -r '.assets[].id' \
-          | while read -r asset_id; do
-              echo "$IMMICH_URL/api/assets/$asset_id/thumbnail?size=preview&apiKey=$IMMICH_API_KEY"
+          | jq -r '.assets[] | [.id, .type] | @tsv' \
+          | while IFS=$'\t' read -r asset_id asset_type; do
+              if [ "$asset_type" = "VIDEO" ]; then
+                echo "$IMMICH_URL/api/assets/$asset_id/video/playback?apiKey=$IMMICH_API_KEY"
+              else
+                echo "$IMMICH_URL/api/assets/$asset_id/original?apiKey=$IMMICH_API_KEY"
+              fi
             done >> "$PLAYLIST.tmp"
         mv "$PLAYLIST.tmp" "$PLAYLIST"
 
