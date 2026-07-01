@@ -41,22 +41,22 @@
             # lock contain machine name, cleanup any previous lock files to support renamed system 
             rm -f ~/.cache/jellyfin-desktop/SingletonLock ~/.cache/jellyfin-desktop/SingletonCookie
 
-            # Wait for the TV to be ready (wlr-randr shows an active resolution)
-            until ${pkgs.wlr-randr}/bin/wlr-randr 2>/dev/null | grep -q 'current'; do
+            # Wait for the TV to be ready (xrandr shows a connected output)
+            until ${pkgs.xorg.xrandr}/bin/xrandr --query 2>/dev/null | grep -q ' connected'; do
               sleep 1
             done
-            randr_out=$(${pkgs.wlr-randr}/bin/wlr-randr 2>/dev/null) || true
-            output=$(echo "$randr_out" | grep -m1 '^[A-Za-z]' | awk '{print $1}')
-            resolution=$(echo "$randr_out" | grep -m1 'current' | awk '{print $1}')
+            randr_out=$(${pkgs.xorg.xrandr}/bin/xrandr --query 2>/dev/null) || true
+            output=$(echo "$randr_out" | grep -m1 ' connected' | awk '{print $1}')
+            resolution=$(echo "$randr_out" | grep -m1 '\*' | awk '{print $1}')
             width=$(echo "$resolution" | cut -dx -f1)
             height=$(echo "$resolution" | cut -dx -f2)
 
-
             # Only switch to 23.976 if both the output and mode are actually available (TODO: https://github.com/jellyfin/jellyfin-desktop/issues/247)
-            if [ -n "$output" ] && [ -n "$resolution" ] && echo "$randr_out" | grep -q "$resolution.*23\.97"; then
+            mode_rate=$(echo "$randr_out" | awk -v res="$resolution" '$1==res {for(i=2;i<=NF;i++) if ($i ~ /^23\.9/) print $i}' | head -1 | tr -d '*+')
+            if [ -n "$output" ] && [ -n "$resolution" ] && [ -n "$mode_rate" ]; then
               # Wait a bit, changing resolution on slow TV start, makes it ignoring the command
               sleep 5
-              ${pkgs.wlr-randr}/bin/wlr-randr --output "$output" --mode "$resolution"@23.976 || true
+              ${pkgs.xorg.xrandr}/bin/xrandr --output "$output" --mode "$resolution" --rate "$mode_rate" || true
             fi
 
             # Volume to 100%
@@ -78,37 +78,42 @@
 
             jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"}
           '';
-          startScript = "${pkgs.labwc}/bin/labwc -s ${jellyfinScript}";
+          xinitScript = pkgs.writeShellScript "start-x-session" ''
+            ${pkgs.openbox}/bin/openbox &
+            ${pkgs.unclutter}/bin/unclutter --timeout 1 --jitter 2 --ignore-scrolling &
+            exec ${jellyfinScript}
+          '';
+          startScript = "${pkgs.xorg.xinit}/bin/xinit ${xinitScript} -- ${pkgs.xorg.xorgserver}/bin/X :0 vt1 -keeptty -nolisten tcp";
         in "${startScript}";
         user = "tv";
       };
     };
 
     home-manager.users.tv = { lib, pkgs, ... }: {
-      home.file.".config/labwc/rc.xml".text = ''
+      home.file.".config/openbox/rc.xml".text = ''
         <?xml version="1.0"?>
-        <labwc_config>
-          <core>
-            <decoration>none</decoration>
-          </core>
-          <mouse>
-            <cursorHideTimeout>1</cursorHideTimeout>
-          </mouse>
-          <windowRules>
-            <windowRule title="*">
-              <action name="ToggleFullscreen"/>
-            </windowRule>
-          </windowRules>
-        </labwc_config>
+        <openbox_config xmlns="http://openbox.org/3.4/rc">
+          <applications>
+            <application name="*" class="*">
+              <decor>no</decor>
+              <fullscreen>yes</fullscreen>
+              <focus>yes</focus>
+            </application>
+          </applications>
+        </openbox_config>
       '';
     };
 
     environment.systemPackages = with pkgs; [
       pulseaudio
-      wlr-randr
-      labwc
+      xorg.xrandr
+      xorg.xorgserver
+      xorg.xinit
+      openbox
+      unclutter
       bcl.jellyfin-desktop
     ];
+
 
     systemd.tmpfiles.rules = [
       "d /nix/home/tv 0700 tv users"
