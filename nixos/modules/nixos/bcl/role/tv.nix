@@ -67,7 +67,8 @@
             until ${pkgs.networkmanager}/bin/nm-online -q 2>/dev/null; do sleep 1; done
 
             cat > ~/.config/jellyfin-desktop/settings.json <<EOF
-            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"server","windowWidth":''${width:-1920},"windowHeight":''${height:-1080},"windowLogicalWidth":''${width:-1920},"windowLogicalHeight":''${height:-1080}}
+            # {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"server","windowWidth":''${width:-1920},"windowHeight":''${height:-1080},"windowLogicalWidth":''${width:-1920},"windowLogicalHeight":''${height:-1080}}
+            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"server"}
             EOF
             export JELLYFIN_DESKTOP_LOG_LEVEL=debug
             export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
@@ -80,7 +81,7 @@
           '';
           xinitScript = pkgs.writeShellScript "start-x-session" ''
             ${pkgs.openbox}/bin/openbox &
-            ${pkgs.unclutter}/bin/unclutter --timeout 1 --jitter 2 --ignore-scrolling &
+            ${pkgs.unclutter}/bin/unclutter --timeout 100 --jitter 2 --ignore-scrolling &
             exec ${jellyfinScript}
           '';
           startScript = "${pkgs.xorg.xinit}/bin/xinit ${xinitScript} -- ${pkgs.xorg.xorgserver}/bin/X :0 vt1 -keeptty -nolisten tcp";
