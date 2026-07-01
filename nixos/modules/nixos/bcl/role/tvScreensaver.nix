@@ -38,7 +38,7 @@ in
             echo "No playlist available at $PLAYLIST, waiting for sync..."
             return
           fi
-          cvlc --vout xcb_x11 --fullscreen --autoscale --loop --random --image-duration 30 --no-video-title-show "$PLAYLIST" &
+          cvlc --vout xcb_x11 --fullscreen --autoscale --loop --random --image-duration 30 --no-video-title-show --no-audio "$PLAYLIST" &
         }
 
         ############################
