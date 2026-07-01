@@ -21,7 +21,7 @@ in
 
     systemd.user.services."screensaver" = {
       enable = true;
-      path = with pkgs; [ bash vlc procps ];
+      path = with pkgs; [ bash mpv vlc procps ];
       script = ''
         set -x
 
@@ -38,7 +38,8 @@ in
             echo "No playlist available at $PLAYLIST, waiting for sync..."
             return
           fi
-          cvlc --vout xcb_x11 --fullscreen --autoscale --loop --random --image-duration 30 --no-video-title-show --no-audio "$PLAYLIST" &
+          # cvlc --vout xcb_x11 --fullscreen --autoscale --loop --random --image-duration 30 --no-video-title-show --no-audio "$PLAYLIST" &
+          mpv --fs --loop-playlist=inf --shuffle --image-display-duration=30 --no-osd-bar --panscan=0 --scale=bilinear --video-unscaled=no --mute=yes "$PLAYLIST" &
         }
 
         ############################
