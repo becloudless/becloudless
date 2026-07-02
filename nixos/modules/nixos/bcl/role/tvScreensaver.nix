@@ -28,7 +28,7 @@ in
         PLAYLIST="$HOME/.cache/screensaver.m3u"
 
         function disableScreensaver {
-          pid=$(pgrep -f vlc || true)
+          pid=$(pgrep -f mpv || true)
           [ -z "$pid" ] || kill $pid
         }
 
