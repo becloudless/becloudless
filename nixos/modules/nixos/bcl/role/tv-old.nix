@@ -37,6 +37,16 @@
         if [ -z $_XPROFILE_SOURCED ]; then
           export _XPROFILE_SOURCED=1
 
+          # Wait for the TV to be ready (xrandr shows an active resolution, not just "connected")
+          bash -c "
+            while ! xrandr | grep -qE 'HDMI-A-1 connected [0-9]'; do
+              sleep 2
+              xrandr --auto
+            done
+          " &
+
+          sleep 5
+
           xsetroot -solid black # black background
           xset -dpms      # disable xorg screen going to sleep
           xset s off      # disable xorg screensaver
