@@ -107,7 +107,9 @@
       # waylandvk -> x11vk -> wayland -> x11egl whenever it suspects a
       # software renderer (e.g. llvmpipe in a GPU-less VM), and the last
       # hop crashes with `vo_x11_init: Assertion !vo->x11 failed`.
-      home.file.".config/mpv/mpv.conf".text = ''
+      # jellyfin-desktop uses its own mpv home (config_dir/mpv), not
+      # ~/.config/mpv.
+      home.file.".config/jellyfin-desktop/mpv/mpv.conf".text = ''
         gpu-context=wayland
       '';
     };
