@@ -25,7 +25,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
 
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.ref_name }}
           token: ${{ steps.github-app-token.outputs.token }}
@@ -48,7 +48,7 @@ jobs:
             sed -i "s|\"${platform}\"  *=.*|\"${platform}\" = \"${hash}\";|" "$FILE"
           done
 
-      - uses: iarekylew00t/verified-bot-commit@5b4e8852dc472093935b8debcb81459bb79f7986 # v2.3.2
+      - uses: iarekylew00t/verified-bot-commit@33985d44b7719dcaf0b854a0f4b0caad9bdc5b86 # v2.3.3
         with:
           ref: ${{ github.ref_name }}
           token: ${{ steps.github-app-token.outputs.token }}

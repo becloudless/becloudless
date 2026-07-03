@@ -2,7 +2,7 @@
 
 let
   # renovate: datasource=github-releases depName=becloudless/becloudless
-  version = "0.260617.849";
+  version = "0.260702.656";
 
   # Map Nix system to Go platform (GOOS-GOARCH format)
   platform = {
@@ -19,10 +19,10 @@ let
   # nix store prefetch-file --hash-type sha256 --json "https://github.com/becloudless/becloudless/releases/download/v$VERSION/bcl-darwin-amd64.tar.gz" | jq -r .hash
   # nix store prefetch-file --hash-type sha256 --json "https://github.com/becloudless/becloudless/releases/download/v$VERSION/bcl-darwin-arm64.tar.gz" | jq -r .hash
   hashes = {
-    "linux-amd64" = "sha256-Ncdocql2hY1Id211nRJHsdiQdzo7LWLAi09GyooDbbs=";
-    "linux-arm64" = "sha256-QaD1yqklZho+0M93lw/SLDK0xpqCSPJNUjFiIoScs4Q=";
-    "darwin-amd64" = "sha256-xF/fJoD9T2d0X8cllbqi2/yQ1MJL5qEViWEH6DqSMYQ=";
-    "darwin-arm64" = "sha256-JayLUwfvGsKbHpvQezEweFl3pCCBHNrG0BtO+/lsZuo=";
+    "linux-amd64" = "sha256-HQ1TJpCBv2ksPjo1ZK7JW14IhKEUdTM6h+1LzoUCmkM=";
+    "linux-arm64" = "sha256-8DtivBGx4hr2a688Q/mMiGxyB52GZQN1p/9fDjQTWjI=";
+    "darwin-amd64" = "sha256-A6J3tg1J68Fg+l7GoVWZbpy67EdPlJ1gbs0WXRNdoLg=";
+    "darwin-arm64" = "sha256-y0by6DkNJeix3MVnBjyirsPdJZnC/IxeUHO20GwNYqQ=";
   };
 in
 
