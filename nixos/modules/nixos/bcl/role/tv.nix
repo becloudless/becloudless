@@ -101,6 +101,15 @@
           </windowRules>
         </labwc_config>
       '';
+
+      # Pin mpv to the native Wayland GL context (labwc is always Wayland).
+      # Without this, mpv's gpu-next "auto" probing falls through
+      # waylandvk -> x11vk -> wayland -> x11egl whenever it suspects a
+      # software renderer (e.g. llvmpipe in a GPU-less VM), and the last
+      # hop crashes with `vo_x11_init: Assertion !vo->x11 failed`.
+      home.file.".config/mpv/mpv.conf".text = ''
+        gpu-context=wayland
+      '';
     };
 
     environment.systemPackages = with pkgs; [
