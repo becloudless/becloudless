@@ -103,7 +103,16 @@
             <cursorHideTimeout>1</cursorHideTimeout>
           </mouse>
           <windowRules>
-            <windowRule title="*">
+            <!-- Only force-fullscreen the Jellyfin window itself (matched by its
+                 wayland app_id, set via mpv's "wayland-app-id" property in
+                 jellyfin-desktop). jellyfin-desktop has no native fullscreen
+                 setting (only windowMaximized), hence this workaround.
+                 Do NOT match "*"/mpv here: mpv (both the screensaver and
+                 jellyfin-desktop's own internal player) already requests
+                 fullscreen itself via --fs / the fullscreen mpv property, and
+                 a blanket ToggleFullscreen rule would fire again on map and
+                 immediately toggle it back off. -->
+            <windowRule identifier="org.jellyfin.JellyfinDesktop">
               <action name="ToggleFullscreen"/>
             </windowRule>
           </windowRules>
