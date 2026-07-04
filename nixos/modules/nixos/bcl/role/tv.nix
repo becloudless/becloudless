@@ -51,6 +51,7 @@
             width=$(echo "$resolution" | cut -dx -f1)
             height=$(echo "$resolution" | cut -dx -f2)
 
+
             # Only switch to 23.976 if both the output and mode are actually available (TODO: https://github.com/jellyfin/jellyfin-desktop/issues/247)
             if [ -n "$output" ] && [ -n "$resolution" ] && echo "$randr_out" | grep -q "$resolution.*23\.97"; then
               # Wait a bit, changing resolution on slow TV start, makes it ignoring the command
@@ -85,29 +86,21 @@
             ''}
             jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"}
           '';
-          startScript = "${pkgs.labwc}/bin/labwc -s ${jellyfinScript}";
+          swayConfig = pkgs.writeText "tv-sway-config" ''
+            default_border none
+            default_floating_border none
+            seat seat0 hide_cursor 1000
+            for_window [title=".*"] fullscreen enable
+            exec "${jellyfinScript}; ${pkgs.sway}/bin/swaymsg exit"
+          '';
+          startScript = "${pkgs.sway}/bin/sway -c ${swayConfig}";
         in "${startScript}";
         user = "tv";
       };
     };
 
     home-manager.users.tv = { lib, pkgs, ... }: {
-      home.file.".config/labwc/rc.xml".text = ''
-        <?xml version="1.0"?>
-        <labwc_config>
-          <mouse>
-            <cursorHideTimeout>1</cursorHideTimeout>
-          </mouse>
-          <windowRules>
-            <windowRule title="*" serverDecoration="no"/>
-            <windowRule identifier="org.jellyfin.JellyfinDesktop">
-              <action name="ToggleFullscreen"/>
-            </windowRule>
-          </windowRules>
-        </labwc_config>
-      '';
-
-      # Pin mpv to the native Wayland GL context (labwc is always Wayland).
+      # Pin mpv to the native Wayland GL context (sway is always Wayland).
       # Without this, mpv's gpu-next "auto" probing falls through
       # waylandvk -> x11vk -> wayland -> x11egl whenever it suspects a
       # software renderer (e.g. llvmpipe in a GPU-less VM), and the last
@@ -121,7 +114,7 @@
     environment.systemPackages = with pkgs; [
       pulseaudio
       wlr-randr
-      labwc
+      sway
       bcl.jellyfin-desktop
     ];
 
