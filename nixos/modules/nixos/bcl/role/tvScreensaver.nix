@@ -21,7 +21,7 @@ in
 
     systemd.user.services."screensaver" = {
       enable = true;
-      path = with pkgs; [ bash mpv vlc procps ];
+      path = with pkgs; [ bash mpv procps ];
       script = ''
         set -x
 
