@@ -66,8 +66,17 @@
             until pactl info >/dev/null 2>&1; do sleep 0.5; done
             pactl set-sink-volume @DEFAULT_SINK@ 100%
 
+            # windowMaximized is intentionally omitted: requesting mpv's
+            # own "window-maximized" boot state races/conflicts with the
+            # labwc windowRule that forces real xdg-toplevel fullscreen
+            # (see rc.xml below). The app's CSD titlebar (windowDecorations
+            # "csd") only auto-hides once jellyfin-desktop's native side
+            # observes a genuine OS-fullscreen transition (wired through
+            # window._nativeFullscreenChanged); a merely-maximized window
+            # looks fullscreen visually but never fires that signal, so the
+            # titlebar would stay stuck on screen forever.
             cat > ~/.config/jellyfin-desktop/settings.json <<EOF
-            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"csd", "windowMaximized": true}
+            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"csd"}
             EOF
             export JELLYFIN_DESKTOP_LOG_LEVEL=debug
             export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
@@ -100,11 +109,15 @@
             <cursorHideTimeout>1</cursorHideTimeout>
           </mouse>
           <windowRules>
-            <!-- <core><decoration> only affects native xdg-shell (Wayland) surfaces.
-                 Jellyfin's CEF window runs as an XWayland client, so its
-                 server-side decoration can only be turned off via this
-                 window-rule property, which applies to both native and
-                 XWayland windows. -->
+            <!-- jellyfin-desktop is a single native-Wayland xdg-toplevel:
+                 mpv owns the real window/surface and CEF's UI is composited
+                 onto it as an overlay texture (no separate CEF window).
+                 mpv negotiates decoration directly via the xdg-decoration
+                 protocol (driven by jellyfin's "windowDecorations" setting,
+                 which we set to "csd" so mpv requests border=no and never
+                 asks labwc for SSD at all) - this serverDecoration rule is
+                 mostly a no-op for it, but is kept as a harmless fallback
+                 for any other window that doesn't negotiate the protocol. -->
             <windowRule title="*" serverDecoration="no"/>
             <!-- Only force-fullscreen the Jellyfin window itself (matched by its
                  wayland app_id, set via mpv's "wayland-app-id" property in
