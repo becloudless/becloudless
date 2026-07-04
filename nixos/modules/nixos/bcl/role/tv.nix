@@ -76,7 +76,7 @@
             # screensaver takes time to start and will arrive after jellyfin
             systemctl --user start screensaver.service || true
 
-            jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"}
+            jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"} --platform-paint=shm
           '';
           startScript = "${pkgs.labwc}/bin/labwc -s ${jellyfinScript}";
         in "${startScript}";
