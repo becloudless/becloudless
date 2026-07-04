@@ -59,12 +59,12 @@
               ${pkgs.wlr-randr}/bin/wlr-randr --output "$output" --mode "$resolution"@23.976 || true
             fi
 
+            # Wait for network before starting jellyfin
+            until ${pkgs.networkmanager}/bin/nm-online -q 2>/dev/null; do sleep 1; done
+
             # Volume to 100%
             until pactl info >/dev/null 2>&1; do sleep 0.5; done
             pactl set-sink-volume @DEFAULT_SINK@ 100%
-
-            # Wait for network before starting jellyfin
-            until ${pkgs.networkmanager}/bin/nm-online -q 2>/dev/null; do sleep 1; done
 
             cat > ~/.config/jellyfin-desktop/settings.json <<EOF
             {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"server","windowWidth":''${width:-1920},"windowHeight":''${height:-1080},"windowLogicalWidth":''${width:-1920},"windowLogicalHeight":''${height:-1080}}
