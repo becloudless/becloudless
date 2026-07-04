@@ -96,13 +96,16 @@
       home.file.".config/labwc/rc.xml".text = ''
         <?xml version="1.0"?>
         <labwc_config>
-          <core>
-            <decoration>none</decoration>
-          </core>
           <mouse>
             <cursorHideTimeout>1</cursorHideTimeout>
           </mouse>
           <windowRules>
+            <!-- <core><decoration> only affects native xdg-shell (Wayland) surfaces.
+                 Jellyfin's CEF window runs as an XWayland client, so its
+                 server-side decoration can only be turned off via this
+                 window-rule property, which applies to both native and
+                 XWayland windows. -->
+            <windowRule title="*" serverDecoration="no"/>
             <!-- Only force-fullscreen the Jellyfin window itself (matched by its
                  wayland app_id, set via mpv's "wayland-app-id" property in
                  jellyfin-desktop). jellyfin-desktop has no native fullscreen
