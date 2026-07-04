@@ -76,6 +76,14 @@
             # screensaver takes time to start and will arrive after jellyfin
             systemctl --user start screensaver.service || true
 
+            ${lib.optionalString config.bcl.role.tv.disableGpuCompositing ''
+              # On GPU-less hosts (e.g. CI VMs), Mesa's automatic driver
+              # selection routes CEF's EGL context through zink (Vulkan
+              # software rasterizer), which fails to pick a device
+              # ("ZINK: failed to choose pdev") and segfaults CEF's GPU
+              # process. Force the classic llvmpipe softpipe path instead.
+              export LIBGL_ALWAYS_SOFTWARE=1
+            ''}
             jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"} --platform-paint=shm
           '';
           startScript = "${pkgs.labwc}/bin/labwc -s ${jellyfinScript}";
