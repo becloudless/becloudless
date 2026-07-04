@@ -39,7 +39,7 @@ in
             return
           fi
           # cvlc --vout xcb_x11 --fullscreen --autoscale --loop --random --image-duration 30 --no-video-title-show --no-audio "$PLAYLIST" &
-          mpv --fs --loop-playlist=inf --shuffle --image-display-duration=30 --no-osd-bar --panscan=0 --scale=bilinear --video-unscaled=no --mute=yes --speed=0.75 "$PLAYLIST" &
+          mpv --fs --loop-playlist=inf --shuffle --image-display-duration=30 --no-osd-bar --panscan=0 --scale=bilinear --video-unscaled=no --mute=yes --speed=0.75 --osd-playing-msg='''${media-title}' --osd-duration=30000 --osd-font-size=25 "$PLAYLIST" &
         }
 
         ############################
@@ -83,8 +83,10 @@ in
         curl -sf \
           -H "x-api-key: $IMMICH_API_KEY" \
           "$IMMICH_URL/api/albums/$ALBUM_ID" \
-          | jq -r '.assets[] | [.id, .type] | @tsv' \
-          | while IFS=$'\t' read -r asset_id asset_type; do
+          | jq -r '.assets[] | [.id, .type, (.fileCreatedAt // .localDateTime // "")] | @tsv' \
+          | while IFS=$'\t' read -r asset_id asset_type asset_date; do
+              date_only="''${asset_date%%T*}"
+              echo "#EXTINF:-1,$date_only"
               if [ "$asset_type" = "VIDEO" ]; then
                 echo "$IMMICH_URL/api/assets/$asset_id/video/playback?apiKey=$IMMICH_API_KEY"
               else

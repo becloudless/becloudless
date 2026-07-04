@@ -72,8 +72,22 @@
             # (window._nativeFullscreenChanged). A merely-maximized window
             # looks fullscreen visually but never fires that signal, so the
             # titlebar would stay stuck on screen forever.
+            #
+            # windowWidth/windowHeight are set to the real detected output
+            # resolution (jellyfin-desktop otherwise falls back to a
+            # hardcoded 1600x900 default boot size). Without this, mpv boots
+            # its toplevel at 1600x900 and then separately requests real
+            # xdg-toplevel fullscreen; labwc/mpv's wayland vo don't reliably
+            # resize the actual rendered surface to the new fullscreen size
+            # afterwards, leaving a small 1600x900 image centered on a black
+            # background instead of true fullscreen video. Booting directly
+            # at the native resolution avoids that resize entirely.
+            window_size_json=""
+            if [ -n "$width" ] && [ -n "$height" ]; then
+              window_size_json=",\"windowWidth\":$width,\"windowHeight\":$height"
+            fi
             cat > ~/.config/jellyfin-desktop/settings.json <<EOF
-            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"csd"}
+            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"csd"$window_size_json}
             EOF
             export JELLYFIN_DESKTOP_LOG_LEVEL=debug
             export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
