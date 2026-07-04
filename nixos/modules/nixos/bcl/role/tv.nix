@@ -84,7 +84,7 @@
               # process. Force the classic llvmpipe softpipe path instead.
               export LIBGL_ALWAYS_SOFTWARE=1
             ''}
-            jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"} --platform-paint=shm
+            jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"}
           '';
           startScript = "${pkgs.labwc}/bin/labwc -s ${jellyfinScript}";
         in "${startScript}";
@@ -115,8 +115,7 @@
       # waylandvk -> x11vk -> wayland -> x11egl whenever it suspects a
       # software renderer (e.g. llvmpipe in a GPU-less VM), and the last
       # hop crashes with `vo_x11_init: Assertion !vo->x11 failed`.
-      # jellyfin-desktop uses its own mpv home (config_dir/mpv), not
-      # ~/.config/mpv.
+      # without it, IT tests in kvm fail.
       home.file.".config/jellyfin-desktop/mpv/mpv.conf".text = ''
         gpu-context=wayland
       '';
