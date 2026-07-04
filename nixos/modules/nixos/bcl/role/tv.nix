@@ -66,13 +66,10 @@
             until pactl info >/dev/null 2>&1; do sleep 0.5; done
             pactl set-sink-volume @DEFAULT_SINK@ 100%
 
-            # windowMaximized is intentionally omitted: requesting mpv's
-            # own "window-maximized" boot state races/conflicts with the
-            # labwc windowRule that forces real xdg-toplevel fullscreen
-            # (see rc.xml below). The app's CSD titlebar (windowDecorations
-            # "csd") only auto-hides once jellyfin-desktop's native side
-            # observes a genuine OS-fullscreen transition (wired through
-            # window._nativeFullscreenChanged); a merely-maximized window
+            # windowMaximized is intentionally omitted: real fullscreen is
+            # requested directly by mpv itself (fullscreen=yes in mpv.conf),
+            # which is what drives jellyfin-desktop's CSD titlebar auto-hide
+            # (window._nativeFullscreenChanged). A merely-maximized window
             # looks fullscreen visually but never fires that signal, so the
             # titlebar would stay stuck on screen forever.
             cat > ~/.config/jellyfin-desktop/settings.json <<EOF
@@ -119,19 +116,20 @@
                  mostly a no-op for it, but is kept as a harmless fallback
                  for any other window that doesn't negotiate the protocol. -->
             <windowRule title="*" serverDecoration="no"/>
-            <!-- Only force-fullscreen the Jellyfin window itself (matched by its
-                 wayland app_id, set via mpv's "wayland-app-id" property in
-                 jellyfin-desktop). jellyfin-desktop has no native fullscreen
-                 setting (only windowMaximized), hence this workaround.
-                 Do NOT match "*"/mpv here: mpv (both the screensaver and
-                 jellyfin-desktop's own internal player) already requests
-                 fullscreen itself via --fs / the fullscreen mpv property, and
-                 a blanket ToggleFullscreen rule would fire again on map and
-                 immediately toggle it back off. -->
-            <windowRule identifier="org.jellyfin.JellyfinDesktop">
-              <action name="ToggleFullscreen"/>
-            </windowRule>
           </windowRules>
+          <!-- Real fullscreen for jellyfin's mpv window is requested by mpv
+               itself (see mpv.conf's fullscreen=yes below), NOT via a
+               windowRule action here: a labwc windowRule only fires once,
+               on the very first map, and is keyed on the window's app_id
+               ("wayland-app-id" mpv option) - in practice this proved
+               unreliable (the window never actually left its initial
+               1600x900 floating size). Letting mpv request fullscreen
+               directly through the standard xdg-toplevel protocol (exactly
+               like the screensaver's "mpv --fs") is the same mechanism
+               jellyfin-desktop's own fullscreen detection
+               (window._nativeFullscreenChanged, used to hide the CSD
+               titlebar) already relies on, so it is reliable by
+               construction. -->
         </labwc_config>
       '';
 
@@ -141,8 +139,15 @@
       # software renderer (e.g. llvmpipe in a GPU-less VM), and the last
       # hop crashes with `vo_x11_init: Assertion !vo->x11 failed`.
       # without it, IT tests in kvm fail.
+      #
+      # fullscreen=yes: request real xdg-toplevel fullscreen directly from
+      # mpv at startup (same mechanism as the screensaver's "mpv --fs").
+      # This is what drives jellyfin-desktop's own fullscreen detection
+      # (window._nativeFullscreenChanged), which in turn hides its CSD
+      # titlebar - a labwc-side windowRule action proved unreliable here.
       home.file.".config/jellyfin-desktop/mpv/mpv.conf".text = ''
         gpu-context=wayland
+        fullscreen=yes
       '';
     };
 

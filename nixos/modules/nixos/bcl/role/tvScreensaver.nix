@@ -39,7 +39,7 @@ in
             return
           fi
           # cvlc --vout xcb_x11 --fullscreen --autoscale --loop --random --image-duration 30 --no-video-title-show --no-audio "$PLAYLIST" &
-          mpv --fs --loop-playlist=inf --shuffle --image-display-duration=30 --no-osd-bar --panscan=0 --scale=bilinear --video-unscaled=no --mute=yes "$PLAYLIST" &
+          mpv --fs --loop-playlist=inf --shuffle --image-display-duration=30 --no-osd-bar --panscan=0 --scale=bilinear --video-unscaled=no --mute=yes --speed=0.75 "$PLAYLIST" &
         }
 
         ############################
