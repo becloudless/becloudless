@@ -12,7 +12,7 @@ in
   };
 
   config = lib.mkIf (config.bcl.role.name == "tv" && cfg.albumId != null) {
-    environment.systemPackages = with pkgs; [ feh curl jq ];
+    environment.systemPackages = with pkgs; [ vlc curl jq ];
 
     sops.secrets."users.tv.immich.apiKey" = {
       sopsFile = config.bcl.role.secretFile;
@@ -21,48 +21,50 @@ in
 
     systemd.user.services."screensaver" = {
       enable = true;
-      path = with pkgs; [ bash feh procps ];
+      path = with pkgs; [ bash mpv vlc procps ];
       script = ''
         set -x
 
-        PHOTO_DIR="$HOME/.cache/screensaver-photos"
+        PLAYLIST="$HOME/.cache/screensaver.m3u"
 
         function disableScreensaver {
-          pid=$(pgrep -f feh || true)
+          pid=$(pgrep -f mpv || true)
           [ -z "$pid" ] || kill $pid
         }
 
         function displayScreensaver {
           disableScreensaver
-          if [ -z "$(ls -A "$PHOTO_DIR" 2>/dev/null)" ]; then
-            echo "No photos available in $PHOTO_DIR, waiting for sync..."
+          if [ ! -s "$PLAYLIST" ] 2>/dev/null; then
+            echo "No playlist available at $PLAYLIST, waiting for sync..."
             return
           fi
-          feh --recursive --randomize --full-screen -Z --slideshow-delay 30 --hide-pointer --draw-tinted -e yudit/20 --info "echo '%N'" "$PHOTO_DIR" &
+          # cvlc --vout xcb_x11 --fullscreen --autoscale --loop --random --image-duration 30 --no-video-title-show --no-audio "$PLAYLIST" &
+          mpv --fs --loop-playlist=inf --shuffle --image-display-duration=30 --no-osd-bar --panscan=0 --scale=bilinear --video-unscaled=no --mute=yes "$PLAYLIST" &
         }
 
         ############################
         sleep 5
         displayScreensaver
-        tail -fn0 ~/.local/share/jellyfin-desktop/profiles/b6a136dc17a44b32a63eed3507a6f2d0/logs/jellyfin-desktop.log \
-          | grep --line-buffered "nowplaying event:" \
+        tail -fn0 ~/.config/jellyfin-desktop/jellyfin-desktop.log \
+          | grep --line-buffered "Firing signal:" \
           | while read line; do
-              state=$(echo $line | sed 's/.* - nowplaying event: \([a-z]*\)/\1/')
+              state=$(echo $line | sed 's/.*Firing signal: \([a-z]*\).*/\1/')
               case $state in
-                playbackstart) disableScreensaver;;
-                playbackstop) displayScreensaver;;
+                playing) disableScreensaver;;
+                canceled) displayScreensaver;;
                 *) echo "Unknown state $state";;
               esac
             done
       '';
-      wantedBy = [ "graphical-session.target" ];
+      wantedBy = [];
       serviceConfig = {
         Restart = "on-failure";
         RestartSec = 10;
+        Environment = "DISPLAY=:0";
       };
     };
 
-    # Sync photos from an Immich album to a local cache directory
+    # Generate m3u playlist with direct Immich URLs
     systemd.user.services."immich-photo-sync" = {
       path = with pkgs; [ curl jq bash coreutils ];
       script = ''
@@ -72,45 +74,26 @@ in
         IMMICH_URL="https://immich.${config.bcl.global.domain}"
         IMMICH_API_KEY="$(cat ${config.sops.secrets."users.tv.immich.apiKey".path})"
         ALBUM_ID="${cfg.albumId}"
-        PHOTO_DIR="$HOME/.cache/screensaver-photos"
+        PLAYLIST="$HOME/.cache/screensaver.m3u"
 
-        mkdir -p "$PHOTO_DIR"
+        mkdir -p "$(dirname "$PLAYLIST")"
 
         echo "Fetching asset list from album $ALBUM_ID..."
-        assets=$(curl -sf \
+        echo "#EXTM3U" > "$PLAYLIST.tmp"
+        curl -sf \
           -H "x-api-key: $IMMICH_API_KEY" \
           "$IMMICH_URL/api/albums/$ALBUM_ID" \
-          | jq -r '.assets[] | [.id, .originalFileName, (.localDateTime | split("T")[0])] | @tsv')
+          | jq -r '.assets[] | [.id, .type] | @tsv' \
+          | while IFS=$'\t' read -r asset_id asset_type; do
+              if [ "$asset_type" = "VIDEO" ]; then
+                echo "$IMMICH_URL/api/assets/$asset_id/video/playback?apiKey=$IMMICH_API_KEY"
+              else
+                echo "$IMMICH_URL/api/assets/$asset_id/original?apiKey=$IMMICH_API_KEY"
+              fi
+            done >> "$PLAYLIST.tmp"
+        mv "$PLAYLIST.tmp" "$PLAYLIST"
 
-        # Track current short hashes to remove stale photos
-        current_hashes=""
-
-        while IFS=$'\t' read -r asset_id original_name photo_date; do
-          ext="''${original_name##*.}"
-          short_hash=$(echo "$asset_id" | sha256sum | cut -c1-8)
-          dest="$PHOTO_DIR/''${short_hash}_''${photo_date}.''${ext}"
-          current_hashes="$current_hashes $short_hash"
-          if [ ! -f "$dest" ]; then
-            echo "Downloading $original_name ($asset_id)..."
-            curl -sf \
-              -H "x-api-key: $IMMICH_API_KEY" \
-              "$IMMICH_URL/api/assets/$asset_id/thumbnail?size=preview" \
-              -o "$dest" || echo "Failed to download $asset_id, skipping."
-          fi
-        done <<< "$assets"
-
-        # Remove photos no longer in the album
-        for f in "$PHOTO_DIR"/*; do
-          [ -f "$f" ] || continue
-          fname="''${f##*/}"
-          fhash="''${fname%%_*}"
-          if ! echo "$current_hashes" | grep -qw "$fhash"; then
-            echo "Removing stale photo $f"
-            rm -f "$f"
-          fi
-        done
-
-        echo "Sync complete. $(ls "$PHOTO_DIR" | wc -l) photos available."
+        echo "Playlist updated with $(grep -c http "$PLAYLIST") entries."
       '';
       serviceConfig = {
         Type = "oneshot";

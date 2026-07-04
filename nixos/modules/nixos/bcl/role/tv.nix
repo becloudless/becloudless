@@ -1,4 +1,4 @@
-{ inputs, config, lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 {
   options.bcl.role.tv = {
     audioType = lib.mkOption {
@@ -13,6 +13,10 @@
          type = lib.types.str;
          default = "https://jellyfin.${config.bcl.global.domain}";
       };
+    disableGpuCompositing = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+    };
   };
 
   config = lib.mkMerge [
@@ -21,171 +25,119 @@
     bcl.boot.quiet = true;
     bcl.sound.enable = true;
     bcl.wifi.enable = true;
+    services.speechd.enable = lib.mkForce false; # remove mbrola-voices dependency that is huge
+    security.sudo.wheelNeedsPassword = false;
 
     bcl.users.users.tv = {};
 
     services.greetd = {
       enable = true;
       settings.default_session = {
-        command = "${pkgs.cage}/bin/cage -s -- env QT_WAYLAND_DISABLE_WINDOWDECORATION=1 jellyfin-desktop";
+        command = let
+          jellyfinScript = pkgs.writeShellScript "start-jellyfin" ''
+            exec > ~/.config/jellyfin-desktop/start-jellyfin.log 2>&1
+            set -x
+
+            # lock contain machine name, cleanup any previous lock files to support renamed system 
+            rm -f ~/.cache/jellyfin-desktop/SingletonLock ~/.cache/jellyfin-desktop/SingletonCookie
+
+            # Wait for the TV to be ready (wlr-randr shows an active resolution)
+            until ${pkgs.wlr-randr}/bin/wlr-randr 2>/dev/null | grep -q 'current'; do
+              sleep 1
+            done
+            randr_out=$(${pkgs.wlr-randr}/bin/wlr-randr 2>/dev/null) || true
+            output=$(echo "$randr_out" | grep -m1 '^[A-Za-z]' | awk '{print $1}')
+            resolution=$(echo "$randr_out" | grep -m1 'current' | awk '{print $1}')
+            width=$(echo "$resolution" | cut -dx -f1)
+            height=$(echo "$resolution" | cut -dx -f2)
+
+
+            # Only switch to 23.976 if both the output and mode are actually available (TODO: https://github.com/jellyfin/jellyfin-desktop/issues/247)
+            if [ -n "$output" ] && [ -n "$resolution" ] && echo "$randr_out" | grep -q "$resolution.*23\.97"; then
+              # Wait a bit, changing resolution on slow TV start, makes it ignoring the command
+              sleep 5
+              ${pkgs.wlr-randr}/bin/wlr-randr --output "$output" --mode "$resolution"@23.976 || true
+            fi
+
+            # Wait for network before starting jellyfin
+            until ${pkgs.networkmanager}/bin/nm-online -q 2>/dev/null; do sleep 1; done
+
+            # Volume to 100%
+            until pactl info >/dev/null 2>&1; do sleep 0.5; done
+            pactl set-sink-volume @DEFAULT_SINK@ 100%
+
+            cat > ~/.config/jellyfin-desktop/settings.json <<EOF
+            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"server","windowWidth":''${width:-1920},"windowHeight":''${height:-1080},"windowLogicalWidth":''${width:-1920},"windowLogicalHeight":''${height:-1080}}
+            EOF
+            export JELLYFIN_DESKTOP_LOG_LEVEL=debug
+            export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
+
+            # Start screensaver just before jellyfin to be hover jellyfin window
+            # screensaver takes time to start and will arrive after jellyfin
+            systemctl --user start screensaver.service || true
+
+            ${lib.optionalString config.bcl.role.tv.disableGpuCompositing ''
+              # On GPU-less hosts (e.g. CI VMs), Mesa's automatic driver
+              # selection routes CEF's EGL context through zink (Vulkan
+              # software rasterizer), which fails to pick a device
+              # ("ZINK: failed to choose pdev") and segfaults CEF's GPU
+              # process. Force the classic llvmpipe softpipe path instead.
+              export LIBGL_ALWAYS_SOFTWARE=1
+            ''}
+            jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"}
+          '';
+          startScript = "${pkgs.labwc}/bin/labwc -s ${jellyfinScript}";
+        in "${startScript}";
         user = "tv";
       };
     };
 
-    services.speechd.enable = false; # remove mbrola-voices dependency that is huge
+    home-manager.users.tv = { lib, pkgs, ... }: {
+      home.file.".config/labwc/rc.xml".text = ''
+        <?xml version="1.0"?>
+        <labwc_config>
+          <core>
+            <decoration>none</decoration>
+          </core>
+          <mouse>
+            <cursorHideTimeout>1</cursorHideTimeout>
+          </mouse>
+          <windowRules>
+            <windowRule title="*">
+              <action name="ToggleFullscreen"/>
+            </windowRule>
+          </windowRules>
+        </labwc_config>
+      '';
 
-    security.sudo.wheelNeedsPassword = false;
+      # Pin mpv to the native Wayland GL context (labwc is always Wayland).
+      # Without this, mpv's gpu-next "auto" probing falls through
+      # waylandvk -> x11vk -> wayland -> x11egl whenever it suspects a
+      # software renderer (e.g. llvmpipe in a GPU-less VM), and the last
+      # hop crashes with `vo_x11_init: Assertion !vo->x11 failed`.
+      # without it, IT tests in kvm fail.
+      home.file.".config/jellyfin-desktop/mpv/mpv.conf".text = ''
+        gpu-context=wayland
+      '';
+    };
 
     environment.systemPackages = with pkgs; [
-      jellyfin-desktop
-      cage
       pulseaudio
+      wlr-randr
+      labwc
+      bcl.jellyfin-desktop
     ];
 
     systemd.tmpfiles.rules = [
       "d /nix/home/tv 0700 tv users"
     ];
 
-    home-manager.users.tv = { lib, pkgs, ... }: {
-      home = {
-        stateVersion = "23.11"; # never touch that
-      };
-
-      imports = [ (inputs.impermanence + "/home-manager.nix") ];
-
-      home.file.".xprofile".text = ''
-        if [ -z $_XPROFILE_SOURCED ]; then
-          export _XPROFILE_SOURCED=1
-
-          xsetroot -solid black # black background
-          xset -dpms      # disable xorg screen going to sleep
-          xset s off      # disable xorg screensaver
-          # xdotool mousemove 100 100 && xdotool click 1
-
-          # TODO this is a hack
-          pactl set-sink-volume @DEFAULT_SINK@ 100%
-          pactl set-sink-volume alsa_output.pci-0000_00_0e.0.hdmi-stereo 100% # TODO
-
-          # TODO wait for network
-          # while ! ping -c 1 -W 1 192.168.40.12; do sleep 1; done;
-          bash -c "while true; do jellyfin-desktop; sleep 5; done" &
-          bash -c "sleep 20; xdotool mousemove 100 100; xdotool click 1; amixer set Master 95%;" &
-        fi
-      '';
-
-      home.file.".local/share/jellyfin-desktop/profiles.json".text = ''
-        {
-            "defaultProfile": "b6a136dc17a44b32a63eed3507a6f2d0"
-        }
-      '';
-
-      home.file.".local/share/jellyfin-desktop/profiles/b6a136dc17a44b32a63eed3507a6f2d0/jellyfin-desktop.conf".text = ''
-        {
-            "sections": {
-                "appleremote": {
-                    "emulatepht": true
-                },
-                "audio": {
-                    "channels": "2.0",
-                    "device": "${config.bcl.role.tv.audioDevice}",
-                    "devicetype": "${config.bcl.role.tv.audioType}",
-                    "exclusive": false,
-                    "normalize": false,
-                    "passthrough.ac3": false,
-                    "passthrough.dts": false,
-                    "passthrough.dts-hd": false,
-                    "passthrough.eac3": false,
-                    "passthrough.truehd": false
-                },
-                "cec": {
-                    "activatesource": true,
-                    "enable": true,
-                    "hdmiport": 0,
-                    "poweroffonstandby": false,
-                    "suspendonstandby": false,
-                    "usekeyupdown": false,
-                    "verbose_logging": false
-                },
-                "main": {
-                    "allowBrowserZoom": true,
-                    "alwaysOnTop": false,
-                    "autodetectCertBundle": true,
-                    "checkForUpdates": false,
-                    "disablemouse": false,
-                    "enableInputRepeat": true,
-                    "enableMPV": true,
-                    "enableWindowsMediaIntegration": true,
-                    "enableWindowsTaskbarIntegration": true,
-                    "forceAlwaysFS": false,
-                    "forceFSScreen": "",
-                    "fullscreen": true,
-                    "hdmi_poweron": false,
-                    "ignoreSSLErrors": false,
-                    "layout": "desktop",
-                    "logLevel": "debug",
-                    "minimizeOnDefocus": false,
-                    "sdlEnabled": true,
-                    "showPowerOptions": true,
-                    "useOpenGL": false,
-                    "useSystemVideoCodecs": false,
-                    "userWebClient": "${config.bcl.role.tv.jellyfinUrl}",
-                    "webMode": "desktop"
-                },
-                "other": {
-                    "other_conf": ""
-                },
-                "path": {
-                    "startupurl_desktop": "bundled",
-                    "startupurl_extension": "bundled"
-                },
-                "subtitles": {
-                    "ass_scale_border_and_shadow": true,
-                    "ass_style_override": "",
-                    "background_color": "",
-                    "background_transparency": "",
-                    "border_color": "",
-                    "border_size": -1,
-                    "color": "",
-                    "font": "sans-serif",
-                    "placement": "",
-                    "size": -1
-                },
-                "system": {
-                    "lircd_enabled": false,
-                    "smbd_enabled": false,
-                    "sshd_enabled": false,
-                    "systemname": "JellyfinDesktop"
-                },
-                "video": {
-                    "allow_transcode_to_hevc": false,
-                    "always_force_transcode": false,
-                    "aspect": "normal",
-                    "audio_delay.24hz": 0,
-                    "audio_delay.25hz": 0,
-                    "audio_delay.50hz": 0,
-                    "audio_delay.normal": 0,
-                    "cache": 500,
-                    "debug.force_vo": "",
-                    "default_playback_speed": 1,
-                    "deinterlace": false,
-                    "force_transcode_4k": true,
-                    "force_transcode_av1": true,
-                    "force_transcode_dovi": true,
-                    "force_transcode_hdr": true,
-                    "force_transcode_hevc": true,
-                    "force_transcode_hi10p": true,
-                    "hardwareDecoding": "enabled",
-                    "prefer_transcode_to_h265": false,
-                    "refreshrate.auto_switch": true,
-                    "refreshrate.avoid_25hz_30hz": true,
-                    "refreshrate.delay": 3,
-                    "sync_mode": "audio"
-                }
-            },
-            "version": 7
-        }
-      '';
+    environment.persistence."/nix" = {
+      users."tv".directories = [
+        ".config/jellyfin-desktop"
+      ];
     };
+
   })
   ];
 }

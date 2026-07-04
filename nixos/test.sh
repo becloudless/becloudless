@@ -134,6 +134,7 @@ $BCL_BIN -C "$DIR/tests/basic" nixos prepare
 
 ###
 validate-test-tv() {
+	ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ../secrets/ed25519 -p 10022 toto@127.0.0.1 sudo cat /home/tv/.config/jellyfin-desktop/start-jellyfin.log
 	ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ../secrets/ed25519 -p 10022 toto@127.0.0.1 pidof jellyfin-desktop
 }
 
