@@ -55,7 +55,7 @@ in
             echo "No playlist available at $PLAYLIST, waiting for sync..."
             return
           fi
-          mpv --fs --loop-playlist=inf --shuffle --image-display-duration=30 --no-osd-bar --panscan=0 --scale=bilinear --video-unscaled=no --mute=yes --speed=0.5 --osd-playing-msg=\''${media-title} --osd-duration=3600000 --osd-font-size=12 --osd-align-x=left --osd-align-y=bottom "$PLAYLIST" &
+          mpv --fs --loop-playlist=inf --image-display-duration=30 --no-osd-bar --panscan=0 --scale=bilinear --video-unscaled=no --mute=yes --speed=0.5 --osd-playing-msg=\''${media-title} --osd-duration=3600000 --osd-font-size=12 --osd-align-x=left --osd-align-y=bottom "$PLAYLIST" &
         }
 
         ############################
@@ -116,7 +116,10 @@ in
             done > "$FRAGMENT.tmp"
         mv "$FRAGMENT.tmp" "$FRAGMENT"
 
-        { echo "#EXTM3U"; cat "$PLAYLIST_DIR"/*.m3u 2>/dev/null; } > "$PLAYLIST.tmp"
+        {
+          echo "#EXTM3U"
+          cat "$PLAYLIST_DIR"/*.m3u 2>/dev/null | paste -d'\t' - - | shuf | tr '\t' '\n'
+        } > "$PLAYLIST.tmp"
         mv "$PLAYLIST.tmp" "$PLAYLIST"
 
         echo "Playlist updated with $(grep -c http "$PLAYLIST") entries."
@@ -144,17 +147,21 @@ in
 
         mkdir -p "$PLAYLIST_DIR"
 
-        echo "Fetching movies/shows backdrops from Jellyfin..."
+        echo "Fetching movies/shows/artists backdrops from Jellyfin..."
         curl -sf \
           -H "X-Emby-Token: $JELLYFIN_API_KEY" \
-          "$JELLYFIN_URL/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=BackdropImageTags" \
-          | jq -r '.Items[] | .Id as $id | (.BackdropImageTags | length) as $count | range(0; $count) | "\($id)\t\(.)"' \
-          | while IFS=$'\t' read -r item_id tag_index; do
+          "$JELLYFIN_URL/Items?IncludeItemTypes=Movie,Series,MusicArtist&Recursive=true&Fields=BackdropImageTags" \
+          | jq -r '.Items[] | .Id as $id | .Name as $name | (.BackdropImageTags | length) as $count | range(0; $count) | "\($id)\t\($name)\t\(.)"' \
+          | while IFS=$'\t' read -r item_id item_name tag_index; do
+              echo "#EXTINF:-1,$item_name"
               echo "$JELLYFIN_URL/Items/$item_id/Images/Backdrop/$tag_index?api_key=$JELLYFIN_API_KEY"
             done > "$FRAGMENT.tmp"
         mv "$FRAGMENT.tmp" "$FRAGMENT"
 
-        { echo "#EXTM3U"; cat "$PLAYLIST_DIR"/*.m3u 2>/dev/null; } > "$PLAYLIST.tmp"
+        {
+          echo "#EXTM3U"
+          cat "$PLAYLIST_DIR"/*.m3u 2>/dev/null | paste -d'\t' - - | shuf | tr '\t' '\n'
+        } > "$PLAYLIST.tmp"
         mv "$PLAYLIST.tmp" "$PLAYLIST"
 
         echo "Playlist updated with $(grep -c http "$PLAYLIST") entries."
