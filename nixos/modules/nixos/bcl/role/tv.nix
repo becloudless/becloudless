@@ -67,7 +67,7 @@
             pactl set-sink-volume @DEFAULT_SINK@ 100%
 
             cat > ~/.config/jellyfin-desktop/settings.json <<EOF
-            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"server","windowWidth":''${width:-1920},"windowHeight":''${height:-1080},"windowLogicalWidth":''${width:-1920},"windowLogicalHeight":''${height:-1080}}
+            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"csd", "windowMaximized": true}
             EOF
             export JELLYFIN_DESKTOP_LOG_LEVEL=debug
             export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
@@ -86,31 +86,21 @@
             ''}
             jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"}
           '';
-          startScript = "${pkgs.labwc}/bin/labwc -s ${jellyfinScript}";
+          swayConfig = pkgs.writeText "tv-sway-config" ''
+            default_border none
+            default_floating_border none
+            seat seat0 hide_cursor 1000
+            for_window [title=".*"] fullscreen enable
+            exec "${jellyfinScript}; ${pkgs.sway}/bin/swaymsg exit"
+          '';
+          startScript = "${pkgs.sway}/bin/sway -c ${swayConfig}";
         in "${startScript}";
         user = "tv";
       };
     };
 
     home-manager.users.tv = { lib, pkgs, ... }: {
-      home.file.".config/labwc/rc.xml".text = ''
-        <?xml version="1.0"?>
-        <labwc_config>
-          <core>
-            <decoration>none</decoration>
-          </core>
-          <mouse>
-            <cursorHideTimeout>1</cursorHideTimeout>
-          </mouse>
-          <windowRules>
-            <windowRule title="*">
-              <action name="ToggleFullscreen"/>
-            </windowRule>
-          </windowRules>
-        </labwc_config>
-      '';
-
-      # Pin mpv to the native Wayland GL context (labwc is always Wayland).
+      # Pin mpv to the native Wayland GL context (sway is always Wayland).
       # Without this, mpv's gpu-next "auto" probing falls through
       # waylandvk -> x11vk -> wayland -> x11egl whenever it suspects a
       # software renderer (e.g. llvmpipe in a GPU-less VM), and the last
@@ -124,7 +114,7 @@
     environment.systemPackages = with pkgs; [
       pulseaudio
       wlr-randr
-      labwc
+      sway
       bcl.jellyfin-desktop
     ];
 
