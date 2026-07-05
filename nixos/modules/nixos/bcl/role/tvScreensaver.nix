@@ -4,17 +4,34 @@ let
 in
 {
   options.bcl.role.tv.screensaver = {
-    albumId = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "Immich album UUID to display as screensaver. Feature is disabled when null.";
+    immich = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Include photos/videos fetched from an Immich album in the screensaver playlist.";
+      };
+      albumId = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Immich album UUID to display as screensaver.";
+      };
+    };
+    jellyfin.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Include movies/shows backdrops fetched from Jellyfin in the screensaver playlist.";
     };
   };
 
-  config = lib.mkIf (config.bcl.role.name == "tv" && cfg.albumId != null) {
+  config = lib.mkIf (config.bcl.role.name == "tv" && (cfg.immich.enable || cfg.jellyfin.enable)) {
     environment.systemPackages = with pkgs; [ curl jq ];
 
-    sops.secrets."users.tv.immich.apiKey" = {
+    sops.secrets."users.tv.immich.apiKey" = lib.mkIf cfg.immich.enable {
+      sopsFile = config.bcl.role.secretFile;
+      owner = "tv";
+    };
+
+    sops.secrets."users.tv.jellyfin.apiKey" = lib.mkIf cfg.jellyfin.enable {
       sopsFile = config.bcl.role.secretFile;
       owner = "tv";
     };
@@ -63,8 +80,12 @@ in
       };
     };
 
-    # Generate m3u playlist with direct Immich URLs
-    systemd.user.services."immich-photo-sync" = {
+    # Generate m3u playlist fragments per source, then combine them into the
+    # final playlist so Immich and Jellyfin can be enabled independently
+    # without one sync overwriting the other's entries.
+
+    # Fragment with direct Immich URLs
+    systemd.user.services."immich-photo-sync" = lib.mkIf cfg.immich.enable {
       path = with pkgs; [ curl jq bash coreutils ];
       script = ''
         set -euo pipefail
@@ -72,13 +93,14 @@ in
 
         IMMICH_URL="https://immich.${config.bcl.global.domain}"
         IMMICH_API_KEY="$(cat ${config.sops.secrets."users.tv.immich.apiKey".path})"
-        ALBUM_ID="${cfg.albumId}"
+        ALBUM_ID="${cfg.immich.albumId}"
+        PLAYLIST_DIR="$HOME/.cache/screensaver.d"
+        FRAGMENT="$PLAYLIST_DIR/immich.m3u"
         PLAYLIST="$HOME/.cache/screensaver.m3u"
 
-        mkdir -p "$(dirname "$PLAYLIST")"
+        mkdir -p "$PLAYLIST_DIR"
 
         echo "Fetching asset list from album $ALBUM_ID..."
-        echo "#EXTM3U" > "$PLAYLIST.tmp"
         curl -sf \
           -H "x-api-key: $IMMICH_API_KEY" \
           "$IMMICH_URL/api/albums/$ALBUM_ID" \
@@ -91,7 +113,10 @@ in
               else
                 echo "$IMMICH_URL/api/assets/$asset_id/original?apiKey=$IMMICH_API_KEY"
               fi
-            done >> "$PLAYLIST.tmp"
+            done > "$FRAGMENT.tmp"
+        mv "$FRAGMENT.tmp" "$FRAGMENT"
+
+        { echo "#EXTM3U"; cat "$PLAYLIST_DIR"/*.m3u 2>/dev/null; } > "$PLAYLIST.tmp"
         mv "$PLAYLIST.tmp" "$PLAYLIST"
 
         echo "Playlist updated with $(grep -c http "$PLAYLIST") entries."
@@ -104,7 +129,54 @@ in
       wantedBy = [ "default.target" ];
     };
 
-    systemd.user.timers."immich-photo-sync" = {
+    # Fragment with direct Jellyfin backdrop URLs (movies + shows)
+    systemd.user.services."jellyfin-backdrop-sync" = lib.mkIf cfg.jellyfin.enable {
+      path = with pkgs; [ curl jq bash coreutils ];
+      script = ''
+        set -euo pipefail
+        set -x
+
+        JELLYFIN_URL="${config.bcl.role.tv.jellyfinUrl}"
+        JELLYFIN_API_KEY="$(cat ${config.sops.secrets."users.tv.jellyfin.apiKey".path})"
+        PLAYLIST_DIR="$HOME/.cache/screensaver.d"
+        FRAGMENT="$PLAYLIST_DIR/jellyfin.m3u"
+        PLAYLIST="$HOME/.cache/screensaver.m3u"
+
+        mkdir -p "$PLAYLIST_DIR"
+
+        echo "Fetching movies/shows backdrops from Jellyfin..."
+        curl -sf \
+          -H "X-Emby-Token: $JELLYFIN_API_KEY" \
+          "$JELLYFIN_URL/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=BackdropImageTags" \
+          | jq -r '.Items[] | .Id as $id | (.BackdropImageTags | length) as $count | range(0; $count) | "\($id)\t\(.)"' \
+          | while IFS=$'\t' read -r item_id tag_index; do
+              echo "$JELLYFIN_URL/Items/$item_id/Images/Backdrop/$tag_index?api_key=$JELLYFIN_API_KEY"
+            done > "$FRAGMENT.tmp"
+        mv "$FRAGMENT.tmp" "$FRAGMENT"
+
+        { echo "#EXTM3U"; cat "$PLAYLIST_DIR"/*.m3u 2>/dev/null; } > "$PLAYLIST.tmp"
+        mv "$PLAYLIST.tmp" "$PLAYLIST"
+
+        echo "Playlist updated with $(grep -c http "$PLAYLIST") entries."
+      '';
+      serviceConfig = {
+        Type = "oneshot";
+      };
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      wantedBy = [ "default.target" ];
+    };
+
+    systemd.user.timers."immich-photo-sync" = lib.mkIf cfg.immich.enable {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnBootSec = "2min";
+        OnUnitActiveSec = "1h";
+        Persistent = true;
+      };
+    };
+
+    systemd.user.timers."jellyfin-backdrop-sync" = lib.mkIf cfg.jellyfin.enable {
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnBootSec = "2min";
