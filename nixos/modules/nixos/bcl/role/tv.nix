@@ -51,7 +51,6 @@
             width=$(echo "$resolution" | cut -dx -f1)
             height=$(echo "$resolution" | cut -dx -f2)
 
-
             # Only switch to 23.976 if both the output and mode are actually available (TODO: https://github.com/jellyfin/jellyfin-desktop/issues/247)
             if [ -n "$output" ] && [ -n "$resolution" ] && echo "$randr_out" | grep -q "$resolution.*23\.97"; then
               # Wait a bit, changing resolution on slow TV start, makes it ignoring the command
@@ -67,7 +66,7 @@
             pactl set-sink-volume @DEFAULT_SINK@ 100%
 
             cat > ~/.config/jellyfin-desktop/settings.json <<EOF
-            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"server","windowWidth":''${width:-1920},"windowHeight":''${height:-1080},"windowLogicalWidth":''${width:-1920},"windowLogicalHeight":''${height:-1080}}
+            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"csd", "windowMaximized": true}
             EOF
             export JELLYFIN_DESKTOP_LOG_LEVEL=debug
             export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
@@ -96,14 +95,12 @@
       home.file.".config/labwc/rc.xml".text = ''
         <?xml version="1.0"?>
         <labwc_config>
-          <core>
-            <decoration>none</decoration>
-          </core>
           <mouse>
             <cursorHideTimeout>1</cursorHideTimeout>
           </mouse>
           <windowRules>
-            <windowRule title="*">
+            <windowRule title="*" serverDecoration="no"/>
+            <windowRule identifier="org.jellyfin.JellyfinDesktop">
               <action name="ToggleFullscreen"/>
             </windowRule>
           </windowRules>
