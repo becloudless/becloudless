@@ -55,7 +55,7 @@ in
             echo "No playlist available at $PLAYLIST, waiting for sync..."
             return
           fi
-          mpv --fs --loop-playlist=inf --shuffle --image-display-duration=30 --no-osd-bar --panscan=0 --scale=bilinear --video-unscaled=no --mute=yes --speed=0.5 --osd-playing-msg=\''${media-title} --osd-duration=3600000 --osd-font-size=12 --osd-align-x=left --osd-align-y=bottom "$PLAYLIST" &
+          mpv --fs --loop-playlist=inf --image-display-duration=30 --no-osd-bar --panscan=0 --scale=bilinear --video-unscaled=no --mute=yes --speed=0.5 --osd-playing-msg=\''${media-title} --osd-duration=3600000 --osd-font-size=12 --osd-align-x=left --osd-align-y=bottom "$PLAYLIST" &
         }
 
         ############################
@@ -116,7 +116,10 @@ in
             done > "$FRAGMENT.tmp"
         mv "$FRAGMENT.tmp" "$FRAGMENT"
 
-        { echo "#EXTM3U"; cat "$PLAYLIST_DIR"/*.m3u 2>/dev/null; } > "$PLAYLIST.tmp"
+        {
+          echo "#EXTM3U"
+          cat "$PLAYLIST_DIR"/*.m3u 2>/dev/null | paste -d'\t' - - | shuf | tr '\t' '\n'
+        } > "$PLAYLIST.tmp"
         mv "$PLAYLIST.tmp" "$PLAYLIST"
 
         echo "Playlist updated with $(grep -c http "$PLAYLIST") entries."
@@ -154,7 +157,10 @@ in
             done > "$FRAGMENT.tmp"
         mv "$FRAGMENT.tmp" "$FRAGMENT"
 
-        { echo "#EXTM3U"; cat "$PLAYLIST_DIR"/*.m3u 2>/dev/null; } > "$PLAYLIST.tmp"
+        {
+          echo "#EXTM3U"
+          cat "$PLAYLIST_DIR"/*.m3u 2>/dev/null | paste -d'\t' - - | shuf | tr '\t' '\n'
+        } > "$PLAYLIST.tmp"
         mv "$PLAYLIST.tmp" "$PLAYLIST"
 
         echo "Playlist updated with $(grep -c http "$PLAYLIST") entries."
