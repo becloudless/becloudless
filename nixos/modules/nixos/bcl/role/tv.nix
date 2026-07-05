@@ -16,7 +16,7 @@
     disableGpuCompositing = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "required on old GPU for jellyfin compositing";
+      description = "required on old GPU not supported anymore by chromium";
     };
     forceSoftwareGL = lib.mkOption {
       type = lib.types.bool;
@@ -98,7 +98,14 @@
             default_border none
             default_floating_border none
             seat seat0 hide_cursor 1000
-            for_window [title=".*"] fullscreen enable
+            # jellyfin-desktop renders video via an embedded libmpv Wayland
+            # window layered under a transparent CEF UI window: two separate
+            # xdg_shell toplevels, neither of which ever sets a window
+            # title/app_id. Matching on "title" never fires, so sway falls
+            # back to tiling them side by side (each gets half the screen).
+            # Match on the "shell" protocol instead, which is always set,
+            # so both windows get forced fullscreen and stack correctly.
+            for_window [shell="xdg_shell"] fullscreen enable
             exec "${jellyfinScript}; ${pkgs.sway}/bin/swaymsg exit"
           '';
           startScript = "${pkgs.sway}/bin/sway -c ${swayConfig}";
