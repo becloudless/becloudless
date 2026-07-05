@@ -92,10 +92,6 @@ spec:
           path: /data/Images
           hostPath: /data/Images
           # mountPropagation: Bidirectional
-        downloads:
-          type: hostPath
-          path: /data/Downloads
-          hostPath: /data/Downloads
 
 
     resources:
@@ -165,25 +161,6 @@ spec:
                 <IsRemoteIPFilterBlacklist>false</IsRemoteIPFilterBlacklist>
               </NetworkConfiguration>
 
-
-      controllers:
-        main:
-          containers:
-            images:
-              image:
-                repository: ghcr.io/becloudless/alpine
-                # renovate: versioning=loose
-                tag: 1.260622.943
-                tag: 1.260202.1736-H7074dbd
-              command: ["sh"]
-              args:
-              - -c
-              - |
-                while true; do
-                  mkdir -p /data/Downloads/Images/Backdrops
-                  find /config/metadata/library/ -name backdrop.jpg -exec bash -c 'id=$(echo {} | sed "s/.*\([a-z0-9]\{32\}\).*/\1/") && cp {} "/data/Downloads/Images/Backdrops/$id.jpg"' \;
-                  sleep 7d
-                done
 
       persistentVolumeClaims:
         config:
