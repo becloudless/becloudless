@@ -73,7 +73,7 @@
             pactl set-sink-volume @DEFAULT_SINK@ 100%
 
             cat > ~/.config/jellyfin-desktop/settings.json <<EOF
-            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"csd", "windowMaximized": true,"windowWidth":''${width:-1920},"windowHeight":''${height:-1080},"windowLogicalWidth":''${width:-1920},"windowLogicalHeight":''${height:-1080}}
+            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"csd", "windowMaximized": false,"windowWidth":''${width:-1920},"windowHeight":''${height:-1080},"windowLogicalWidth":''${width:-1920},"windowLogicalHeight":''${height:-1080}}
             EOF
             export JELLYFIN_DESKTOP_LOG_LEVEL=debug
             export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
