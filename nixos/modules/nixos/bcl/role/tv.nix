@@ -101,11 +101,16 @@
             # jellyfin-desktop renders video via an embedded libmpv Wayland
             # window layered under a transparent CEF UI window: two separate
             # xdg_shell toplevels, neither of which ever sets a window
-            # title/app_id. Matching on "title" never fires, so sway falls
-            # back to tiling them side by side (each gets half the screen).
-            # Match on the "shell" protocol instead, which is always set,
-            # so both windows get forced fullscreen and stack correctly.
-            for_window [shell="xdg_shell"] fullscreen enable
+            # title/app_id, matched here via the "shell" criterion instead
+            # (always set). They're meant to be stacked on top of each
+            # other (CEF's transparent regions reveal the mpv video
+            # underneath), not tiled side by side or take turns being
+            # fullscreen: sway (like i3) only allows one fullscreen window
+            # per workspace, so "fullscreen enable" on both just makes them
+            # fight over exclusivity and fall back to a 50/50 tiled split.
+            # Instead float both and resize/position them to cover the
+            # whole output, so they overlap and stack normally.
+            for_window [shell="xdg_shell"] floating enable, resize set width 100 ppt height 100 ppt, move position 0 0
             exec "${jellyfinScript}; ${pkgs.sway}/bin/swaymsg exit"
           '';
           startScript = "${pkgs.sway}/bin/sway -c ${swayConfig}";
