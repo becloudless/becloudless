@@ -147,10 +147,10 @@ in
 
         mkdir -p "$PLAYLIST_DIR"
 
-        echo "Fetching movies/shows backdrops from Jellyfin..."
+        echo "Fetching movies/shows/artists backdrops from Jellyfin..."
         curl -sf \
           -H "X-Emby-Token: $JELLYFIN_API_KEY" \
-          "$JELLYFIN_URL/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=BackdropImageTags" \
+          "$JELLYFIN_URL/Items?IncludeItemTypes=Movie,Series,MusicArtist&Recursive=true&Fields=BackdropImageTags" \
           | jq -r '.Items[] | .Id as $id | .Name as $name | (.BackdropImageTags | length) as $count | range(0; $count) | "\($id)\t\($name)\t\(.)"' \
           | while IFS=$'\t' read -r item_id item_name tag_index; do
               echo "#EXTINF:-1,$item_name"
