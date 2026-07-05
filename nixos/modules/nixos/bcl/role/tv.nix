@@ -82,6 +82,8 @@
               # software rasterizer), which fails to pick a device
               # ("ZINK: failed to choose pdev") and segfaults CEF's GPU
               # process. Force the classic llvmpipe softpipe path instead.
+              #
+              # required for CI
               export LIBGL_ALWAYS_SOFTWARE=1
             ''}
             jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"}
@@ -108,6 +110,17 @@
       # without it, IT tests in kvm fail.
       home.file.".config/jellyfin-desktop/mpv/mpv.conf".text = ''
         gpu-context=wayland
+        ${lib.optionalString config.bcl.role.tv.disableGpuCompositing ''
+          # On hosts where GPU compositing is disabled (weak/old iGPU where
+          # CEF's GPU process can't get an ES3.0 context, e.g. Ironlake),
+          # mpv's gpu-next/gpu also only gets a software (llvmpipe) GL
+          # context, so without hwdec, video is decoded in software too:
+          # on a weak CPU this causes laggy/dropped-frame playback.
+          # vaapi-copy decodes on the iGPU's separate media engine (backed
+          # by intel-vaapi-driver) and copies frames back to system memory,
+          # so it works even though the GL context itself is software.
+          hwdec=vaapi-copy
+        ''}
       '';
     };
 
