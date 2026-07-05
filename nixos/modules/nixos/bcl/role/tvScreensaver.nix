@@ -151,8 +151,9 @@ in
         curl -sf \
           -H "X-Emby-Token: $JELLYFIN_API_KEY" \
           "$JELLYFIN_URL/Items?IncludeItemTypes=Movie,Series&Recursive=true&Fields=BackdropImageTags" \
-          | jq -r '.Items[] | .Id as $id | (.BackdropImageTags | length) as $count | range(0; $count) | "\($id)\t\(.)"' \
-          | while IFS=$'\t' read -r item_id tag_index; do
+          | jq -r '.Items[] | .Id as $id | .Name as $name | (.BackdropImageTags | length) as $count | range(0; $count) | "\($id)\t\($name)\t\(.)"' \
+          | while IFS=$'\t' read -r item_id item_name tag_index; do
+              echo "#EXTINF:-1,$item_name"
               echo "$JELLYFIN_URL/Items/$item_id/Images/Backdrop/$tag_index?api_key=$JELLYFIN_API_KEY"
             done > "$FRAGMENT.tmp"
         mv "$FRAGMENT.tmp" "$FRAGMENT"
