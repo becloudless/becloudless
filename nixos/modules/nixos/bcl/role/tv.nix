@@ -16,6 +16,12 @@
     disableGpuCompositing = lib.mkOption {
       type = lib.types.bool;
       default = false;
+      description = "required on old GPU for jellyfin compositing";
+    };
+    forceSoftwareGL = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Required on GPU-less hosts like CI.";
     };
   };
 
@@ -76,7 +82,7 @@
             # screensaver takes time to start and will arrive after jellyfin
             systemctl --user start screensaver.service || true
 
-            ${lib.optionalString config.bcl.role.tv.disableGpuCompositing ''
+            ${lib.optionalString config.bcl.role.tv.forceSoftwareGL ''
               # On GPU-less hosts (e.g. CI VMs), Mesa's automatic driver
               # selection routes CEF's EGL context through zink (Vulkan
               # software rasterizer), which fails to pick a device
@@ -110,17 +116,6 @@
       # without it, IT tests in kvm fail.
       home.file.".config/jellyfin-desktop/mpv/mpv.conf".text = ''
         gpu-context=wayland
-        ${lib.optionalString config.bcl.role.tv.disableGpuCompositing ''
-          # On hosts where GPU compositing is disabled (weak/old iGPU where
-          # CEF's GPU process can't get an ES3.0 context, e.g. Ironlake),
-          # mpv's gpu-next/gpu also only gets a software (llvmpipe) GL
-          # context, so without hwdec, video is decoded in software too:
-          # on a weak CPU this causes laggy/dropped-frame playback.
-          # vaapi-copy decodes on the iGPU's separate media engine (backed
-          # by intel-vaapi-driver) and copies frames back to system memory,
-          # so it works even though the GL context itself is software.
-          hwdec=vaapi-copy
-        ''}
       '';
     };
 
