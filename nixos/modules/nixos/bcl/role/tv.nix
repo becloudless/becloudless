@@ -51,7 +51,6 @@
             width=$(echo "$resolution" | cut -dx -f1)
             height=$(echo "$resolution" | cut -dx -f2)
 
-
             # Only switch to 23.976 if both the output and mode are actually available (TODO: https://github.com/jellyfin/jellyfin-desktop/issues/247)
             if [ -n "$output" ] && [ -n "$resolution" ] && echo "$randr_out" | grep -q "$resolution.*23\.97"; then
               # Wait a bit, changing resolution on slow TV start, makes it ignoring the command
@@ -100,21 +99,7 @@
             <cursorHideTimeout>1</cursorHideTimeout>
           </mouse>
           <windowRules>
-            <!-- <core><decoration> only affects native xdg-shell (Wayland) surfaces.
-                 Jellyfin's CEF window runs as an XWayland client, so its
-                 server-side decoration can only be turned off via this
-                 window-rule property, which applies to both native and
-                 XWayland windows. -->
             <windowRule title="*" serverDecoration="no"/>
-            <!-- Only force-fullscreen the Jellyfin window itself (matched by its
-                 wayland app_id, set via mpv's "wayland-app-id" property in
-                 jellyfin-desktop). jellyfin-desktop has no native fullscreen
-                 setting (only windowMaximized), hence this workaround.
-                 Do NOT match "*"/mpv here: mpv (both the screensaver and
-                 jellyfin-desktop's own internal player) already requests
-                 fullscreen itself via --fs / the fullscreen mpv property, and
-                 a blanket ToggleFullscreen rule would fire again on map and
-                 immediately toggle it back off. -->
             <windowRule identifier="org.jellyfin.JellyfinDesktop">
               <action name="ToggleFullscreen"/>
             </windowRule>
