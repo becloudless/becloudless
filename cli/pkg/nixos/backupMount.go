@@ -58,12 +58,18 @@ func MountBackup(target string, mountpoint string, identity io.Reader, sshUser s
 	}
 	defer wipeBytes(identityBytes)
 
-	// Trim leading/trailing whitespace so that incidental differences (extra
-	// blank lines, trailing newline, pasted-in surrounding spaces) don't
-	// change the gocryptfs passphrase, which is a sha512sum of this content.
-	// bcl.backups applies the same trimming to the key file on the source
-	// host before hashing it, so both sides stay in sync.
-	identityBytes = bytes.TrimSpace(identityBytes)
+	// The gocryptfs passphrase is a sha512sum of the fully-trimmed identity
+	// content. bcl.backups applies the same trimming to the key file on the
+	// source host before hashing it, so both sides must stay in sync.
+	passphraseBytes := bytes.TrimSpace(identityBytes)
+
+	// For ssh/sshfs itself, only strip leading whitespace from each line
+	// (not the passphrase bytes above): pasting a key out of an indented
+	// sops/YAML block scalar carries that indentation along, which ssh
+	// otherwise chokes on, but ssh doesn't care about surrounding blank
+	// lines the way a byte-exact hash does.
+	sshKeyBytes := trimLeadingLineWhitespace(identityBytes)
+	defer wipeBytes(sshKeyBytes)
 
 	identityFile, err := os.CreateTemp("", "bcl-backup-identity-")
 	if err != nil {
@@ -76,7 +82,7 @@ func MountBackup(target string, mountpoint string, identity io.Reader, sshUser s
 		_ = identityFile.Close()
 		return errs.WithE(err, "Failed to chmod temporary identity file")
 	}
-	if _, err := identityFile.Write(identityBytes); err != nil {
+	if _, err := identityFile.Write(sshKeyBytes); err != nil {
 		_ = identityFile.Close()
 		return errs.WithE(err, "Failed to write temporary identity file")
 	}
@@ -97,7 +103,7 @@ func MountBackup(target string, mountpoint string, identity io.Reader, sshUser s
 		return errs.WithE(err, "Failed to sshfs mount remote backup")
 	}
 
-	passphrase := backupPassphraseFromBytes(identityBytes)
+	passphrase := backupPassphraseFromBytes(passphraseBytes)
 
 	passFile, err := os.CreateTemp("", "bcl-backup-pass-")
 	if err != nil {
@@ -151,6 +157,18 @@ func UmountBackup(mountpoint string) error {
 func backupPassphraseFromBytes(identityBytes []byte) string {
 	sum := sha512.Sum512(identityBytes)
 	return hex.EncodeToString(sum[:])
+}
+
+// trimLeadingLineWhitespace strips leading spaces/tabs from every line of b.
+// This is only used for the copy of the identity written out for ssh/sshfs,
+// so that pasting a key out of an indented YAML block scalar (e.g. a sops
+// secrets file) works without requiring the paste to be dedented by hand.
+func trimLeadingLineWhitespace(b []byte) []byte {
+	lines := bytes.Split(b, []byte("\n"))
+	for i, line := range lines {
+		lines[i] = bytes.TrimLeft(line, " \t")
+	}
+	return bytes.Join(lines, []byte("\n"))
 }
 
 // wipeBytes zeroes out a byte slice in place, best-effort, once the identity
