@@ -2,6 +2,7 @@ package backup
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 
@@ -15,6 +16,14 @@ import (
 // fine for single-line passwords but not for multiline key material), this
 // puts the terminal in raw mode and keeps reading until either an empty
 // line or EOF (Ctrl-D) is received.
+//
+// The returned bytes are only whitespace-trimmed at the very start/end (plus
+// a single trailing newline appended back). Other formatting quirks
+// introduced by pasting (e.g. indentation carried over from a YAML block
+// scalar) are handled later by nixos.canonicalizeOpenSSHKey, which
+// re-derives the exact ssh-keygen on-disk byte representation - needed
+// because the gocryptfs passphrase is a byte-exact sha512sum of the identity
+// file content, and simple whitespace stripping here can't guarantee that.
 func readMultilineSecret(prompt string) ([]byte, error) {
 	fd := int(os.Stdin.Fd())
 	if !term.IsTerminal(fd) {
@@ -53,5 +62,8 @@ func readMultilineSecret(prompt string) ([]byte, error) {
 	}
 	fmt.Print("\r\n")
 
-	return secret, nil
+	// Trim stray leading/trailing whitespace (blank lines, spaces, etc.) that
+	// can sneak in when pasting, then normalize to end with exactly one
+	// trailing newline - the same convention a real key file on disk uses.
+	return append(bytes.TrimSpace(secret), '\n'), nil
 }

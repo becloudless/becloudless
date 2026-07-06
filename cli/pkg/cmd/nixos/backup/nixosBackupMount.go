@@ -12,6 +12,7 @@ import (
 
 func nixosBackupMountCmd() *cobra.Command {
 	var identityFile string
+	var sshUser string
 	identityService := memguarded.NewService()
 
 	cmd := &cobra.Command{
@@ -34,7 +35,7 @@ func nixosBackupMountCmd() *cobra.Command {
 				identity = file
 			}
 
-			if err := nixos.MountBackup(args[0], args[1], identity); err != nil {
+			if err := nixos.MountBackup(args[0], args[1], identity, sshUser); err != nil {
 				return errs.WithE(err, "Failed to mount backup")
 			}
 			return nil
@@ -42,6 +43,7 @@ func nixosBackupMountCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&identityFile, "identity", "i", nixos.DefaultBackupIdentityFile, "ssh private key file used to reach the target and derive the decryption passphrase")
+	cmd.Flags().StringVarP(&sshUser, "user", "u", "root", "ssh user used to connect to the target (ignored if the target already specifies a user@host)")
 	cmd.Flags().BoolFuncP("ask-identity", "I", "read the ssh identity content (multiline) from a secured prompt instead of --identity", func(s string) error {
 		secret, err := readMultilineSecret("SSH identity key content")
 		if err != nil {

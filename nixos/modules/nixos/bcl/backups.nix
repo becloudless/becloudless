@@ -64,7 +64,12 @@ let
         ' EXIT
 
         echo "[backup-${name}] Deriving gocryptfs passphrase from SSH key..."
-        sha512sum /nix/etc/ssh/ssh_host_ed25519_key | awk '{print $1}' > "$PASS_FILE"
+        # Trim leading/trailing whitespace (blank lines, trailing newline, ...)
+        # before hashing, so incidental differences in the on-disk key file
+        # don't change the derived passphrase. The "bcl" CLI trims identity
+        # bytes the same way before hashing, so both sides stay in sync.
+        awk 'BEGIN{RS="\0"} { gsub(/^[[:space:]]+/, ""); gsub(/[[:space:]]+$/, ""); printf "%s", $0 }' \
+          /nix/etc/ssh/ssh_host_ed25519_key | sha512sum | awk '{print $1}' > "$PASS_FILE"
 
         echo "[backup-${name}] Mounting gocryptfs reverse view of ${backup.source} at $MOUNT_DIR..."
         if [ ! -f "${backup.source}/.gocryptfs.reverse.conf" ]; then

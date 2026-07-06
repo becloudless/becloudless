@@ -1,10 +1,12 @@
 package nixos
 
 import (
+	"bytes"
 	"crypto/sha512"
 	"encoding/hex"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/n0rad/go-erlog/errs"
@@ -28,13 +30,20 @@ func rawMountDir(mountpoint string) string {
 // ssh identity read from identity, exactly as bcl.backups does when producing
 // the backup. This must run on the same host that produced the backup.
 //
+// target is in "host:/path" or "user@host:/path" format. If sshUser is not
+// empty and target doesn't already carry a user, sshUser is prepended.
+//
 // identity is read fully in memory (e.g. it can be a memguarded.Service.Reader()
 // so the key material never has to live unprotected on disk) and is then
 // written to a private (0600) temporary file, since sshfs/ssh require an
 // actual file for -o IdentityFile. The temporary file is removed as soon as
 // the sshfs mount is established.
-func MountBackup(target string, mountpoint string, identity io.Reader) error {
+func MountBackup(target string, mountpoint string, identity io.Reader, sshUser string) error {
 	raw := rawMountDir(mountpoint)
+
+	if sshUser != "" && !strings.Contains(target, "@") {
+		target = sshUser + "@" + target
+	}
 
 	if err := os.MkdirAll(mountpoint, 0755); err != nil {
 		return errs.WithE(err, "Failed to create mountpoint directory")
@@ -48,6 +57,13 @@ func MountBackup(target string, mountpoint string, identity io.Reader) error {
 		return errs.WithE(err, "Failed to read ssh identity")
 	}
 	defer wipeBytes(identityBytes)
+
+	// Trim leading/trailing whitespace so that incidental differences (extra
+	// blank lines, trailing newline, pasted-in surrounding spaces) don't
+	// change the gocryptfs passphrase, which is a sha512sum of this content.
+	// bcl.backups applies the same trimming to the key file on the source
+	// host before hashing it, so both sides stay in sync.
+	identityBytes = bytes.TrimSpace(identityBytes)
 
 	identityFile, err := os.CreateTemp("", "bcl-backup-identity-")
 	if err != nil {
