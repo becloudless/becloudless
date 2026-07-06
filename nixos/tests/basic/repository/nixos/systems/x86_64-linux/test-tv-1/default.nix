@@ -9,4 +9,5 @@
     };
   };
   bcl.role.tv.disableGpuCompositing = true;
+  bcl.role.tv.forceSoftwareGL = true;
 }

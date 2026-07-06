@@ -16,6 +16,12 @@
     disableGpuCompositing = lib.mkOption {
       type = lib.types.bool;
       default = false;
+      description = "required on old GPU not supported anymore by chromium";
+    };
+    forceSoftwareGL = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Required on GPU-less hosts like CI.";
     };
   };
 
@@ -76,12 +82,14 @@
             # screensaver takes time to start and will arrive after jellyfin
             systemctl --user start screensaver.service || true
 
-            ${lib.optionalString config.bcl.role.tv.disableGpuCompositing ''
+            ${lib.optionalString config.bcl.role.tv.forceSoftwareGL ''
               # On GPU-less hosts (e.g. CI VMs), Mesa's automatic driver
               # selection routes CEF's EGL context through zink (Vulkan
               # software rasterizer), which fails to pick a device
               # ("ZINK: failed to choose pdev") and segfaults CEF's GPU
               # process. Force the classic llvmpipe softpipe path instead.
+              #
+              # required for CI
               export LIBGL_ALWAYS_SOFTWARE=1
             ''}
             jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"}
@@ -90,7 +98,19 @@
             default_border none
             default_floating_border none
             seat seat0 hide_cursor 1000
-            for_window [title=".*"] fullscreen enable
+            # jellyfin-desktop renders video via an embedded libmpv Wayland
+            # window layered under a transparent CEF UI window: two separate
+            # xdg_shell toplevels, neither of which ever sets a window
+            # title/app_id, matched here via the "shell" criterion instead
+            # (always set). They're meant to be stacked on top of each
+            # other (CEF's transparent regions reveal the mpv video
+            # underneath), not tiled side by side or take turns being
+            # fullscreen: sway (like i3) only allows one fullscreen window
+            # per workspace, so "fullscreen enable" on both just makes them
+            # fight over exclusivity and fall back to a 50/50 tiled split.
+            # Instead float both and resize/position them to cover the
+            # whole output, so they overlap and stack normally.
+            for_window [shell="xdg_shell"] floating enable, resize set width 100 ppt height 100 ppt, move position 0 0
             exec "${jellyfinScript}; ${pkgs.sway}/bin/swaymsg exit"
           '';
           startScript = "${pkgs.sway}/bin/sway -c ${swayConfig}";
