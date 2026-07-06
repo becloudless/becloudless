@@ -12,9 +12,16 @@ let
       host        = targetHost backup.target;
       # Build "-exclude-wildcard '*' -exclude-wildcard '!foo' ..."
       # so that only the listed patterns are included in the encrypted view.
+      # ".gocryptfs.reverse.conf" (the reverse-mode config file, stored as a
+      # real plaintext file at the root of the source) must always be kept:
+      # gocryptfs applies excludes to the plaintext tree BEFORE renaming it to
+      # "gocryptfs.conf" in the encrypted view, so without this it would get
+      # filtered out by the "*" exclude and never make it into the rsynced
+      # backup, breaking mounting on the target.
       excludeArgs = lib.optionalString (backup.sourceIncludes != []) (
         "-exclude-wildcard '*' "
         + lib.concatMapStringsSep " " (p: "-exclude-wildcard ${lib.escapeShellArg "!${p}"}") backup.sourceIncludes
+        + " -exclude-wildcard '!/.gocryptfs.reverse.conf'"
       );
     in {
       description = "Backup ${name}: ${backup.source} -> ${backup.target}";
