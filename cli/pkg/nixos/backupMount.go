@@ -58,18 +58,23 @@ func MountBackup(target string, mountpoint string, identity io.Reader, sshUser s
 	}
 	defer wipeBytes(identityBytes)
 
+	// Strip leading whitespace from each line first: pasting a key out of an
+	// indented sops/YAML block scalar carries that indentation along, which
+	// is not part of the actual key content (the YAML parser would strip it
+	// when sops-nix renders the real file), so it must be removed before
+	// deriving anything from these bytes, not just for the ssh copy.
+	dedented := trimLeadingLineWhitespace(identityBytes)
+	defer wipeBytes(dedented)
+
 	// The gocryptfs passphrase is a sha512sum of the fully-trimmed identity
 	// content. bcl.backups applies the same trimming to the key file on the
 	// source host before hashing it, so both sides must stay in sync.
-	passphraseBytes := bytes.TrimSpace(identityBytes)
+	passphraseBytes := bytes.TrimSpace(dedented)
 
-	// For ssh/sshfs itself, only strip leading whitespace from each line
-	// (not the passphrase bytes above): pasting a key out of an indented
-	// sops/YAML block scalar carries that indentation along, which ssh
-	// otherwise chokes on, but ssh doesn't care about surrounding blank
+	// The copy written out for ssh/sshfs keeps its internal newlines as-is
+	// (only dedented above), since ssh doesn't care about surrounding blank
 	// lines the way a byte-exact hash does.
-	sshKeyBytes := trimLeadingLineWhitespace(identityBytes)
-	defer wipeBytes(sshKeyBytes)
+	sshKeyBytes := dedented
 
 	identityFile, err := os.CreateTemp("", "bcl-backup-identity-")
 	if err != nil {
