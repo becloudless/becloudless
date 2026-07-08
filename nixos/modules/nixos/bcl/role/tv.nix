@@ -94,33 +94,29 @@
             ''}
             jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"}
           '';
-          swayConfig = pkgs.writeText "tv-sway-config" ''
-            default_border none
-            default_floating_border none
-            seat seat0 hide_cursor 1000
-            # jellyfin-desktop renders video via an embedded libmpv Wayland
-            # window layered under a transparent CEF UI window: two separate
-            # xdg_shell toplevels, neither of which ever sets a window
-            # title/app_id, matched here via the "shell" criterion instead
-            # (always set). They're meant to be stacked on top of each
-            # other (CEF's transparent regions reveal the mpv video
-            # underneath), not tiled side by side or take turns being
-            # fullscreen: sway (like i3) only allows one fullscreen window
-            # per workspace, so "fullscreen enable" on both just makes them
-            # fight over exclusivity and fall back to a 50/50 tiled split.
-            # Instead float both and resize/position them to cover the
-            # whole output, so they overlap and stack normally.
-            for_window [shell="xdg_shell"] floating enable, resize set width 100 ppt height 100 ppt, move position 0 0
-            exec "${jellyfinScript}; ${pkgs.sway}/bin/swaymsg exit"
-          '';
-          startScript = "${pkgs.sway}/bin/sway -c ${swayConfig}";
+          startScript = "${pkgs.labwc}/bin/labwc -s ${jellyfinScript}";
         in "${startScript}";
         user = "tv";
       };
     };
 
     home-manager.users.tv = { lib, pkgs, ... }: {
-      # Pin mpv to the native Wayland GL context (sway is always Wayland).
+      home.file.".config/labwc/rc.xml".text = ''
+        <?xml version="1.0"?>
+        <labwc_config>
+          <mouse>
+            <cursorHideTimeout>1</cursorHideTimeout>
+          </mouse>
+          <windowRules>
+            <windowRule title="*" serverDecoration="no"/>
+            <windowRule identifier="org.jellyfin.JellyfinDesktop">
+              <action name="ToggleFullscreen"/>
+            </windowRule>
+          </windowRules>
+        </labwc_config>
+      '';
+
+      # Pin mpv to the native Wayland GL context (labwc is always Wayland).
       # Without this, mpv's gpu-next "auto" probing falls through
       # waylandvk -> x11vk -> wayland -> x11egl whenever it suspects a
       # software renderer (e.g. llvmpipe in a GPU-less VM), and the last
@@ -134,7 +130,7 @@
     environment.systemPackages = with pkgs; [
       pulseaudio
       wlr-randr
-      sway
+      labwc
       bcl.jellyfin-desktop
     ];
 
