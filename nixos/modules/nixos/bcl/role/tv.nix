@@ -113,7 +113,16 @@
             for_window [shell="xdg_shell"] floating enable, resize set width 100 ppt height 100 ppt, move position 0 0
             exec "${jellyfinScript}; ${pkgs.sway}/bin/swaymsg exit"
           '';
-          startScript = "${pkgs.sway}/bin/sway -c ${swayConfig}";
+          # sway itself has no windows to composite that need GPU-accelerated
+          # rendering (it just floats/positions jellyfin-desktop's two
+          # toplevels), so force wlroots' software (pixman) renderer for the
+          # compositor rather than the default GLES2/Vulkan one. This leaves
+          # the GPU fully available for jellyfin-desktop's own mpv/CEF
+          # hardware decode+render (gpu-context=wayland).
+          startScript = pkgs.writeShellScript "start-sway-tv" ''
+            export WLR_RENDERER=pixman
+            exec ${pkgs.sway}/bin/sway -c ${swayConfig}
+          '';
         in "${startScript}";
         user = "tv";
       };
