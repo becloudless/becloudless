@@ -68,6 +68,7 @@ in
               case $state in
                 playing) disableScreensaver;;
                 canceled) displayScreensaver;;
+                finished) displayScreensaver;;
                 *) echo "Unknown state $state";;
               esac
             done
