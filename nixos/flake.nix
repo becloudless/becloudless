@@ -111,9 +111,6 @@
       url = "github:nixos/nixpkgs/nixpkgs-unstable";
     };
 
-    # TODO: Temporary until nixpkgs is updated
-    cef-update.url = "github:r-ryantm/nixpkgs/auto-update/cef-binary";
-
     snowfall-lib = {
       url = "github:snowfallorg/lib";
       inputs.nixpkgs.follows = "nixpkgs";
