@@ -7,6 +7,7 @@
   symlinkJoin,
   pkg-config,
   wrapGAppsHook4,
+  pkgs,
 
   # Needed at runtime by CEF
   libGL,
