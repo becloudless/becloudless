@@ -1,6 +1,7 @@
 package nixos
 
 import (
+	"github.com/becloudless/becloudless/pkg/cmd/nixos/hardware"
 	"github.com/spf13/cobra"
 )
 
@@ -16,7 +17,7 @@ func NixosCmd() *cobra.Command {
 		nixosPrepareCmd(),
 		nixosGroupCmd(),
 		nixosGlobalCmd(),
-		nixosHardwareCmd(),
+		hardware.NixosHardwareCmd(),
 		nixosUpgradeCmd(),
 	)
 	return cmd
