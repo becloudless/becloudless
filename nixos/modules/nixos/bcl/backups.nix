@@ -10,11 +10,21 @@ let
   mkBackupService = name: backup:
     let
       host        = targetHost backup.target;
+      # gitignore-style negation can't re-include a path whose parent directory
+      # is still excluded, so for a nested pattern like "/Videos/Anime-Movies"
+      # we also need to negate every ancestor ("/Videos") or it never gets
+      # traversed into. Expand each sourceIncludes entry into all of its
+      # ancestor prefixes and dedupe.
+      ancestorsOf = p:
+        let
+          segments = lib.filter (s: s != "") (lib.splitString "/" p);
+        in lib.genList (i: "/" + lib.concatStringsSep "/" (lib.take (i + 1) segments)) (lib.length segments);
+      includePaths = lib.unique (lib.concatMap ancestorsOf backup.sourceIncludes);
       # Build "-exclude-wildcard '*' -exclude-wildcard '!foo' ..."
       # so that only the listed patterns are included in the encrypted view.
       excludeArgs = lib.optionalString (backup.sourceIncludes != []) (
         "-exclude-wildcard '*' "
-        + lib.concatMapStringsSep " " (p: "-exclude-wildcard ${lib.escapeShellArg "!${p}"}") backup.sourceIncludes
+        + lib.concatMapStringsSep " " (p: "-exclude-wildcard ${lib.escapeShellArg "!${p}"}") includePaths
       );
     in {
       description = "Backup ${name}: ${backup.source} -> ${backup.target}";
