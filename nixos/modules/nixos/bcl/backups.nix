@@ -10,16 +10,28 @@ let
   mkBackupService = name: backup:
     let
       host        = targetHost backup.target;
-      # gitignore-style negation can't re-include a path whose parent directory
-      # is still excluded, so for a nested pattern like "/Videos/Anime-Movies"
-      # we also need to negate every ancestor ("/Videos") or it never gets
-      # traversed into. Expand each sourceIncludes entry into all of its
-      # ancestor prefixes and dedupe.
+      # gocryptfs's gitignore-style patterns are matched with a regex that is
+      # implicitly recursive for directories (a pattern for "/Videos" also
+      # matches everything under "/Videos"). That means naively negating an
+      # ancestor directory (e.g. "!/Videos") to make a nested include like
+      # "/Videos/Anime-Movies" reachable actually re-includes the ENTIRE
+      # ancestor subtree (all of "/Videos", not just "Anime-Movies").
+      # The fix is the standard gitignore "peeling" trick: for every proper
+      # ancestor, re-include it (making it visible) and then immediately
+      # re-exclude its (recursive) contents again with "ancestor/*", before
+      # finally re-including the actual leaf path. Ancestors must be applied
+      # shallowest-first so each level's re-exclude doesn't clobber a deeper
+      # level's re-include.
       ancestorsOf = p:
         let
           segments = lib.filter (s: s != "") (lib.splitString "/" p);
-        in lib.genList (i: "/" + lib.concatStringsSep "/" (lib.take (i + 1) segments)) (lib.length segments);
-      includePaths = lib.unique (lib.concatMap ancestorsOf backup.sourceIncludes);
+        in lib.genList (i: "/" + lib.concatStringsSep "/" (lib.take (i + 1) segments)) (lib.max 0 (lib.length segments - 1));
+      ancestorPaths = lib.sort
+        (a: b: (lib.length (lib.splitString "/" a)) < (lib.length (lib.splitString "/" b)))
+        (lib.unique (lib.concatMap ancestorsOf backup.sourceIncludes));
+      ancestorArgs = lib.concatMapStringsSep " "
+        (a: "-exclude-wildcard ${lib.escapeShellArg "!${a}"} -exclude-wildcard ${lib.escapeShellArg "${a}/*"}")
+        ancestorPaths;
       # Build "-exclude-wildcard '*' -exclude-wildcard '!foo' ..."
       # so that only the listed patterns are included in the encrypted view.
       # ".gocryptfs.reverse.conf" (the reverse-mode config file, stored as a
@@ -30,7 +42,8 @@ let
       # backup, breaking mounting on the target.
       excludeArgs = lib.optionalString (backup.sourceIncludes != []) (
         "-exclude-wildcard '*' "
-        + lib.concatMapStringsSep " " (p: "-exclude-wildcard ${lib.escapeShellArg "!${p}"}") includePaths
+        + (lib.optionalString (ancestorArgs != "") (ancestorArgs + " "))
+        + lib.concatMapStringsSep " " (p: "-exclude-wildcard ${lib.escapeShellArg "!${p}"}") backup.sourceIncludes
         + " -exclude-wildcard '!/.gocryptfs.reverse.conf'"
       );
     in {
