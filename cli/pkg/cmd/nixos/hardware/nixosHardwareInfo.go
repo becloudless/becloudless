@@ -23,13 +23,21 @@ func nixosHardwareInfoCmd() *cobra.Command {
 		Use:   "info",
 		Short: "dump system info as json",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			run := runner.Runner(runner.NewLocalRunner())
+			var run runner.Runner = runner.NewLocalRunner()
 			if sshConfig.Host != "" {
 				sshRun, err := runner.NewSshRunner(&sshConfig)
 				if err != nil {
-					return err
+					return errs.WithE(err, "Failed to connect to remote host")
 				}
+
 				run = sshRun
+				if sshConfig.User != "root" {
+					sudoRun, err := runner.NewSudoRunnerWithPassword(sshRun, sshConfig.Password)
+					if err != nil {
+						return errs.WithE(err, "Sudo cannot be run successfully on remote host")
+					}
+					run = sudoRun.WithInline(true)
+				}
 			}
 
 			sys := system.System{
