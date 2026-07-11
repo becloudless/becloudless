@@ -9,8 +9,43 @@ import (
 	"strings"
 
 	"github.com/becloudless/becloudless/pkg/system/runner"
+	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
+)
+
+type BackupPeriod string
+
+func FromBackupPeriodString(s string) (BackupPeriod, error) {
+	switch s {
+	case "hourly", "h":
+		return BackupPeriodHourly, nil
+	case "daily", "d":
+		return BackupPeriodDaily, nil
+	case "weekly", "w":
+		return BackupPeriodWeekly, nil
+	case "monthly", "m":
+		return BackupPeriodMonthly, nil
+	case "semesterly", "s":
+		return BackupPeriodSemesterly, nil
+	case "yearly", "y":
+		return BackupPeriodYearly, nil
+	default:
+		return "", errs.WithF(data.WithField("string", s), "Invalid backup period")
+	}
+}
+
+func (p BackupPeriod) String() string {
+	return string(p)
+}
+
+const (
+	BackupPeriodHourly     BackupPeriod = "hourly"
+	BackupPeriodDaily      BackupPeriod = "daily"
+	BackupPeriodWeekly     BackupPeriod = "weekly"
+	BackupPeriodMonthly    BackupPeriod = "monthly"
+	BackupPeriodSemesterly BackupPeriod = "semesterly"
+	BackupPeriodYearly     BackupPeriod = "yearly"
 )
 
 // DefaultBackupIdentityFile is the ssh identity file bcl.backups uses on the
@@ -25,10 +60,11 @@ func rawMountDir(mountpoint string) string {
 }
 
 // MountBackup mounts a remote backup (created by the bcl.backups nixos module)
-// read-only at mountpoint. It first mounts the remote encrypted directory via
-// sshfs, then decrypts it with gocryptfs using a passphrase derived from the
-// ssh identity read from identity, exactly as bcl.backups does when producing
-// the backup. This must run on the same host that produced the backup.
+// at mountpoint, read-only unless rw is true. It first mounts the remote
+// encrypted directory via sshfs, then decrypts it with gocryptfs using a
+// passphrase derived from the ssh identity read from identity, exactly as
+// bcl.backups does when producing the backup. This must run on the same host
+// that produced the backup.
 //
 // target is in "host:/path" or "user@host:/path" format. If sshUser is not
 // empty and target doesn't already carry a user, sshUser is prepended.
@@ -38,7 +74,7 @@ func rawMountDir(mountpoint string) string {
 // written to a private (0600) temporary file, since sshfs/ssh require an
 // actual file for -o IdentityFile. The temporary file is removed as soon as
 // the sshfs mount is established.
-func MountBackup(target string, mountpoint string, identity io.Reader, sshUser string) error {
+func MountBackup(target string, mountpoint string, identity io.Reader, sshUser string, rw bool) error {
 	raw := rawMountDir(mountpoint)
 
 	if sshUser != "" && !strings.Contains(target, "@") {
@@ -97,9 +133,14 @@ func MountBackup(target string, mountpoint string, identity io.Reader, sshUser s
 
 	localRunner := runner.NewLocalRunner()
 
+	sshfsMode := "ro"
+	if rw {
+		sshfsMode = "rw"
+	}
+
 	logs.WithField("target", target).WithField("dir", raw).Info("Mounting remote backup (encrypted) via sshfs")
 	if err := localRunner.ExecCmd("sshfs",
-		"-o", "ro",
+		"-o", sshfsMode,
 		"-o", "follow_symlinks",
 		"-o", "IdentityFile="+identityFilePath,
 		"-o", "StrictHostKeyChecking=no",
@@ -122,17 +163,23 @@ func MountBackup(target string, mountpoint string, identity io.Reader, sshUser s
 		return errs.WithE(err, "Failed to write temporary passphrase file")
 	}
 
+	gocryptfsArgs := []string{"-nosyslog", "-passfile", passFile.Name()}
+	if !rw {
+		gocryptfsArgs = append(gocryptfsArgs, "-ro")
+	}
+	gocryptfsArgs = append(gocryptfsArgs, raw, mountpoint)
+
 	logs.WithField("mountpoint", mountpoint).Info("Mounting decrypted view of the backup")
-	if err := localRunner.ExecCmd("gocryptfs",
-		"-ro", "-nosyslog",
-		"-passfile", passFile.Name(),
-		raw, mountpoint,
-	); err != nil {
+	if err := localRunner.ExecCmd("gocryptfs", gocryptfsArgs...); err != nil {
 		_ = localRunner.ExecCmd("fusermount", "-u", raw)
 		return errs.WithE(err, "Failed to gocryptfs mount decrypted backup")
 	}
 
-	logs.WithField("mountpoint", mountpoint).Info("Backup mounted read-only")
+	if rw {
+		logs.WithField("mountpoint", mountpoint).Info("Backup mounted read-write")
+	} else {
+		logs.WithField("mountpoint", mountpoint).Info("Backup mounted read-only")
+	}
 	return nil
 }
 
