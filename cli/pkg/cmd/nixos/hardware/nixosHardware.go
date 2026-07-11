@@ -1,8 +1,8 @@
-package nixos
+package hardware
 
 import "github.com/spf13/cobra"
 
-func nixosHardwareCmd() *cobra.Command {
+func NixosHardwareCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "hardware",
 		Short: "hardware related commands",
@@ -10,6 +10,7 @@ func nixosHardwareCmd() *cobra.Command {
 	cmd.AddCommand(
 		nixosHardwareConfigCmd(),
 		nixosHardwareNetworkDriverCmd(),
+		nixosHardwareInfoCmd(),
 	)
 	return cmd
 }
