@@ -17,7 +17,7 @@ require (
 	github.com/gordonklaus/ineffassign v0.2.0
 	github.com/hashicorp/go-version v1.9.0
 	github.com/hashicorp/hc-install v0.9.5
-	github.com/hashicorp/terraform-config-inspect v0.0.0-20260224005459-813a97530220
+	github.com/hashicorp/terraform-config-inspect v0.0.0-20260709150029-2fb54c236733
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/moby/buildkit v0.31.1
 	github.com/n0rad/go-app v0.0.0-20260502170822-14ac9a7082c9
