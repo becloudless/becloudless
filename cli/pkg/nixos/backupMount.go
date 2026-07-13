@@ -163,7 +163,7 @@ func MountBackup(target string, mountpoint string, identity io.Reader, sshUser s
 		return errs.WithE(err, "Failed to write temporary passphrase file")
 	}
 
-	gocryptfsArgs := []string{"-nosyslog", "-sharedstorage", "-passfile", passFile.Name()}
+	gocryptfsArgs := []string{"-nosyslog", "-passfile", passFile.Name()}
 	if !rw {
 		gocryptfsArgs = append(gocryptfsArgs, "-ro")
 	}
