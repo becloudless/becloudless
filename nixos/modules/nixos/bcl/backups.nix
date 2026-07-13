@@ -102,7 +102,7 @@ let
         gocryptfs -reverse -nosyslog -allow_other ${excludeArgs} -passfile "$PASS_FILE" "${backup.source}" "$MOUNT_DIR"
 
         echo "[backup-${name}] Starting rsync..."
-        rsync -avzO --delete \
+        rsync -avzO --delete --max-alloc=0 \
           -e "ssh -i /nix/etc/ssh/ssh_host_ed25519_key -o StrictHostKeyChecking=no" \
           "$MOUNT_DIR/" \
           "root@${backup.target}/"
