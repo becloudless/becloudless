@@ -1,8 +1,65 @@
-{ inputs, config, lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 {
   config = lib.mkMerge [
     { bcl.role.knownRoles = [ "backup" ]; }
-    (lib.mkIf (config.bcl.role.name == "backup") {
+    (lib.mkIf (config.bcl.role.name == "backup") (
+      let
+        # Data pools backed by more than one physical disk (mergerfs pools).
+        # A file written into the pool (e.g. gocryptfs.conf) only lands on
+        # whichever single branch disk mergerfs picked, so it must be copied
+        # to every backing disk to be readable when a disk is pulled/mounted
+        # standalone.
+        multiDiskData = lib.filterAttrs
+          (_: dataCfg: dataCfg.sourceFoldersPattern != null || builtins.length dataCfg.sourceFolders > 1)
+          config.bcl.data;
+
+        syncGocryptfsConfScript = lib.concatStringsSep "\n" (lib.mapAttrsToList (name: dataCfg:
+          let
+            targets = if dataCfg.sourceFoldersPattern != null
+              then dataCfg.sourceFoldersPattern
+              else lib.concatMapStringsSep " " lib.escapeShellArg dataCfg.sourceFolders;
+          in ''
+            conf="${dataCfg.path}/gocryptfs.conf"
+            if [ -f "$conf" ]; then
+              for disk in ${targets}; do
+                if [ -d "$disk" ] && ! cmp -s "$conf" "$disk/gocryptfs.conf" 2>/dev/null; then
+                  echo "[sync-gocryptfs-conf] Copying gocryptfs.conf to $disk"
+                  cp "$conf" "$disk/gocryptfs.conf"
+                fi
+              done
+            else
+              echo "[sync-gocryptfs-conf] No gocryptfs.conf found at ${dataCfg.path}, skipping ${name}"
+            fi
+          ''
+        ) multiDiskData);
+
+        # gocryptfs writes one "gocryptfs.diriv" (directory IV) file into EVERY
+        # directory of the reverse view, not just the root, and each one only
+        # lands on whichever single branch mergerfs' mkdir/create policy
+        # picked. Walk the whole pool tree and mirror every diriv file.
+        syncGocryptfsDirivScript = lib.concatStringsSep "\n" (lib.mapAttrsToList (name: dataCfg:
+          let
+            targets = if dataCfg.sourceFoldersPattern != null
+              then dataCfg.sourceFoldersPattern
+              else lib.concatMapStringsSep " " lib.escapeShellArg dataCfg.sourceFolders;
+          in ''
+            poolPath="${dataCfg.path}"
+            find "$poolPath" -type f -name 'gocryptfs.diriv' -print0 | while IFS= read -r -d ''' f; do
+              rel="''${f#$poolPath/}"
+              for disk in ${targets}; do
+                if [ -d "$disk" ]; then
+                  destFile="$disk/$rel"
+                  destDir="$(dirname "$destFile")"
+                  if [ -d "$destDir" ] && [ ! -f "$destFile" ]; then
+                    echo "[sync-gocryptfs-conf] Copying $rel to $disk"
+                    cp "$f" "$destFile"
+                  fi
+                fi
+              done
+            done
+          ''
+        ) multiDiskData);
+      in {
 
      security.sudo.wheelNeedsPassword = false;
 
@@ -49,6 +106,25 @@
         wantedBy = ["multi-user.target"];
       };
 
-    })
+      systemd.services."sync-gocryptfs-conf" = {
+        description = "Copy each data pool's gocryptfs.conf and gocryptfs.diriv files onto every backing disk";
+        after = [ "local-fs.target" ];
+        path = with pkgs; [ diffutils ];
+        serviceConfig = {
+          Type = "oneshot";
+        };
+        script = syncGocryptfsConfScript + "\n" + syncGocryptfsDirivScript;
+      };
+
+      systemd.timers."sync-gocryptfs-conf" = {
+        description = "Timer for sync-gocryptfs-conf";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = "*:0/10";
+          Persistent = true;
+        };
+      };
+
+    }))
   ];
 }
