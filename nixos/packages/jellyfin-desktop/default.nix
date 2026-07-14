@@ -19,8 +19,6 @@
   libxcb,
 }:
 let
-  unstable = inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system};
-
   mpvPrefix = symlinkJoin {
     name = "mpv-external-prefix";
     paths = [
@@ -39,8 +37,8 @@ let
     dontUnpack = true;
     installPhase = ''
       mkdir -p $out
-      cp -r ${unstable.cef-binary}/Release/* $out/
-      cp -r ${unstable.cef-binary}/Resources/* $out/
+      cp -r ${pkgs.cef-binary}/Release/* $out/
+      cp -r ${pkgs.cef-binary}/Resources/* $out/
     '';
   });
 in
