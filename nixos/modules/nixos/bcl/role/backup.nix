@@ -120,7 +120,7 @@
         description = "Timer for sync-gocryptfs-conf";
         wantedBy = [ "timers.target" ];
         timerConfig = {
-          OnCalendar = "*:0/10";
+          OnCalendar = "weekly";
           Persistent = true;
         };
       };
