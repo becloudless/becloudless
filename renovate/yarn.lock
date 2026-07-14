@@ -3507,10 +3507,10 @@ proc-log@^7.0.0:
   resolved "https://registry.npmjs.org/proc-log/-/proc-log-7.0.0.tgz"
   integrity sha512-FYgfaA69XZ93zaXLoMNQ+ViDXGGBgR8aLh03txzcFhV+9xOXx7+8DLCULrKKpR9+GsH9ZfHm82aSUPpozX0Ztg==
 
-protobufjs@8.6.5:
-  version "8.6.5"
-  resolved "https://registry.npmjs.org/protobufjs/-/protobufjs-8.6.5.tgz"
-  integrity sha512-zeE5LPpencAGXvsxyOYmEgJhxzHY8IsmPAFzstZVhDSVT8QH03q6gMZwZRaQGApevZbAL6u28ugs4CC+YKB2jQ==
+protobufjs@8.6.6:
+  version "8.6.6"
+  resolved "https://registry.npmjs.org/protobufjs/-/protobufjs-8.6.6.tgz"
+  integrity sha512-RkLIhE+Tdc2Kpq1F4Uw6OnpAXPca7B+GSDov/GqGCqNBpVyDskQ9yReZfgM+C7xw9AAix873iQZXbBWXj6NzYQ==
   dependencies:
     long "^5.3.2"
 
@@ -3624,10 +3624,10 @@ remark@15.0.1:
     remark-stringify "^11.0.0"
     unified "^11.0.0"
 
-renovate@43.257.7:
-  version "43.257.7"
-  resolved "https://registry.npmjs.org/renovate/-/renovate-43.257.7.tgz"
-  integrity sha512-nWoFyS1ikx0TDScgxLTR/XPz4gQgXR5NBjhq3RwvHaHX3Zx8KSpy0cWsl+3v6AP3PBL5VrUf8Ul2Na7nS5bvSg==
+renovate@43.259.2:
+  version "43.259.2"
+  resolved "https://registry.npmjs.org/renovate/-/renovate-43.259.2.tgz"
+  integrity sha512-3Z/W5CK9pIpi0/Evb/hVCkbIE2gIcinehxE/AW+Dz5SOCJO8LZSRYXKaKicxqVQw1Gk548gB6I1GvUQYjQ5yDg==
   dependencies:
     "@aws-sdk/client-codecommit" "3.1075.0"
     "@aws-sdk/client-ec2" "3.1075.0"
@@ -3723,7 +3723,7 @@ renovate@43.257.7:
     p-throttle "8.1.0"
     parse-link-header "2.0.0"
     prettier "3.8.1"
-    protobufjs "8.6.5"
+    protobufjs "8.6.6"
     punycode "2.3.1"
     remark "15.0.1"
     remark-gfm "4.0.1"
