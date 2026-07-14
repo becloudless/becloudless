@@ -7,7 +7,6 @@
   symlinkJoin,
   pkg-config,
   wrapGAppsHook4,
-  pkgs,
 
   # Needed at runtime by CEF
   libGL,
@@ -19,6 +18,9 @@
   libxcb,
 }:
 let
+  # TODO: Remove once nixpkgs is updated (https://github.com/NixOS/nixpkgs/pull/522930)
+  cef-binary = inputs.cef-update.legacyPackages.${stdenv.hostPlatform.system}.cef-binary;
+
   mpvPrefix = symlinkJoin {
     name = "mpv-external-prefix";
     paths = [
@@ -37,8 +39,8 @@ let
     dontUnpack = true;
     installPhase = ''
       mkdir -p $out
-      cp -r ${pkgs.cef-binary}/Release/* $out/
-      cp -r ${pkgs.cef-binary}/Resources/* $out/
+      cp -r ${cef-binary}/Release/* $out/
+      cp -r ${cef-binary}/Resources/* $out/
     '';
   });
 in
