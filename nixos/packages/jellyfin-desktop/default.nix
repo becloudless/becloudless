@@ -1,5 +1,4 @@
 {
-  inputs,
   lib,
   fetchFromGitHub,
   rustPlatform,
@@ -10,6 +9,7 @@
 
   # Needed at runtime by CEF
   libGL,
+  cef-binary,
 
   # Dependencies
   ffmpeg,
@@ -18,9 +18,6 @@
   libxcb,
 }:
 let
-  # TODO: Remove once nixpkgs is updated (https://github.com/NixOS/nixpkgs/pull/522930)
-  cef-binary = inputs.cef-update.legacyPackages.${stdenv.hostPlatform.system}.cef-binary;
-
   mpvPrefix = symlinkJoin {
     name = "mpv-external-prefix";
     paths = [
