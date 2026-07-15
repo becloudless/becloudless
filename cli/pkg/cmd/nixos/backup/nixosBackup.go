@@ -15,14 +15,3 @@ func NixosBackupCmd() *cobra.Command {
 	)
 	return cmd
 }
-
-/*
-
-nix-shell -p wakeonlan --run "wakeonlan 00:d8:61:6f:f8:6e"
-
-
-
-
-
-
-*/

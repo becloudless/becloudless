@@ -50,9 +50,13 @@ let
       description = "Backup ${name}: ${backup.source} -> ${backup.target}";
       after    = [ "network-online.target" ];
       wants    = [ "network-online.target" ];
+      startLimitIntervalSec = 900;
+      startLimitBurst = 3;
       serviceConfig = {
         Type = "oneshot";
         User = "root";
+        Restart = "on-failure";
+        RestartSec = "30s";
       };
       path = with pkgs; [ wol openssh rsync iputils gocryptfs fuse gawk util-linux ];
       script = ''
@@ -103,7 +107,7 @@ let
 
         echo "[backup-${name}] Starting rsync..."
         rsync -avzO --delete --max-alloc=0 \
-          -e "ssh -i /nix/etc/ssh/ssh_host_ed25519_key -o StrictHostKeyChecking=no" \
+          -e "ssh -i /nix/etc/ssh/ssh_host_ed25519_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3" \
           "$MOUNT_DIR/" \
           "root@${backup.target}/"
 
