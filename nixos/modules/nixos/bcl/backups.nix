@@ -10,19 +10,53 @@ let
   mkBackupService = name: backup:
     let
       host        = targetHost backup.target;
+      # gocryptfs's gitignore-style patterns are matched with a regex that is
+      # implicitly recursive for directories (a pattern for "/Videos" also
+      # matches everything under "/Videos"). That means naively negating an
+      # ancestor directory (e.g. "!/Videos") to make a nested include like
+      # "/Videos/Anime-Movies" reachable actually re-includes the ENTIRE
+      # ancestor subtree (all of "/Videos", not just "Anime-Movies").
+      # The fix is the standard gitignore "peeling" trick: for every proper
+      # ancestor, re-include it (making it visible) and then immediately
+      # re-exclude its (recursive) contents again with "ancestor/*", before
+      # finally re-including the actual leaf path. Ancestors must be applied
+      # shallowest-first so each level's re-exclude doesn't clobber a deeper
+      # level's re-include.
+      ancestorsOf = p:
+        let
+          segments = lib.filter (s: s != "") (lib.splitString "/" p);
+        in lib.genList (i: "/" + lib.concatStringsSep "/" (lib.take (i + 1) segments)) (lib.max 0 (lib.length segments - 1));
+      ancestorPaths = lib.sort
+        (a: b: (lib.length (lib.splitString "/" a)) < (lib.length (lib.splitString "/" b)))
+        (lib.unique (lib.concatMap ancestorsOf backup.sourceIncludes));
+      ancestorArgs = lib.concatMapStringsSep " "
+        (a: "-exclude-wildcard ${lib.escapeShellArg "!${a}"} -exclude-wildcard ${lib.escapeShellArg "${a}/*"}")
+        ancestorPaths;
       # Build "-exclude-wildcard '*' -exclude-wildcard '!foo' ..."
       # so that only the listed patterns are included in the encrypted view.
+      # ".gocryptfs.reverse.conf" (the reverse-mode config file, stored as a
+      # real plaintext file at the root of the source) must always be kept:
+      # gocryptfs applies excludes to the plaintext tree BEFORE renaming it to
+      # "gocryptfs.conf" in the encrypted view, so without this it would get
+      # filtered out by the "*" exclude and never make it into the rsynced
+      # backup, breaking mounting on the target.
       excludeArgs = lib.optionalString (backup.sourceIncludes != []) (
         "-exclude-wildcard '*' "
+        + (lib.optionalString (ancestorArgs != "") (ancestorArgs + " "))
         + lib.concatMapStringsSep " " (p: "-exclude-wildcard ${lib.escapeShellArg "!${p}"}") backup.sourceIncludes
+        + " -exclude-wildcard '!/.gocryptfs.reverse.conf'"
       );
     in {
       description = "Backup ${name}: ${backup.source} -> ${backup.target}";
       after    = [ "network-online.target" ];
       wants    = [ "network-online.target" ];
+      startLimitIntervalSec = 900;
+      startLimitBurst = 3;
       serviceConfig = {
         Type = "oneshot";
         User = "root";
+        Restart = "on-failure";
+        RestartSec = "30s";
       };
       path = with pkgs; [ wol openssh rsync iputils gocryptfs fuse gawk util-linux ];
       script = ''
@@ -57,7 +91,12 @@ let
         ' EXIT
 
         echo "[backup-${name}] Deriving gocryptfs passphrase from SSH key..."
-        sha512sum /nix/etc/ssh/ssh_host_ed25519_key | awk '{print $1}' > "$PASS_FILE"
+        # Trim leading/trailing whitespace (blank lines, trailing newline, ...)
+        # before hashing, so incidental differences in the on-disk key file
+        # don't change the derived passphrase. The "bcl" CLI trims identity
+        # bytes the same way before hashing, so both sides stay in sync.
+        awk 'BEGIN{RS="\0"} { gsub(/^[[:space:]]+/, ""); gsub(/[[:space:]]+$/, ""); printf "%s", $0 }' \
+          /nix/etc/ssh/ssh_host_ed25519_key | sha512sum | awk '{print $1}' > "$PASS_FILE"
 
         echo "[backup-${name}] Mounting gocryptfs reverse view of ${backup.source} at $MOUNT_DIR..."
         if [ ! -f "${backup.source}/.gocryptfs.reverse.conf" ]; then
@@ -67,8 +106,8 @@ let
         gocryptfs -reverse -nosyslog -allow_other ${excludeArgs} -passfile "$PASS_FILE" "${backup.source}" "$MOUNT_DIR"
 
         echo "[backup-${name}] Starting rsync..."
-        rsync -avzO --delete \
-          -e "ssh -i /nix/etc/ssh/ssh_host_ed25519_key -o StrictHostKeyChecking=no" \
+        rsync -avzO --delete --max-alloc=0 \
+          -e "ssh -i /nix/etc/ssh/ssh_host_ed25519_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3" \
           "$MOUNT_DIR/" \
           "root@${backup.target}/"
 
