@@ -85,6 +85,9 @@ else
 	BCL_BIN=$(realpath "$HOME/.cache/bcl-build/bcl-linux-amd64/bcl")
 fi
 
+echo_brightred "## Check bcl parent flake"
+(cd "$DIR" && nix flake check)
+
 echo_brightred "## Check flake"
 (cd "$DIR/tests/basic/repository/nixos" && nix flake update && nix flake check)
 

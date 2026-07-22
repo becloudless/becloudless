@@ -103,6 +103,10 @@
   #################################
 
   inputs = {
+    fim = {
+      url = "github:becloudless/file-integrity-manager";
+    };
+
     nixpkgs = {
       url = "github:NixOS/nixpkgs/nixos-26.05";
     };

@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ inputs, config, lib, pkgs, ... }:
 let
   srvNumber = lib.strings.toInt(builtins.substring ((builtins.stringLength config.networking.hostName) -1)  (-1) config.networking.hostName);
   cfg = config.bcl.role.serverKube;
@@ -40,6 +40,7 @@ in
       etcd
       ssh-to-age
       mergerfs
+      inputs.fim
     ];
 
     users.users.root.packages = with pkgs; [
