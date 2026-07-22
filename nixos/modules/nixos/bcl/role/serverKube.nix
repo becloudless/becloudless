@@ -40,7 +40,7 @@ in
       etcd
       ssh-to-age
       mergerfs
-      inputs.fim
+      inputs.fim.packages.${pkgs.stdenv.hostPlatform.system}.fim
     ];
 
     users.users.root.packages = with pkgs; [
