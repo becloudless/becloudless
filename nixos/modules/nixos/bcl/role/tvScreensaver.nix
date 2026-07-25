@@ -1,6 +1,29 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.bcl.role.tv.screensaver;
+
+  # mpv OSD overlay showing a permanent clock in the top-right corner,
+  # updated every second independently of the playlist content.
+  clockOverlayScript = pkgs.writeText "screensaver-clock.lua" ''
+    local assdraw = require 'mp.assdraw'
+    local overlay = mp.create_osd_overlay("ass-events")
+
+    local function update_clock()
+      local w, h = mp.get_osd_size()
+      if not w or w == 0 then return end
+      local ass = assdraw.ass_new()
+      ass:new_event()
+      ass:pos(w - 10, 10)
+      ass:append("{\\an9\\fs36\\bord2\\shad1}" .. os.date("%H:%M"))
+      overlay.res_x = w
+      overlay.res_y = h
+      overlay.data = ass.text
+      overlay:update()
+    end
+
+    update_clock()
+    mp.add_periodic_timer(1, update_clock)
+  '';
 in
 {
   options.bcl.role.tv.screensaver = {
@@ -55,7 +78,7 @@ in
             echo "No playlist available at $PLAYLIST, waiting for sync..."
             return
           fi
-          mpv --fs --loop-playlist=inf --image-display-duration=30 --no-osd-bar --panscan=0 --scale=bilinear --video-unscaled=no --mute=yes --speed=0.5 --osd-playing-msg=\''${media-title} --osd-duration=3600000 --osd-font-size=12 --osd-align-x=left --osd-align-y=bottom "$PLAYLIST" &
+          mpv --fs --loop-playlist=inf --image-display-duration=30 --no-osd-bar --panscan=0 --scale=bilinear --video-unscaled=no --mute=yes --speed=0.5 --osd-playing-msg=\''${media-title} --osd-duration=3600000 --osd-font-size=12 --osd-align-x=left --osd-align-y=bottom --script=${clockOverlayScript} "$PLAYLIST" &
         }
 
         ############################
