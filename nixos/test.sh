@@ -144,7 +144,7 @@ validate-test-tv() {
 
 (cd "$DIR/tests/basic/repository" && installHost "test-tv" \
 	"7d5e9855-0cba-4c41-b45e-cdff7a9514d9" \
-	13G \
+	14G \
 	3G \
 	validate-test-tv)
 
