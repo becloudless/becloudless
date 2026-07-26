@@ -113,7 +113,15 @@
             for_window [shell="xdg_shell"] floating enable, resize set width 100 ppt height 100 ppt, move position 0 0
             exec "${jellyfinScript}; ${pkgs.sway}/bin/swaymsg exit"
           '';
-          startScript = "${pkgs.sway}/bin/sway -c ${swayConfig}";
+          startScript = pkgs.writeShellScript "start-sway" ''
+            ${lib.optionalString config.bcl.role.tv.forceSoftwareGL ''
+              # On GPU-less hosts (e.g. CI VMs), wlroots refuses to start with
+              # only a software rasterizer (llvmpipe) available unless
+              # explicitly allowed.
+              export WLR_RENDERER_ALLOW_SOFTWARE=1
+            ''}
+            exec ${pkgs.sway}/bin/sway -c ${swayConfig}
+          '';
         in "${startScript}";
         user = "tv";
       };
