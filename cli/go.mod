@@ -7,7 +7,7 @@ toolchain go1.26.5
 require (
 	charm.land/huh/v2 v2.0.3
 	github.com/Mic92/ssh-to-age v1.3.0
-	github.com/atombender/go-jsonschema v0.23.1
+	github.com/atombender/go-jsonschema v0.24.0
 	github.com/awnumar/memguard v0.23.0
 	github.com/client9/misspell v0.3.4
 	github.com/fzipp/gocyclo v0.6.0
