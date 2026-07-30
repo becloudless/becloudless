@@ -3375,10 +3375,10 @@ p-locate@^6.0.0:
   dependencies:
     p-limit "^4.0.0"
 
-p-map@7.0.5, p-map@^7.0.2:
-  version "7.0.5"
-  resolved "https://registry.npmjs.org/p-map/-/p-map-7.0.5.tgz"
-  integrity sha512-e8vJF4XdVkzqqSHguEMz41mQO1wKwxKm5ENrUJQUu9kLDCtn83cxbyHZcszr4QC5zEA7WffRRC4gsTecC7J9oA==
+p-map@7.0.6, p-map@^7.0.2:
+  version "7.0.6"
+  resolved "https://registry.npmjs.org/p-map/-/p-map-7.0.6.tgz"
+  integrity sha512-I4Prw6ivkd6p8PiYR1tXASOAOBzIJwu0TB7fqaX0c/8c3QAehNYmX57EijyGGGBt3c/BIowGwV03RVBtXvHEVg==
 
 p-map@^2.0.0:
   version "2.1.0"
@@ -3615,10 +3615,10 @@ remark@15.0.1:
     remark-stringify "^11.0.0"
     unified "^11.0.0"
 
-renovate@43.281.1:
-  version "43.281.1"
-  resolved "https://registry.npmjs.org/renovate/-/renovate-43.281.1.tgz"
-  integrity sha512-3uKSD4M4IbP0uYkgd7khVV2yz0c+i288jbpwUcrO+KXwjnlcHr6rfCInmqJ17whI6l3/qGUiX+PHhqU5B9eRSw==
+renovate@43.285.3:
+  version "43.285.3"
+  resolved "https://registry.npmjs.org/renovate/-/renovate-43.285.3.tgz"
+  integrity sha512-n0Oy5PapMFHsaXgtwGKMKF51Ce506TNEjHeOp3bhUxIsz1DqV2dPL8ozgBo4fD1F+LtoxD4uU1U3yvFo7HknlQ==
   dependencies:
     "@aws-sdk/client-codecommit" "3.1075.0"
     "@aws-sdk/client-ec2" "3.1075.0"
@@ -3710,7 +3710,7 @@ renovate@43.281.1:
     neotraverse "0.6.18"
     node-html-parser "7.1.0"
     p-all "5.0.1"
-    p-map "7.0.5"
+    p-map "7.0.6"
     p-queue "9.3.1"
     p-throttle "8.1.0"
     parse-link-header "2.0.0"
