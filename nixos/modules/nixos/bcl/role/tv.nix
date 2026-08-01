@@ -143,7 +143,7 @@
       pulseaudio
       wlr-randr
       sway
-      bcl.jellyfin-desktop
+      bcl.jellium-desktop
     ];
 
     systemd.tmpfiles.rules = [
