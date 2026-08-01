@@ -371,6 +371,8 @@ in
     # via `busctl tree` each run instead.
     systemd.services.miraclecast-p2p-keepalive = {
       description = "Keep MiracleCast P2P discovery (re-)enabled";
+      after = [ "miraclecast-wifid.service" ];
+      wants = [ "miraclecast-wifid.service" ];
       serviceConfig.Type = "oneshot";
       serviceConfig.ExecStart = pkgs.writeShellScript "miraclecast-p2p-keepalive" ''
         set -eu
@@ -395,8 +397,16 @@ in
           "$link_path" org.freedesktop.miracle.wifi.Link P2PScanning 2>/dev/null \
           | ${pkgs.gawk}/bin/awk '{print $2}')
         if [ "$scanning" != "true" ]; then
+          # `|| true`: wifid can still be finishing its own internal P2P
+          # setup for a brief moment right after it starts (confirmed
+          # live: "ERROR: supplicant: invalid arguments
+          # (supplicant_p2p_start_scan())" logged once at boot, exactly
+          # when this timer's OnBootSec=5s fired essentially concurrently
+          # with miraclecast-wifid.service's own startup) - this is a
+          # harmless, self-healing race (the next run 15s later always
+          # succeeds), not worth hard-failing the oneshot unit over.
           ${pkgs.systemd}/bin/busctl set-property org.freedesktop.miracle.wifi \
-            "$link_path" org.freedesktop.miracle.wifi.Link P2PScanning b true
+            "$link_path" org.freedesktop.miracle.wifi.Link P2PScanning b true || true
         fi
       '';
     };
