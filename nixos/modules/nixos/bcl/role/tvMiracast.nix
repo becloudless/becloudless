@@ -39,11 +39,32 @@ let
   # buffering, not any decode/render element, unlike the GPU-decode
   # (vaapih264dec) experiment tried earlier that broke video AND audio
   # entirely and was reverted.
+  #
+  # Also replacing the hardcoded "autovideosink" with an explicit
+  # "waylandsink fullscreen=true": sway's own `for_window` rule (in
+  # tv.nix, floating enable + resize to 100 ppt) covers jellyfin-desktop's
+  # windows fine, but the cast's rendered window kept appearing as a
+  # small, native-video-resolution (1280x720) window instead of
+  # fullscreen - GStreamer's Wayland-backed video sinks generally don't
+  # actually honour a compositor's resize/configure requests on their
+  # surface (they just create it at the video's native size and never
+  # resize afterwards), so relying on sway to force-resize it doesn't
+  # work here. `waylandsink` has a dedicated `fullscreen` boolean property
+  # (see gstwaylandsink.c) that instead directly calls
+  # xdg_toplevel_set_fullscreen on its own surface - the correct/reliable
+  # way to get a Wayland client fullscreen, independent of whatever the
+  # compositor's floating/tiling rules do. This also makes the sink
+  # selection deterministic (no more autovideosink autoplug at all for
+  # video), so GST_PLUGIN_FEATURE_RANK=kmssink:0 in miracleGstShim below
+  # is no longer strictly required, but is left in place as a harmless
+  # safety net in case some other pipeline in this shim's PATH is ever
+  # extended to use autovideosink again.
   miraclecastTuned = pkgs.miraclecast.overrideAttrs (oldAttrs: {
     postPatch = (oldAttrs.postPatch or "") + ''
       substituteInPlace res/miracle-gst \
         --replace-fail 'rtpjitterbuffer latency=100' 'rtpjitterbuffer latency=250' \
-        --replace-fail 'udpsrc port=$PORT caps=' 'udpsrc port=$PORT buffer-size=2097152 caps='
+        --replace-fail 'udpsrc port=$PORT caps=' 'udpsrc port=$PORT buffer-size=2097152 caps=' \
+        --replace-fail 'RUN+="autovideosink "' 'RUN+="waylandsink fullscreen=true "'
     '';
   });
 
