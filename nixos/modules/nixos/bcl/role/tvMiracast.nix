@@ -32,7 +32,26 @@ let
   # miraclecast's own bin dir) and re-execs it as the `tv` user via
   # `runuser`, inheriting the WAYLAND_DISPLAY/XDG_RUNTIME_DIR exported by
   # the sinkctl service's ExecStart below.
+  #
+  # GST_PLUGIN_FEATURE_RANK=kmssink:0 is also required: `autovideosink`
+  # picks elements purely by GStreamer rank, and kmssink's rank
+  # (secondary, 128) is HIGHER than waylandsink's (marginal, 64) in this
+  # nixpkgs build - so autovideosink tries kmssink FIRST. kmssink's
+  # opening of /dev/dri/cardN during the initial READY/PAUSED autoplug
+  # probe succeeds (logind grants the tv user's active session read/write
+  # access to the DRM device), so autovideosink "picks" it and never even
+  # tries waylandsink - but kmssink can NEVER actually render frames here,
+  # because sway (also running as the tv user, on the same seat) already
+  # holds DRM master for that device, and only a single DRM master may
+  # perform modesetting/plane operations at a time. This only surfaces
+  # once real frames arrive ("drmModeSetPlane failed: Permission denied
+  # (13)"), well after the pipeline reports PLAYING - confirmed live by
+  # reproducing the exact same nondeterministic kmssink-vs-waylandsink
+  # autoplug choice with a synthetic `videotestsrc ! autovideosink` test
+  # pipeline, and confirming `GST_PLUGIN_FEATURE_RANK=kmssink:0` reliably
+  # forces the working GL/Wayland sink instead.
   miracleGstShim = pkgs.writeShellScriptBin "miracle-gst" ''
+    export GST_PLUGIN_FEATURE_RANK=kmssink:0
     exec ${pkgs.util-linux}/bin/runuser -u tv -- ${pkgs.miraclecast}/bin/miracle-gst "$@"
   '';
 in
