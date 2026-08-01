@@ -409,5 +409,50 @@ in
         OnUnitActiveSec = "15s";
       };
     };
+
+    # Upstream miracle-wifid is *supposed* to auto-derive the cast device's
+    # advertised name from the system's hostname (see manager_read_name()
+    # in wifid.c, which queries org.freedesktop.hostname1's "Hostname"
+    # property over D-Bus at startup) - but confirmed live via
+    # `busctl get-property ... FriendlyName` that it stays permanently
+    # empty here even though `hostnamectl` correctly reports the static
+    # hostname, so the phone falls back to displaying the hardcoded
+    # "Miracle" default (device_name sent to wpa_supplicant when
+    # l->friendly_name is unset - see supplicant_started() in
+    # wifid-supplicant.c). Rather than chase down why that upstream
+    # hostname1 lookup silently fails/never applies (skipped for now -
+    # not worth the investigation for a cosmetic feature), just set it
+    # ourselves directly via the same Property.Set mechanism already used
+    # for the P2P-keepalive workaround above, using the hostname NixOS
+    # itself is configured with (known at build time, so no runtime
+    # hostname1 round-trip needed at all).
+    systemd.services.miraclecast-set-friendly-name = {
+      description = "Set MiracleCast Wi-Fi Display friendly name to the host's hostname";
+      after = [ "miraclecast-wifid.service" ];
+      wants = [ "miraclecast-wifid.service" ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = pkgs.writeShellScript "miraclecast-set-friendly-name" ''
+          set -eu
+          link_path=""
+          for i in $(seq 1 30); do
+            link_path=$(${pkgs.systemd}/bin/busctl tree org.freedesktop.miracle.wifi 2>/dev/null \
+              | ${pkgs.gnugrep}/bin/grep -o '/org/freedesktop/miracle/wifi/link/_[0-9A-Za-z]*' \
+              | head -n1)
+            [ -n "$link_path" ] && break
+            sleep 1
+          done
+          if [ -z "$link_path" ]; then
+            echo "miraclecast-set-friendly-name: no link found after 30s, giving up" >&2
+            exit 1
+          fi
+          ${pkgs.systemd}/bin/busctl set-property org.freedesktop.miracle.wifi \
+            "$link_path" org.freedesktop.miracle.wifi.Link FriendlyName s "${config.networking.hostName}"
+        '';
+        Restart = "on-failure";
+        RestartSec = "5s";
+      };
+    };
   };
 }
