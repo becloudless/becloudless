@@ -170,6 +170,20 @@ in
       wantedBy = [ "multi-user.target" ];
       path = [ pkgs.wpa_supplicant ];
       serviceConfig = {
+        # NixOS patches wpa_cli to hard-code its OWN client-side ctrl
+        # socket directory to /run/wpa_supplicant/client (regardless of
+        # the `-p` server ctrl path passed on the command line - see
+        # nixpkgs' wpa_supplicant unprivileged-daemon.patch). That
+        # directory is normally only created by the system
+        # wpa_supplicant.service's own ExecStartPre, and only when
+        # `networking.wireless.userControlled.enable` is set - neither of
+        # which applies here (we talk to miracle-wifid's OWN supplicant
+        # instance, not the system one). Without it, every wpa_cli
+        # invocation below fails immediately with "No such file or
+        # directory", silently preventing the SSID/PSK from EVER being
+        # injected - the root cause of a full loss of normal networking
+        # observed in practice. Create it ourselves before use.
+        ExecStartPre = "+${pkgs.coreutils}/bin/mkdir -p /run/wpa_supplicant/client";
         ExecStart = pkgs.writeShellScript "miraclecast-join-wifi" ''
           set -eu
           psk_file="${lib.optionalString (global.secretFile != null) config.sops.secrets.${pskSecretName}.path}"
