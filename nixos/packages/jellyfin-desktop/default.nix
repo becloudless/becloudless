@@ -46,8 +46,8 @@ rustPlatform.buildRustPackage (finalAttrs: {
   version = "3.0.0-unstable-2026-06-21";
 
   src = fetchFromGitHub {
-    owner = "jellyfin";
-    repo = "jellyfin-desktop";
+    owner = "andrewrabert";
+    repo = "jellium-desktop";
     rev = "676919e2eca998f2ef048be7a13675731c97c794";
     hash = "sha256-KatFwFuCrcUm1+A9Msi98Yem6JAQR2OmXHCZtCdhPC4=";
   };
