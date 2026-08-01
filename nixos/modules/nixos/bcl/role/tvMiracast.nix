@@ -307,7 +307,7 @@ in
       after = [ "miraclecast-wifid.service" ];
       wants = [ "miraclecast-wifid.service" ];
       wantedBy = [ "multi-user.target" ];
-      path = [ pkgs.wpa_supplicant ];
+      path = [ pkgs.wpa_supplicant pkgs.iw pkgs.gawk ];
       serviceConfig = {
         # NixOS patches wpa_cli to hard-code its OWN client-side ctrl
         # socket directory to /run/wpa_supplicant/client (regardless of
@@ -340,6 +340,58 @@ in
               wpa_cli_ set_network "$id" psk "\"$psk\""
               wpa_cli_ enable_network "$id"
             fi
+
+            # Force the P2P group onto the SAME channel/band as the
+            # normal STA connection above, instead of leaving channel
+            # selection to wpa_supplicant/the phone's own negotiation
+            # (which picked a 2.4GHz channel here - confirmed live via
+            # `iw dev p2p-<iface>-N info` showing "channel 6 (2437 MHz)"
+            # while the STA link (`iw dev <iface> info`) was on "channel
+            # 36 (5180 MHz)"). Two consequences of that mismatch,
+            # confirmed by both being on the SAME physical radio
+            # (`wiphy 0` for both interfaces): (1) 2.4GHz is a much more
+            # congested/interference-prone band than 5GHz for weak-signal
+            # loss: `iw dev <p2p-iface> station dump` showed only
+            # -65/-68 dBm for the connected phone; (2) with STA and P2P
+            # simultaneously on two DIFFERENT channels on one physical
+            # radio, the driver/firmware must time-slice between them
+            # (multi-channel concurrency/MCC) rather than truly
+            # transmitting on both at once - itself a further source of
+            # periodic loss on both links, independent of RF quality.
+            # Setting the SAME channel for both lets the radio use
+            # single-channel concurrency (SCC) instead, avoiding that
+            # time-slicing entirely. p2p_oper_channel/p2p_oper_reg_class
+            # are wpa_supplicant GLOBAL params (confirmed settable live
+            # via `wpa_cli set p2p_oper_channel/p2p_oper_reg_class` ->
+            # "OK") that only influence the NEXT P2P group formation, not
+            # any already-established group - reading the STA's current
+            # channel fresh every loop iteration (rather than hardcoding
+            # it) keeps this correct if the AP ever renegotiates to a
+            # different channel. Global operating class mapping is only
+            # implemented for the common 20MHz-channel 5GHz classes here
+            # (115: UNII-1 36/40/44/48, 124: UNII-3 149/153/157/161) -
+            # if the STA is on 2.4GHz or some other 5GHz channel/width,
+            # this intentionally does nothing and P2P keeps its own
+            # default channel selection.
+            #
+            # EXPERIMENTAL: forcing this may or may not actually be
+            # honored by the phone's own P2P/GO-negotiation stack
+            # (channel selection during GO Negotiation is a
+            # two-way/proposed-and-confirmed process, not something one
+            # side can unilaterally dictate) - not a confirmed/stable
+            # recipe, worth verifying live via `iw dev <p2p-iface> info`
+            # after reconnecting a cast.
+            sta_channel=$(iw dev "$iface" info 2>/dev/null | awk '/channel/ {print $2}')
+            reg_class=""
+            case "$sta_channel" in
+              36|40|44|48) reg_class=115 ;;
+              149|153|157|161) reg_class=124 ;;
+            esac
+            if [ -S "$ctrl" ] && [ -n "$reg_class" ]; then
+              wpa_cli_ set p2p_oper_channel "$sta_channel" >/dev/null 2>&1 || true
+              wpa_cli_ set p2p_oper_reg_class "$reg_class" >/dev/null 2>&1 || true
+            fi
+
             sleep 5
           done
         '';
