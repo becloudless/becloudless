@@ -84,6 +84,17 @@ in
     # Predictable wireless interface names always start with "wl" (wlan*,
     # wlp*, wlo*, wlx*) under systemd's naming scheme, so this doesn't
     # interfere with NetworkManager handling everything else (e.g. Ethernet).
+    #
+    # `networking.useDHCP` must be forced back on here: the NetworkManager
+    # module unconditionally sets it to `false` whenever NetworkManager is
+    # enabled (see nixos/modules/services/networking/networkmanager.nix),
+    # and dhcpcd's own systemd service is entirely disabled unless
+    # `useDHCP` is true (or an interface explicitly sets `useDHCP = true`).
+    # Without this override, `allowInterfaces` below has no effect at all
+    # because the dhcpcd service never starts in the first place - leaving
+    # the wifi interface with no DHCP client whatsoever once it's unmanaged
+    # from NetworkManager (total loss of network on that radio).
+    networking.useDHCP = lib.mkForce true;
     networking.dhcpcd.allowInterfaces = [ "wl*" ];
 
     sops.secrets.${pskSecretName} = lib.mkIf (global.secretFile != null) {

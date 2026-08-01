@@ -8,6 +8,6 @@
     # networking.domain = "h.test.local";
 
     # legacy
-    networking.useDHCP = lib.mkForce false;
+    networking.useDHCP = false;
   };
 }
