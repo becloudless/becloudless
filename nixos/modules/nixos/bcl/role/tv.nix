@@ -127,6 +127,35 @@
             # Instead float both and resize/position them to cover the
             # whole output, so they overlap and stack normally.
             for_window [shell="xdg_shell"] floating enable, resize set width 100 ppt height 100 ppt, move position 0 0
+
+            # Miracast video sink (miracle-gst's own `gst-launch-1.0 ...
+            # autovideosink` pipeline, which auto-selects waylandsink on
+            # Wayland): unlike jellyfin-desktop's windows above, this is a
+            # single toplevel with no CEF UI layered on top of it, so
+            # sway's normal single-fullscreen-per-workspace exclusivity is
+            # not an issue here - use real compositor-driven fullscreen
+            # instead of the floating+100ppt-resize trick. That trick alone
+            # left the cast window small/native-resolution (1280x720)
+            # instead of filling the screen; an earlier attempt to fix that
+            # by setting waylandsink's OWN `fullscreen=true` element
+            # property (rather than a sway rule) crashed the pipeline
+            # outright (gst_wl_window_ensure_fullscreen: assertion 'self'
+            # failed, since the property is applied before the sink's
+            # Wayland window exists) - killing audio too, since video and
+            # audio are two branches of the SAME single gst-launch-1.0
+            # process. Sway's own `fullscreen enable` instead sends an
+            # xdg_toplevel configure event carrying the real target
+            # width/height - GstWlWindow's own configure handler
+            # (handle_xdg_toplevel_configure in gst-plugins-bad's
+            # gstwlwindow.c) DOES resize its render rectangle to match
+            # whatever width/height the compositor requests, so this
+            # should genuinely fill the screen without touching the
+            # pipeline or its properties at all. gst-launch-1.0 sets its
+            # own Wayland app_id via g_get_prgname(), i.e. its own argv[0]
+            # basename - confirmed live via `swaymsg -t get_tree` showing
+            # `"app_id": "gst-launch-1.0"` for the running cast window.
+            for_window [app_id="gst-launch-1.0"] fullscreen enable
+
             exec "${jellyfinScript}; ${pkgs.sway}/bin/swaymsg exit"
           '';
           startScript = pkgs.writeShellScript "start-sway" ''
