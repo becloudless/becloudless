@@ -65,8 +65,24 @@
               ${pkgs.wlr-randr}/bin/wlr-randr --output "$output" --mode "$resolution"@23.976 || true
             fi
 
-            # Wait for network before starting jellyfin
-            until ${pkgs.networkmanager}/bin/nm-online -q 2>/dev/null; do sleep 1; done
+            # Wait for network before starting jellyfin.
+            #
+            # NOTE: this previously used `nm-online -q`, which waits for
+            # NetworkManager's own global connectivity state to become
+            # "connected". That silently hangs FOREVER (retried every 1s,
+            # each nm-online call itself blocking up to its own ~30s
+            # internal timeout) on hosts with
+            # `bcl.role.tv.miracast.enable = true`: that role's
+            # `networking.networkmanager.unmanaged = [ "type:wifi" ]`
+            # hands the wifi interface entirely to miracast's own
+            # wpa_supplicant/dhcpcd instead, so NetworkManager has no
+            # managed device left at all and can never report
+            # "connected" - confirmed live via the jellyfin startup log
+            # sitting on the nm-online line indefinitely right after
+            # enabling miracast. Checking for an actual default route
+            # instead works regardless of which component (NetworkManager
+            # or miracast/dhcpcd) brought the interface up.
+            until ${pkgs.iproute2}/bin/ip route show default | ${pkgs.gnugrep}/bin/grep -q default; do sleep 1; done
 
             # Volume to 100%
             until pactl info >/dev/null 2>&1; do sleep 0.5; done
