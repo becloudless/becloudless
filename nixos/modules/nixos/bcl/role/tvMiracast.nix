@@ -392,6 +392,33 @@ in
               wpa_cli_ set p2p_oper_reg_class "$reg_class" >/dev/null 2>&1 || true
             fi
 
+            # Advertise the host's hostname as the cast device's friendly
+            # name directly to wpa_supplicant's "device_name" global
+            # param, INSTEAD of relying solely on
+            # miraclecast-set-friendly-name.service's D-Bus
+            # `FriendlyName` Property.Set call. That service alone is
+            # racy: wifid's own link_set_friendly_name() (wifid-link.c)
+            # only forwards the new name to wpa_supplicant
+            # (supplicant_set_friendly_name -> "SET device_name ...") if
+            # supplicant_is_ready(l->s) is true AT THE EXACT MOMENT the
+            # property is set - otherwise it's silently stored in
+            # wifid's own memory only (so `busctl get-property
+            # FriendlyName` keeps reporting the correct hostname
+            # forever), while wpa_supplicant's actual device_name is
+            # simply never updated and keeps showing wpa_supplicant's own
+            # built-in default. Confirmed live: `busctl get-property
+            # FriendlyName` returned "salon-0" while
+            # `wpa_cli get device_name` simultaneously returned "unknown"
+            # (the phone was displaying "unknown" as the cast name).
+            # Setting device_name directly here bypasses that race
+            # entirely, and re-asserting it every loop iteration
+            # self-heals if miracle-wifid ever regenerates its
+            # wpa_supplicant instance (same reasoning as the SSID/PSK
+            # injection above).
+            if [ -S "$ctrl" ]; then
+              wpa_cli_ set device_name "${config.networking.hostName}" >/dev/null 2>&1 || true
+            fi
+
             sleep 5
           done
         '';
