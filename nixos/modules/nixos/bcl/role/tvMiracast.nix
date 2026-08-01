@@ -40,31 +40,30 @@ let
   # (vaapih264dec) experiment tried earlier that broke video AND audio
   # entirely and was reverted.
   #
-  # Also replacing the hardcoded "autovideosink" with an explicit
-  # "waylandsink fullscreen=true": sway's own `for_window` rule (in
-  # tv.nix, floating enable + resize to 100 ppt) covers jellyfin-desktop's
-  # windows fine, but the cast's rendered window kept appearing as a
-  # small, native-video-resolution (1280x720) window instead of
-  # fullscreen - GStreamer's Wayland-backed video sinks generally don't
-  # actually honour a compositor's resize/configure requests on their
-  # surface (they just create it at the video's native size and never
-  # resize afterwards), so relying on sway to force-resize it doesn't
-  # work here. `waylandsink` has a dedicated `fullscreen` boolean property
-  # (see gstwaylandsink.c) that instead directly calls
-  # xdg_toplevel_set_fullscreen on its own surface - the correct/reliable
-  # way to get a Wayland client fullscreen, independent of whatever the
-  # compositor's floating/tiling rules do. This also makes the sink
-  # selection deterministic (no more autovideosink autoplug at all for
-  # video), so GST_PLUGIN_FEATURE_RANK=kmssink:0 in miracleGstShim below
-  # is no longer strictly required, but is left in place as a harmless
-  # safety net in case some other pipeline in this shim's PATH is ever
-  # extended to use autovideosink again.
+  # NOTE: an attempt was made here to also replace "autovideosink" with
+  # an explicit "waylandsink fullscreen=true" (to fix the cast window
+  # rendering as a small native-resolution window instead of fullscreen)
+  # - REVERTED. Standalone/explicit waylandsink in this gst-plugins-bad
+  # version fails immediately with "Window has no size set" /
+  # "gst_wl_window_ensure_fullscreen: assertion 'self' failed" as soon as
+  # the first real frame arrives (confirmed live via
+  # `journalctl -u miraclecast-sinkctl`), which is fatal to the WHOLE
+  # gst-launch-1.0 process - since video and audio are two branches of
+  # the SAME pipeline/process here, this took down audio too, not just
+  # video (total cast failure, confirmed by user: "no video, no sound").
+  # autovideosink's own internal wrapping of waylandsink does NOT hit
+  # this - it must set up the window/size-negotiation differently
+  # (likely via its own GstVideoOverlay handling before the real sink is
+  # swapped in) - so autovideosink is kept here for now. The fullscreen
+  # sizing problem needs a different fix (e.g. a sway `for_window` rule
+  # matching GstWaylandSink's actual Wayland app_id/title once
+  # identified, rather than an element property), to be investigated
+  # separately without repeating this outage.
   miraclecastTuned = pkgs.miraclecast.overrideAttrs (oldAttrs: {
     postPatch = (oldAttrs.postPatch or "") + ''
       substituteInPlace res/miracle-gst \
         --replace-fail 'rtpjitterbuffer latency=100' 'rtpjitterbuffer latency=250' \
-        --replace-fail 'udpsrc port=$PORT caps=' 'udpsrc port=$PORT buffer-size=2097152 caps=' \
-        --replace-fail 'RUN+="autovideosink "' 'RUN+="waylandsink fullscreen=true "'
+        --replace-fail 'udpsrc port=$PORT caps=' 'udpsrc port=$PORT buffer-size=2097152 caps='
     '';
   });
 
