@@ -18,6 +18,23 @@ let
     echo "miraclecast: no wireless interface found" >&2
     exit 1
   '';
+
+  # miracle-sinkctl (running as root) spawns `miracle-gst` (via a bare-name
+  # execvpe lookup on PATH) to actually render the incoming video/audio.
+  # `miracle-gst`'s GStreamer pipeline refuses to work correctly as root
+  # though: it logs "XDG_RUNTIME_DIR (/run/user/<uid>) is not owned by us
+  # (uid 0), but by uid <uid>!" and never actually renders anything to the
+  # screen, even though the RTSP session and pipeline otherwise reach
+  # PLAYING state with caps correctly negotiated (confirmed via real IP
+  # traffic on the RTSP/RTP ports and `gst-launch-1.0 -v` output, but no
+  # video ever appears on the TV). This shim intercepts the `miracle-gst`
+  # lookup (placed first in the sinkctl service's PATH, ahead of
+  # miraclecast's own bin dir) and re-execs it as the `tv` user via
+  # `runuser`, inheriting the WAYLAND_DISPLAY/XDG_RUNTIME_DIR exported by
+  # the sinkctl service's ExecStart below.
+  miracleGstShim = pkgs.writeShellScriptBin "miracle-gst" ''
+    exec ${pkgs.util-linux}/bin/runuser -u tv -- ${pkgs.miraclecast}/bin/miracle-gst "$@"
+  '';
 in
 {
   options.bcl.role.tv.miracast = {
@@ -112,7 +129,16 @@ in
     # only ssh/icmp/established allowed, everything else hitting
     # nixos-fw-log-refuse, and via `ip addr`/miracle-dhcp both being up and
     # correctly configured on the group interface.
-    networking.firewall.interfaces."p2p-+".allowedUDPPorts = [ 67 ];
+    #
+    # Port 7236 (the standard Wi-Fi Display RTP port, hardcoded by
+    # miraclecast) needs the same treatment: the RTSP control session is a
+    # TCP connection sinkctl makes OUT to the phone (unaffected by the
+    # default-deny INBOUND policy), so it completes fine and `miracle-gst`'s
+    # GStreamer pipeline reaches PLAYING with correct caps negotiated - but
+    # the phone's actual inbound RTP video/audio packets on UDP 7236 were
+    # silently dropped, so no video ever reached the TV despite every other
+    # part of the pipeline reporting success.
+    networking.firewall.interfaces."p2p-+".allowedUDPPorts = [ 67 7236 ];
 
     sops.secrets.${pskSecretName} = lib.mkIf (global.secretFile != null) {
       sopsFile = global.secretFile;
@@ -146,7 +172,18 @@ in
         ExecStart = pkgs.writeShellScript "miraclecast-wifid-start" ''
           set -eu
           iface=$(${detectWifiInterface})
-          exec ${pkgs.miraclecast}/bin/miracle-wifid --interface="$iface"
+          # --use-dev works around an upstream issue where AP-STA-CONNECTED
+          # events delivered via the bus_dev (p2p-dev-<iface>) control
+          # socket arrive without an "ifname" field, causing
+          # supplicant_event_ap_sta_connected() to bail out early and never
+          # bind the connecting peer to its P2P group. Without this flag,
+          # `Connected` on the sink link never flips true and
+          # miracle-sinkctl never attempts the RTSP handshake - Android
+          # shows "connecting..." for ~30s then gives up. Confirmed via
+          # `miracle-wifid --log-level debug` showing "no ifname in
+          # AP-STA-CONNECTED" without the flag, and "bind peer ... to
+          # existing local group" with it.
+          exec ${pkgs.miraclecast}/bin/miracle-wifid --interface="$iface" --use-dev
         '';
         Restart = "on-failure";
         RestartSec = "2s";
@@ -226,6 +263,11 @@ in
       after = [ "miraclecast-wifid.service" ];
       wants = [ "miraclecast-wifid.service" ];
       wantedBy = [ "multi-user.target" ];
+      # miracleGstShim MUST come before pkgs.miraclecast here: sinkctl looks
+      # up "miracle-gst" by bare name (execvpe on PATH), and the first match
+      # wins - see miracleGstShim's own comment above for why it needs to
+      # intercept that lookup.
+      path = [ miracleGstShim pkgs.miraclecast ];
       serviceConfig = {
         ExecStart = pkgs.writeShellScript "miraclecast-sinkctl-start" ''
           set -eu
