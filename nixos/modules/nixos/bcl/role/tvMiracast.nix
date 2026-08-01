@@ -19,6 +19,34 @@ let
     exit 1
   '';
 
+  # miracle-gst (res/miracle-gst in upstream) is a plain bash script that
+  # builds and execs a hardcoded gst-launch-1.0 pipeline string - it does
+  # NOT expose udpsrc's buffer-size or rtpjitterbuffer's latency as CLI
+  # options. Confirmed live via `nstat -az | grep Udp`: UdpRcvbufErrors
+  # was non-zero (310 seen in one session) - real packet loss happening at
+  # the KERNEL UDP socket layer because udpsrc's receive buffer (its
+  # default `buffer-size` GstUDPSrc property, backed by SO_RCVBUF) fills
+  # up faster than the pipeline drains it during brief scheduling
+  # hiccups - visible on-screen as intermittent macroblock
+  # artifacts/glitches, since lost RTP packets in an MPEG-TS/H.264 stream
+  # corrupt whatever frame(s) they belonged to (no retransmission in this
+  # WFD RTP stream). Also bumping rtpjitterbuffer's latency from its
+  # hardcoded 100ms so brief network jitter/reordering over the P2P Wi-Fi
+  # link doesn't itself look like loss to the jitterbuffer. Patching just
+  # these two numeric values in the vendored script (at the same
+  # postPatch step nixpkgs already uses to fix up the gst-launch-1.0
+  # path) is deliberately narrow in scope - it only affects RTP-receive
+  # buffering, not any decode/render element, unlike the GPU-decode
+  # (vaapih264dec) experiment tried earlier that broke video AND audio
+  # entirely and was reverted.
+  miraclecastTuned = pkgs.miraclecast.overrideAttrs (oldAttrs: {
+    postPatch = (oldAttrs.postPatch or "") + ''
+      substituteInPlace res/miracle-gst \
+        --replace-fail 'rtpjitterbuffer latency=100' 'rtpjitterbuffer latency=250' \
+        --replace-fail 'udpsrc port=$PORT caps=' 'udpsrc port=$PORT buffer-size=2097152 caps='
+    '';
+  });
+
   # miracle-sinkctl (running as root) spawns `miracle-gst` (via a bare-name
   # execvpe lookup on PATH) to actually render the incoming video/audio.
   # `miracle-gst`'s GStreamer pipeline refuses to work correctly as root
@@ -52,7 +80,7 @@ let
   # forces the working GL/Wayland sink instead.
   miracleGstShim = pkgs.writeShellScriptBin "miracle-gst" ''
     export GST_PLUGIN_FEATURE_RANK=kmssink:0
-    exec ${pkgs.util-linux}/bin/runuser -u tv -- ${pkgs.miraclecast}/bin/miracle-gst "$@"
+    exec ${pkgs.util-linux}/bin/runuser -u tv -- ${miraclecastTuned}/bin/miracle-gst "$@"
   '';
 in
 {
