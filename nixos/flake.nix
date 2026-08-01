@@ -68,7 +68,7 @@
           # different bcl branch/feature (for testing, staged rollout, etc.)
           # while every other host keeps using this flake as normal. Several
           # hosts can share the same override input.
-          channelOverrides ? {},
+          bclOverrides ? {},
           ...
         }: let
           lib = bclInputs.snowfall-lib.mkLib {
@@ -88,7 +88,7 @@
               builtins.elem (nixpkgsLib.getName pkg) allowedInsecurePackages
               || (userChannelsConfig.allowInsecurePredicate or (_: false)) pkg;
           };
-          flake-options = builtins.removeAttrs flake-and-lib-options ["inputs" "src" "allowedUnfreePackages" "allowedInsecurePackages" "snowfall" "channelOverrides"];
+          flake-options = builtins.removeAttrs flake-and-lib-options ["inputs" "src" "allowedUnfreePackages" "allowedInsecurePackages" "snowfall" "bclOverrides"];
 
           baseFlake = lib.mkFlake (flake-options // {
             systems.modules.nixos = bclModules;
@@ -105,15 +105,15 @@
           });
 
           # Args passed down to each override input's own mkFlake: everything the
-          # caller passed to us, minus channelOverrides itself (each override
-          # build only needs to produce its own host's nixosConfiguration, not
-          # recurse into further overrides).
-          channelFlakeArgs = builtins.removeAttrs flake-and-lib-options ["channelOverrides"];
-          channelFlakes = nixpkgsLib.mapAttrs (host: channelInput: channelInput.mkFlake channelFlakeArgs) channelOverrides;
-          channelConfigurations = nixpkgsLib.mapAttrs (host: flake: flake.nixosConfigurations.${host}) channelFlakes;
+          # caller passed to us, minus bclOverrides itself (each override build
+          # only needs to produce its own host's nixosConfiguration, not recurse
+          # into further overrides).
+          overrideFlakeArgs = builtins.removeAttrs flake-and-lib-options ["bclOverrides"];
+          overrideFlakes = nixpkgsLib.mapAttrs (host: overrideInput: overrideInput.mkFlake overrideFlakeArgs) bclOverrides;
+          overrideConfigurations = nixpkgsLib.mapAttrs (host: flake: flake.nixosConfigurations.${host}) overrideFlakes;
         in
           baseFlake // {
-            nixosConfigurations = baseFlake.nixosConfigurations // channelConfigurations;
+            nixosConfigurations = baseFlake.nixosConfigurations // overrideConfigurations;
           };
   in
     bclFlake // {
