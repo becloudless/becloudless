@@ -42,7 +42,7 @@ let
   });
 in
 rustPlatform.buildRustPackage (finalAttrs: {
-  pname = "jellyfin-desktop";
+  pname = "jellium-desktop";
   version = "3.0.0-unstable-2026-06-21";
 
   src = fetchFromGitHub {
@@ -115,7 +115,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   meta = {
     description = "Jellyfin desktop client";
-    homepage = "https://github.com/jellyfin/jellyfin-desktop";
+    homepage = "https://github.com/andrewrabert/jellium-desktop";
     license = lib.licenses.gpl2Only;
     mainProgram = "jellyfin-desktop";
     platforms = [ "x86_64-linux" ];
