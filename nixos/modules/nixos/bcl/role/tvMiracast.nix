@@ -3,6 +3,21 @@ let
   cfg = config.bcl.role.tv.miracast;
   global = config.bcl.global;
   pskSecretName = "networking.wireless.${cfg.network.ssid}.password";
+
+  # Detects the (assumed single) wireless network interface at runtime, by
+  # looking for the first /sys/class/net/*/wireless dir - avoids requiring
+  # the interface name as a static option, since it can vary across
+  # hardware/driver/udev naming.
+  detectWifiInterface = pkgs.writeShellScript "miraclecast-detect-interface" ''
+    set -eu
+    for w in /sys/class/net/*/wireless; do
+      [ -d "$w" ] || continue
+      basename "$(dirname "$w")"
+      exit 0
+    done
+    echo "miraclecast: no wireless interface found" >&2
+    exit 1
+  '';
 in
 {
   options.bcl.role.tv.miracast = {
@@ -13,66 +28,74 @@ in
         Whether to enable the Miracast (Wi-Fi Display) receiver, to cast
         from Android devices without Google/Chromecast.
 
-        This runs concurrently with normal Wi-Fi networking on the SAME
-        physical radio (`interface`): the same trick Android itself uses to
-        keep your phone's own Wi-Fi connected while it casts. This is
-        possible because Wi-Fi Direct (P2P) group formation is handled by
-        the wpa_supplicant instance that already owns the "station" (STA)
-        interface - it dynamically spins up virtual P2P-Device/P2P-GO
-        interfaces on the same phy alongside the normal AP association,
-        rather than needing an entirely separate radio. Confirm your
-        hardware supports this via `iw phy <phy> info`: look for a "valid
-        interface combinations" entry listing "managed" together with
-        "P2P-client, P2P-GO" allowing more than 1 total interface (checked
-        on an Intel AX201: supported).
+        EXPERIMENTAL / UNVERIFIED: this runs concurrently with normal Wi-Fi
+        networking on the SAME physical radio (the auto-detected wireless
+        interface), the same idea Android itself uses to keep a phone's own
+        Wi-Fi connected while it
+        casts (P2P group formation happens via a separate virtual interface
+        - e.g. `p2p-dev-wlan0` - alongside the normal STA association,
+        rather than needing a second radio). However, upstream MiracleCast
+        has an explicitly still-open issue about this exact scenario
+        (https://github.com/albfan/miraclecast/issues/75, filed 2016, no
+        clean fix as of the maintainer's own last comment in Sep 2025) -
+        there is no officially confirmed/stable recipe for it, only
+        best-effort workarounds from various users. What's implemented
+        here is one such best-effort approach (injecting a station network
+        into miracle-wifid's own wpa_supplicant instance via its control
+        socket, see `miraclecast-join-wifi` below) that is NOT validated by
+        upstream and may break across driver/kernel/miraclecast updates.
+        Test thoroughly before relying on it; if it proves unreliable, the
+        safe fallback is a dedicated second wifi adapter for Miracast,
+        leaving the primary adapter solely under NetworkManager.
 
-        Since MiracleCast's own `miracle-wifid` always spawns its own
-        wpa_supplicant instance and takes exclusive ownership of whatever
-        interface it's given, `interface` is unmanaged by NetworkManager
-        and, instead, normal STA networking on it is achieved by injecting
-        an infrastructure network into that SAME wpa_supplicant instance at
-        runtime (via its control socket) and running dhcpcd scoped to just
-        that interface.
-      '';
-    };
-    interface = lib.mkOption {
-      type = lib.types.str;
-      description = ''
-        Name of the wifi network interface (e.g. "wlan0") shared between
-        normal station networking and Miracast's Wi-Fi Direct receiver.
+        Confirm your hardware/driver at least supports STA+P2P
+        concurrency in principle via `iw phy <phy> info`: look for a
+        "valid interface combinations" entry listing "managed" together
+        with "P2P-client, P2P-GO" allowing more than 1 total interface
+        (checked on an Intel AX201: supported) - this is necessary but not
+        sufficient, since the fragility above is in miraclecast's process
+        orchestration, not the underlying radio capability.
       '';
     };
     network = {
       ssid = lib.mkOption {
         type = lib.types.str;
         description = ''
-          SSID of the Wi-Fi network `interface` should associate to for
-          normal networking (e.g. to reach Jellyfin), concurrently with
-          acting as a Miracast receiver.
+          SSID of the Wi-Fi network the auto-detected wireless interface
+          should associate to for normal networking (e.g. to reach
+          Jellyfin), concurrently with acting as a Miracast receiver.
         '';
       };
     };
   };
 
   config = lib.mkIf (config.bcl.role.name == "tv" && cfg.enable) {
-    # miracle-wifid needs to be the sole owner of this interface's
+    # miracle-wifid needs to be the sole owner of the wireless interface's
     # wpa_supplicant (it always spawns/manages its own instance), so
-    # NetworkManager must not also try to manage/associate it.
-    networking.networkmanager.unmanaged = [ "interface-name:${cfg.interface}" ];
+    # NetworkManager must not also try to manage/associate any wifi device.
+    # Assumes a single wireless adapter is present (self-detected at
+    # runtime elsewhere below); if several are present, all of them become
+    # unmanaged by NetworkManager here even though only the auto-detected
+    # one is actually driven by miracle-wifid/the join-wifi service.
+    networking.networkmanager.unmanaged = [ "type:wifi" ];
 
-    # DHCP client for the STA role on `interface`, scoped to just this
-    # interface so it doesn't interfere with NetworkManager handling
-    # everything else (e.g. Ethernet).
-    networking.dhcpcd.allowInterfaces = [ cfg.interface ];
+    # DHCP client for the STA role on the wireless interface, scoped via a
+    # glob rather than a static name since it's auto-detected at runtime.
+    # Predictable wireless interface names always start with "wl" (wlan*,
+    # wlp*, wlo*, wlx*) under systemd's naming scheme, so this doesn't
+    # interfere with NetworkManager handling everything else (e.g. Ethernet).
+    networking.dhcpcd.allowInterfaces = [ "wl*" ];
 
     sops.secrets.${pskSecretName} = lib.mkIf (global.secretFile != null) {
       sopsFile = global.secretFile;
     };
 
-    # Tag the shared interface with "miracle", so miracle-wifid (built with
-    # rely-udev=true) manages it.
+    # Tag every wireless interface with "miracle", so miracle-wifid (built
+    # with rely-udev=true) is able to manage it. Since miracle-wifid is
+    # started below with an explicit --interface=<auto-detected>, only that
+    # one interface is actually used even if several are tagged.
     services.udev.extraRules = ''
-      SUBSYSTEM=="net", ACTION=="add|change", NAME=="${cfg.interface}", TAG+="miracle"
+      SUBSYSTEM=="net", ACTION=="add|change", TEST=="wireless", TAG+="miracle"
     '';
 
     # dbus policy allowing org.freedesktop.miracle.wifi (bundled in the package).
@@ -97,23 +120,38 @@ in
       wantedBy = [ "multi-user.target" ];
       path = [ pkgs.wpa_supplicant pkgs.miraclecast ];
       serviceConfig = {
-        ExecStart = "${pkgs.miraclecast}/bin/miracle-wifid --interface=${cfg.interface}";
+        ExecStart = pkgs.writeShellScript "miraclecast-wifid-start" ''
+          set -eu
+          iface=$(${detectWifiInterface})
+          exec ${pkgs.miraclecast}/bin/miracle-wifid --interface="$iface"
+        '';
         Restart = "on-failure";
         RestartSec = "2s";
       };
     };
 
-    # Concurrently join the normal Wi-Fi network on the SAME interface, by
-    # talking to the wpa_supplicant instance that miracle-wifid itself
-    # spawned (via its standard per-interface ctrl_interface socket at
-    # /run/miracle/wifi/<interface>) rather than running a second,
-    # conflicting wpa_supplicant. wpa_supplicant fully supports handling a
-    # normal infrastructure association and Wi-Fi Direct group formation at
-    # the same time on one interface/instance - this is exactly how P2P is
-    # designed to coexist with STA mode. A reconciliation loop (rather than
-    # a one-shot) is used because miracle-wifid regenerates and restarts
-    # its wpa_supplicant (fresh, without our injected network) whenever the
-    # link is (re)established, e.g. after a crash/interface replug.
+    # Concurrently join the normal Wi-Fi network on the SAME (auto-detected)
+    # interface, by talking to the wpa_supplicant instance that
+    # miracle-wifid itself spawned (via its standard per-interface
+    # ctrl_interface socket at /run/miracle/wifi/<interface>) rather than
+    # running a second, conflicting wpa_supplicant.
+    #
+    # EXPERIMENTAL: this is a best-effort workaround, NOT a confirmed/
+    # supported upstream recipe. See
+    # https://github.com/albfan/miraclecast/issues/75 (open since 2016):
+    # the only things upstream itself has ever confirmed working are (a)
+    # `--lazy-managed` + toggling exclusive ownership between
+    # NetworkManager and miracle-wifid (mutually exclusive, not
+    # concurrent), and (b) the maintainer's own Sep-2025 finding that
+    # stopping NetworkManager, starting miraclecast, then starting
+    # NetworkManager again can leave two wpa_supplicant processes
+    # coexisting (NetworkManager's on the main interface, miraclecast's on
+    # the auto-created `p2p-dev-<iface>`) - itself described by the
+    # maintainer as "not a big improvement" and unverified long-term.
+    # A reconciliation loop (rather than a one-shot) is used here because
+    # miracle-wifid regenerates and restarts its wpa_supplicant (fresh,
+    # without our injected network) whenever the link is (re)established,
+    # e.g. after a crash/interface replug.
     systemd.services.miraclecast-join-wifi = {
       description = "Join normal Wi-Fi network on the interface shared with Miracast";
       after = [ "miraclecast-wifid.service" ];
@@ -123,12 +161,14 @@ in
       serviceConfig = {
         ExecStart = pkgs.writeShellScript "miraclecast-join-wifi" ''
           set -eu
-          ctrl="/run/miracle/wifi/${cfg.interface}"
           psk_file="${lib.optionalString (global.secretFile != null) config.sops.secrets.${pskSecretName}.path}"
 
-          wpa_cli_() { wpa_cli -p /run/miracle/wifi -i "${cfg.interface}" "$@"; }
-
           while true; do
+            iface=$(${detectWifiInterface} 2>/dev/null) || { sleep 5; continue; }
+            ctrl="/run/miracle/wifi/$iface"
+
+            wpa_cli_() { wpa_cli -p /run/miracle/wifi -i "$iface" "$@"; }
+
             if [ -S "$ctrl" ] && ! wpa_cli_ list_networks 2>/dev/null | grep -q "^0"; then
               psk="$(cat "$psk_file")"
               id=$(wpa_cli_ add_network | tail -n1)
