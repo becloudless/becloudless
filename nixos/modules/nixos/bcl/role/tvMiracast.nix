@@ -301,5 +301,48 @@ in
         RestartSec = "2s";
       };
     };
+
+    # `miracle-sinkctl run <iface>` only enables P2P discovery
+    # (P2PScanning=true) ONCE, at startup (see run_on() in sinkctl.c). Per
+    # upstream's own code, wpa_supplicant's P2P_FIND naturally stops after
+    # ~20-30s (confirmed live via `busctl get-property ... P2PScanning`
+    # polling every 10s: it flips back to false and NEVER recovers on its
+    # own) and nothing in miraclecast re-issues it unless a peer
+    # connection attempt is already in flight (formation-failure/
+    # disconnect handlers) - there is NO generic idle keepalive. Result:
+    # the TV becomes invisible to phones a few seconds after boot, even
+    # though every service reports healthy. `miracle-wifictl p2p-scan` is
+    # the obvious fix but its command is marked CLI-only (CLI_Y) in
+    # wifictl.c, so it refuses non-interactive one-shot invocation
+    # ("unknown operation p2p-scan") - falling back to a direct D-Bus
+    # Property.Set call on P2PScanning instead (confirmed working live).
+    # The link's D-Bus object path is escaped-hex-encoded from its label
+    # (e.g. ifindex "3" -> "_33", since '3' is ASCII 0x33) which isn't
+    # worth reimplementing in shell - just discover the (always single,
+    # per this module's single-interface design) link path dynamically
+    # via `busctl tree` each run instead.
+    systemd.services.miraclecast-p2p-keepalive = {
+      description = "Keep MiracleCast P2P discovery (re-)enabled";
+      serviceConfig.Type = "oneshot";
+      serviceConfig.ExecStart = pkgs.writeShellScript "miraclecast-p2p-keepalive" ''
+        set -eu
+        link_path=$(${pkgs.systemd}/bin/busctl tree org.freedesktop.miracle.wifi 2>/dev/null \
+          | ${pkgs.gnugrep}/bin/grep -o '/org/freedesktop/miracle/wifi/link/_[0-9A-Za-z]*' \
+          | head -n1)
+        if [ -n "$link_path" ]; then
+          ${pkgs.systemd}/bin/busctl set-property org.freedesktop.miracle.wifi \
+            "$link_path" org.freedesktop.miracle.wifi.Link P2PScanning b true
+        fi
+      '';
+    };
+
+    systemd.timers.miraclecast-p2p-keepalive = {
+      description = "Timer for miraclecast-p2p-keepalive";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnBootSec = "5s";
+        OnUnitActiveSec = "15s";
+      };
+    };
   };
 }
