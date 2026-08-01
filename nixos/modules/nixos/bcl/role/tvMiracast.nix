@@ -97,6 +97,23 @@ in
     networking.useDHCP = lib.mkForce true;
     networking.dhcpcd.allowInterfaces = [ "wl*" ];
 
+    # Allow the P2P group-owner's DHCP server (miracle-dhcp, spawned by
+    # miracle-wifid) to receive DHCP DISCOVER/REQUEST broadcasts from
+    # casting devices on the dynamically-created P2P group interface
+    # (always named "p2p-<parent-iface>-<N>", e.g. p2p-wlo1-0 - the "p2p-+"
+    # key below uses iptables' trailing "+" wildcard to match any such
+    # name). Without this, the NixOS firewall's default-deny policy
+    # silently drops the incoming DHCP packets (new/non-established
+    # connections are dropped unless explicitly allowed): the phone
+    # completes the WPA/P2P handshake fine (visible as "AP-STA-CONNECTED"
+    # in miracle-wifid's log) but then never gets an IP, so Android shows
+    # "connecting..." for a while and then gives up, removing the device
+    # from its cast list - confirmed via `iptables -L nixos-fw -v` showing
+    # only ssh/icmp/established allowed, everything else hitting
+    # nixos-fw-log-refuse, and via `ip addr`/miracle-dhcp both being up and
+    # correctly configured on the group interface.
+    networking.firewall.interfaces."p2p-+".allowedUDPPorts = [ 67 ];
+
     sops.secrets.${pskSecretName} = lib.mkIf (global.secretFile != null) {
       sopsFile = global.secretFile;
     };
