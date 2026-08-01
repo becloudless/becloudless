@@ -12,7 +12,27 @@ let
     set -eu
     for w in /sys/class/net/*/wireless; do
       [ -d "$w" ] || continue
-      basename "$(dirname "$w")"
+      name=$(basename "$(dirname "$w")")
+      # Skip miracle-wifid's own P2P group interfaces (named
+      # "p2p-<iface>-N" thanks to --use-dev). These only exist while a
+      # cast is actively connected, also have a "wireless" sysfs dir, and
+      # sort ALPHABETICALLY BEFORE the real physical interface ("p" <
+      # "w"/etc) - without this filter, this function would start
+      # returning the transient P2P group interface instead of the
+      # physical STA interface the moment a phone connects, breaking
+      # every caller that assumes it always gets the STA interface (SSID
+      # injection, channel-forcing, device_name - see
+      # miraclecast-join-wifi below). Confirmed live: right after a
+      # successful P2P-GO-NEG-SUCCESS, this returned "p2p-wlo1-0" instead
+      # of "wlo1", and miraclecast-join-wifi's next loop iteration then
+      # ran wpa_cli against that transient interface and crashed
+      # (set -eu, unguarded wpa_cli_ call), which combined with
+      # Restart=always/RestartSec=2s crash-looped the service for the
+      # remainder of the cast and killed it.
+      case "$name" in
+        p2p-*) continue ;;
+      esac
+      printf '%s' "$name"
       exit 0
     done
     echo "miraclecast: no wireless interface found" >&2
@@ -333,12 +353,24 @@ in
 
             wpa_cli_() { wpa_cli -p /run/miracle/wifi -i "$iface" "$@"; }
 
+            # Guard every wpa_cli_ call here with `|| true` (alongside the
+            # `set -eu` at the top of this script): a transient failure
+            # (e.g. miracle-wifid mid-(re)initializing its wpa_supplicant
+            # instance, or the wpa_cli client-side ctrl-socket dir
+            # momentarily missing/being recreated) would otherwise exit
+            # the WHOLE script immediately, and combined with
+            # Restart=always/RestartSec=2s that crash-loops this service
+            # instead of just skipping to the next 5s reconciliation pass
+            # - confirmed live to happen right as a phone's P2P group was
+            # forming, killing the in-progress cast.
             if [ -S "$ctrl" ] && ! wpa_cli_ list_networks 2>/dev/null | grep -q "^0"; then
               psk="$(cat "$psk_file")"
-              id=$(wpa_cli_ add_network | tail -n1)
-              wpa_cli_ set_network "$id" ssid "\"${cfg.network.ssid}\""
-              wpa_cli_ set_network "$id" psk "\"$psk\""
-              wpa_cli_ enable_network "$id"
+              id=$(wpa_cli_ add_network 2>/dev/null | tail -n1) || id=""
+              if [ -n "$id" ]; then
+                wpa_cli_ set_network "$id" ssid "\"${cfg.network.ssid}\"" >/dev/null 2>&1 || true
+                wpa_cli_ set_network "$id" psk "\"$psk\"" >/dev/null 2>&1 || true
+                wpa_cli_ enable_network "$id" >/dev/null 2>&1 || true
+              fi
             fi
 
             # Force the P2P group onto the SAME channel/band as the
