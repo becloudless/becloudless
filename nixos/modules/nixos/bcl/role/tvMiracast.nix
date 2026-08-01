@@ -59,10 +59,33 @@ let
   # matching GstWaylandSink's actual Wayland app_id/title once
   # identified, rather than an element property), to be investigated
   # separately without repeating this outage.
+  #
+  # Further latency bump (250ms -> 400ms): after the buffer-size fix
+  # above, `nstat -az | grep Udp` confirmed UdpRcvbufErrors dropped to 0
+  # (no more kernel-level overflow), yet some visible artifacts
+  # persisted. `iw dev <p2p-iface> station dump` on the connected peer
+  # showed only -65/-68 dBm signal on a 2.4GHz P2P group (channel 6,
+  # negotiated automatically by wpa_supplicant/the phone - miracle-wifid
+  # doesn't expose any option to force 5GHz or a specific channel, and
+  # patching that in would mean changing miraclecast's C source, not just
+  # this script - too risky to attempt blindly after two pipeline changes
+  # already caused full outages this session). That signal/channel
+  # combination is consistent with genuine RF-level frame loss (real
+  # radio interference/retries on a busy 2.4GHz band), which no amount of
+  # RECEIVE-side buffering can fully recover since the data was never
+  # correctly received in the first place - only the reordering/jitter
+  # portion of it is something rtpjitterbuffer can help smooth over. This
+  # extra latency is a modest, low-risk trade-off (turns brief
+  # reordering into "late but complete" instead of "gap", at the cost of
+  # ~150ms more end-to-end lag) - it will NOT eliminate artifacts caused
+  # by frames that were truly never received; that would require
+  # improving the actual Wi-Fi signal (e.g. reducing distance/obstacles
+  # between the TV and the phone, or reducing 2.4GHz interference from
+  # other devices).
   miraclecastTuned = pkgs.miraclecast.overrideAttrs (oldAttrs: {
     postPatch = (oldAttrs.postPatch or "") + ''
       substituteInPlace res/miracle-gst \
-        --replace-fail 'rtpjitterbuffer latency=100' 'rtpjitterbuffer latency=250' \
+        --replace-fail 'rtpjitterbuffer latency=100' 'rtpjitterbuffer latency=400' \
         --replace-fail 'udpsrc port=$PORT caps=' 'udpsrc port=$PORT buffer-size=2097152 caps='
     '';
   });
