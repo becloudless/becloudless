@@ -114,15 +114,10 @@ in
 
     environment.systemPackages = [ pkgs.miraclecast ];
 
-    # Auto-run the sink on link "1" (the only managed link, since a single
-    # interface is shared) as soon as sinkctl starts, so no manual
-    # interaction is needed. Also auto-accepts incoming Wi-Fi Direct
-    # connections (built-in miraclecast behaviour) with no PIN/confirmation
-    # - any nearby device can cast to this TV.
-    environment.etc."miraclecastrc".text = ''
-      [sinkctl]
-      autocmd=run 1
-    '';
+    # Wi-Fi Direct connections are auto-accepted with no PIN/confirmation
+    # (built-in miraclecast behaviour) - any nearby device can cast to this
+    # TV once `miracle-sinkctl run <link>` is running (see
+    # miraclecast-sinkctl below).
 
     systemd.services.miraclecast-wifid = {
       description = "MiracleCast Wi-Fi Display (P2P) management daemon";
@@ -228,7 +223,20 @@ in
           export XDG_RUNTIME_DIR="$runtime_dir"
           export WAYLAND_DISPLAY="$(${pkgs.coreutils}/bin/basename "$lock" .lock)"
 
-          exec ${pkgs.miraclecast}/bin/miracle-sinkctl
+          # miracle-wifid labels its dbus link objects by the interface's
+          # ifindex (e.g. "3"), which is unknowable at build time and can
+          # differ across hosts/reboots - so a static "run <link>" config
+          # can't hardcode a link number. `miracle-sinkctl`'s link lookup
+          # (ctl_wifi_search_link) also matches by INTERFACE NAME though,
+          # so pass that instead. This previously relied on a static
+          # /etc/miraclecastrc with `autocmd=run 1`, which silently never
+          # matched any real link (labels are ifindex-based, not always
+          # "1") - the sink was NEVER actually started, confirmed via
+          # `busctl` showing the link's WfdSubelements/P2PScanning still
+          # at their unset defaults despite the service running with no
+          # errors.
+          iface=$(${detectWifiInterface})
+          exec ${pkgs.miraclecast}/bin/miracle-sinkctl run "$iface"
         '';
         Restart = "on-failure";
         RestartSec = "2s";
