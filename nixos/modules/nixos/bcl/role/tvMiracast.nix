@@ -294,8 +294,37 @@ in
 
           # Wait for the tv user's Wayland compositor (sway) to be up, so
           # miracle-gst has somewhere to render the incoming video into.
-          until lock=$(${pkgs.coreutils}/bin/ls "$runtime_dir"/wayland-*.lock 2>/dev/null | head -n1); do
-            sleep 1
+          #
+          # NOTE: a previous version of this wait loop used
+          # `until lock=$(ls "$runtime_dir"/wayland-*.lock | head -n1); do
+          # sleep 1; done` - which is BROKEN: the exit status of a
+          # `var=$(pipeline)` assignment is the exit status of the LAST
+          # command in the pipeline, i.e. `head -n1`, which always
+          # succeeds (exit 0) even when it reads zero bytes because `ls`
+          # found no matching file. So that loop never actually waited -
+          # it always fell through on its very first iteration, with
+          # `lock` empty whenever sway's socket didn't exist yet. Since
+          # this service is long-running and only computes
+          # WAYLAND_DISPLAY once at its own startup, hitting that race at
+          # boot (sinkctl starting before sway creates its
+          # wayland-*.lock) permanently cached WAYLAND_DISPLAY="" for the
+          # service's whole lifetime - confirmed live via
+          # `cat /proc/<sinkctl-pid>/environ`showing an empty
+          # WAYLAND_DISPLAY after a cold reboot, even though a valid
+          # wayland-1 socket existed by the time a phone actually
+          # connected. Symptom: audio plays fine (routed via PulseAudio,
+          # unaffected) but no video ever appears, because every
+          # Wayland-based GStreamer video sink fails to connect and
+          # autovideosink silently falls back to its internal no-op
+          # fake-video-sink. This plain bash glob (no ls/head pipe)
+          # doesn't have that problem: the loop condition is a direct
+          # `[ -e ... ]` test, not a pipeline's exit status.
+          lock=""
+          until [ -n "$lock" ]; do
+            for candidate in "$runtime_dir"/wayland-*.lock; do
+              [ -e "$candidate" ] && lock="$candidate" && break
+            done
+            [ -n "$lock" ] || sleep 1
           done
 
           export XDG_RUNTIME_DIR="$runtime_dir"
@@ -348,7 +377,24 @@ in
         link_path=$(${pkgs.systemd}/bin/busctl tree org.freedesktop.miracle.wifi 2>/dev/null \
           | ${pkgs.gnugrep}/bin/grep -o '/org/freedesktop/miracle/wifi/link/_[0-9A-Za-z]*' \
           | head -n1)
-        if [ -n "$link_path" ]; then
+        if [ -z "$link_path" ]; then
+          exit 0
+        fi
+
+        # Only re-arm scanning if it's CURRENTLY disabled. Blindly calling
+        # Set every 15s regardless of state re-triggers wpa_supplicant's
+        # P2P_FIND even while a scan or GO-negotiation is already
+        # in-flight, logged as "P2P: Reject scan trigger since one is
+        # already pending" - confirmed live to coincide exactly with a
+        # phone's P2P-PROV-DISC-PBC-REQ retries never reaching
+        # AP-STA-CONNECTED (a full regression back to the "connection
+        # fails after ~30s" symptom this timer was meant to fix in the
+        # first place). Checking current state first avoids interrupting
+        # an in-progress connection attempt.
+        scanning=$(${pkgs.systemd}/bin/busctl get-property org.freedesktop.miracle.wifi \
+          "$link_path" org.freedesktop.miracle.wifi.Link P2PScanning 2>/dev/null \
+          | ${pkgs.gawk}/bin/awk '{print $2}')
+        if [ "$scanning" != "true" ]; then
           ${pkgs.systemd}/bin/busctl set-property org.freedesktop.miracle.wifi \
             "$link_path" org.freedesktop.miracle.wifi.Link P2PScanning b true
         fi
