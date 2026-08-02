@@ -2,7 +2,48 @@
 let
   cfg = config.bcl.role.tv.miracast;
   global = config.bcl.global;
-  pskSecretName = "networking.wireless.${cfg.network.ssid}.password";
+
+  # SSID(s) to inject into miracle-wifid's own wpa_supplicant instance for
+  # normal (STA) networking, alongside its P2P/Miracast role.
+  #
+  # If cfg.network.ssid is set explicitly, only that one SSID is used.
+  # Otherwise, self-deduce candidates from the infra's already-known wifi
+  # networks - the exact same source bcl.wifi.nix's NetworkManager
+  # profiles are generated from: any SSID with a
+  # "networking.wireless.<ssid>.password" key in bcl.global.secretFile,
+  # plus any key of bcl.global.networking.wireless. All candidates get
+  # injected as SEPARATE wpa_supplicant networks below (like a normal
+  # multi-profile wpa_supplicant/NetworkManager config) - wpa_supplicant
+  # itself then picks whichever network is actually in range (by signal
+  # strength), so this role doesn't need its own dedicated SSID
+  # hardcoded, it can share the same "known networks" list every other
+  # host on the infra already uses.
+  ssidsFromSecretFile =
+    if global.secretFile == null then []
+    else
+      let
+        lines = lib.splitString "\n" (builtins.readFile global.secretFile);
+        prefix = "networking.wireless.";
+        extractSsid = line:
+          if lib.hasPrefix prefix line
+          then
+            let
+              withoutPrefix = lib.removePrefix prefix line;
+              parts = lib.splitString "." withoutPrefix;
+            in
+              # parts = [ "<ssid>" "password:" ... ] — need at least 2
+              # elements and the second element must start with "password:"
+              if lib.length parts >= 2 && lib.hasPrefix "password:" (lib.elemAt parts 1)
+              then lib.head parts
+              else null
+          else null;
+      in lib.filter (s: s != null) (map extractSsid lines);
+
+  ssidsToJoin =
+    if cfg.network.ssid != null then [ cfg.network.ssid ]
+    else lib.unique (ssidsFromSecretFile ++ builtins.attrNames global.networking.wireless);
+
+  pskSecretNameFor = ssid: "networking.wireless.${ssid}.password";
 
   # Detects the (assumed single) wireless network interface at runtime, by
   # looking for the first /sys/class/net/*/wireless dir - avoids requiring
@@ -186,11 +227,28 @@ in
     };
     network = {
       ssid = lib.mkOption {
-        type = lib.types.str;
+        type = lib.types.nullOr lib.types.str;
+        default = null;
         description = ''
           SSID of the Wi-Fi network the auto-detected wireless interface
           should associate to for normal networking (e.g. to reach
           Jellyfin), concurrently with acting as a Miracast receiver.
+
+          Defaults to null, which self-deduces candidate SSIDs from the
+          infra's already-known wifi networks instead of requiring one to
+          be hardcoded here: every SSID with a
+          "networking.wireless.<ssid>.password" key in
+          bcl.global.secretFile, plus every key of
+          bcl.global.networking.wireless, is injected as a separate
+          wpa_supplicant network (same as a normal multi-profile
+          wpa_supplicant/NetworkManager config) - wpa_supplicant itself
+          then picks whichever network is actually in range (by signal
+          strength), so this TV role doesn't need its own dedicated SSID
+          configured, it can share the same "known networks" list every
+          other host on the infra already uses (via bcl.wifi.nix).
+
+          Set explicitly only if this TV should join one specific SSID
+          regardless of what else is known/in range.
         '';
       };
     };
@@ -250,9 +308,12 @@ in
     # part of the pipeline reporting success.
     networking.firewall.interfaces."p2p-+".allowedUDPPorts = [ 67 7236 ];
 
-    sops.secrets.${pskSecretName} = lib.mkIf (global.secretFile != null) {
-      sopsFile = global.secretFile;
-    };
+    sops.secrets = lib.mkIf (global.secretFile != null) (
+      lib.listToAttrs (map (ssid: {
+        name = pskSecretNameFor ssid;
+        value = { sopsFile = global.secretFile; };
+      }) ssidsToJoin)
+    );
 
     # Tag every wireless interface with "miracle", so miracle-wifid (built
     # with rely-udev=true) is able to manage it. Since miracle-wifid is
@@ -345,7 +406,6 @@ in
         ExecStartPre = "+${pkgs.coreutils}/bin/mkdir -p /run/wpa_supplicant/client";
         ExecStart = pkgs.writeShellScript "miraclecast-join-wifi" ''
           set -eu
-          psk_file="${lib.optionalString (global.secretFile != null) config.sops.secrets.${pskSecretName}.path}"
 
           while true; do
             iface=$(${detectWifiInterface} 2>/dev/null) || { sleep 5; continue; }
@@ -363,14 +423,29 @@ in
             # instead of just skipping to the next 5s reconciliation pass
             # - confirmed live to happen right as a phone's P2P group was
             # forming, killing the in-progress cast.
-            if [ -S "$ctrl" ] && ! wpa_cli_ list_networks 2>/dev/null | grep -q "^0"; then
-              psk="$(cat "$psk_file")"
-              id=$(wpa_cli_ add_network 2>/dev/null | tail -n1) || id=""
-              if [ -n "$id" ]; then
-                wpa_cli_ set_network "$id" ssid "\"${cfg.network.ssid}\"" >/dev/null 2>&1 || true
-                wpa_cli_ set_network "$id" psk "\"$psk\"" >/dev/null 2>&1 || true
-                wpa_cli_ enable_network "$id" >/dev/null 2>&1 || true
-              fi
+            # Inject every candidate SSID (see ssidsToJoin above) as its
+            # own wpa_supplicant network, skipping ones already present -
+            # letting wpa_supplicant pick whichever is actually in range
+            # itself, exactly like a normal multi-profile wpa_supplicant/
+            # NetworkManager config would. Candidates are baked in at
+            # build time as tab-separated "ssid<TAB>psk-secret-path"
+            # lines, since the SSID list and per-SSID sops secret paths
+            # are only known at Nix eval time, not at runtime.
+            if [ -S "$ctrl" ]; then
+              existing_ssids=$(wpa_cli_ list_networks 2>/dev/null | tail -n +2 | cut -f2)
+              while IFS=$'\t' read -r cand_ssid cand_psk_file; do
+                [ -z "$cand_ssid" ] && continue
+                printf '%s\n' "$existing_ssids" | grep -qxF "$cand_ssid" && continue
+                psk="$(cat "$cand_psk_file" 2>/dev/null)" || continue
+                id=$(wpa_cli_ add_network 2>/dev/null | tail -n1) || id=""
+                if [ -n "$id" ]; then
+                  wpa_cli_ set_network "$id" ssid "\"$cand_ssid\"" >/dev/null 2>&1 || true
+                  wpa_cli_ set_network "$id" psk "\"$psk\"" >/dev/null 2>&1 || true
+                  wpa_cli_ enable_network "$id" >/dev/null 2>&1 || true
+                fi
+              done <<'MIRACAST_SSID_CANDIDATES'
+${if global.secretFile != null then lib.concatMapStringsSep "\n" (ssid: "${ssid}\t${config.sops.secrets.${pskSecretNameFor ssid}.path}") ssidsToJoin else ""}
+MIRACAST_SSID_CANDIDATES
             fi
 
             # Force the P2P group onto the SAME channel/band as the
