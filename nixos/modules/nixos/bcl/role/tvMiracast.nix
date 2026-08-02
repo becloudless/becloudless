@@ -431,17 +431,41 @@ in
             # build time as tab-separated "ssid<TAB>psk-secret-path"
             # lines, since the SSID list and per-SSID sops secret paths
             # are only known at Nix eval time, not at runtime.
+            #
+            # Deliberately avoids `cut`/external text-processing tools
+            # beyond what's already used elsewhere in this script (plain
+            # `read`/`grep`/`printf`) to sidestep any doubt about which
+            # coreutils are actually on PATH for this service.
             if [ -S "$ctrl" ]; then
-              existing_ssids=$(wpa_cli_ list_networks 2>/dev/null | tail -n +2 | cut -f2)
+              existing_ssids=""
+              while IFS=$'\t' read -r ex_id ex_ssid ex_rest; do
+                [ -z "$ex_id" ] && continue
+                existing_ssids="$existing_ssids
+$ex_ssid"
+              done < <(wpa_cli_ list_networks 2>/dev/null | tail -n +2)
               while IFS=$'\t' read -r cand_ssid cand_psk_file; do
                 [ -z "$cand_ssid" ] && continue
-                printf '%s\n' "$existing_ssids" | grep -qxF "$cand_ssid" && continue
-                psk="$(cat "$cand_psk_file" 2>/dev/null)" || continue
-                id=$(wpa_cli_ add_network 2>/dev/null | tail -n1) || id=""
+                if printf '%s\n' "$existing_ssids" | grep -qxF "$cand_ssid"; then
+                  continue
+                fi
+                psk="$(cat "$cand_psk_file" 2>/dev/null)"
+                if [ -z "$psk" ]; then
+                  echo "miraclecast-join-wifi: could not read psk file for SSID '$cand_ssid' ($cand_psk_file), skipping" >&2
+                  continue
+                fi
+                add_out="$(wpa_cli_ add_network 2>&1)"
+                id="$(printf '%s\n' "$add_out" | tail -n1)"
+                case "$id" in
+                  ""|*[!0-9]*)
+                    echo "miraclecast-join-wifi: add_network failed for SSID '$cand_ssid' on $iface: $add_out" >&2
+                    id=""
+                    ;;
+                esac
                 if [ -n "$id" ]; then
-                  wpa_cli_ set_network "$id" ssid "\"$cand_ssid\"" >/dev/null 2>&1 || true
-                  wpa_cli_ set_network "$id" psk "\"$psk\"" >/dev/null 2>&1 || true
-                  wpa_cli_ enable_network "$id" >/dev/null 2>&1 || true
+                  set_ssid_out="$(wpa_cli_ set_network "$id" ssid "\"$cand_ssid\"" 2>&1)" || true
+                  set_psk_out="$(wpa_cli_ set_network "$id" psk "\"$psk\"" 2>&1)" || true
+                  enable_out="$(wpa_cli_ enable_network "$id" 2>&1)" || true
+                  echo "miraclecast-join-wifi: added network '$cand_ssid' (id=$id) on $iface (set_ssid=$set_ssid_out set_psk=$set_psk_out enable=$enable_out)" >&2
                 fi
               done <<'MIRACAST_SSID_CANDIDATES'
 ${if global.secretFile != null then lib.concatMapStringsSep "\n" (ssid: "${ssid}\t${config.sops.secrets.${pskSecretNameFor ssid}.path}") ssidsToJoin else ""}
