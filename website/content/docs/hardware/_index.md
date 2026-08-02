@@ -9,5 +9,6 @@ Hardware guides cover device-specific procedures for flashing firmware, installi
 {{< cards >}}
   {{< card link="adding-hardware" title="Adding Hardware" >}}
   {{< card link="orangepi" title="Orange Pi" >}}
+  {{< card link="wifi-p2p" title="Wi-Fi P2P / Miracast Compatibility" >}}
 {{< /cards >}}
 

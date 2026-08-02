@@ -66,6 +66,10 @@ in
         set -x
 
         PLAYLIST="$HOME/.cache/screensaver.m3u"
+        STATE_DIR="$HOME/.cache/screensaver-state"
+        mkdir -p "$STATE_DIR"
+        echo 0 > "$STATE_DIR/jellyfin-playing"
+        echo 0 > "$STATE_DIR/casting-active"
 
         function disableScreensaver {
           pid=$(pgrep -f mpv || true)
@@ -81,17 +85,53 @@ in
           mpv --fs --loop-playlist=inf --image-display-duration=30 --no-osd-bar --panscan=0 --scale=bilinear --video-unscaled=no --mute=yes --speed=0.5 --osd-playing-msg=\''${media-title} --osd-duration=3600000 --osd-font-size=12 --osd-align-x=left --osd-align-y=bottom --script=${clockOverlayScript} "$PLAYLIST" &
         }
 
+        # Screensaver must stay off if EITHER jellyfin is actively playing
+        # something OR a Miracast/Wi-Fi Display cast session is active -
+        # each tracked in its own state file (updated by the two
+        # independent monitor loops below) so one source's "idle" doesn't
+        # incorrectly re-enable the screensaver over the other's "active".
+        function updateScreensaverState {
+          if [ "$(cat "$STATE_DIR/jellyfin-playing")" = "1" ] || [ "$(cat "$STATE_DIR/casting-active")" = "1" ]; then
+            disableScreensaver
+          else
+            displayScreensaver
+          fi
+        }
+
+        # Detects an active cast session by polling for the gst-launch-1.0
+        # RTP-receive pipeline that miraclecast's `miracle-gst` spawns only
+        # while actually rendering an incoming cast (see tvMiracast.nix) -
+        # it exits/gets killed as soon as the cast session ends, so its
+        # mere presence is a reliable, protocol-agnostic proxy for "cast in
+        # progress" without needing to parse miraclecast's D-Bus state.
+        function monitorCasting {
+          while true; do
+            if pgrep -f 'gst-launch-1.0.*udpsrc' >/dev/null 2>&1; then
+              new=1
+            else
+              new=0
+            fi
+            old=$(cat "$STATE_DIR/casting-active")
+            if [ "$new" != "$old" ]; then
+              echo "$new" > "$STATE_DIR/casting-active"
+              updateScreensaverState
+            fi
+            sleep 2
+          done
+        }
+
         ############################
         sleep 5
         displayScreensaver
+        monitorCasting &
         tail -fn0 ~/.config/jellyfin-desktop/jellyfin-desktop.log \
           | grep --line-buffered "Firing signal:" \
           | while read line; do
               state=$(echo $line | sed 's/.*Firing signal: \([a-z]*\).*/\1/')
               case $state in
-                playing) disableScreensaver;;
-                canceled) displayScreensaver;;
-                finished) displayScreensaver;;
+                playing) echo 1 > "$STATE_DIR/jellyfin-playing"; updateScreensaverState;;
+                canceled) echo 0 > "$STATE_DIR/jellyfin-playing"; updateScreensaverState;;
+                finished) echo 0 > "$STATE_DIR/jellyfin-playing"; updateScreensaverState;;
                 *) echo "Unknown state $state";;
               esac
             done
