@@ -191,7 +191,7 @@ in
   options.bcl.role.tv.miracast = {
     enable = lib.mkOption {
       type = lib.types.bool;
-      default = false;
+      default = true;
       description = ''
         Whether to enable the Miracast (Wi-Fi Display) receiver, to cast
         from Android devices without Google/Chromecast.
