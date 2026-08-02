@@ -453,7 +453,7 @@ $ex_ssid"
                   echo "miraclecast-join-wifi: could not read psk file for SSID '$cand_ssid' ($cand_psk_file), skipping" >&2
                   continue
                 fi
-                add_out="$(wpa_cli_ add_network 2>&1)"
+                add_out="$(wpa_cli_ add_network 2>&1)" || true
                 id="$(printf '%s\n' "$add_out" | tail -n1)"
                 case "$id" in
                   ""|*[!0-9]*)
