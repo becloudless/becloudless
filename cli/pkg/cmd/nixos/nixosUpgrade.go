@@ -74,8 +74,10 @@ func nixosUpgradeCmd() *cobra.Command {
 				return upgradeLocalFromUpstream(action, systemName)
 			case remote && useLocalGitRepository:
 				return upgradeRemoteTargetHostFromGit(&sshConfig, action, systemName)
-			default:
+			case remote && !useLocalGitRepository:
 				return upgradeRemoteFromUpstream(&sshConfig, action, systemName)
+			default:
+				return errs.With("Unsupported update case")
 			}
 		},
 	}
