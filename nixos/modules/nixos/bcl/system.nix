@@ -7,6 +7,7 @@
 with lib.bcl;
 let
   cfg = config.bcl.system;
+  globalRepository = config.bcl.global.git.repository or null;
 in {
   options.bcl.system = {
     enable = lib.mkEnableOption "Enable the default settings?";
@@ -53,6 +54,16 @@ in {
       type = lib.types.str;
       default = "";
     };
+    repository = lib.mkOption {
+      type = lib.types.str;
+      default = if globalRepository != null then globalRepository else "";
+      description = ''
+        Upstream infra git repository used by the bcl CLI (e.g. "bcl nixos upgrade")
+        when no local git repository / --git flag is used. Written to
+        /etc/bcl/config.yaml so it doesn't need to be passed on the command line.
+        Defaults to bcl.global.git.repository.
+      '';
+    };
   };
 
 
@@ -62,6 +73,11 @@ in {
         sopsFile = lib.mkDefault cfg.sopsFile;
       }) config.bcl.users.users
     );
+
+    environment.etc."bcl/config.yaml".source =
+      (pkgs.formats.yaml { }).generate "bcl-config.yaml" {
+        repository = cfg.repository;
+      };
 
     bcl = {
       global = {

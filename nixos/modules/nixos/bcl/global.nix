@@ -17,6 +17,17 @@ in {
       type = lib.types.nullOr (lib.types.submodule ({ ... }: {
         options = {
           publicKey = lib.mkOption { type = lib.types.str; description = "Git repo public key"; };
+          repository = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = ''
+              Upstream infra git repository (e.g. "git@gitea.lmr.fr:lmr/infra.git").
+              Used as the default for bcl.system.repository, written to
+              /etc/bcl/config.yaml so the bcl CLI (e.g. "bcl nixos upgrade") knows
+              where to pull the infra flake from without it being passed on the
+              command line.
+            '';
+          };
         };
       }));
       default = null;
