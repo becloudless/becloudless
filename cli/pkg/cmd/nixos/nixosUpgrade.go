@@ -65,90 +65,17 @@ func nixosUpgradeCmd() *cobra.Command {
 		Short:   "upgrade NixOS system",
 		Long:    "Small wrapper around nixos-rebuild to upgrade NixOS system from current infra git repo",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if sshConfig.Host == "" {
-				if useLocalGitRepository {
-					logs.WithField("repo", bcl.BCL.System.Repository).Info("Update current system using local git repository state")
+			remote := sshConfig.Host != ""
 
-					repository, err := bclGit.OpenRepository(".")
-					if errs.Is(err, git.ErrRepositoryNotExists) {
-						return errs.With("Not an infra folder")
-					} else if err != nil {
-						return errs.WithE(err, "Failed to open git repository")
-					}
-
-					// Nix build process only files that are in git state
-					if err := repository.AddAll(); err != nil {
-						return errs.WithE(err, "failed to add changes to git")
-					}
-
-					var run runner.Runner = runner.NewLocalRunner()
-					if os.Geteuid() != 0 {
-						sudoRun, err := runner.NewSudoRunner(run)
-						if err != nil {
-							return errs.WithE(err, "Failed to create sudo runner")
-						}
-						run = sudoRun
-					}
-
-					return run.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(filepath.Join(repository.Root, "nixos"), systemName))
-				} else {
-					logs.WithField("repo", bcl.BCL.System.Repository).Info("Update current system using upstream state")
-
-					var run runner.Runner = runner.NewLocalRunner()
-					if os.Geteuid() != 0 {
-						sudoRun, err := runner.NewSudoRunner(run)
-						if err != nil {
-							return errs.WithE(err, "Failed to create sudo runner")
-						}
-						run = sudoRun
-					}
-
-					return run.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(bcl.BCL.System.Repository, systemName))
-				}
-
-			} else {
-				if useLocalGitRepository {
-					logs.WithField("repo", bcl.BCL.System.Repository).Info("Update remote system using local git repository state")
-
-					repository, err := bclGit.OpenRepository(".")
-					if errs.Is(err, git.ErrRepositoryNotExists) {
-						return errs.With("Not an infra folder")
-					} else if err != nil {
-						return errs.WithE(err, "Failed to open git repository")
-					}
-
-					// Nix build process only files that are in git state
-					if err := repository.AddAll(); err != nil {
-						return errs.WithE(err, "failed to add changes to git")
-					}
-
-					var run runner.Runner = runner.NewLocalRunner()
-					targetHost := sshConfig.Host
-					if sshConfig.User != "" {
-						targetHost = sshConfig.User + "@" + sshConfig.Host
-					}
-					return run.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(filepath.Join(repository.Root, "nixos"), systemName), "--target-host", targetHost, "--use-remote-sudo")
-
-					// nixos-rebuild switch --flake .#salon-0 --target-host n0rad@192.168.43.33 --use-remote-sudo
-
-					return nil
-				} else {
-					logs.WithField("repo", bcl.BCL.System.Repository).WithField("host", sshConfig.Host).Info("Update remote host using upstream state")
-					run, err := runner.NewSshRunner(&sshConfig)
-					if err != nil {
-						return errs.WithE(err, "Failed to create SSH runner")
-					}
-					config, err := getSystemConfigFromRemoteSystem(run)
-					if err != nil {
-						return errs.WithE(err, "Failed to get system config from remote system")
-					}
-
-					sudoRun, err := runner.NewSudoRunner(run)
-					if err != nil {
-						return errs.WithE(err, "Failed to create remote sudo runner")
-					}
-					return sudoRun.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(config.Repository, systemName))
-				}
+			switch {
+			case !remote && useLocalGitRepository:
+				return upgradeLocalFromGit(action, systemName)
+			case !remote && !useLocalGitRepository:
+				return upgradeLocalFromUpstream(action, systemName)
+			case remote && useLocalGitRepository:
+				return upgradeRemoteTargetHostFromGit(&sshConfig, action, systemName)
+			default:
+				return upgradeRemoteFromUpstream(&sshConfig, action, systemName)
 			}
 		},
 	}
@@ -162,6 +89,114 @@ func nixosUpgradeCmd() *cobra.Command {
 	// nixos-rebuild build-vm --flake .#nixosConfigurations.Olimpo.config.system.build.toplevel
 
 	return cmd
+}
+
+// upgradeLocalFromGit rebuilds the current (local) system from the local infra git repository state.
+func upgradeLocalFromGit(action string, systemName string) error {
+	logs.WithField("repo", bcl.BCL.System.Repository).Info("Update current system using local git repository state")
+
+	repository, err := openLocalInfraRepository()
+	if err != nil {
+		return err
+	}
+
+	run, err := localRunner(true)
+	if err != nil {
+		return err
+	}
+
+	return run.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(filepath.Join(repository.Root, "nixos"), systemName))
+}
+
+// upgradeLocalFromUpstream rebuilds the current (local) system from the configured upstream repository.
+func upgradeLocalFromUpstream(action string, systemName string) error {
+	logs.WithField("repo", bcl.BCL.System.Repository).Info("Update current system using upstream state")
+
+	run, err := localRunner(true)
+	if err != nil {
+		return err
+	}
+
+	return run.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(bcl.BCL.System.Repository, systemName))
+}
+
+// upgradeRemoteTargetHostFromGit builds locally from the local infra git repository state and deploys to a
+// remote host via nixos-rebuild's --target-host/--use-remote-sudo.
+func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, action string, systemName string) error {
+	logs.WithField("repo", bcl.BCL.System.Repository).Info("Update remote system using local git repository state")
+
+	repository, err := openLocalInfraRepository()
+	if err != nil {
+		return err
+	}
+
+	run, err := localRunner(false)
+	if err != nil {
+		return err
+	}
+
+	// nixos-rebuild switch --flake .#salon-0 --target-host n0rad@192.168.43.33 --use-remote-sudo
+	return run.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(filepath.Join(repository.Root, "nixos"), systemName),
+		"--target-host", sshTargetHost(sshConfig), "--use-remote-sudo")
+}
+
+// upgradeRemoteFromUpstream connects to a remote host over SSH and rebuilds it there, using the upstream
+// repository configured in that remote host's own system config.
+func upgradeRemoteFromUpstream(sshConfig *runner.SshConnectionConfig, action string, systemName string) error {
+	logs.WithField("repo", bcl.BCL.System.Repository).WithField("host", sshConfig.Host).Info("Update remote host using upstream state")
+
+	run, err := runner.NewSshRunner(sshConfig)
+	if err != nil {
+		return errs.WithE(err, "Failed to create SSH runner")
+	}
+	config, err := getSystemConfigFromRemoteSystem(run)
+	if err != nil {
+		return errs.WithE(err, "Failed to get system config from remote system")
+	}
+
+	sudoRun, err := runner.NewSudoRunner(run)
+	if err != nil {
+		return errs.WithE(err, "Failed to create remote sudo runner")
+	}
+	return sudoRun.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(config.Repository, systemName))
+}
+
+// openLocalInfraRepository opens the git repository at the current directory and stages all changes,
+// since the nix build process only picks up files that are in git state.
+func openLocalInfraRepository() (*bclGit.Repository, error) {
+	repository, err := bclGit.OpenRepository(".")
+	if errs.Is(err, git.ErrRepositoryNotExists) {
+		return nil, errs.With("Not an infra folder")
+	} else if err != nil {
+		return nil, errs.WithE(err, "Failed to open git repository")
+	}
+
+	if err := repository.AddAll(); err != nil {
+		return nil, errs.WithE(err, "failed to add changes to git")
+	}
+	return repository, nil
+}
+
+// localRunner returns a runner for the local system, wrapped with sudo when withSudo is true and the
+// current process isn't already running as root.
+func localRunner(withSudo bool) (runner.Runner, error) {
+	var run runner.Runner = runner.NewLocalRunner()
+	if withSudo && os.Geteuid() != 0 {
+		sudoRun, err := runner.NewSudoRunner(run)
+		if err != nil {
+			return nil, errs.WithE(err, "Failed to create sudo runner")
+		}
+		run = sudoRun
+	}
+	return run, nil
+}
+
+// sshTargetHost formats the SSH connection config as a nixos-rebuild --target-host argument (user@host).
+func sshTargetHost(sshConfig *runner.SshConnectionConfig) string {
+	if sshConfig.User != "" {
+		return sshConfig.User + "@" + sshConfig.Host
+	}
+	return sshConfig.Host
 }
 
 func getSystemConfigFromRemoteSystem(run runner.Runner) (*bcl.SystemConfig, error) {
