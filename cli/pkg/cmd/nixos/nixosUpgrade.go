@@ -194,7 +194,7 @@ func upgradeLocalFromGit(action string, systemName string, overrideInputs []stri
 		return err
 	}
 
-	args := append([]string{nixosRebuildAction(action), "--flake", buildFlakeTarget(flakeDir, systemName)}, overrideInputArgs...)
+	args := append([]string{nixosRebuildAction(action), "--flake", buildFlakeTarget(flakeDir, systemName), "--no-write-lock-file"}, overrideInputArgs...)
 	if err := run.ExecCmd("nixos-rebuild", args...); err != nil {
 		return err
 	}
@@ -210,7 +210,8 @@ func upgradeLocalFromUpstream(action string, systemName string) error {
 		return err
 	}
 
-	if err := run.ExecCmd("nixos-rebuild", nixosRebuildAction(action), "--flake", buildFlakeTarget(bcl.BCL.System.Repository, systemName)); err != nil {
+	if err := run.ExecCmd("nixos-rebuild", nixosRebuildAction(action), "--flake", buildFlakeTarget(bcl.BCL.System.Repository, systemName),
+		"--no-write-lock-file", "--refresh", "--upgrade"); err != nil {
 		return err
 	}
 	return rebootIfRequested(run, action)
@@ -241,7 +242,7 @@ func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, actio
 	}
 
 	args := append([]string{nixosRebuildAction(action), "--flake", buildFlakeTarget(flakeDir, systemName),
-		"--target-host", sshTargetHost(sshConfig), "--use-remote-sudo"}, overrideInputArgs...)
+		"--target-host", sshTargetHost(sshConfig), "--use-remote-sudo", "--no-write-lock-file"}, overrideInputArgs...)
 	if err := run.ExecCmd("nixos-rebuild", args...); err != nil {
 		return err
 	}
@@ -280,7 +281,8 @@ func upgradeRemoteFromUpstream(sshConfig *runner.SshConnectionConfig, action str
 	if err != nil {
 		return errs.WithE(err, "Failed to create remote sudo runner")
 	}
-	if err := sudoRun.ExecCmd("nixos-rebuild", nixosRebuildAction(action), "--flake", buildFlakeTarget(config.Repository, systemName)); err != nil {
+	if err := sudoRun.ExecCmd("nixos-rebuild", nixosRebuildAction(action), "--flake", buildFlakeTarget(config.Repository, systemName),
+		"--no-write-lock-file", "--refresh", "--upgrade"); err != nil {
 		return err
 	}
 	return rebootIfRequested(sudoRun, action)
