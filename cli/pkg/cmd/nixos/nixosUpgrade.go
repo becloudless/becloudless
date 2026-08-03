@@ -82,7 +82,7 @@ func nixosUpgradeCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&action, "action", "a", "switch", "nixos-rebuild action to perform (switch, boot, test, build)")
+	cmd.Flags().StringVarP(&action, "action", "a", "switch", "nixos-rebuild action to perform (switch, boot, test, build, reboot). reboot switches the boot configuration then reboots the host")
 	cmd.Flags().StringVarP(&systemName, "system-name", "n", "", "nixos system name to apply. If not provided, will use the current system name. Useful when renaming system")
 	cmd.Flags().BoolVar(&useLocalGitRepository, "git", false, "use current local git repository state instead of upstream repository")
 	withSSHRemoteFlags(cmd, &sshConfig)
@@ -107,7 +107,10 @@ func upgradeLocalFromGit(action string, systemName string) error {
 		return err
 	}
 
-	return run.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(filepath.Join(repository.Root, "nixos"), systemName))
+	if err := run.ExecCmd("nixos-rebuild", nixosRebuildAction(action), "--flake", buildFlakeTarget(filepath.Join(repository.Root, "nixos"), systemName)); err != nil {
+		return err
+	}
+	return rebootIfRequested(run, action)
 }
 
 // upgradeLocalFromUpstream rebuilds the current (local) system from the configured upstream repository.
@@ -119,7 +122,10 @@ func upgradeLocalFromUpstream(action string, systemName string) error {
 		return err
 	}
 
-	return run.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(bcl.BCL.System.Repository, systemName))
+	if err := run.ExecCmd("nixos-rebuild", nixosRebuildAction(action), "--flake", buildFlakeTarget(bcl.BCL.System.Repository, systemName)); err != nil {
+		return err
+	}
+	return rebootIfRequested(run, action)
 }
 
 // upgradeRemoteTargetHostFromGit builds locally from the local infra git repository state and deploys to a
@@ -138,8 +144,25 @@ func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, actio
 	}
 
 	// nixos-rebuild switch --flake .#salon-0 --target-host n0rad@192.168.43.33 --use-remote-sudo
-	return run.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(filepath.Join(repository.Root, "nixos"), systemName),
-		"--target-host", sshTargetHost(sshConfig), "--use-remote-sudo")
+	if err := run.ExecCmd("nixos-rebuild", nixosRebuildAction(action), "--flake", buildFlakeTarget(filepath.Join(repository.Root, "nixos"), systemName),
+		"--target-host", sshTargetHost(sshConfig), "--use-remote-sudo"); err != nil {
+		return err
+	}
+
+	if action != "reboot" {
+		return nil
+	}
+
+	sshRun, err := runner.NewSshRunner(sshConfig)
+	if err != nil {
+		return errs.WithE(err, "Failed to create SSH runner to reboot remote host")
+	}
+	sudoRun, err := runner.NewSudoRunner(sshRun)
+	if err != nil {
+		return errs.WithE(err, "Failed to create remote sudo runner to reboot remote host")
+	}
+	logs.WithField("host", sshTargetHost(sshConfig)).Info("Rebooting remote system")
+	return sudoRun.ExecCmd("reboot")
 }
 
 // upgradeRemoteFromUpstream connects to a remote host over SSH and rebuilds it there, using the upstream
@@ -160,7 +183,28 @@ func upgradeRemoteFromUpstream(sshConfig *runner.SshConnectionConfig, action str
 	if err != nil {
 		return errs.WithE(err, "Failed to create remote sudo runner")
 	}
-	return sudoRun.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(config.Repository, systemName))
+	if err := sudoRun.ExecCmd("nixos-rebuild", nixosRebuildAction(action), "--flake", buildFlakeTarget(config.Repository, systemName)); err != nil {
+		return err
+	}
+	return rebootIfRequested(sudoRun, action)
+}
+
+// nixosRebuildAction translates the meta "reboot" action (switch boot config, then reboot) into the
+// actual nixos-rebuild action to run.
+func nixosRebuildAction(action string) string {
+	if action == "reboot" {
+		return "boot"
+	}
+	return action
+}
+
+// rebootIfRequested reboots the host via run when the requested action is the meta "reboot" action.
+func rebootIfRequested(run runner.Runner, action string) error {
+	if action != "reboot" {
+		return nil
+	}
+	logs.Info("Rebooting system")
+	return run.ExecCmd("reboot")
 }
 
 // openLocalInfraRepository opens the git repository at the current directory and stages all changes,
