@@ -57,7 +57,7 @@ func NewSshRunner(config *SshConnectionConfig) (*SshRunner, error) {
 		auths = append(auths, ssh.PublicKeysCallback(agentClient.Signers))
 	}
 
-	if config.Password.IsSet() {
+	if config.Password != nil && config.Password.IsSet() {
 		auths = append(auths, ssh.PasswordCallback(func() (string, error) {
 			buff, err := config.Password.Get()
 			if err != nil {

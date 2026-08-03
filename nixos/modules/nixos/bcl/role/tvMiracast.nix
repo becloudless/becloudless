@@ -408,6 +408,27 @@ in
           set -eu
 
           while true; do
+            # Re-create wpa_cli's hardcoded client-side ctrl socket
+            # directory on EVERY iteration, not just once via
+            # ExecStartPre. /run/wpa_supplicant is the SYSTEM
+            # wpa_supplicant.service's own `RuntimeDirectory` (see
+            # nixos/modules/services/networking/wpa_supplicant.nix) -
+            # systemd wipes and recreates that entire directory tree
+            # from scratch every time THAT unit (re)starts or stops
+            # (default RuntimeDirectoryPreserve=no), which silently
+            # destroys the "client" subdir we create, regardless of
+            # whether our own ExecStartPre already ran once at our own
+            # service's startup. Confirmed live on salon-0: a boot where
+            # "wpa_supplicant.service: Control process exited ... TERM"
+            # (that unit stopping) raced with/landed right after our
+            # ExecStartPre at the very same second - "client" never
+            # existed again for the REST of that boot, so every single
+            # wpa_cli_ call below failed with "/run/wpa_supplicant/client:
+            # No such file or directory" for the whole ~90s uptime.
+            # Recreating it here every 5s self-heals within one
+            # reconciliation pass no matter when/why it gets wiped.
+            mkdir -p /run/wpa_supplicant/client 2>/dev/null || true
+
             iface=$(${detectWifiInterface} 2>/dev/null) || { sleep 5; continue; }
             ctrl="/run/miracle/wifi/$iface"
 

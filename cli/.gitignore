@@ -7,3 +7,5 @@ dist-tools
 
 # Generated go source files
 pkg/generated
+
+__debug_*
