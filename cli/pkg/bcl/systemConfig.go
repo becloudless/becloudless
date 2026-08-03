@@ -34,3 +34,11 @@ func LoadSystemConfig() (*SystemConfig, error) {
 	}
 	return &config, nil
 }
+
+func LoadSystemConfigFromBytes(bytes []byte) (*SystemConfig, error) {
+	var config SystemConfig
+	if err := yaml.Unmarshal(bytes, &config); err != nil {
+		return nil, errs.WithEF(err, data.WithField("content", string(bytes)), "Failed to parse system config file")
+	}
+	return &config, nil
+}

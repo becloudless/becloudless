@@ -3,10 +3,14 @@ package nixos
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/becloudless/becloudless/pkg/bcl"
+	bclGit "github.com/becloudless/becloudless/pkg/git"
 	"github.com/becloudless/becloudless/pkg/system/runner"
+	"github.com/go-git/go-git/v6"
+	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"github.com/spf13/cobra"
@@ -63,43 +67,30 @@ func nixosUpgradeCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if sshConfig.Host == "" {
 				if useLocalGitRepository {
-					// repository, err := bclGit.OpenRepository(".")
-					// if errs.Is(err, git.ErrRepositoryNotExists) {
-					// 	logs.WithField("repo", bcl.BCL.System.Repository).Info("Not in an infra folder, updating using upstream git repository")
+					logs.WithField("repo", bcl.BCL.System.Repository).Info("Update current system using local git repository state")
 
-					// 	if bcl.BCL.System.Repository == "" {
-					// 		return errs.With("No repository configured in bcl config")
-					// 	}
+					repository, err := bclGit.OpenRepository(".")
+					if errs.Is(err, git.ErrRepositoryNotExists) {
+						return errs.With("Not an infra folder")
+					} else if err != nil {
+						return errs.WithE(err, "Failed to open git repository")
+					}
 
-					// } else if err != nil {
-					// 	return errs.WithE(err, "failed to open git repository")
-					// } else {
-					// 	// Nix build process only files that are in git state
-					// 	if err := repository.AddAll(); err != nil {
-					// 		return errs.WithE(err, "failed to add changes to git")
-					// 	}
+					// Nix build process only files that are in git state
+					if err := repository.AddAll(); err != nil {
+						return errs.WithE(err, "failed to add changes to git")
+					}
 
-					// 	run, err := runner.NewSudoRunner(runner.Runner(runner.NewLocalRunner()))
-					// 	if err != nil {
-					// 		return err
-					// 	}
-					// 	//if os.Geteuid() != 0 {
-					// 	// Running sudo internally to prevent root modification of git state during add
-					// 	//var password *memguarded.Service
-					// 	//if err := runner.IsSudoRunnableWithoutPassword(run); err != nil {
-					// 	//	password = memguarded.NewService()
-					// 	//	if err := password.AskSecret(false, "Sudo password to run upgrade"); err != nil {
-					// 	//		return errs.WithE(err, "Failed to get sudo password")
-					// 	//	}
-					// 	//}
-					// 	//run, err = runner.NewSudoRunner(run)
-					// 	//if err != nil {
-					// 	//	return errs.WithE(err, "Failed to create sudo runner")
-					// 	//}
-					// 	//}
+					var run runner.Runner = runner.NewLocalRunner()
+					if os.Geteuid() != 0 {
+						sudoRun, err := runner.NewSudoRunner(run)
+						if err != nil {
+							return errs.WithE(err, "Failed to create sudo runner")
+						}
+						run = sudoRun
+					}
 
-					// 	return run.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(filepath.Join(repository.Root, "nixos"), systemName))
-					return errs.With("not implemented")
+					return run.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(filepath.Join(repository.Root, "nixos"), systemName))
 				} else {
 					logs.WithField("repo", bcl.BCL.System.Repository).Info("Update current system using upstream state")
 
@@ -115,8 +106,50 @@ func nixosUpgradeCmd() *cobra.Command {
 					return run.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(bcl.BCL.System.Repository, systemName))
 				}
 
+			} else {
+				if useLocalGitRepository {
+					logs.WithField("repo", bcl.BCL.System.Repository).Info("Update remote system using local git repository state")
+
+					repository, err := bclGit.OpenRepository(".")
+					if errs.Is(err, git.ErrRepositoryNotExists) {
+						return errs.With("Not an infra folder")
+					} else if err != nil {
+						return errs.WithE(err, "Failed to open git repository")
+					}
+
+					// Nix build process only files that are in git state
+					if err := repository.AddAll(); err != nil {
+						return errs.WithE(err, "failed to add changes to git")
+					}
+
+					var run runner.Runner = runner.NewLocalRunner()
+					targetHost := sshConfig.Host
+					if sshConfig.User != "" {
+						targetHost = sshConfig.User + "@" + sshConfig.Host
+					}
+					return run.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(filepath.Join(repository.Root, "nixos"), systemName), "--target-host", targetHost, "--use-remote-sudo")
+
+					// nixos-rebuild switch --flake .#salon-0 --target-host n0rad@192.168.43.33 --use-remote-sudo
+
+					return nil
+				} else {
+					logs.WithField("repo", bcl.BCL.System.Repository).WithField("host", sshConfig.Host).Info("Update remote host using upstream state")
+					run, err := runner.NewSshRunner(&sshConfig)
+					if err != nil {
+						return errs.WithE(err, "Failed to create SSH runner")
+					}
+					config, err := getSystemConfigFromRemoteSystem(run)
+					if err != nil {
+						return errs.WithE(err, "Failed to get system config from remote system")
+					}
+
+					sudoRun, err := runner.NewSudoRunner(run)
+					if err != nil {
+						return errs.WithE(err, "Failed to create remote sudo runner")
+					}
+					return sudoRun.ExecCmd("nixos-rebuild", action, "--flake", buildFlakeTarget(config.Repository, systemName))
+				}
 			}
-			return errs.With("Remote upgrade is not implemented yet")
 		},
 	}
 
@@ -129,4 +162,22 @@ func nixosUpgradeCmd() *cobra.Command {
 	// nixos-rebuild build-vm --flake .#nixosConfigurations.Olimpo.config.system.build.toplevel
 
 	return cmd
+}
+
+func getSystemConfigFromRemoteSystem(run runner.Runner) (*bcl.SystemConfig, error) {
+	if _, err := run.ExecCmdGetStdout("test", "-f", bcl.PathSystemConfig); err != nil {
+		return nil, errs.WithEF(err, data.WithField("path", bcl.PathSystemConfig), "Remote system config file does not exist. Please create it on the target host")
+	}
+
+	output, err := run.ExecCmdGetStdout("cat", bcl.PathSystemConfig)
+	if err != nil {
+		return nil, errs.WithE(err, "Failed to read remote system config")
+	}
+
+	config, err := bcl.LoadSystemConfigFromBytes([]byte(output))
+	if err != nil {
+		return nil, errs.WithE(err, "Failed to parse remote system config")
+	}
+
+	return config, nil
 }
