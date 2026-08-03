@@ -1,9 +1,11 @@
 package nixos
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/becloudless/becloudless/pkg/bcl"
@@ -58,6 +60,7 @@ func nixosUpgradeCmd() *cobra.Command {
 	var sshConfig runner.SshConnectionConfig
 	var systemName string
 	var useLocalGitRepository bool
+	var overrideInputs []string
 
 	cmd := &cobra.Command{
 		Use:     "upgrade",
@@ -67,13 +70,17 @@ func nixosUpgradeCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			remote := sshConfig.Host != ""
 
+			if len(overrideInputs) > 0 && !useLocalGitRepository {
+				return errs.With("--input can only be used together with --git")
+			}
+
 			switch {
 			case !remote && useLocalGitRepository:
-				return upgradeLocalFromGit(action, systemName)
+				return upgradeLocalFromGit(action, systemName, overrideInputs)
 			case !remote && !useLocalGitRepository:
 				return upgradeLocalFromUpstream(action, systemName)
 			case remote && useLocalGitRepository:
-				return upgradeRemoteTargetHostFromGit(&sshConfig, action, systemName)
+				return upgradeRemoteTargetHostFromGit(&sshConfig, action, systemName, overrideInputs)
 			case remote && !useLocalGitRepository:
 				return upgradeRemoteFromUpstream(&sshConfig, action, systemName)
 			default:
@@ -85,19 +92,99 @@ func nixosUpgradeCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&action, "action", "a", "switch", "nixos-rebuild action to perform (switch, boot, test, build, reboot). reboot switches the boot configuration then reboots the host")
 	cmd.Flags().StringVarP(&systemName, "system-name", "n", "", "nixos system name to apply. If not provided, will use the current system name. Useful when renaming system")
 	cmd.Flags().BoolVar(&useLocalGitRepository, "git", false, "use current local git repository state instead of upstream repository")
+	cmd.Flags().StringArrayVar(&overrideInputs, "input", nil, "override a flake input, format name=value (e.g. bcl-override1=path:/home/n0rad/Perso/bcl/becloudless/nixos). Can be repeated. Only valid with --git")
 	withSSHRemoteFlags(cmd, &sshConfig)
-
-	// nixos-rebuild test --refresh --flake git+ssh://git@gitea.lmr.io/lmr/infra?dir=nixos#vm --upgrade
-	// nixos-rebuild build-vm --flake .#nixosConfigurations.Olimpo.config.system.build.toplevel
 
 	return cmd
 }
 
+// buildOverrideInputArgs converts "name=value" override strings into nixos-rebuild/nix
+// "--override-input name value" argument pairs.
+func buildOverrideInputArgs(overrideInputs []string) ([]string, error) {
+	args := make([]string, 0, len(overrideInputs)*3)
+	for _, override := range overrideInputs {
+		name, value, found := strings.Cut(override, "=")
+		if !found || name == "" || value == "" {
+			return nil, errs.WithF(data.WithField("input", override), "Invalid --input, expected format name=value")
+		}
+		args = append(args, "--override-input", name, value)
+	}
+	return args, nil
+}
+
+// listFlakeInputNames returns the names of a local flake's top-level inputs, as declared in its
+// flake.lock, by reading `nix flake metadata --json`.
+func listFlakeInputNames(flakeDir string) ([]string, error) {
+	output, err := runner.NewLocalRunner().ExecCmdGetStdout("nix", "flake", "metadata", "--json", flakeDir)
+	if err != nil {
+		return nil, errs.WithEF(err, data.WithField("flake", flakeDir), "Failed to read flake metadata")
+	}
+
+	var metadata struct {
+		Locks struct {
+			Root  string `json:"root"`
+			Nodes map[string]struct {
+				Inputs map[string]json.RawMessage `json:"inputs"`
+			} `json:"nodes"`
+		} `json:"locks"`
+	}
+	if err := json.Unmarshal([]byte(output), &metadata); err != nil {
+		return nil, errs.WithE(err, "Failed to parse flake metadata")
+	}
+
+	rootNode, ok := metadata.Locks.Nodes[metadata.Locks.Root]
+	if !ok {
+		return nil, errs.With("Flake metadata is missing its root lock node")
+	}
+
+	names := make([]string, 0, len(rootNode.Inputs))
+	for name := range rootNode.Inputs {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
+// validateOverrideInputs ensures every overridden input (given as "name=value") is actually declared
+// by the target flake, failing with the list of available input names otherwise.
+func validateOverrideInputs(flakeDir string, overrideInputs []string) error {
+	if len(overrideInputs) == 0 {
+		return nil
+	}
+
+	available, err := listFlakeInputNames(flakeDir)
+	if err != nil {
+		return err
+	}
+	availableSet := make(map[string]bool, len(available))
+	for _, name := range available {
+		availableSet[name] = true
+	}
+
+	for _, override := range overrideInputs {
+		name, _, _ := strings.Cut(override, "=")
+		if !availableSet[name] {
+			return errs.WithF(data.WithField("input", name).WithField("available", strings.Join(available, ", ")),
+				"Unknown flake input, it is not declared by the target flake")
+		}
+	}
+	return nil
+}
+
 // upgradeLocalFromGit rebuilds the current (local) system from the local infra git repository state.
-func upgradeLocalFromGit(action string, systemName string) error {
+func upgradeLocalFromGit(action string, systemName string, overrideInputs []string) error {
 	logs.WithField("repo", bcl.BCL.System.Repository).Info("Update current system using local git repository state")
 
 	repository, err := openLocalInfraRepository()
+	if err != nil {
+		return err
+	}
+
+	flakeDir := filepath.Join(repository.Root, "nixos")
+	if err := validateOverrideInputs(flakeDir, overrideInputs); err != nil {
+		return err
+	}
+	overrideInputArgs, err := buildOverrideInputArgs(overrideInputs)
 	if err != nil {
 		return err
 	}
@@ -107,7 +194,8 @@ func upgradeLocalFromGit(action string, systemName string) error {
 		return err
 	}
 
-	if err := run.ExecCmd("nixos-rebuild", nixosRebuildAction(action), "--flake", buildFlakeTarget(filepath.Join(repository.Root, "nixos"), systemName)); err != nil {
+	args := append([]string{nixosRebuildAction(action), "--flake", buildFlakeTarget(flakeDir, systemName)}, overrideInputArgs...)
+	if err := run.ExecCmd("nixos-rebuild", args...); err != nil {
 		return err
 	}
 	return rebootIfRequested(run, action)
@@ -130,10 +218,19 @@ func upgradeLocalFromUpstream(action string, systemName string) error {
 
 // upgradeRemoteTargetHostFromGit builds locally from the local infra git repository state and deploys to a
 // remote host via nixos-rebuild's --target-host/--use-remote-sudo.
-func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, action string, systemName string) error {
+func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, action string, systemName string, overrideInputs []string) error {
 	logs.WithField("repo", bcl.BCL.System.Repository).Info("Update remote system using local git repository state")
 
 	repository, err := openLocalInfraRepository()
+	if err != nil {
+		return err
+	}
+
+	flakeDir := filepath.Join(repository.Root, "nixos")
+	if err := validateOverrideInputs(flakeDir, overrideInputs); err != nil {
+		return err
+	}
+	overrideInputArgs, err := buildOverrideInputArgs(overrideInputs)
 	if err != nil {
 		return err
 	}
@@ -143,9 +240,9 @@ func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, actio
 		return err
 	}
 
-	// nixos-rebuild switch --flake .#salon-0 --target-host n0rad@192.168.43.33 --use-remote-sudo
-	if err := run.ExecCmd("nixos-rebuild", nixosRebuildAction(action), "--flake", buildFlakeTarget(filepath.Join(repository.Root, "nixos"), systemName),
-		"--target-host", sshTargetHost(sshConfig), "--use-remote-sudo"); err != nil {
+	args := append([]string{nixosRebuildAction(action), "--flake", buildFlakeTarget(flakeDir, systemName),
+		"--target-host", sshTargetHost(sshConfig), "--use-remote-sudo"}, overrideInputArgs...)
+	if err := run.ExecCmd("nixos-rebuild", args...); err != nil {
 		return err
 	}
 
