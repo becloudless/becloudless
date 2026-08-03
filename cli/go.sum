@@ -529,6 +529,8 @@ github.com/mattn/go-colorable v0.1.15/go.mod h1:6LmQG8QLFO4G5z1gPvYEzlUgJ2wF+stg
 github.com/mattn/go-isatty v0.0.12/go.mod h1:cbi8OIDigv2wuxKPP5vlRcQ1OAZbq2CE4Kysco4FUpU=
 github.com/mattn/go-isatty v0.0.23 h1:cYwCQTQf3HB6xUC+BtyCLZNr7IzbOmoZbmssVNzSyiQ=
 github.com/mattn/go-isatty v0.0.23/go.mod h1:nMCL3Zebbrt45jsMDgnfIwz6ydEQApk5oEI3HqDio6A=
+github.com/mattn/go-isatty v0.0.24 h1:tGZZoVgT/KiqK1c8ocVLeDS8BSWMRd47J3Lbz7vsReI=
+github.com/mattn/go-isatty v0.0.24/go.mod h1:nMCL3Zebbrt45jsMDgnfIwz6ydEQApk5oEI3HqDio6A=
 github.com/mattn/go-runewidth v0.0.20 h1:WcT52H91ZUAwy8+HUkdM3THM6gXqXuLJi9O3rjcQQaQ=
 github.com/mattn/go-runewidth v0.0.20/go.mod h1:XBkDxAl56ILZc9knddidhrOlY5R/pDhgLpndooCuJAs=
 github.com/mattn/go-sqlite3 v1.14.22 h1:2gZY6PC6kBnID23Tichd1K+Z0oS6nE/XwU+Vz/5o4kU=
@@ -578,6 +580,8 @@ github.com/n0rad/go-app v0.0.0-20260502170822-14ac9a7082c9 h1:HBh7Ktri7tAumeaFkD
 github.com/n0rad/go-app v0.0.0-20260502170822-14ac9a7082c9/go.mod h1:Fl+iFjoLVhMADu6Cai/PLcCxyyh5jJ7PDLYZyHWvamY=
 github.com/n0rad/go-erlog v0.0.0-20260115131226-fdddb793d4f1 h1:eUr+WRhiEI4S0lsvyOKVSG4UASkSmNX5QpvO42JZ0Gk=
 github.com/n0rad/go-erlog v0.0.0-20260115131226-fdddb793d4f1/go.mod h1:rOPFQgGtXqzncO3cGwHXvGbXNi7RuD1MzqeQKaPbGxo=
+github.com/n0rad/go-erlog v0.0.0-20260803012542-2c634692c4e2 h1:4DFVeFjRu/EFqusqBmcUqyHuu4pQ714yrPRFaesLcFU=
+github.com/n0rad/go-erlog v0.0.0-20260803012542-2c634692c4e2/go.mod h1:rOPFQgGtXqzncO3cGwHXvGbXNi7RuD1MzqeQKaPbGxo=
 github.com/n0rad/gomake v0.0.0-20260423115156-cb11feadac58 h1:Fx8AVMnIidK6KGFlZoZJq/XP1TXJFNppoZCWKNoTb4A=
 github.com/n0rad/gomake v0.0.0-20260423115156-cb11feadac58/go.mod h1:1xaDrrWtiIDob/tMRCv0OhPNz4qF8GP3Tk1PNOmSQTU=
 github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260120012428-7b6c2af7698a h1:wsDdGvvNzx3YDdOcp27UQPxusBUBZ+3lrvGPxM2mATk=

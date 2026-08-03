@@ -26,9 +26,7 @@ func init() {
 
 type Bcl struct {
 	app.App
-	//Infra string `yaml:"repository,omitempty"`
-	//
-	//Repo *git.Infra
+	System SystemConfig
 }
 
 func (bcl *Bcl) DefaultCacheFolder() string {
@@ -43,6 +41,12 @@ func (bcl *Bcl) DefaultCacheFolder() string {
 func (bcl *Bcl) Init() error {
 	if err := bcl.App.Init(bcl); err != nil {
 		return err
+	}
+
+	if config, err := LoadSystemConfig(); err != nil {
+		return err
+	} else if config != nil {
+		bcl.System = *config
 	}
 
 	//if bcl.Infra == "" {

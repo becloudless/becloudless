@@ -1,6 +1,7 @@
 package git
 
 import (
+	"errors"
 	"os"
 	"strings"
 
@@ -56,6 +57,9 @@ func OpenRepository(path string) (*Repository, error) {
 	field := data.WithField("path", path)
 	repo, err := git.PlainOpenWithOptions(path, &git.PlainOpenOptions{DetectDotGit: true})
 	if err != nil {
+		if errors.Is(err, git.ErrRepositoryNotExists) {
+			return nil, errs.WithEF(err, field, "No git repository found in path or parent paths")
+		}
 		return nil, errs.WithEF(err, field, "Failed to open git repository")
 	}
 
@@ -65,7 +69,7 @@ func OpenRepository(path string) (*Repository, error) {
 	}
 
 	return &Repository{
-		wt.Filesystem.Root(),
+		wt.Filesystem().Root(),
 		repo,
 		field,
 	}, nil
