@@ -32,6 +32,7 @@ func nixosHardwareInfoCmd() *cobra.Command {
 		Password: memguarded.NewService(),
 	}
 	var outputFormat string
+	var pretty bool
 
 	cmd := &cobra.Command{
 		Use:   "info",
@@ -69,7 +70,14 @@ func nixosHardwareInfoCmd() *cobra.Command {
 				if err != nil {
 					return errs.WithE(err, "Failed to marshal system info")
 				}
-				if term.IsTerminal(int(os.Stdout.Fd())) {
+				// Only respect --pretty as an override when explicitly set;
+				// otherwise self-disable when stdout isn't an interactive
+				// terminal (e.g. piped or redirected to a file).
+				usePretty := pretty
+				if !cmd.Flags().Changed("pretty") {
+					usePretty = term.IsTerminal(int(os.Stdout.Fd()))
+				}
+				if usePretty {
 					fmt.Print(boldYamlKeys(out))
 				} else {
 					fmt.Print(string(out))
@@ -89,6 +97,7 @@ func nixosHardwareInfoCmd() *cobra.Command {
 
 	flags.WithSSHRemoteFlags(cmd, &sshConfig)
 	cmd.Flags().StringVarP(&outputFormat, "output", "o", "yaml", "Output format: json or yaml")
+	cmd.Flags().BoolVar(&pretty, "pretty", true, "Pretty-print (bold keys) for yaml output; auto-disabled when stdout is not a terminal unless explicitly set")
 
 	return cmd
 }
