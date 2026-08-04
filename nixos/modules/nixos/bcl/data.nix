@@ -12,6 +12,22 @@ let
   usesMergerfs = dataCfg:
     dataCfg.sourceFoldersPattern != null || builtins.length dataCfg.sourceFolders > 1;
 
+  # Convert a shell glob (only "*" and "?" are supported, matching what's
+  # actually used in sourceFoldersPattern, e.g. "/disks/week*") into an
+  # anchored Nix regex, so it can be matched against bcl.disks.<name>.path at
+  # Nix EVAL time.
+  globToRegex = glob:
+    let
+      specialChars = [ "." "^" "$" "+" "(" ")" "[" "]" "{" "}" "|" "\\" ];
+      escapeChar   = c: if builtins.elem c specialChars then "\\${c}" else c;
+      convertChar  = c: if c == "*" then ".*" else if c == "?" then "." else escapeChar c;
+    in "^" + lib.concatStrings (map convertChar (lib.stringToCharacters glob)) + "$";
+
+  # bcl.disks entries whose mount path matches a sourceFoldersPattern glob.
+  matchingDisks = pattern:
+    lib.filterAttrs (_: diskCfg: builtins.match (globToRegex pattern) diskCfg.path != null)
+      config.bcl.disks;
+
   fileSystemsEntries = lib.mapAttrs' (name: dataCfg: {
     name  = dataCfg.path;
     value = if singleSource dataCfg then {
@@ -44,10 +60,19 @@ let
 
   dataSourceServices = lib.mapAttrs' (name: dataCfg: {
     name = "data-sources-${name}";
-    value = {
+    value =
+      let
+        patternDisks = if dataCfg.sourceFoldersPattern != null
+          then matchingDisks dataCfg.sourceFoldersPattern
+          else {};
+        patternFolders = lib.mapAttrsToList (_: diskCfg: diskCfg.path) patternDisks;
+        effectiveFolders = dataCfg.sourceFolders ++ patternFolders;
+
+        extraMountUnits = map (diskCfg: mountUnitName diskCfg.path) (lib.attrValues patternDisks);
+      in {
       description = "Add source folders to mergerfs mount ${dataCfg.path}";
-      after    = [ "local-fs.target" (mountUnitName dataCfg.path) ];
-      requires = [ (mountUnitName dataCfg.path) ];
+      after    = [ "local-fs.target" (mountUnitName dataCfg.path) ] ++ extraMountUnits;
+      requires = [ (mountUnitName dataCfg.path) ] ++ extraMountUnits;
       wantedBy = [ "multi-user.target" ];
       path = with pkgs; [ attr util-linux ];
       serviceConfig = {
@@ -76,17 +101,12 @@ let
               fi
             }
           '';
-          staticPart = lib.optionalString (dataCfg.sourceFolders != []) ''
-            for src in ${lib.concatStringsSep " " dataCfg.sourceFolders}; do
+          effectivePart = lib.optionalString (effectiveFolders != []) ''
+            for src in ${lib.concatStringsSep " " effectiveFolders}; do
               add_branch "$src"
             done
           '';
-          patternPart = lib.optionalString (dataCfg.sourceFoldersPattern != null) ''
-            for src in ${dataCfg.sourceFoldersPattern}; do
-              add_branch "$src"
-            done
-          '';
-        in addBranch + staticPart + patternPart;
+        in addBranch + effectivePart;
     };
   }) multiSourceCfg;
 
@@ -115,7 +135,11 @@ in {
         sourceFoldersPattern = lib.mkOption {
           type        = lib.types.nullOr lib.types.str;
           default     = null;
-          description = "Shell glob pattern evaluated at runtime to discover source folders (e.g. \"/disks/*/Videos\"). Always uses mergerfs + systemd service.";
+          description = ''
+            Shell glob pattern matched, at Nix EVAL time, against every
+            bcl.disks.<name>.path (e.g. "/disks/week*"). Always uses
+            mergerfs + systemd service.
+          '';
         };
         mode = lib.mkOption {
           type        = lib.types.enum [ "rw" "ro" ];
