@@ -58,7 +58,7 @@ in {
         };
         mode = lib.mkOption {
           type        = lib.types.enum [ "rw" "ro" ];
-          default     = "rw";
+          default     = "ro";
           description = "Mount mode: rw (read-write) or ro (read-only).";
         };
         location = lib.mkOption {

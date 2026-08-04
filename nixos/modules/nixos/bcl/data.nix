@@ -49,7 +49,7 @@ let
       after    = [ "local-fs.target" (mountUnitName dataCfg.path) ];
       requires = [ (mountUnitName dataCfg.path) ];
       wantedBy = [ "multi-user.target" ];
-      path = with pkgs; [ attr ];
+      path = with pkgs; [ attr util-linux ];
       serviceConfig = {
         Type            = "oneshot";
         RemainAfterExit = true;
@@ -60,13 +60,19 @@ let
           addBranch = ''
             add_branch() {
               local src="$1"
-              if [ -d "$src" ]; then
+              # Require src to be an ACTUAL mountpoint, not just a directory:
+              # a disk whose fstab mount failed (e.g. bad sectors, drive not
+              # ready, dropped off the bus) still leaves behind an empty
+              # mountpoint directory created by systemd - without this check
+              # that empty root-fs directory would silently be accepted as a
+              # mergerfs branch, masquerading as the real disk.
+              if [ -d "$src" ] && mountpoint -q "$src"; then
                 echo "Adding $src to mergerfs at ${dataCfg.path}"
                 setfattr -n user.mergerfs.branches \
                   -v "+>$src=${branchMode}" \
                   "${dataCfg.path}/.mergerfs"
               else
-                echo "Skipping $src (not found)"
+                echo "Skipping $src (not a mountpoint - disk likely failed to mount)"
               fi
             }
           '';
