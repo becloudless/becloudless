@@ -8,9 +8,11 @@ import (
 	"github.com/becloudless/becloudless/pkg/nixos"
 	"github.com/becloudless/becloudless/pkg/system"
 	"github.com/becloudless/becloudless/pkg/system/runner"
+	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/memguarded"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 func nixosHardwareInfoCmd() *cobra.Command {
@@ -18,10 +20,11 @@ func nixosHardwareInfoCmd() *cobra.Command {
 	sshConfig := runner.SshConnectionConfig{
 		Password: memguarded.NewService(),
 	}
+	var outputFormat string
 
 	cmd := &cobra.Command{
 		Use:   "info",
-		Short: "dump system info as json",
+		Short: "Dump system info",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var run runner.Runner = runner.NewLocalRunner()
 			if sshConfig.Host != "" {
@@ -49,17 +52,28 @@ func nixosHardwareInfoCmd() *cobra.Command {
 				return errs.WithE(err, "Failed to extract system info")
 			}
 
-			out, err := json.MarshalIndent(info, "", "  ")
-			if err != nil {
-				return errs.WithE(err, "Failed to marshal system info")
+			switch outputFormat {
+			case "yaml":
+				out, err := yaml.Marshal(info)
+				if err != nil {
+					return errs.WithE(err, "Failed to marshal system info")
+				}
+				fmt.Print(string(out))
+			case "json":
+				out, err := json.MarshalIndent(info, "", "  ")
+				if err != nil {
+					return errs.WithE(err, "Failed to marshal system info")
+				}
+				fmt.Println(string(out))
+			default:
+				return errs.WithF(data.WithField("output", outputFormat), "Invalid output format, must be 'json' or 'yaml'")
 			}
-
-			fmt.Println(string(out))
 			return nil
 		},
 	}
 
 	flags.WithSSHRemoteFlags(cmd, &sshConfig)
+	cmd.Flags().StringVarP(&outputFormat, "output", "o", "yaml", "Output format: json or yaml")
 
 	return cmd
 }

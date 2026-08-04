@@ -1,8 +1,8 @@
 package nixos
 
 import (
-	"github.com/becloudless/becloudless/pkg/cmd/nixos/hardware"
 	"github.com/becloudless/becloudless/pkg/cmd/nixos/backup"
+	"github.com/becloudless/becloudless/pkg/cmd/nixos/hardware"
 	"github.com/spf13/cobra"
 )
 
