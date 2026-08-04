@@ -7,13 +7,14 @@ toolchain go1.26.5
 require (
 	charm.land/huh/v2 v2.0.3
 	github.com/Mic92/ssh-to-age v1.3.0
-	github.com/atombender/go-jsonschema v0.24.0
+	github.com/atombender/go-jsonschema v0.24.1
 	github.com/awnumar/memguard v0.23.0
 	github.com/client9/misspell v0.3.4
 	github.com/fzipp/gocyclo v0.6.0
 	github.com/getsops/sops/v3 v3.13.3
 	github.com/go-bindata/go-bindata/v3 v3.1.3
 	github.com/go-git/go-git/v6 v6.0.0-alpha.5
+	github.com/goccy/go-yaml v1.19.2
 	github.com/gordonklaus/ineffassign v0.2.0
 	github.com/hashicorp/go-version v1.9.0
 	github.com/hashicorp/hc-install v0.9.5
@@ -156,7 +157,6 @@ require (
 	github.com/go-openapi/swag/yamlutils v0.26.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
-	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/gofrs/flock v0.13.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/google/btree v1.1.3 // indirect
