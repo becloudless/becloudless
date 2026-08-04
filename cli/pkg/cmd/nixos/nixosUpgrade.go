@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/becloudless/becloudless/pkg/bcl"
+	"github.com/becloudless/becloudless/pkg/cmd/flags"
 	bclGit "github.com/becloudless/becloudless/pkg/git"
 	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/go-git/go-git/v6"
@@ -93,7 +94,7 @@ func nixosUpgradeCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&systemName, "system-name", "n", "", "nixos system name to apply. If not provided, will use the current system name. Useful when renaming system")
 	cmd.Flags().BoolVar(&useLocalGitRepository, "git", false, "use current local git repository state instead of upstream repository")
 	cmd.Flags().StringArrayVar(&overrideInputs, "input", nil, "override a flake input, format name=value (e.g. bcl-override1=path:/home/n0rad/Perso/bcl/becloudless/nixos). Can be repeated. Only valid with --git")
-	withSSHRemoteFlags(cmd, &sshConfig)
+	flags.WithSSHRemoteFlags(cmd, &sshConfig)
 
 	return cmd
 }

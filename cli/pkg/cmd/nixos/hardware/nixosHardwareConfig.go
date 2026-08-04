@@ -1,4 +1,4 @@
-package nixos
+package hardware
 
 import (
 	"github.com/becloudless/becloudless/pkg/system/runner"

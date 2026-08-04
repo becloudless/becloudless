@@ -3,6 +3,7 @@ package nixos
 import (
 	"os"
 
+	"github.com/becloudless/becloudless/pkg/cmd/flags"
 	"github.com/becloudless/becloudless/pkg/nixos"
 	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/n0rad/go-erlog/errs"
@@ -39,7 +40,7 @@ func nixosInstallCmd() *cobra.Command {
 		},
 	}
 
-	withSSHRemoteFlags(cmd, &sshConfig)
+	flags.WithSSHRemoteFlags(cmd, &sshConfig)
 
 	if err := cmd.MarkFlagRequired("host"); err != nil {
 		logs.WithE(err).Fatal("Failed to mark host flag as required")

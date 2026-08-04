@@ -1,13 +1,17 @@
-package nixos
+package hardware
 
 import (
+	"github.com/becloudless/becloudless/pkg/cmd/flags"
 	"github.com/becloudless/becloudless/pkg/system/runner"
+	"github.com/n0rad/memguarded"
 	"github.com/spf13/cobra"
 )
 
 func nixosHardwareNetworkDriverCmd() *cobra.Command {
 
-	sshConfig := runner.SshConnectionConfig{}
+	sshConfig := runner.SshConnectionConfig{
+		Password: memguarded.NewService(),
+	}
 
 	cmd := &cobra.Command{
 		Use:   "network-driver",
@@ -27,7 +31,7 @@ func nixosHardwareNetworkDriverCmd() *cobra.Command {
 		},
 	}
 
-	withSSHRemoteFlags(cmd, &sshConfig)
+	flags.WithSSHRemoteFlags(cmd, &sshConfig)
 
 	return cmd
 }
