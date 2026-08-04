@@ -3,6 +3,8 @@ package hardware
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"regexp"
 
 	"github.com/becloudless/becloudless/pkg/cmd/flags"
 	"github.com/becloudless/becloudless/pkg/nixos"
@@ -12,8 +14,17 @@ import (
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/memguarded"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
 )
+
+var yamlKeyPattern = regexp.MustCompile(`(?m)^(\s*(?:- )?)([\w.\-]+):(\s|$)`)
+
+// boldYamlKeys wraps each yaml map key in ANSI bold codes, for nicer
+// readability when printed to an interactive terminal.
+func boldYamlKeys(yamlOut []byte) string {
+	return yamlKeyPattern.ReplaceAllString(string(yamlOut), "$1\033[1m$2\033[0m:$3")
+}
 
 func nixosHardwareInfoCmd() *cobra.Command {
 
@@ -58,7 +69,11 @@ func nixosHardwareInfoCmd() *cobra.Command {
 				if err != nil {
 					return errs.WithE(err, "Failed to marshal system info")
 				}
-				fmt.Print(string(out))
+				if term.IsTerminal(int(os.Stdout.Fd())) {
+					fmt.Print(boldYamlKeys(out))
+				} else {
+					fmt.Print(string(out))
+				}
 			case "json":
 				out, err := json.MarshalIndent(info, "", "  ")
 				if err != nil {
