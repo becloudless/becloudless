@@ -18,11 +18,13 @@ let
       ++ lib.optional (dataCfg.sourceFoldersPattern != null) "${dataCfg.sourceFoldersPattern}=${branchMode dataCfg}"
     );
 
-  # Paths this data mount must wait for. Explicit sourceFolders resolve to their
-  # underlying bcl.disks mount via x-systemd.requires-mounts-for (see `depends`
-  # option semantics: any filesystem whose mount point is a parent of the path
-  # is ordered first). A glob pattern could match any disk, so depend on all of
-  # them to make sure none are missed.
+  # Paths this data mount must wait for. `depends` becomes
+  # x-systemd.requires-mounts-for on the fileSystems entry, which systemd
+  # translates to RequiresMountsFor= (i.e. both Requires= and After= on the
+  # underlying disk's mount unit). This means a disk that fails to mount will
+  # also make this data mount fail to start, rather than silently coming up
+  # incomplete. Explicit sourceFolders resolve to their own disk path; a glob
+  # pattern could match any disk, so depend on all of them.
   dependsFor = dataCfg:
     lib.unique (dataCfg.sourceFolders ++ lib.optionals (dataCfg.sourceFoldersPattern != null) allDiskPaths);
 
