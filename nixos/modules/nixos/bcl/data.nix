@@ -5,8 +5,13 @@ let
   singleSource = dataCfg:
     dataCfg.sourceFoldersPattern == null && builtins.length dataCfg.sourceFolders == 1;
 
-  # All bcl.disks mount points.
-  allDiskPaths = lib.mapAttrsToList (_: diskCfg: diskCfg.path) config.bcl.disks;
+  # bcl.disks mount points whose path is a prefix of the given glob pattern,
+  # i.e. disks the pattern could actually match against.
+  diskPathsForPattern = pattern:
+    lib.pipe config.bcl.disks [
+      (lib.filterAttrs (_: diskCfg: lib.hasPrefix diskCfg.path pattern))
+      (lib.mapAttrsToList (_: diskCfg: diskCfg.path))
+    ];
 
   branchMode = dataCfg: if dataCfg.mode == "rw" then "RW" else "RO";
 
@@ -24,9 +29,9 @@ let
   # underlying disk's mount unit). This means a disk that fails to mount will
   # also make this data mount fail to start, rather than silently coming up
   # incomplete. Explicit sourceFolders resolve to their own disk path; a glob
-  # pattern could match any disk, so depend on all of them.
+  # pattern depends on every disk whose mount point could match it.
   dependsFor = dataCfg:
-    lib.unique (dataCfg.sourceFolders ++ lib.optionals (dataCfg.sourceFoldersPattern != null) allDiskPaths);
+    lib.unique (dataCfg.sourceFolders ++ lib.optionals (dataCfg.sourceFoldersPattern != null) (diskPathsForPattern dataCfg.sourceFoldersPattern));
 
   fileSystemsEntries = lib.mapAttrs' (name: dataCfg: {
     name  = dataCfg.path;
