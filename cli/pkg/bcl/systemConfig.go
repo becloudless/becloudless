@@ -11,12 +11,8 @@ import (
 const PathSystemConfig = "/etc/bcl/config.yaml"
 
 type SystemConfig struct {
-	Repository string                `yaml:"repository,omitempty"`
-	Disks      map[string]DiskConfig `yaml:"disks,omitempty"`
-}
-
-type DiskConfig struct {
-	Devices []DeviceConfig `yaml:"devices,omitempty"`
+	Repository string                    `yaml:"repository,omitempty"`
+	Disks      map[string][]DeviceConfig `yaml:"disks,omitempty"`
 }
 
 type DeviceConfig struct {

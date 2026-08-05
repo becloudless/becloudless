@@ -109,8 +109,8 @@ func canonicalDevice(run runner.Runner, device string) string {
 // locationForDevice looks up the configured location for a resolved device
 // name (e.g. "/dev/nvme0n1"), by canonicalizing each of the disk's
 // configured device paths and comparing.
-func locationForDevice(disk bcl.DiskConfig, run runner.Runner, deviceName string) string {
-	for _, device := range disk.Devices {
+func locationForDevice(devices []bcl.DeviceConfig, run runner.Runner, deviceName string) string {
+	for _, device := range devices {
 		if canonicalDevice(run, device.Path) == deviceName {
 			return device.Location
 		}
@@ -121,13 +121,13 @@ func locationForDevice(disk bcl.DiskConfig, run runner.Runner, deviceName string
 // findDiskByChain finds a configured bcl.disks entry whose devices overlap
 // with the given block device chain (which may include partitions, mdraid
 // or LUKS mapper devices, and the underlying physical disk(s)).
-func findDiskByChain(disks map[string]bcl.DiskConfig, run runner.Runner, chain []blockDevice) (string, bool) {
+func findDiskByChain(disks map[string][]bcl.DeviceConfig, run runner.Runner, chain []blockDevice) (string, bool) {
 	chainNames := make(map[string]bool, len(chain))
 	for _, d := range chain {
 		chainNames[d.Name] = true
 	}
-	for name, disk := range disks {
-		for _, device := range disk.Devices {
+	for name, devices := range disks {
+		for _, device := range devices {
 			if chainNames[canonicalDevice(run, device.Path)] {
 				return name, true
 			}
@@ -165,12 +165,12 @@ func nixosHardwareDisksInfoCmd() *cobra.Command {
 
 			var info diskInfo
 			var mountPoint string
-			var matchedDisk *bcl.DiskConfig
+			var matchedDevices []bcl.DeviceConfig
 
-			if disk, ok := disks[arg]; ok {
+			if devices, ok := disks[arg]; ok {
 				info.Name = arg
-				matchedDisk = &disk
-				for _, candidate := range mountPointCandidatesForDisk(arg, disk.Devices) {
+				matchedDevices = devices
+				for _, candidate := range mountPointCandidatesForDisk(arg, devices) {
 					if out, err := run.ExecCmdGetStdout("findmnt", "-n", "-o", "TARGET", "--source", candidate); err == nil {
 						if target := strings.TrimSpace(out); target != "" {
 							mountPoint = target
@@ -180,7 +180,7 @@ func nixosHardwareDisksInfoCmd() *cobra.Command {
 				}
 				if mountPoint == "" {
 					// Disk not currently mounted: fall back to the devices declared in config.
-					for _, device := range disk.Devices {
+					for _, device := range devices {
 						info.Devices = append(info.Devices, deviceInfo{
 							Path:     canonicalDevice(run, device.Path),
 							Location: device.Location,
@@ -202,20 +202,16 @@ func nixosHardwareDisksInfoCmd() *cobra.Command {
 				}
 				info.Path = mountPoint
 
-				if matchedDisk == nil {
+				if matchedDevices == nil {
 					if name, found := findDiskByChain(disks, run, chain); found {
 						info.Name = name
-						disk := disks[name]
-						matchedDisk = &disk
+						matchedDevices = disks[name]
 					}
 				}
 
 				info.Devices = nil
 				for _, deviceName := range physicalDeviceNames(chain) {
-					location := ""
-					if matchedDisk != nil {
-						location = locationForDevice(*matchedDisk, run, deviceName)
-					}
+					location := locationForDevice(matchedDevices, run, deviceName)
 					info.Devices = append(info.Devices, deviceInfo{Path: deviceName, Location: location})
 				}
 			}
