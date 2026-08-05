@@ -29,55 +29,123 @@ type blockDevice struct {
 	Type string
 }
 
-// resolveDiskMountPoint turns a block device, by-id path, mount point or
-// arbitrary path inside a mount point into the mount point (TARGET) that
-// covers it, using findmnt.
-func resolveDiskMountPoint(run runner.Runner, arg string) (string, error) {
-	// Try resolving as a block device / source first (e.g. /dev/sda1, /dev/disk/by-id/xxx).
-	if out, err := run.ExecCmdGetStdout("findmnt", "-n", "-o", "TARGET", "--source", arg); err == nil {
-		if target := strings.TrimSpace(out); target != "" {
-			return target, nil
-		}
-	}
-
-	// Fall back to treating arg as a path: findmnt --target resolves the
-	// closest mount point above any given file or directory.
-	out, err := run.ExecCmdGetStdout("findmnt", "-n", "-o", "TARGET", "--target", arg)
-	if err != nil {
-		return "", errs.WithEF(err, data.WithField("arg", arg), "Failed to resolve mount point")
-	}
-	return strings.TrimSpace(out), nil
+// lsblkNode is a single row of the system-wide block device tree.
+type lsblkNode struct {
+	Name       string
+	Type       string
+	MountPoint string
+	PKName     string
 }
 
-// resolveBlockChain resolves the full chain of block devices (from the
-// mounted source down to the underlying physical disk(s)), walking through
-// any device-mapper / LVM / mdraid layers (e.g. a LUKS mapper device).
-func resolveBlockChain(run runner.Runner, mountPoint string) ([]blockDevice, error) {
-	out, err := run.ExecCmdGetStdout("findmnt", "-n", "-o", "SOURCE", "--target", mountPoint)
+// blockDeviceGraph indexes every block device on the system so that any
+// disk, partition, mapper (LUKS) or raid device, or one of its by-id /
+// by-uuid / by-path / /dev/mapper links, can be resolved to its ancestor
+// physical disk(s) and/or a mounted descendant, regardless of whether the
+// given device itself is currently mounted.
+type blockDeviceGraph struct {
+	byName   map[string]lsblkNode
+	byCanon  map[string]lsblkNode
+	children map[string][]string
+}
+
+// loadBlockDeviceGraph lists every block device on the system (lsblk with no
+// device argument walks the whole tree).
+func loadBlockDeviceGraph(run runner.Runner) (*blockDeviceGraph, error) {
+	out, err := run.ExecCmdGetStdout("lsblk", "-rnpo", "NAME,TYPE,MOUNTPOINT,PKNAME")
 	if err != nil {
-		return nil, errs.WithEF(err, data.WithField("mountPoint", mountPoint), "Failed to resolve mount source")
-	}
-	source := strings.TrimSpace(out)
-	// findmnt appends a "[subvol-path]" suffix to SOURCE for bind mounts /
-	// btrfs subvolumes (e.g. "/dev/mapper/nix[/home/user]"); strip it since
-	// lsblk expects a plain device path.
-	if idx := strings.IndexByte(source, '['); idx != -1 {
-		source = source[:idx]
+		return nil, errs.WithE(err, "Failed to list system block devices")
 	}
 
-	lsblkOut, err := run.ExecCmdGetStdout("lsblk", "-rsp", "-no", "NAME,TYPE", source)
-	if err != nil {
-		return nil, errs.WithEF(err, data.WithField("source", source), "Failed to resolve block device chain")
+	g := &blockDeviceGraph{
+		byName:   map[string]lsblkNode{},
+		byCanon:  map[string]lsblkNode{},
+		children: map[string][]string{},
 	}
-
-	var chain []blockDevice
-	for _, line := range strings.Split(strings.TrimSpace(lsblkOut), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) == 2 {
-			chain = append(chain, blockDevice{Name: fields[0], Type: fields[1]})
+	for _, line := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
+		if line == "" {
+			continue
+		}
+		fields := strings.SplitN(line, " ", 4)
+		for len(fields) < 4 {
+			fields = append(fields, "")
+		}
+		node := lsblkNode{Name: fields[0], Type: fields[1], MountPoint: fields[2], PKName: fields[3]}
+		g.byName[node.Name] = node
+		g.byCanon[canonicalDevice(run, node.Name)] = node
+		if node.PKName != "" {
+			g.children[node.PKName] = append(g.children[node.PKName], node.Name)
 		}
 	}
-	return chain, nil
+	return g, nil
+}
+
+// find resolves arg (an lsblk NAME such as /dev/mapper/nix or /dev/nvme0n1,
+// or a symlink to one such as a /dev/disk/by-id/... path) to its node.
+func (g *blockDeviceGraph) find(run runner.Runner, arg string) (lsblkNode, bool) {
+	if node, ok := g.byName[arg]; ok {
+		return node, true
+	}
+	if node, ok := g.byCanon[canonicalDevice(run, arg)]; ok {
+		return node, true
+	}
+	return lsblkNode{}, false
+}
+
+// descendMountPoint searches name and its descendants (in tree order) for
+// the first mounted device, e.g. resolving a raw disk down through a LUKS
+// mapper device to find where the mapped volume is mounted.
+func (g *blockDeviceGraph) descendMountPoint(name string) (string, bool) {
+	queue := []string{name}
+	seen := map[string]bool{}
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		if seen[cur] {
+			continue
+		}
+		seen[cur] = true
+		if node, ok := g.byName[cur]; ok && node.MountPoint != "" {
+			return node.MountPoint, true
+		}
+		queue = append(queue, g.children[cur]...)
+	}
+	return "", false
+}
+
+// relatedChain returns name plus all of its ancestors (walking up PKName,
+// e.g. partition -> disk) and descendants (e.g. partition -> LUKS mapper),
+// as a []blockDevice suitable for findDiskByChain / physicalDeviceNames.
+func (g *blockDeviceGraph) relatedChain(name string) []blockDevice {
+	seen := map[string]bool{}
+	var chain []blockDevice
+	add := func(n string) {
+		if seen[n] {
+			return
+		}
+		seen[n] = true
+		if node, ok := g.byName[n]; ok {
+			chain = append(chain, blockDevice{Name: node.Name, Type: node.Type})
+		}
+	}
+
+	for cur := name; cur != ""; {
+		add(cur)
+		node, ok := g.byName[cur]
+		if !ok {
+			break
+		}
+		cur = node.PKName
+	}
+
+	queue := append([]string{}, g.children[name]...)
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		add(cur)
+		queue = append(queue, g.children[cur]...)
+	}
+
+	return chain
 }
 
 // physicalDeviceNames filters a block chain down to the underlying physical
@@ -169,7 +237,8 @@ func nixosHardwareDisksInfoCmd() *cobra.Command {
 		Use:   "info <disk>",
 		Short: "get info of a disk",
 		Long: "Print info (path, devices, per-device location) of a bcl.disks entry, as configured in /etc/bcl/config.yaml.\n" +
-			"The argument can be the disk name, a mount point, a path within a mount point, or a block device.\n" +
+			"The argument can be the disk name, a mount point, a path within a mount point, or a block\n" +
+			"device (a raw disk, partition, LUKS mapper, raid device, or a /dev/disk/by-id|by-uuid|by-path link).\n" +
 			"Physical devices are resolved by walking down through any LUKS/LVM/mdraid layers to the real disk(s) (e.g. /dev/nvme0n1).\n" +
 			"If the disk is not declared in the config, its resolved mount point is still printed, with no location.",
 		Args: cobra.ExactArgs(1),
@@ -181,6 +250,7 @@ func nixosHardwareDisksInfoCmd() *cobra.Command {
 			var info diskInfo
 			var mountPoint string
 			var matchedDevices []bcl.DeviceConfig
+			var chain []blockDevice
 
 			if devices, ok := disks[arg]; ok {
 				info.Name = arg
@@ -203,27 +273,58 @@ func nixosHardwareDisksInfoCmd() *cobra.Command {
 					}
 				}
 			} else {
-				resolvedMountPoint, err := resolveDiskMountPoint(run, arg)
+				graph, err := loadBlockDeviceGraph(run)
 				if err != nil {
 					return errs.WithEF(err, data.WithField("arg", arg), "Failed to resolve disk from argument")
 				}
-				mountPoint = resolvedMountPoint
+
+				if node, found := graph.find(run, arg); found {
+					// arg is a block device (raw disk, partition, mapper,
+					// raid device, or a link to one): find its physical
+					// disk(s) and any mounted descendant directly from the
+					// system's block device tree.
+					chain = graph.relatedChain(node.Name)
+					if mp, ok := graph.descendMountPoint(node.Name); ok {
+						mountPoint = mp
+					}
+				} else {
+					// Not a recognized block device: treat arg as a mount
+					// point, or an arbitrary path within one.
+					out, err := run.ExecCmdGetStdout("findmnt", "-n", "-o", "TARGET", "--target", arg)
+					if err != nil {
+						return errs.WithEF(err, data.WithField("arg", arg), "Failed to resolve mount point")
+					}
+					mountPoint = strings.TrimSpace(out)
+
+					sourceOut, err := run.ExecCmdGetStdout("findmnt", "-n", "-o", "SOURCE", "--target", mountPoint)
+					if err != nil {
+						return errs.WithEF(err, data.WithField("mountPoint", mountPoint), "Failed to resolve mount source")
+					}
+					source := strings.TrimSpace(sourceOut)
+					// findmnt appends a "[subvol-path]" suffix to SOURCE for
+					// bind mounts / btrfs subvolumes (e.g.
+					// "/dev/mapper/nix[/home/user]"); strip it.
+					if idx := strings.IndexByte(source, '['); idx != -1 {
+						source = source[:idx]
+					}
+					if node, found := graph.find(run, source); found {
+						chain = graph.relatedChain(node.Name)
+					}
+				}
 			}
 
 			if mountPoint != "" {
-				chain, err := resolveBlockChain(run, mountPoint)
-				if err != nil {
-					return errs.WithEF(err, data.WithField("mountPoint", mountPoint), "Failed to resolve physical device")
-				}
 				info.Path = mountPoint
+			}
 
-				if matchedDevices == nil {
-					if name, found := findDiskByChain(disks, run, chain); found {
-						info.Name = name
-						matchedDevices = disks[name]
-					}
+			if info.Name == "" && chain != nil {
+				if name, found := findDiskByChain(disks, run, chain); found {
+					info.Name = name
+					matchedDevices = disks[name]
 				}
+			}
 
+			if chain != nil {
 				info.Devices = nil
 				for _, deviceName := range physicalDeviceNames(chain) {
 					info.Devices = append(info.Devices, deviceInfoForPhysicalName(matchedDevices, run, deviceName))
