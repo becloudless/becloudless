@@ -106,16 +106,31 @@ func canonicalDevice(run runner.Runner, device string) string {
 	return device
 }
 
-// locationForDevice looks up the configured location for a resolved device
-// name (e.g. "/dev/nvme0n1"), by canonicalizing each of the disk's
-// configured device paths and comparing.
-func locationForDevice(devices []bcl.DeviceConfig, run runner.Runner, deviceName string) string {
+// byIDPath resolves a physical device name (e.g. "/dev/nvme0n1") to a
+// /dev/disk/by-id/... link, using lsblk's ID-LINK column. Falls back to the
+// original device name if no by-id link can be found.
+func byIDPath(run runner.Runner, deviceName string) string {
+	out, err := run.ExecCmdGetStdout("lsblk", "-n", "--nodeps", "-o", "ID-LINK", deviceName)
+	if err != nil {
+		return deviceName
+	}
+	if link := strings.TrimSpace(out); link != "" {
+		return "/dev/disk/by-id/" + link
+	}
+	return deviceName
+}
+
+// deviceInfoForPhysicalName builds the deviceInfo for a resolved physical
+// device name (e.g. "/dev/nvme0n1"): if it matches one of the disk's
+// configured devices, the configured by-id path and location are reused;
+// otherwise the by-id link is resolved directly from the physical device.
+func deviceInfoForPhysicalName(devices []bcl.DeviceConfig, run runner.Runner, deviceName string) deviceInfo {
 	for _, device := range devices {
 		if canonicalDevice(run, device.Path) == deviceName {
-			return device.Location
+			return deviceInfo{Path: device.Path, Location: device.Location}
 		}
 	}
-	return ""
+	return deviceInfo{Path: byIDPath(run, deviceName)}
 }
 
 // findDiskByChain finds a configured bcl.disks entry whose devices overlap
@@ -182,7 +197,7 @@ func nixosHardwareDisksInfoCmd() *cobra.Command {
 					// Disk not currently mounted: fall back to the devices declared in config.
 					for _, device := range devices {
 						info.Devices = append(info.Devices, deviceInfo{
-							Path:     canonicalDevice(run, device.Path),
+							Path:     device.Path,
 							Location: device.Location,
 						})
 					}
@@ -211,8 +226,7 @@ func nixosHardwareDisksInfoCmd() *cobra.Command {
 
 				info.Devices = nil
 				for _, deviceName := range physicalDeviceNames(chain) {
-					location := locationForDevice(matchedDevices, run, deviceName)
-					info.Devices = append(info.Devices, deviceInfo{Path: deviceName, Location: location})
+					info.Devices = append(info.Devices, deviceInfoForPhysicalName(matchedDevices, run, deviceName))
 				}
 			}
 
