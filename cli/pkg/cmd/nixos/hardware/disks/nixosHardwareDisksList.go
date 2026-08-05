@@ -94,7 +94,7 @@ func nixosHardwareDisksListCmd() *cobra.Command {
 			for _, name := range missingNames {
 				var devices []deviceInfo
 				for _, device := range disks[name] {
-					devices = append(devices, deviceInfo{Path: device.Path, Location: device.Location})
+					devices = append(devices, deviceInfoFromConfig(run, device))
 				}
 				infos = append(infos, diskInfo{Name: name, Status: diskStatusMissing, Devices: devices})
 			}

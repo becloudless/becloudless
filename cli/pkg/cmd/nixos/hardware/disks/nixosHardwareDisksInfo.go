@@ -3,6 +3,7 @@ package disks
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/becloudless/becloudless/pkg/bcl"
@@ -14,8 +15,8 @@ import (
 )
 
 type deviceInfo struct {
-	Path     string `json:"path,omitempty" yaml:"path,omitempty"`
-	Location string `json:"location,omitempty" yaml:"location,omitempty"`
+	Paths    []string `json:"paths,omitempty" yaml:"paths,omitempty"`
+	Location string   `json:"location,omitempty" yaml:"location,omitempty"`
 }
 
 type diskInfo struct {
@@ -47,8 +48,14 @@ type lsblkNode struct {
 type blockDeviceGraph struct {
 	byName   map[string]lsblkNode
 	byCanon  map[string]lsblkNode
+	byHCTL   map[string]lsblkNode
 	children map[string][]string
 }
+
+// hctlPattern matches a SCSI H:C:T:L address, as reported by the kernel in
+// dmesg messages such as "sd 7:0:29:0: Device offlined - not ready after
+// error recovery" (host:channel:target:lun, all non-negative integers).
+var hctlPattern = regexp.MustCompile(`^[0-9]+:[0-9]+:[0-9]+:[0-9]+$`)
 
 // loadBlockDeviceGraph lists every block device on the system (lsblk with no
 // device argument walks the whole tree).
@@ -61,6 +68,7 @@ func loadBlockDeviceGraph(run runner.Runner) (*blockDeviceGraph, error) {
 	g := &blockDeviceGraph{
 		byName:   map[string]lsblkNode{},
 		byCanon:  map[string]lsblkNode{},
+		byHCTL:   map[string]lsblkNode{},
 		children: map[string][]string{},
 	}
 	for _, line := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
@@ -78,17 +86,49 @@ func loadBlockDeviceGraph(run runner.Runner) (*blockDeviceGraph, error) {
 			g.children[node.PKName] = append(g.children[node.PKName], node.Name)
 		}
 	}
+
+	// lsblk -S (SCSI mode) reports the HCTL (host:channel:target:lun)
+	// address of each SCSI-attached disk (sata/sas/iscsi/usb/...), which is
+	// the same address the kernel logs in dmesg (e.g. "sd 7:0:29:0: ...").
+	hctlOut, err := run.ExecCmdGetStdout("lsblk", "-Srno", "NAME,HCTL")
+	if err == nil {
+		for _, line := range strings.Split(strings.TrimRight(hctlOut, "\n"), "\n") {
+			if line == "" {
+				continue
+			}
+			fields := strings.SplitN(line, " ", 2)
+			if len(fields) != 2 || fields[1] == "" {
+				continue
+			}
+			if node, ok := g.byName["/dev/"+fields[0]]; ok {
+				g.byHCTL[fields[1]] = node
+			}
+		}
+	}
+
 	return g, nil
 }
 
 // find resolves arg (an lsblk NAME such as /dev/mapper/nix or /dev/nvme0n1,
-// or a symlink to one such as a /dev/disk/by-id/... path) to its node.
+// a symlink to one such as a /dev/disk/by-id/... path, a bare kernel device
+// name as reported by dmesg, e.g. "sda" or "sda1", or a SCSI H:C:T:L address
+// as reported by dmesg, e.g. "7:0:29:0") to its node.
 func (g *blockDeviceGraph) find(run runner.Runner, arg string) (lsblkNode, bool) {
 	if node, ok := g.byName[arg]; ok {
 		return node, true
 	}
 	if node, ok := g.byCanon[canonicalDevice(run, arg)]; ok {
 		return node, true
+	}
+	if !strings.HasPrefix(arg, "/dev/") {
+		if node, ok := g.byName["/dev/"+arg]; ok {
+			return node, true
+		}
+	}
+	if hctlPattern.MatchString(arg) {
+		if node, ok := g.byHCTL[arg]; ok {
+			return node, true
+		}
 	}
 	return lsblkNode{}, false
 }
@@ -225,13 +265,40 @@ func byIDPath(run runner.Runner, deviceName string) string {
 // device name (e.g. "/dev/nvme0n1"): if it matches one of the disk's
 // configured devices, the configured by-id path and location are reused;
 // otherwise the by-id link is resolved directly from the physical device.
+// In both cases the live kernel device path (e.g. "/dev/sdg") is also
+// included in Paths.
 func deviceInfoForPhysicalName(devices []bcl.DeviceConfig, run runner.Runner, deviceName string) deviceInfo {
 	for _, device := range devices {
 		if canonicalDevice(run, device.Path) == deviceName {
-			return deviceInfo{Path: device.Path, Location: device.Location}
+			return deviceInfo{Paths: mergePaths(device.Path, deviceName), Location: device.Location}
 		}
 	}
-	return deviceInfo{Path: byIDPath(run, deviceName)}
+	return deviceInfo{Paths: mergePaths(byIDPath(run, deviceName), deviceName)}
+}
+
+// deviceInfoFromConfig builds the deviceInfo for a configured device entry
+// that could not be resolved from the live system block device tree (e.g.
+// the disk is not currently mounted, or is missing entirely). The
+// configured path is always included; the live kernel device path (e.g.
+// "/dev/sdg") is added as well if the configured path currently resolves
+// to one.
+func deviceInfoFromConfig(run runner.Runner, device bcl.DeviceConfig) deviceInfo {
+	return deviceInfo{Paths: mergePaths(device.Path, canonicalDevice(run, device.Path)), Location: device.Location}
+}
+
+// mergePaths returns paths with empty and duplicate entries removed,
+// preserving order.
+func mergePaths(paths ...string) []string {
+	seen := map[string]bool{}
+	var result []string
+	for _, p := range paths {
+		if p == "" || seen[p] {
+			continue
+		}
+		seen[p] = true
+		result = append(result, p)
+	}
+	return result
 }
 
 // findDiskByChain finds a configured bcl.disks entry whose devices overlap
@@ -271,7 +338,9 @@ func nixosHardwareDisksInfoCmd() *cobra.Command {
 		Short: "get info of a disk",
 		Long: "Print info (path, devices, per-device location) of a bcl.disks entry, as configured in /etc/bcl/config.yaml.\n" +
 			"The argument can be the disk name, a mount point, a path within a mount point, or a block\n" +
-			"device (a raw disk, partition, LUKS mapper, raid device, or a /dev/disk/by-id|by-uuid|by-path link).\n" +
+			"device (a raw disk, partition, LUKS mapper, raid device, a bare kernel name as reported by\n" +
+			"dmesg such as \"sda\", a SCSI H:C:T:L address as reported by dmesg such as \"7:0:29:0\", or a\n" +
+			"/dev/disk/by-id|by-uuid|by-path link).\n" +
 			"Physical devices are resolved by walking down through any LUKS/LVM/mdraid layers to the real disk(s) (e.g. /dev/nvme0n1).\n" +
 			"If the disk is not declared in the config, its resolved mount point is still printed, with no location.",
 		Args: cobra.ExactArgs(1),
@@ -299,10 +368,7 @@ func nixosHardwareDisksInfoCmd() *cobra.Command {
 				if mountPoint == "" {
 					// Disk not currently mounted: fall back to the devices declared in config.
 					for _, device := range devices {
-						info.Devices = append(info.Devices, deviceInfo{
-							Path:     device.Path,
-							Location: device.Location,
-						})
+						info.Devices = append(info.Devices, deviceInfoFromConfig(run, device))
 					}
 				}
 			} else {
