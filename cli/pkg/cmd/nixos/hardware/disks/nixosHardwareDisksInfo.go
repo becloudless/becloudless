@@ -20,6 +20,7 @@ type deviceInfo struct {
 
 type diskInfo struct {
 	Name    string       `json:"name,omitempty" yaml:"name,omitempty"`
+	Status  string       `json:"status,omitempty" yaml:"status,omitempty"`
 	Path    string       `json:"path,omitempty" yaml:"path,omitempty"`
 	Devices []deviceInfo `json:"devices,omitempty" yaml:"devices,omitempty"`
 }

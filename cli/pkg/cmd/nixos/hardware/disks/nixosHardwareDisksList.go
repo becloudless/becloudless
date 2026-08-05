@@ -3,6 +3,7 @@ package disks
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/becloudless/becloudless/pkg/bcl"
@@ -13,16 +14,33 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	diskStatusMounted    = "mounted"
+	diskStatusNotMounted = "not-mounted"
+	diskStatusMissing    = "missing"
+)
+
+var validDiskStatuses = []string{diskStatusMounted, diskStatusNotMounted, diskStatusMissing}
+
 func nixosHardwareDisksListCmd() *cobra.Command {
 	var outputFormat string
+	var statusFilter []string
 
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "list disks on the system",
 		Long: "List physical disks present on the system, enriched with the matching bcl.disks entry\n" +
-			"(name, per-device location) from /etc/bcl/config.yaml, and its current mount point if mounted.",
+			"(name, per-device location) from /etc/bcl/config.yaml, and its current mount point if mounted.\n" +
+			"Disks configured in bcl.disks but not currently present on the system are also listed, with\n" +
+			"status \"missing\". Use --status to only show disks in specific states.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			for _, status := range statusFilter {
+				if !slices.Contains(validDiskStatuses, status) {
+					return errs.WithF(data.WithField("status", status), "Invalid status filter, must be one of: mounted, not-mounted, missing")
+				}
+			}
+
 			disks := bcl.BCL.System.Disks
 			run := runner.NewLocalRunner()
 
@@ -42,6 +60,8 @@ func nixosHardwareDisksListCmd() *cobra.Command {
 			}
 			sort.Strings(physicalDiskNames)
 
+			matchedNames := map[string]bool{}
+
 			var infos []diskInfo
 			for _, diskName := range physicalDiskNames {
 				chain := graph.relatedChain(diskName)
@@ -51,13 +71,42 @@ func nixosHardwareDisksListCmd() *cobra.Command {
 				if name, found := findDiskByChain(disks, run, chain); found {
 					info.Name = name
 					matchedDevices = disks[name]
+					matchedNames[name] = true
 				}
 				if mountPoint, ok := graph.descendMountPoint(diskName); ok {
 					info.Path = mountPoint
+					info.Status = diskStatusMounted
+				} else {
+					info.Status = diskStatusNotMounted
 				}
 				info.Devices = []deviceInfo{deviceInfoForPhysicalName(matchedDevices, run, diskName)}
 
 				infos = append(infos, info)
+			}
+
+			var missingNames []string
+			for name := range disks {
+				if !matchedNames[name] {
+					missingNames = append(missingNames, name)
+				}
+			}
+			sort.Strings(missingNames)
+			for _, name := range missingNames {
+				var devices []deviceInfo
+				for _, device := range disks[name] {
+					devices = append(devices, deviceInfo{Path: device.Path, Location: device.Location})
+				}
+				infos = append(infos, diskInfo{Name: name, Status: diskStatusMissing, Devices: devices})
+			}
+
+			if len(statusFilter) > 0 {
+				var filtered []diskInfo
+				for _, info := range infos {
+					if slices.Contains(statusFilter, info.Status) {
+						filtered = append(filtered, info)
+					}
+				}
+				infos = filtered
 			}
 
 			switch outputFormat {
@@ -81,6 +130,7 @@ func nixosHardwareDisksListCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&outputFormat, "output", "o", "yaml", "Output format: json or yaml")
+	cmd.Flags().StringSliceVarP(&statusFilter, "status", "s", nil, "Filter by status: mounted, not-mounted, missing (default: all)")
 
 	return cmd
 }
