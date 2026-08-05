@@ -5,11 +5,19 @@ let
   singleSource = dataCfg:
     dataCfg.sourceFoldersPattern == null && builtins.length dataCfg.sourceFolders == 1;
 
-  # bcl.disks mount points whose path is a prefix of the given glob pattern,
-  # i.e. disks the pattern could actually match against.
+  # bcl.disks mount points that could be matched by the given glob pattern,
+  # i.e. whose path starts with the pattern's literal (non-glob) prefix
+  # directory. E.g. for "/disks/*/Audio", the literal prefix directory is
+  # "/disks", so any disk mounted under /disks is considered a candidate
+  # source. Appending a dummy character before taking dirOf ensures a
+  # partial trailing segment (e.g. from "/disks/hd*1/Audio") is stripped too.
   diskPathsForPattern = pattern:
+    let
+      beforeGlob = builtins.head (lib.splitString "*" pattern);
+      prefixPath = builtins.dirOf "${beforeGlob}x";
+    in
     lib.pipe config.bcl.disks [
-      (lib.filterAttrs (_: diskCfg: lib.hasPrefix diskCfg.path pattern))
+      (lib.filterAttrs (_: diskCfg: lib.hasPrefix prefixPath diskCfg.path))
       (lib.mapAttrsToList (_: diskCfg: diskCfg.path))
     ];
 
