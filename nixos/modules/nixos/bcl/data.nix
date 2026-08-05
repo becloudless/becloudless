@@ -12,6 +12,10 @@ let
   usesMergerfs = dataCfg:
     dataCfg.sourceFoldersPattern != null || builtins.length dataCfg.sourceFolders > 1;
 
+  # All bcl.disks mount units. Source-adding services wait on these so a slow
+  # (nofail) disk mount can't race the mergerfs branch setup and get missed.
+  diskMountUnits = lib.mapAttrsToList (_: diskCfg: mountUnitName diskCfg.path) config.bcl.disks;
+
   fileSystemsEntries = lib.mapAttrs' (name: dataCfg: {
     name  = dataCfg.path;
     value = if singleSource dataCfg then {
@@ -46,7 +50,8 @@ let
     name = "data-sources-${name}";
     value = {
       description = "Add source folders to mergerfs mount ${dataCfg.path}";
-      after    = [ "local-fs.target" (mountUnitName dataCfg.path) ];
+      after    = [ "local-fs.target" (mountUnitName dataCfg.path) ] ++ diskMountUnits;
+      wants    = diskMountUnits;
       requires = [ (mountUnitName dataCfg.path) ];
       wantedBy = [ "multi-user.target" ];
       path = with pkgs; [ attr ];
