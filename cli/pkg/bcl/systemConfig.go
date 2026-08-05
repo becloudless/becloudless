@@ -16,6 +16,10 @@ type SystemConfig struct {
 }
 
 type DiskConfig struct {
+	Devices []DeviceConfig `yaml:"devices,omitempty"`
+}
+
+type DeviceConfig struct {
 	Path     string `yaml:"path,omitempty"`
 	Location string `yaml:"location,omitempty"`
 }

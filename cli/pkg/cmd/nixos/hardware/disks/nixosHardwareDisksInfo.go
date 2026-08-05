@@ -13,11 +13,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type deviceInfo struct {
+	Path     string `json:"path,omitempty" yaml:"path,omitempty"`
+	Location string `json:"location,omitempty" yaml:"location,omitempty"`
+}
+
 type diskInfo struct {
-	Name     string   `json:"name,omitempty" yaml:"name,omitempty"`
-	Path     string   `json:"path,omitempty" yaml:"path,omitempty"`
-	Location string   `json:"location,omitempty" yaml:"location,omitempty"`
-	Devices  []string `json:"devices,omitempty" yaml:"devices,omitempty"`
+	Name    string       `json:"name,omitempty" yaml:"name,omitempty"`
+	Path    string       `json:"path,omitempty" yaml:"path,omitempty"`
+	Devices []deviceInfo `json:"devices,omitempty" yaml:"devices,omitempty"`
+}
+
+type blockDevice struct {
+	Name string
+	Type string
 }
 
 // resolveDiskMountPoint turns a block device, by-id path, mount point or
@@ -40,10 +49,10 @@ func resolveDiskMountPoint(run runner.Runner, arg string) (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
-// resolvePhysicalDevices resolves the underlying physical block device(s) backing
-// a mount point, walking down through any device-mapper / LVM / mdraid layers
-// (e.g. a LUKS mapper device) to the real disk(s) (e.g. /dev/nvme0n1).
-func resolvePhysicalDevices(run runner.Runner, mountPoint string) ([]string, error) {
+// resolveBlockChain resolves the full chain of block devices (from the
+// mounted source down to the underlying physical disk(s)), walking through
+// any device-mapper / LVM / mdraid layers (e.g. a LUKS mapper device).
+func resolveBlockChain(run runner.Runner, mountPoint string) ([]blockDevice, error) {
 	out, err := run.ExecCmdGetStdout("findmnt", "-n", "-o", "SOURCE", "--target", mountPoint)
 	if err != nil {
 		return nil, errs.WithEF(err, data.WithField("mountPoint", mountPoint), "Failed to resolve mount source")
@@ -58,26 +67,84 @@ func resolvePhysicalDevices(run runner.Runner, mountPoint string) ([]string, err
 
 	lsblkOut, err := run.ExecCmdGetStdout("lsblk", "-rsp", "-no", "NAME,TYPE", source)
 	if err != nil {
-		return nil, errs.WithEF(err, data.WithField("source", source), "Failed to resolve physical device")
+		return nil, errs.WithEF(err, data.WithField("source", source), "Failed to resolve block device chain")
 	}
 
-	var devices []string
+	var chain []blockDevice
 	for _, line := range strings.Split(strings.TrimSpace(lsblkOut), "\n") {
 		fields := strings.Fields(line)
-		if len(fields) == 2 && fields[1] == "disk" {
-			devices = append(devices, fields[0])
+		if len(fields) == 2 {
+			chain = append(chain, blockDevice{Name: fields[0], Type: fields[1]})
 		}
 	}
-	return devices, nil
+	return chain, nil
 }
 
-func findDiskByMountPoint(disks map[string]bcl.DiskConfig, mountPoint string) (string, bool) {
+// physicalDeviceNames filters a block chain down to the underlying physical
+// disk(s) (e.g. /dev/nvme0n1).
+func physicalDeviceNames(chain []blockDevice) []string {
+	var names []string
+	for _, d := range chain {
+		if d.Type == "disk" {
+			names = append(names, d.Name)
+		}
+	}
+	return names
+}
+
+// canonicalDevice resolves symlinks (e.g. /dev/disk/by-id/xxx) to their
+// canonical device path (e.g. /dev/sda1). Falls back to the original value
+// if it cannot be resolved (e.g. the device doesn't currently exist).
+func canonicalDevice(run runner.Runner, device string) string {
+	out, err := run.ExecCmdGetStdout("readlink", "-f", device)
+	if err != nil {
+		return device
+	}
+	if target := strings.TrimSpace(out); target != "" {
+		return target
+	}
+	return device
+}
+
+// locationForDevice looks up the configured location for a resolved device
+// name (e.g. "/dev/nvme0n1"), by canonicalizing each of the disk's
+// configured device paths and comparing.
+func locationForDevice(disk bcl.DiskConfig, run runner.Runner, deviceName string) string {
+	for _, device := range disk.Devices {
+		if canonicalDevice(run, device.Path) == deviceName {
+			return device.Location
+		}
+	}
+	return ""
+}
+
+// findDiskByChain finds a configured bcl.disks entry whose devices overlap
+// with the given block device chain (which may include partitions, mdraid
+// or LUKS mapper devices, and the underlying physical disk(s)).
+func findDiskByChain(disks map[string]bcl.DiskConfig, run runner.Runner, chain []blockDevice) (string, bool) {
+	chainNames := make(map[string]bool, len(chain))
+	for _, d := range chain {
+		chainNames[d.Name] = true
+	}
 	for name, disk := range disks {
-		if disk.Path == mountPoint {
-			return name, true
+		for _, device := range disk.Devices {
+			if chainNames[canonicalDevice(run, device.Path)] {
+				return name, true
+			}
 		}
 	}
 	return "", false
+}
+
+// mountPointCandidatesForDisk returns, in priority order, the possible
+// top-level sources findmnt could report for a bcl.disks entry: the LUKS
+// mapper device, the mdraid device, then each raw device.
+func mountPointCandidatesForDisk(name string, devices []bcl.DeviceConfig) []string {
+	candidates := []string{"/dev/mapper/" + name, "/dev/md/" + name}
+	for _, device := range devices {
+		candidates = append(candidates, device.Path)
+	}
+	return candidates
 }
 
 func nixosHardwareDisksInfoCmd() *cobra.Command {
@@ -86,10 +153,10 @@ func nixosHardwareDisksInfoCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "info <disk>",
 		Short: "get info of a disk",
-		Long: "Print info (path, location, physical devices) of a bcl.disks entry, as configured in /etc/bcl/config.yaml.\n" +
+		Long: "Print info (path, devices, per-device location) of a bcl.disks entry, as configured in /etc/bcl/config.yaml.\n" +
 			"The argument can be the disk name, a mount point, a path within a mount point, or a block device.\n" +
 			"Physical devices are resolved by walking down through any LUKS/LVM/mdraid layers to the real disk(s) (e.g. /dev/nvme0n1).\n" +
-			"If the disk is not declared in the config, its resolved mount point is still printed, with an empty location.",
+			"If the disk is not declared in the config, its resolved mount point is still printed, with no location.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			arg := args[0]
@@ -98,35 +165,60 @@ func nixosHardwareDisksInfoCmd() *cobra.Command {
 
 			var info diskInfo
 			var mountPoint string
+			var matchedDisk *bcl.DiskConfig
 
 			if disk, ok := disks[arg]; ok {
-				resolvedMountPoint, err := resolveDiskMountPoint(run, disk.Path)
-				if err != nil {
-					return errs.WithEF(err, data.WithField("arg", arg).WithField("path", disk.Path), "Failed to resolve mount point for disk")
+				info.Name = arg
+				matchedDisk = &disk
+				for _, candidate := range mountPointCandidatesForDisk(arg, disk.Devices) {
+					if out, err := run.ExecCmdGetStdout("findmnt", "-n", "-o", "TARGET", "--source", candidate); err == nil {
+						if target := strings.TrimSpace(out); target != "" {
+							mountPoint = target
+							break
+						}
+					}
 				}
-				mountPoint = resolvedMountPoint
-				info = diskInfo{Name: arg, Path: mountPoint, Location: disk.Location}
+				if mountPoint == "" {
+					// Disk not currently mounted: fall back to the devices declared in config.
+					for _, device := range disk.Devices {
+						info.Devices = append(info.Devices, deviceInfo{
+							Path:     canonicalDevice(run, device.Path),
+							Location: device.Location,
+						})
+					}
+				}
 			} else {
 				resolvedMountPoint, err := resolveDiskMountPoint(run, arg)
 				if err != nil {
 					return errs.WithEF(err, data.WithField("arg", arg), "Failed to resolve disk from argument")
 				}
 				mountPoint = resolvedMountPoint
+			}
 
-				if name, found := findDiskByMountPoint(disks, mountPoint); found {
-					disk := disks[name]
-					info = diskInfo{Name: name, Path: mountPoint, Location: disk.Location}
-				} else {
-					// Not declared in bcl.disks: still report what we resolved from the system.
-					info = diskInfo{Path: mountPoint}
+			if mountPoint != "" {
+				chain, err := resolveBlockChain(run, mountPoint)
+				if err != nil {
+					return errs.WithEF(err, data.WithField("mountPoint", mountPoint), "Failed to resolve physical device")
+				}
+				info.Path = mountPoint
+
+				if matchedDisk == nil {
+					if name, found := findDiskByChain(disks, run, chain); found {
+						info.Name = name
+						disk := disks[name]
+						matchedDisk = &disk
+					}
+				}
+
+				info.Devices = nil
+				for _, deviceName := range physicalDeviceNames(chain) {
+					location := ""
+					if matchedDisk != nil {
+						location = locationForDevice(*matchedDisk, run, deviceName)
+					}
+					info.Devices = append(info.Devices, deviceInfo{Path: deviceName, Location: location})
 				}
 			}
-
-			devices, err := resolvePhysicalDevices(run, mountPoint)
-			if err != nil {
-				return errs.WithEF(err, data.WithField("mountPoint", mountPoint), "Failed to resolve physical device")
-			}
-			info.Devices = devices
 
 			switch outputFormat {
 			case "yaml":

@@ -78,8 +78,7 @@ in {
       (pkgs.formats.yaml { }).generate "bcl-config.yaml" {
         repository = cfg.repository;
         disks = lib.mapAttrs (_: diskCfg: {
-          path = diskCfg.path;
-          location = diskCfg.location;
+          devices = map (d: { path = d.path; location = d.location; }) diskCfg.devices;
         }) config.bcl.disks;
       };
 
