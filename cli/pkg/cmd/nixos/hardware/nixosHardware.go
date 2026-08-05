@@ -1,6 +1,9 @@
 package hardware
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/becloudless/becloudless/pkg/cmd/nixos/hardware/disks"
+	"github.com/spf13/cobra"
+)
 
 func NixosHardwareCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -11,6 +14,7 @@ func NixosHardwareCmd() *cobra.Command {
 		nixosHardwareConfigCmd(),
 		nixosHardwareNetworkDriverCmd(),
 		nixosHardwareInfoCmd(),
+		disks.NixosHardwareDisksCmd(),
 	)
 	return cmd
 }

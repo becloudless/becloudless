@@ -77,6 +77,10 @@ in {
     environment.etc."bcl/config.yaml".source =
       (pkgs.formats.yaml { }).generate "bcl-config.yaml" {
         repository = cfg.repository;
+        disks = lib.mapAttrs (_: diskCfg: {
+          path = diskCfg.path;
+          location = diskCfg.location;
+        }) config.bcl.disks;
       };
 
     bcl = {
