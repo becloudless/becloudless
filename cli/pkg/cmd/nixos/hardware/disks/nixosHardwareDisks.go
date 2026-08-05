@@ -10,6 +10,7 @@ func NixosHardwareDisksCmd() *cobra.Command {
 	}
 	cmd.AddCommand(
 		nixosHardwareDisksInfoCmd(),
+		nixosHardwareDisksListCmd(),
 	)
 
 	return cmd

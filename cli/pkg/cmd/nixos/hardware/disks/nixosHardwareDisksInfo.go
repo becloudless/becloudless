@@ -35,6 +35,7 @@ type lsblkNode struct {
 	Type       string
 	MountPoint string
 	PKName     string
+	Tran       string
 }
 
 // blockDeviceGraph indexes every block device on the system so that any
@@ -51,7 +52,7 @@ type blockDeviceGraph struct {
 // loadBlockDeviceGraph lists every block device on the system (lsblk with no
 // device argument walks the whole tree).
 func loadBlockDeviceGraph(run runner.Runner) (*blockDeviceGraph, error) {
-	out, err := run.ExecCmdGetStdout("lsblk", "-rnpo", "NAME,TYPE,MOUNTPOINT,PKNAME")
+	out, err := run.ExecCmdGetStdout("lsblk", "-rnpo", "NAME,TYPE,MOUNTPOINT,PKNAME,TRAN")
 	if err != nil {
 		return nil, errs.WithE(err, "Failed to list system block devices")
 	}
@@ -65,11 +66,11 @@ func loadBlockDeviceGraph(run runner.Runner) (*blockDeviceGraph, error) {
 		if line == "" {
 			continue
 		}
-		fields := strings.SplitN(line, " ", 4)
-		for len(fields) < 4 {
+		fields := strings.SplitN(line, " ", 5)
+		for len(fields) < 5 {
 			fields = append(fields, "")
 		}
-		node := lsblkNode{Name: fields[0], Type: fields[1], MountPoint: fields[2], PKName: fields[3]}
+		node := lsblkNode{Name: fields[0], Type: fields[1], MountPoint: fields[2], PKName: fields[3], Tran: fields[4]}
 		g.byName[node.Name] = node
 		g.byCanon[canonicalDevice(run, node.Name)] = node
 		if node.PKName != "" {
@@ -174,16 +175,47 @@ func canonicalDevice(run runner.Runner, device string) string {
 	return device
 }
 
-// byIDPath resolves a physical device name (e.g. "/dev/nvme0n1") to a
-// /dev/disk/by-id/... link, using lsblk's ID-LINK column. Falls back to the
-// original device name if no by-id link can be found.
+// byIDPathPreferredPrefixes orders /dev/disk/by-id link name prefixes by
+// preference: vendor/serial-based links (ata-, nvme-, scsi-) are more
+// descriptive and are preferred over generic links (e.g. wwn-) when a
+// device has more than one by-id link.
+var byIDPathPreferredPrefixes = []string{"ata-", "nvme-", "scsi-"}
+
+// byIDPath resolves a physical device name (e.g. "/dev/sdi") to a
+// /dev/disk/by-id/... link. lsblk's ID-LINK column only ever returns a
+// single (somewhat arbitrarily chosen) link per device, which for some
+// disks is a generic wwn- link even though a more descriptive ata- link
+// also exists; to get consistent, descriptive output this instead scans
+// every /dev/disk/by-id/ entry pointing at the device and prefers a
+// vendor/serial-based link. Falls back to the original device name if no
+// by-id link can be found.
 func byIDPath(run runner.Runner, deviceName string) string {
-	out, err := run.ExecCmdGetStdout("lsblk", "-n", "--nodeps", "-o", "ID-LINK", deviceName)
+	out, err := run.ExecCmdGetStdout("ls", "-1", "/dev/disk/by-id")
 	if err != nil {
 		return deviceName
 	}
-	if link := strings.TrimSpace(out); link != "" {
-		return "/dev/disk/by-id/" + link
+
+	target := canonicalDevice(run, deviceName)
+
+	var links []string
+	for _, name := range strings.Split(strings.TrimSpace(out), "\n") {
+		if name == "" {
+			continue
+		}
+		if canonicalDevice(run, "/dev/disk/by-id/"+name) == target {
+			links = append(links, name)
+		}
+	}
+
+	for _, prefix := range byIDPathPreferredPrefixes {
+		for _, link := range links {
+			if strings.HasPrefix(link, prefix) {
+				return "/dev/disk/by-id/" + link
+			}
+		}
+	}
+	if len(links) > 0 {
+		return "/dev/disk/by-id/" + links[0]
 	}
 	return deviceName
 }
