@@ -2,36 +2,15 @@
 let
   cfg = config.bcl.data;
 
-  # Resolve a sourceFoldersPattern (e.g. "/disks/*/Videos" or "/disks/week*")
-  # into a static list of real folders, by matching the pattern's single '*'
-  # wildcard against the mount paths declared in bcl.disks. The wildcard only
-  # ever matches within one path segment (like a shell glob); anything after
-  # the segment containing '*' is treated as a literal suffix appended to the
-  # matching disk's path.
-  resolvePattern = pattern:
-    if pattern == null then [] else
-    let
-      m = builtins.match "(.*)\\*(.*)" pattern;
-    in
-    if m == null then
-      throw "bcl.data: sourceFoldersPattern '${pattern}' must contain exactly one '*' wildcard."
-    else
-    let
-      prefix   = builtins.elemAt m 0;
-      rest     = builtins.elemAt m 1;
-      rm       = builtins.match "([^/]*)(/.*)?" rest;
-      restTail = builtins.elemAt rm 0;
-      suffix   = let s = builtins.elemAt rm 1; in if s == null then "" else s;
-      regex    = lib.escapeRegex prefix + "[^/]*" + lib.escapeRegex restTail;
-      diskPaths = map (diskCfg: diskCfg.path) (lib.attrValues config.bcl.disks);
-      matched  = builtins.filter (p: builtins.match regex p != null) diskPaths;
-    in map (p: p + suffix) matched;
-
-  resolvedSourceFolders = dataCfg:
-    dataCfg.sourceFolders ++ (resolvePattern dataCfg.sourceFoldersPattern);
+  # Convert a mount path to its systemd unit name, e.g. /data/Videos -> data-Videos.mount
+  mountUnitName = path:
+    (builtins.replaceStrings [ "/" ] [ "-" ] (lib.removePrefix "/" path)) + ".mount";
 
   singleSource = dataCfg:
     dataCfg.sourceFoldersPattern == null && builtins.length dataCfg.sourceFolders == 1;
+
+  usesMergerfs = dataCfg:
+    dataCfg.sourceFoldersPattern != null || builtins.length dataCfg.sourceFolders > 1;
 
   fileSystemsEntries = lib.mapAttrs' (name: dataCfg: {
     name  = dataCfg.path;
@@ -39,33 +18,71 @@ let
       device  = builtins.head dataCfg.sourceFolders;
       fsType  = "none";
       options = [ "bind" dataCfg.mode "defaults" "nofail" ];
-    } else
-      let
-        branchMode = if dataCfg.mode == "rw" then "RW" else "RO";
-        branches   = resolvedSourceFolders dataCfg;
-      in {
-        device  = lib.concatStringsSep ":" (map (src: "${src}=${branchMode}") branches);
-        fsType  = "fuse.mergerfs";
-        options = [
-          dataCfg.mode
-          "defaults"
-          "allow_other"
-          "use_ino"
-          "cache.files=partial"
-          "dropcacheonclose=true"
-          # most shared path, most free space
-          # try to keep files to the same disk. Filling biggest disks space first
-          "category.create=mspmfs"
-          # most free space
-          # move current write file that cannot fit to next biggest space disk
-          "moveonenospc=mfs"
-          "minfreespace=4G"
-          # refuse to mount if a branch isn't an actual mountpoint (e.g. missing disk)
-          "branches-mount-timeout-fail=true"
-          "nofail"
-        ];
-      };
+    } else {
+      device  = "/var/empty";
+      fsType  = "fuse.mergerfs";
+      options = [
+        dataCfg.mode
+        "defaults"
+        "allow_other"
+        "use_ino"
+        "cache.files=partial"
+        "dropcacheonclose=true"
+        # most shared path, most free space
+        # try to keep files to the same disk. Filling biggest disks space first
+        "category.create=mspmfs"
+        # most free space
+        # move current write file that cannot fit to next biggest space disk
+        "moveonenospc=mfs"
+        "minfreespace=4G"
+        "nofail"
+      ];
+    };
   }) cfg;
+
+  multiSourceCfg = lib.filterAttrs (_: dataCfg: usesMergerfs dataCfg) cfg;
+
+  dataSourceServices = lib.mapAttrs' (name: dataCfg: {
+    name = "data-sources-${name}";
+    value = {
+      description = "Add source folders to mergerfs mount ${dataCfg.path}";
+      after    = [ "local-fs.target" (mountUnitName dataCfg.path) ];
+      requires = [ (mountUnitName dataCfg.path) ];
+      wantedBy = [ "multi-user.target" ];
+      path = with pkgs; [ attr ];
+      serviceConfig = {
+        Type            = "oneshot";
+        RemainAfterExit = true;
+      };
+      script =
+        let
+          branchMode = if dataCfg.mode == "rw" then "RW" else "RO";
+          addBranch = ''
+            add_branch() {
+              local src="$1"
+              if [ -d "$src" ]; then
+                echo "Adding $src to mergerfs at ${dataCfg.path}"
+                setfattr -n user.mergerfs.branches \
+                  -v "+>$src=${branchMode}" \
+                  "${dataCfg.path}/.mergerfs"
+              else
+                echo "Skipping $src (not found)"
+              fi
+            }
+          '';
+          staticPart = lib.optionalString (dataCfg.sourceFolders != []) ''
+            for src in ${lib.concatStringsSep " " dataCfg.sourceFolders}; do
+              add_branch "$src"
+            done
+          '';
+          patternPart = lib.optionalString (dataCfg.sourceFoldersPattern != null) ''
+            for src in ${dataCfg.sourceFoldersPattern}; do
+              add_branch "$src"
+            done
+          '';
+        in addBranch + staticPart + patternPart;
+    };
+  }) multiSourceCfg;
 
 in {
   options.bcl.data = lib.mkOption {
@@ -92,7 +109,7 @@ in {
         sourceFoldersPattern = lib.mkOption {
           type        = lib.types.nullOr lib.types.str;
           default     = null;
-          description = "Glob-like pattern with a single '*' wildcard, statically resolved at build time against bcl.disks mount paths (e.g. \"/disks/*/Videos\"). Always uses mergerfs.";
+          description = "Shell glob pattern evaluated at runtime to discover source folders (e.g. \"/disks/*/Videos\"). Always uses mergerfs + systemd service.";
         };
         mode = lib.mkOption {
           type        = lib.types.enum [ "rw" "ro" ];
@@ -108,6 +125,7 @@ in {
       assertion = dataCfg.sourceFolders != [] || dataCfg.sourceFoldersPattern != null;
       message   = "bcl.data.${name}: at least one of sourceFolders or sourceFoldersPattern must be set.";
     }) cfg;
-    fileSystems = fileSystemsEntries;
+    fileSystems      = fileSystemsEntries;
+    systemd.services = dataSourceServices;
   };
 }
