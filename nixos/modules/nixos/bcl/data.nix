@@ -68,6 +68,7 @@ let
         "minfreespace=4G"
         # refuse to mount if a branch isn't an actual mountpoint (e.g. missing disk)
         "branches-mount-timeout-fail=true"
+        "nofail" # not understood by mount command, but required by systemd to not fail the boot if a disk is missing
       ];
       depends = dependsFor dataCfg;
     };
