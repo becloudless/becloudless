@@ -22,7 +22,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/moby/buildkit v0.32.0
 	github.com/n0rad/go-app v0.0.0-20260502170822-14ac9a7082c9
-	github.com/n0rad/go-erlog v0.0.0-20260803012542-2c634692c4e2
+	github.com/n0rad/go-erlog v0.0.0-20260803020042-6c728ddb3e7a
 	github.com/n0rad/gomake v0.0.0-20260423115156-cb11feadac58
 	github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260120012428-7b6c2af7698a
 	github.com/spf13/cobra v1.10.2
