@@ -24,9 +24,12 @@ let
   }) cfg;
 
   # crypttab entries for encrypted disks
+  # "nofail" keeps unlocking asynchronous so a missing/slow device does not
+  # block or fail the boot process (the fileSystems entry above already has
+  # its own "nofail" so the dependent mount doesn't block boot either).
   encryptedCfgs = lib.filterAttrs (_: diskCfg: diskCfg.encrypted) cfg;
   crypttabLines = lib.concatStringsSep "\n" (lib.mapAttrsToList (name: diskCfg:
-    "${name}  ${underlyingDevice name diskCfg}  none  luks"
+    "${name}  ${underlyingDevice name diskCfg}  none  luks,nofail"
   ) encryptedCfgs);
 
   # mdadm.conf entries for multi-device disks
