@@ -1,7 +1,7 @@
 { config, lib, pkgs, ...}:
 {
   services.usbguard = {
-    enable = true;
+    enable = false;
     presentDevicePolicy = lib.mkDefault "keep";
   };
 
