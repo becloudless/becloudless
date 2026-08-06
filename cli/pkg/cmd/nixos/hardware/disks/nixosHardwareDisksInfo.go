@@ -16,6 +16,7 @@ import (
 
 type deviceInfo struct {
 	Paths    []string `json:"paths,omitempty" yaml:"paths,omitempty"`
+	Size     string   `json:"size,omitempty" yaml:"size,omitempty"`
 	Location string   `json:"location,omitempty" yaml:"location,omitempty"`
 }
 
@@ -270,10 +271,10 @@ func byIDPath(run runner.Runner, deviceName string) string {
 func deviceInfoForPhysicalName(devices []bcl.DeviceConfig, run runner.Runner, deviceName string) deviceInfo {
 	for _, device := range devices {
 		if canonicalDevice(run, device.Path) == deviceName {
-			return deviceInfo{Paths: mergePaths(device.Path, deviceName), Location: device.Location}
+			return deviceInfo{Paths: mergePaths(device.Path, deviceName), Size: deviceSize(run, deviceName), Location: device.Location}
 		}
 	}
-	return deviceInfo{Paths: mergePaths(byIDPath(run, deviceName), deviceName)}
+	return deviceInfo{Paths: mergePaths(byIDPath(run, deviceName), deviceName), Size: deviceSize(run, deviceName)}
 }
 
 // deviceInfoFromConfig builds the deviceInfo for a configured device entry
@@ -283,7 +284,18 @@ func deviceInfoForPhysicalName(devices []bcl.DeviceConfig, run runner.Runner, de
 // "/dev/sdg") is added as well if the configured path currently resolves
 // to one.
 func deviceInfoFromConfig(run runner.Runner, device bcl.DeviceConfig) deviceInfo {
-	return deviceInfo{Paths: mergePaths(device.Path, canonicalDevice(run, device.Path)), Location: device.Location}
+	return deviceInfo{Paths: mergePaths(device.Path, canonicalDevice(run, device.Path)), Size: deviceSize(run, device.Path), Location: device.Location}
+}
+
+// deviceSize returns the human-readable size (as reported by lsblk, e.g.
+// "20T", "745.2G") of a device, or "" if the device does not currently
+// exist on the system (e.g. a configured but missing/unplugged disk).
+func deviceSize(run runner.Runner, deviceName string) string {
+	out, err := run.ExecCmdGetStdout("lsblk", "-dno", "SIZE", deviceName)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
 }
 
 // mergePaths returns paths with empty and duplicate entries removed,
