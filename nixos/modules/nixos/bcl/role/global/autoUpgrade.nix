@@ -15,16 +15,6 @@
           IdentityFile /nix/etc/ssh/ssh_host_ed25519_key
       '';
 
-      home.packages = with pkgs; [
-        (writeShellScriptBin "nixos-upgrade" ''
-          ${config.system.build.nixos-rebuild}/bin/nixos-rebuild \
-            switch \
-            --no-write-lock-file \
-            --refresh \
-            --flake ${config.system.autoUpgrade.flake} \
-            --upgrade
-        '')
-      ];
       home.stateVersion = "23.11";
     };
 
