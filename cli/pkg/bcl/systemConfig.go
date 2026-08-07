@@ -11,7 +11,13 @@ import (
 const PathSystemConfig = "/etc/bcl/config.yaml"
 
 type SystemConfig struct {
-	Repository string `yaml:"repository,omitempty"`
+	Repository string                    `yaml:"repository,omitempty"`
+	Disks      map[string][]DeviceConfig `yaml:"disks,omitempty"`
+}
+
+type DeviceConfig struct {
+	Path     string `yaml:"path,omitempty"`
+	Location string `yaml:"location,omitempty"`
 }
 
 func LoadSystemConfig() (*SystemConfig, error) {
