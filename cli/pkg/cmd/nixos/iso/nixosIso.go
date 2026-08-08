@@ -1,4 +1,4 @@
-package nixos
+package iso
 
 import (
 	"os"
@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func nixosIsoCmd() *cobra.Command {
+func NixosIsoCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "iso",
 		Short: "Handle iso images for system installations",

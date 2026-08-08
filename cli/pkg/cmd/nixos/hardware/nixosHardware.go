@@ -7,8 +7,9 @@ import (
 
 func NixosHardwareCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "hardware",
-		Short: "hardware related commands",
+		Use:     "hardware",
+		Aliases: []string{"hw"},
+		Short:   "hardware related commands",
 	}
 	cmd.AddCommand(
 		nixosHardwareConfigCmd(),
