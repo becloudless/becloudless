@@ -790,12 +790,12 @@
   dependencies:
     cluster-key-slot "1.1.2"
 
-"@renovatebot/detect-tools@4.0.10":
-  version "4.0.10"
-  resolved "https://registry.npmjs.org/@renovatebot/detect-tools/-/detect-tools-4.0.10.tgz"
-  integrity sha512-hGIZahyyO3zahpr3a2kRkNvDVXwW1gZBN6YYbql6OXlN1gFRQz7/jgn+/ImtYvP84P4tQxc9U4jS5/Qurvl0Nw==
+"@renovatebot/detect-tools@4.0.11":
+  version "4.0.11"
+  resolved "https://registry.npmjs.org/@renovatebot/detect-tools/-/detect-tools-4.0.11.tgz"
+  integrity sha512-rQ8McuE2JQkg4jmUl7l0MxwZTENOY/Z/UFWT5PYi5SzaNMXfGL/iqAMMLBYrp437pAT1rF7bwzM8xaGNOp088A==
   dependencies:
-    fs-extra "^11.3.6"
+    fs-extra "^11.4.0"
     toml-eslint-parser "^1.0.3"
     upath "^3.0.8"
     zod "^4.4.3"
@@ -1078,9 +1078,9 @@
     "@types/node" "*"
 
 "@types/semver@^7.1.0":
-  version "7.7.1"
-  resolved "https://registry.npmjs.org/@types/semver/-/semver-7.7.1.tgz"
-  integrity sha512-FmgJfu+MOcQ370SD0ev7EI8TlCAfKYU+B4m5T3yXc1CiRN94g/SZPtsCkk506aUDtlMnFZvasDwHHUcZUEaYuA==
+  version "7.8.0"
+  resolved "https://registry.npmjs.org/@types/semver/-/semver-7.8.0.tgz"
+  integrity sha512-1mAINjtQCXXeLkJ9ehXkwOcBpqtLxiVtKhpUf83DdRNdQKV0iXZpaHYqRr7nj+wvxuJzoAmAwXI+sCNMv1CzLQ==
 
 "@types/treeify@^1.0.0":
   version "1.0.3"
@@ -1092,17 +1092,17 @@
   resolved "https://registry.npmjs.org/@types/unist/-/unist-3.0.3.tgz"
   integrity sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q==
 
-"@yarnpkg/core@4.9.0":
-  version "4.9.0"
-  resolved "https://registry.npmjs.org/@yarnpkg/core/-/core-4.9.0.tgz"
-  integrity sha512-vhJEVo423jAZBtU5CDe2HEkyNkEYfgMfukNQk1uyYFkP3OmCsuLzpyqbJCEXIg6Fy3YTrQg7kSCnjHbLed3toA==
+"@yarnpkg/core@4.9.1":
+  version "4.9.1"
+  resolved "https://registry.npmjs.org/@yarnpkg/core/-/core-4.9.1.tgz"
+  integrity sha512-P8H10ehQBFWL5eR1y/8nLRzFHx1yumgE9P1DQjJ+EIVvqeWo0MjbwQ+ZJjPDT+HqVDslE+e6I/9GrJ7Arbx/8A==
   dependencies:
     "@arcanis/slice-ansi" "^1.1.1"
     "@types/semver" "^7.1.0"
     "@types/treeify" "^1.0.0"
     "@yarnpkg/fslib" "^3.1.5"
     "@yarnpkg/libzip" "^3.2.2"
-    "@yarnpkg/parsers" "^3.0.3"
+    "@yarnpkg/parsers" "^3.1.0"
     "@yarnpkg/shell" "^4.1.3"
     camelcase "^5.3.1"
     chalk "^4.1.2"
@@ -1117,7 +1117,7 @@
     hpagent "^1.2.0"
     micromatch "^4.0.2"
     p-limit "^2.2.0"
-    semver "^7.1.2"
+    semver "^7.8.5"
     strip-ansi "^6.0.0"
     tar "^7.5.3"
     tinylogic "^2.0.0"
@@ -1140,12 +1140,12 @@
     "@yarnpkg/fslib" "^3.1.3"
     tslib "^2.4.0"
 
-"@yarnpkg/parsers@3.0.3", "@yarnpkg/parsers@^3.0.3":
-  version "3.0.3"
-  resolved "https://registry.npmjs.org/@yarnpkg/parsers/-/parsers-3.0.3.tgz"
-  integrity sha512-mQZgUSgFurUtA07ceMjxrWkYz8QtDuYkvPlu0ZqncgjopQ0t6CNEo/OSealkmnagSUx8ZD5ewvezUwUuMqutQg==
+"@yarnpkg/parsers@3.1.0", "@yarnpkg/parsers@^3.0.3", "@yarnpkg/parsers@^3.1.0":
+  version "3.1.0"
+  resolved "https://registry.npmjs.org/@yarnpkg/parsers/-/parsers-3.1.0.tgz"
+  integrity sha512-WoxUM/Be4hfsX06FxsvpGgfYqwgivMV7/Ol7aFuSfSmY6rRaiju4QxOEe9RUS0iYcSHWl5i9AhB1cMoE0p+XiA==
   dependencies:
-    js-yaml "^3.10.0"
+    js-yaml "^4.3.0"
     tslib "^2.4.0"
 
 "@yarnpkg/shell@^4.1.3":
@@ -1220,13 +1220,6 @@ ansi-styles@^6.1.0:
   version "6.2.3"
   resolved "https://registry.npmjs.org/ansi-styles/-/ansi-styles-6.2.3.tgz"
   integrity sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg==
-
-argparse@^1.0.7:
-  version "1.0.10"
-  resolved "https://registry.npmjs.org/argparse/-/argparse-1.0.10.tgz"
-  integrity sha512-o5Roy6tNG4SL/FOkCAN6RzjiakZS25RLYFrcMttJqbdd8BWrnA+fGz57iN5Pb06pvBGvl5gQ0B48dJlslXvoTg==
-  dependencies:
-    sprintf-js "~1.0.2"
 
 argparse@^2.0.1:
   version "2.0.1"
@@ -1807,9 +1800,9 @@ es-object-atoms@^1.0.0, es-object-atoms@^1.1.1:
     es-errors "^1.3.0"
 
 es-toolkit@^1.39.7:
-  version "1.48.1"
-  resolved "https://registry.npmjs.org/es-toolkit/-/es-toolkit-1.48.1.tgz"
-  integrity sha512-wfnXlwd5I75eXRtdD2vuEs50xHHESECDsGD7yiQnfFVNoa5522NwXEbmgo98LfiukSQHs+mBM7/YG3qKJB9/mQ==
+  version "1.50.0"
+  resolved "https://registry.npmjs.org/es-toolkit/-/es-toolkit-1.50.0.tgz"
+  integrity sha512-OyZKhUVvEep9ITEiwHn8GKnMRQIVqoSIX7WnRbkWgJkllCujilqP2rD0u979tkl8wqyc8ICwlc1UBVv/Sl1G6w==
 
 es6-error@^4.1.1:
   version "4.1.1"
@@ -1830,11 +1823,6 @@ eslint-visitor-keys@^5.0.0:
   version "5.0.1"
   resolved "https://registry.npmjs.org/eslint-visitor-keys/-/eslint-visitor-keys-5.0.1.tgz"
   integrity sha512-tD40eHxA35h0PEIZNeIjkHoDR4YjjJp34biM0mDvplBe//mB+IHCqHDGV7pxF+7MklTvighcCPPZC7ynWyjdTA==
-
-esprima@^4.0.0:
-  version "4.0.1"
-  resolved "https://registry.npmjs.org/esprima/-/esprima-4.0.1.tgz"
-  integrity sha512-eGuFFw7Upda+g4p+QHvnW0RyTX/SVeJBDM/gCtMARO0cLuT2HcEKnTPvhjV6aGeqrCB/sbNop0Kszm0jsaWU4A==
 
 eventemitter3@^5.0.4:
   version "5.0.4"
@@ -1962,7 +1950,7 @@ fs-extra@11.3.0:
     jsonfile "^6.0.1"
     universalify "^2.0.0"
 
-fs-extra@11.4.0, fs-extra@^11.3.6, fs-extra@^11.4.0:
+fs-extra@11.4.0, fs-extra@^11.4.0:
   version "11.4.0"
   resolved "https://registry.npmjs.org/fs-extra/-/fs-extra-11.4.0.tgz"
   integrity sha512-EQsFzMUJkCKGr1ePqlYADkIUmHW1s3ZXr5Yqy6wbGrfUCphpl2maM/kyOIRA2HpP3AaFQTZXD4ldjek+nccddA==
@@ -2456,18 +2444,10 @@ js-tokens@^4.0.0:
   resolved "https://registry.npmjs.org/js-tokens/-/js-tokens-4.0.0.tgz"
   integrity sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==
 
-js-yaml@^3.10.0:
-  version "3.14.2"
-  resolved "https://registry.npmjs.org/js-yaml/-/js-yaml-3.14.2.tgz"
-  integrity sha512-PMSmkqxr106Xa156c2M265Z+FTrPl+oxd/rgOQy2tijQeK5TxQ43psO1ZCwhVOSdnn+RzkzlRz/eY4BgJBYVpg==
-  dependencies:
-    argparse "^1.0.7"
-    esprima "^4.0.0"
-
-js-yaml@^4.0.0:
-  version "4.1.1"
-  resolved "https://registry.npmjs.org/js-yaml/-/js-yaml-4.1.1.tgz"
-  integrity sha512-qQKT4zQxXl8lLwBtHMWwaTcGfFOZviOJet3Oy/xmGk2gZH677CJM9EvtfdSkgWcATZhj/55JZ0rmy3myCT5lsA==
+js-yaml@^4.0.0, js-yaml@^4.3.0:
+  version "4.3.1"
+  resolved "https://registry.npmjs.org/js-yaml/-/js-yaml-4.3.1.tgz"
+  integrity sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==
   dependencies:
     argparse "^2.0.1"
 
@@ -3622,10 +3602,10 @@ remark@15.0.1:
     remark-stringify "^11.0.0"
     unified "^11.0.0"
 
-renovate@44.11.6:
-  version "44.11.6"
-  resolved "https://registry.npmjs.org/renovate/-/renovate-44.11.6.tgz"
-  integrity sha512-B4s5OUwbia4MgeGAB8uDT2ldoWROpOKWyr0/ZVyUsJfbNfWzJosFKz8PSDz7Siy0Dh1MqRbmSyXNFY0dNwqMkg==
+renovate@44.13.3:
+  version "44.13.3"
+  resolved "https://registry.npmjs.org/renovate/-/renovate-44.13.3.tgz"
+  integrity sha512-Y3yIFhcX5rqdTM7HqmVttYlO47UC64nQio7+jIB75GXGzu/euDKrHNDa76ZfVa+AyWU3jNiDc27/ZV1a59CjQw==
   dependencies:
     "@aws-sdk/client-codecommit" "3.1095.0"
     "@aws-sdk/client-ec2" "3.1095.0"
@@ -3656,15 +3636,15 @@ renovate@44.11.6:
     "@pnpm/parse-overrides" "1001.0.4"
     "@qnighy/marshal" "0.1.3"
     "@redis/client" "5.12.1"
-    "@renovatebot/detect-tools" "4.0.10"
+    "@renovatebot/detect-tools" "4.0.11"
     "@renovatebot/good-enough-parser" "2.0.1"
     "@renovatebot/osv-offline" "3.0.10"
     "@renovatebot/pep440" "5.0.0"
     "@renovatebot/pgp" "1.3.16"
     "@renovatebot/ruby-semver" "5.0.0"
     "@sindresorhus/is" "8.1.0"
-    "@yarnpkg/core" "4.9.0"
-    "@yarnpkg/parsers" "3.0.3"
+    "@yarnpkg/core" "4.9.1"
+    "@yarnpkg/parsers" "3.1.0"
     adm-zip "0.6.0"
     ae-cvss-calculator "1.0.13"
     agentkeepalive "4.6.0"
@@ -3851,7 +3831,7 @@ semver-utils@1.1.4:
   resolved "https://registry.npmjs.org/semver-utils/-/semver-utils-1.1.4.tgz"
   integrity sha512-EjnoLE5OGmDAVV/8YDoN5KiajNadjzIp9BAHOhYeQHt7j0UWxjmgsx4YD48wp4Ue1Qogq38F1GNUJNqF1kKKxA==
 
-semver@7.8.5, semver@^7.0.0, semver@^7.1.2, semver@^7.3.2, semver@^7.3.5, semver@^7.7.4:
+semver@7.8.5, semver@^7.0.0, semver@^7.3.2, semver@^7.3.5, semver@^7.7.4, semver@^7.8.5:
   version "7.8.5"
   resolved "https://registry.npmjs.org/semver/-/semver-7.8.5.tgz"
   integrity sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==
@@ -3975,11 +3955,6 @@ sprintf-js@^1.1.2:
   version "1.1.3"
   resolved "https://registry.npmjs.org/sprintf-js/-/sprintf-js-1.1.3.tgz"
   integrity sha512-Oo+0REFV59/rz3gfJNKQiBlwfHaSESl1pcGyABQsnnIfWOFt6JNj5gCog2U6MLZ//IGYD+nA8nI+mTShREReaA==
-
-sprintf-js@~1.0.2:
-  version "1.0.3"
-  resolved "https://registry.npmjs.org/sprintf-js/-/sprintf-js-1.0.3.tgz"
-  integrity sha512-D9cPgkvLlV3t3IzL0D0YLvGA9Ahk4PcvVwUbN0dSGr1aP0Nrt4AEnTUbuGvquEC0mA64Gqt1fzirlRs5ibXx8g==
 
 ssri@^13.0.0:
   version "13.0.1"
