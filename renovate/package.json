@@ -22,7 +22,7 @@
   "license": "WTFPL",
   "devDependencies": {
     "prettier": "^3.0.0",
-    "renovate": "44.13.3"
+    "renovate": "44.14.3"
   },
   "dependencies": {
     "yarn": "^1.22.22"
