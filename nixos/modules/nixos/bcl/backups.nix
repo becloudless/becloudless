@@ -6,10 +6,13 @@ let
 
   # Extract IP/hostname from "host:/path"
   targetHost = target: builtins.head (lib.splitString ":" target);
+  # Extract the remote path from "host:/path"
+  targetPath = target: lib.concatStringsSep ":" (lib.tail (lib.splitString ":" target));
 
   mkBackupService = name: backup:
     let
       host        = targetHost backup.target;
+      remotePath  = targetPath backup.target;
       # gocryptfs's gitignore-style patterns are matched with a regex that is
       # implicitly recursive for directories (a pattern for "/Videos" also
       # matches everything under "/Videos"). That means naively negating an
@@ -81,6 +84,13 @@ let
           elapsed=$((elapsed + 5))
         done
         echo "[backup-${name}] ${host} is reachable via SSH"
+
+        echo "[backup-${name}] Checking that target folder ${remotePath} exists on ${host}..."
+        if ! ssh -i /nix/etc/ssh/ssh_host_ed25519_key -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes \
+              root@${host} "[ -d ${lib.escapeShellArg remotePath} ]"; then
+          echo "[backup-${name}] Target folder ${remotePath} does not exist on ${host}, aborting" >&2
+          exit 1
+        fi
 
         PASS_FILE=$(mktemp /run/backup-${name}-pass-XXXXXX)
         MOUNT_DIR=$(mktemp -d /run/backup-${name}-XXXXXX)

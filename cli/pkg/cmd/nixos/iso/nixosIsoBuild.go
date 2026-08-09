@@ -1,4 +1,4 @@
-package nixos
+package iso
 
 import (
 	"os"

@@ -4,10 +4,12 @@ let
 
   isRaid = diskCfg: builtins.length diskCfg.devices > 1;
 
+  devicePaths = diskCfg: map (d: d.path) diskCfg.devices;
+
   # Underlying block device (before optional LUKS)
   underlyingDevice = name: diskCfg:
     if isRaid diskCfg then "/dev/md/${name}"
-    else builtins.head diskCfg.devices;
+    else (builtins.head diskCfg.devices).path;
 
   # fileSystems entries
   fileSystemsEntries = lib.mapAttrs' (name: diskCfg: {
@@ -22,16 +24,39 @@ let
   }) cfg;
 
   # crypttab entries for encrypted disks
+  # "nofail" keeps unlocking asynchronous so a missing/slow device does not
+  # block or fail the boot process (the fileSystems entry above already has
+  # its own "nofail" so the dependent mount doesn't block boot either).
   encryptedCfgs = lib.filterAttrs (_: diskCfg: diskCfg.encrypted) cfg;
   crypttabLines = lib.concatStringsSep "\n" (lib.mapAttrsToList (name: diskCfg:
-    "${name}  ${underlyingDevice name diskCfg}  none  luks"
+    "${name}  ${underlyingDevice name diskCfg}  none  luks,nofail"
   ) encryptedCfgs);
 
   # mdadm.conf entries for multi-device disks
   raidCfgs      = lib.filterAttrs (_: diskCfg: isRaid diskCfg) cfg;
   mdadmConfLines = lib.concatStringsSep "\n" (lib.mapAttrsToList (name: diskCfg:
-    "ARRAY /dev/md/${name} level=raid${toString diskCfg.raidMode} num-devices=${toString (builtins.length diskCfg.devices)} devices=${lib.concatStringsSep "," diskCfg.devices}"
+    "ARRAY /dev/md/${name} level=raid${toString diskCfg.raidMode} num-devices=${toString (builtins.length diskCfg.devices)} devices=${lib.concatStringsSep "," (devicePaths diskCfg)}"
   ) raidCfgs);
+
+  deviceSubmodule = lib.types.submodule {
+    options = {
+      path = lib.mkOption {
+        type        = lib.types.str;
+        description = "Block-device path, e.g. /dev/disk/by-id/xxx.";
+      };
+      location = lib.mkOption {
+        type        = lib.types.str;
+        default     = "";
+        description = "Physical location of this device, for inventory purposes. No functional effect.";
+      };
+    };
+  };
+  # Accepts a plain device path string (location defaults to ""), or an
+  # attrset with path + location.
+  deviceEntry = lib.types.either lib.types.str deviceSubmodule;
+  normalizeDeviceEntry = d:
+    if builtins.isString d then { path = d; location = ""; }
+    else { path = d.path; location = d.location; };
 
 in {
   options.bcl.disks = lib.mkOption {
@@ -41,7 +66,10 @@ in {
       ssd1 = {
         encrypted = true;
         raidMode  = 1;
-        devices   = [ "/dev/disk/by-id/xxx" "/dev/disk/by-id/yyy" ];
+        devices   = [
+          { path = "/dev/disk/by-id/xxx"; location = "rack1-slot1"; }
+          "/dev/disk/by-id/yyy"
+        ];
       };
     };
     type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
@@ -61,11 +89,6 @@ in {
           default     = "rw";
           description = "Mount mode: rw (read-write) or ro (read-only).";
         };
-        location = lib.mkOption {
-          type        = lib.types.str;
-          default     = "";
-          description = "Physical location of the disk(s), for inventory purposes. No functional effect.";
-        };
         raidMode = lib.mkOption {
           type        = lib.types.int;
           default     = 1;
@@ -75,9 +98,15 @@ in {
           '';
         };
         devices = lib.mkOption {
-          type        = lib.types.either lib.types.str (lib.types.listOf lib.types.str);
-          apply       = d: if builtins.isString d then [ d ] else d;
-          description = "Block-device path(s) that make up this volume. A single string is accepted for the single-device case.";
+          type        = lib.types.either deviceEntry (lib.types.listOf deviceEntry);
+          apply       = d: map normalizeDeviceEntry (if builtins.isList d then d else [ d ]);
+          description = ''
+            Block-device(s) that make up this volume. Each device is either a
+            plain path string (e.g. "/dev/disk/by-id/xxx"), or an attrset
+            { path; location; } to also record its physical location for
+            inventory purposes. A single device (string or attrset) is
+            accepted for the single-device case.
+          '';
         };
         scrubInterval = lib.mkOption {
           type        = lib.types.nullOr lib.types.str;
@@ -92,6 +121,7 @@ in {
       };
     }));
   };
+
 
   config = lib.mkIf (cfg != {}) (lib.mkMerge [
 
