@@ -135,8 +135,16 @@ in {
     }
     (lib.mkIf (enabledCfg != {}) {
       assertions = lib.mapAttrsToList (name: dataCfg: {
-        assertion = dataCfg.sourceFolders != [] || dataCfg.sourceFoldersPattern != null;
-        message   = "bcl.data.${name}: at least one of sourceFolders or sourceFoldersPattern must be set.";
+        assertion =
+          dataCfg.sourceFolders != []
+          || (dataCfg.sourceFoldersPattern != null && diskPathsForPattern dataCfg.sourceFoldersPattern != []);
+        message =
+          if dataCfg.sourceFolders == [] && dataCfg.sourceFoldersPattern == null then
+            "bcl.data.${name}: at least one of sourceFolders or sourceFoldersPattern must be set."
+          else
+            "bcl.data.${name}: sourceFoldersPattern \"${toString dataCfg.sourceFoldersPattern}\""
+            + " matches no bcl.disks path - this would silently create an empty mount at"
+            + " ${dataCfg.path}. Add a matching disk, fix the pattern, or set enable = false.";
       }) enabledCfg;
       fileSystems = fileSystemsEntries;
     })
