@@ -18,6 +18,57 @@ let
   # Extract the remote path from "host:/path"
   targetPath = target: lib.concatStringsSep ":" (lib.tail (lib.splitString ":" target));
 
+  # The bcl.data pool (if any) whose mount point is this backup's source, so
+  # we can find the underlying disk branches it's made of.
+  dataCfgForSource = source: lib.findFirst (dataCfg: dataCfg.path == source) null (lib.attrValues config.bcl.data);
+
+  # Backup sources backed by a bcl.data mergerfs pool spanning more than one
+  # physical disk (or a glob pattern, which could match several). gocryptfs
+  # reverse mode writes ".gocryptfs.reverse.conf" once, at the root of the
+  # plaintext source tree - on such a pool it only lands on whichever single
+  # branch mergerfs' create policy picked, so it must be mirrored onto every
+  # branch to stay readable/re-initializable if a single disk is later
+  # pulled and mounted standalone.
+  sourcesWithDataPool = lib.filterAttrs (_: backup:
+    let dataCfg = dataCfgForSource backup.source; in
+    dataCfg != null && (dataCfg.sourceFoldersPattern != null || builtins.length dataCfg.sourceFolders > 1)
+  ) enabledSources;
+
+  mkSyncReverseConfService = jobName: backup:
+    let
+      dataCfg = dataCfgForSource backup.source;
+      targets = if dataCfg.sourceFoldersPattern != null
+        then dataCfg.sourceFoldersPattern
+        else lib.concatMapStringsSep " " lib.escapeShellArg dataCfg.sourceFolders;
+    in {
+      description = "Copy ${backup.source}'s .gocryptfs.reverse.conf onto every backing disk branch";
+      after = [ "local-fs.target" ];
+      path = with pkgs; [ diffutils ];
+      serviceConfig.Type = "oneshot";
+      script = ''
+        conf="${backup.source}/.gocryptfs.reverse.conf"
+        if [ ! -f "$conf" ]; then
+          echo "[sync-gocryptfs-reverse-conf-${jobName}] No .gocryptfs.reverse.conf found at ${backup.source}, skipping"
+          exit 0
+        fi
+        for disk in ${targets}; do
+          if [ -d "$disk" ] && ! cmp -s "$conf" "$disk/.gocryptfs.reverse.conf" 2>/dev/null; then
+            echo "[sync-gocryptfs-reverse-conf-${jobName}] Copying .gocryptfs.reverse.conf to $disk"
+            cp "$conf" "$disk/.gocryptfs.reverse.conf"
+          fi
+        done
+      '';
+    };
+
+  mkSyncReverseConfTimer = jobName: {
+    description = "Timer for sync-gocryptfs-reverse-conf-${jobName}";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "weekly";
+      Persistent  = true;
+    };
+  };
+
   mkBackupService = { fullName, backup, scheduleName, schedule, ... }:
     let
       host        = targetHost backup.target.address;
@@ -221,15 +272,28 @@ in {
     }));
   };
 
-  config = lib.mkIf (flatSchedules != []) {
-    systemd.services = builtins.listToAttrs (map (e: {
-      name  = "backup-${e.fullName}";
-      value = mkBackupService e;
-    }) flatSchedules);
+  config = lib.mkMerge [
+    (lib.mkIf (flatSchedules != []) {
+      systemd.services = builtins.listToAttrs (map (e: {
+        name  = "backup-${e.fullName}";
+        value = mkBackupService e;
+      }) flatSchedules);
 
-    systemd.timers = builtins.listToAttrs (map (e: {
-      name  = "backup-${e.fullName}";
-      value = mkBackupTimer e;
-    }) flatSchedules);
-  };
+      systemd.timers = builtins.listToAttrs (map (e: {
+        name  = "backup-${e.fullName}";
+        value = mkBackupTimer e;
+      }) flatSchedules);
+    })
+    (lib.mkIf (sourcesWithDataPool != {}) {
+      systemd.services = lib.mapAttrs' (jobName: backup: {
+        name  = "sync-gocryptfs-reverse-conf-${jobName}";
+        value = mkSyncReverseConfService jobName backup;
+      }) sourcesWithDataPool;
+
+      systemd.timers = lib.mapAttrs' (jobName: backup: {
+        name  = "sync-gocryptfs-reverse-conf-${jobName}";
+        value = mkSyncReverseConfTimer jobName;
+      }) sourcesWithDataPool;
+    })
+  ];
 }
