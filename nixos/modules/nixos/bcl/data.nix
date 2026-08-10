@@ -72,9 +72,17 @@ let
         # move current write file that cannot fit to next biggest space disk
         "moveonenospc=mfs"
         "minfreespace=4G"
-        # refuse to mount if a branch isn't an actual mountpoint (e.g. missing disk)
+        # Wait up to 120s for every branch (incl. any sourceFoldersPattern glob
+        # that matched zero disks, in which case mergerfs falls back to
+        # treating the literal glob string as a single never-appearing
+        # "phantom" branch) to actually become a real mountpoint, then fail
+        # the mergerfs process instead of silently mounting an empty merged
+        # view. NOTE: branches-mount-timeout-fail is a no-op unless
+        # branches-mount-timeout is also set >0 - mergerfs only runs this
+        # check at all when the timeout is nonzero.
+        "branches-mount-timeout=120"
         "branches-mount-timeout-fail=true"
-        "nofail" # not understood by mount command, but required by systemd to not fail the boot if a disk is missing
+        "nofail" # not understood by mount command, but required by systemd to not fail the boot if a disk is missing. use systemd to manually mount.
       ];
       depends = dependsFor dataCfg;
     };
@@ -135,8 +143,16 @@ in {
     }
     (lib.mkIf (enabledCfg != {}) {
       assertions = lib.mapAttrsToList (name: dataCfg: {
-        assertion = dataCfg.sourceFolders != [] || dataCfg.sourceFoldersPattern != null;
-        message   = "bcl.data.${name}: at least one of sourceFolders or sourceFoldersPattern must be set.";
+        assertion =
+          dataCfg.sourceFolders != []
+          || (dataCfg.sourceFoldersPattern != null && diskPathsForPattern dataCfg.sourceFoldersPattern != []);
+        message =
+          if dataCfg.sourceFolders == [] && dataCfg.sourceFoldersPattern == null then
+            "bcl.data.${name}: at least one of sourceFolders or sourceFoldersPattern must be set."
+          else
+            "bcl.data.${name}: sourceFoldersPattern \"${toString dataCfg.sourceFoldersPattern}\""
+            + " matches no bcl.disks path - this would silently create an empty mount at"
+            + " ${dataCfg.path}. Add a matching disk, fix the pattern, or set enable = false.";
       }) enabledCfg;
       fileSystems = fileSystemsEntries;
     })
