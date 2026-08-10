@@ -72,7 +72,7 @@ let
         # move current write file that cannot fit to next biggest space disk
         "moveonenospc=mfs"
         "minfreespace=4G"
-        # Wait up to 10s for every branch (incl. any sourceFoldersPattern glob
+        # Wait up to 120s for every branch (incl. any sourceFoldersPattern glob
         # that matched zero disks, in which case mergerfs falls back to
         # treating the literal glob string as a single never-appearing
         # "phantom" branch) to actually become a real mountpoint, then fail
