@@ -2,17 +2,78 @@
 let
   cfg = config.bcl.backups;
 
-  enabledBackups = lib.filterAttrs (_: b: b.enable) cfg;
+  enabledSources = lib.filterAttrs (_: b: b.enable) cfg;
+
+  # Flatten sources+schedules into a list of { jobName, backup, scheduleName, schedule }
+  # for every enabled schedule of every enabled source.
+  flatSchedules = lib.concatLists (lib.mapAttrsToList (jobName: backup:
+    lib.mapAttrsToList (scheduleName: schedule: {
+      inherit jobName backup scheduleName schedule;
+      fullName = "${jobName}-${scheduleName}";
+    }) (lib.filterAttrs (_: s: s.enable) backup.schedules)
+  ) enabledSources);
 
   # Extract IP/hostname from "host:/path"
   targetHost = target: builtins.head (lib.splitString ":" target);
   # Extract the remote path from "host:/path"
   targetPath = target: lib.concatStringsSep ":" (lib.tail (lib.splitString ":" target));
 
-  mkBackupService = name: backup:
+  # The bcl.data pool (if any) whose mount point is this backup's source, so
+  # we can find the underlying disk branches it's made of.
+  dataCfgForSource = source: lib.findFirst (dataCfg: dataCfg.path == source) null (lib.attrValues config.bcl.data);
+
+  # Backup sources backed by a bcl.data mergerfs pool spanning more than one
+  # physical disk (or a glob pattern, which could match several). gocryptfs
+  # reverse mode writes ".gocryptfs.reverse.conf" once, at the root of the
+  # plaintext source tree - on such a pool it only lands on whichever single
+  # branch mergerfs' create policy picked, so it must be mirrored onto every
+  # branch to stay readable/re-initializable if a single disk is later
+  # pulled and mounted standalone.
+  sourcesWithDataPool = lib.filterAttrs (_: backup:
+    let dataCfg = dataCfgForSource backup.source; in
+    dataCfg != null && (dataCfg.sourceFoldersPattern != null || builtins.length dataCfg.sourceFolders > 1)
+  ) enabledSources;
+
+  mkSyncReverseConfService = jobName: backup:
     let
-      host        = targetHost backup.target;
-      remotePath  = targetPath backup.target;
+      dataCfg = dataCfgForSource backup.source;
+      targets = if dataCfg.sourceFoldersPattern != null
+        then dataCfg.sourceFoldersPattern
+        else lib.concatMapStringsSep " " lib.escapeShellArg dataCfg.sourceFolders;
+    in {
+      description = "Copy ${backup.source}'s .gocryptfs.reverse.conf onto every backing disk branch";
+      after = [ "local-fs.target" ];
+      path = with pkgs; [ diffutils ];
+      serviceConfig.Type = "oneshot";
+      script = ''
+        conf="${backup.source}/.gocryptfs.reverse.conf"
+        if [ ! -f "$conf" ]; then
+          echo "[sync-gocryptfs-reverse-conf-${jobName}] No .gocryptfs.reverse.conf found at ${backup.source}, skipping"
+          exit 0
+        fi
+        for disk in ${targets}; do
+          if [ -d "$disk" ] && ! cmp -s "$conf" "$disk/.gocryptfs.reverse.conf" 2>/dev/null; then
+            echo "[sync-gocryptfs-reverse-conf-${jobName}] Copying .gocryptfs.reverse.conf to $disk"
+            cp "$conf" "$disk/.gocryptfs.reverse.conf"
+          fi
+        done
+      '';
+    };
+
+  mkSyncReverseConfTimer = jobName: {
+    description = "Timer for sync-gocryptfs-reverse-conf-${jobName}";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "weekly";
+      Persistent  = true;
+    };
+  };
+
+  mkBackupService = { fullName, backup, scheduleName, schedule, ... }:
+    let
+      host        = targetHost backup.target.address;
+      remotePath  = "${targetPath backup.target.address}/${scheduleName}";
+      name        = fullName;
       # gocryptfs's gitignore-style patterns are matched with a regex that is
       # implicitly recursive for directories (a pattern for "/Videos" also
       # matches everything under "/Videos"). That means naively negating an
@@ -31,7 +92,7 @@ let
         in lib.genList (i: "/" + lib.concatStringsSep "/" (lib.take (i + 1) segments)) (lib.max 0 (lib.length segments - 1));
       ancestorPaths = lib.sort
         (a: b: (lib.length (lib.splitString "/" a)) < (lib.length (lib.splitString "/" b)))
-        (lib.unique (lib.concatMap ancestorsOf backup.sourceIncludes));
+        (lib.unique (lib.concatMap ancestorsOf schedule.sourceIncludes));
       ancestorArgs = lib.concatMapStringsSep " "
         (a: "-exclude-wildcard ${lib.escapeShellArg "!${a}"} -exclude-wildcard ${lib.escapeShellArg "${a}/*"}")
         ancestorPaths;
@@ -43,14 +104,15 @@ let
       # "gocryptfs.conf" in the encrypted view, so without this it would get
       # filtered out by the "*" exclude and never make it into the rsynced
       # backup, breaking mounting on the target.
-      excludeArgs = lib.optionalString (backup.sourceIncludes != []) (
+      excludeArgs = lib.optionalString (schedule.sourceIncludes != []) (
         "-exclude-wildcard '*' "
         + (lib.optionalString (ancestorArgs != "") (ancestorArgs + " "))
-        + lib.concatMapStringsSep " " (p: "-exclude-wildcard ${lib.escapeShellArg "!${p}"}") backup.sourceIncludes
+        + lib.concatMapStringsSep " " (p: "-exclude-wildcard ${lib.escapeShellArg "!${p}"}") schedule.sourceIncludes
         + " -exclude-wildcard '!/.gocryptfs.reverse.conf'"
       );
+      fullTarget = "${host}:${remotePath}";
     in {
-      description = "Backup ${name}: ${backup.source} -> ${backup.target}";
+      description = "Backup ${name}: ${backup.source} -> ${fullTarget}";
       after    = [ "network-online.target" ];
       wants    = [ "network-online.target" ];
       startLimitIntervalSec = 900;
@@ -66,9 +128,9 @@ let
         set -euo pipefail
         set -x
 
-        ${lib.optionalString (backup.targetMac != null) ''
-          echo "[backup-${name}] Waking up ${host} via WOL (${backup.targetMac})..."
-          wol ${backup.targetMac}
+        ${lib.optionalString (backup.target.mac != null) ''
+          echo "[backup-${name}] Waking up ${host} via WOL (${backup.target.mac})..."
+          wol ${backup.target.mac}
         ''}
 
         echo "[backup-${name}] Waiting for SSH on ${host}..."
@@ -119,17 +181,17 @@ let
         rsync -avzO --delete --max-alloc=0 \
           -e "ssh -i /nix/etc/ssh/ssh_host_ed25519_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3" \
           "$MOUNT_DIR/" \
-          "root@${backup.target}/"
+          "root@${fullTarget}/"
 
         echo "[backup-${name}] Backup complete"
       '';
     };
 
-  mkBackupTimer = name: backup: {
-    description = "Timer for backup job ${name}";
+  mkBackupTimer = { fullName, schedule, ... }: {
+    description = "Timer for backup job ${fullName}";
     wantedBy = [ "timers.target" ];
     timerConfig = {
-      OnCalendar = backup.timer;
+      OnCalendar = schedule.timer;
       Persistent  = true;
     };
   };
@@ -137,20 +199,25 @@ let
 in {
   options.bcl.backups = lib.mkOption {
     default     = {};
-    description = "Named rsync backup job configurations with Wake-on-LAN support.";
+    description = "Named rsync backup source configurations with Wake-on-LAN support. Each source can have multiple named schedules, each backing up to \"<target>/<scheduleName>\" on its own timer.";
     example = {
-      week = {
-        enable       = true;
-        source       = "/data/Audio";
+      data = {
+        enable         = true;
+        source         = "/data/Audio";
         sourceIncludes = [ "*.flac" "*.mp3" ];
-        target       = "192.168.0.1:/data/week";
-        targetMac    = "00:d8:61:6f:f4:6e";
-        timer        = "Mon 02:00";
+        target = {
+          address = "192.168.0.1:/data";
+          mac     = "00:d8:61:6f:f4:6e";
+        };
+        schedules = {
+          week  = { timer = "Mon 02:00"; };
+          month = { timer = "*-*-1 02:00"; sourceIncludes = [ "*.flac" ]; };
+        };
       };
     };
-    type = lib.types.attrsOf (lib.types.submodule {
+    type = lib.types.attrsOf (lib.types.submodule ({ config, ... }: {
       options = {
-        enable = lib.mkEnableOption "this backup job";
+        enable = lib.mkEnableOption "this backup source";
 
         source = lib.mkOption {
           type        = lib.types.str;
@@ -160,37 +227,73 @@ in {
         sourceIncludes = lib.mkOption {
           type        = lib.types.listOf lib.types.str;
           default     = [];
-          description = "Plaintext wildcard patterns to include in the gocryptfs reverse mount. Everything else is excluded. Implemented as: -exclude-wildcard '*' -exclude-wildcard '!pat1' -exclude-wildcard '!pat2'. Empty list includes everything.";
+          description = "Default plaintext wildcard patterns to include in the gocryptfs reverse mount, used by any schedule that doesn't set its own sourceIncludes. Everything else is excluded. Implemented as: -exclude-wildcard '*' -exclude-wildcard '!pat1' -exclude-wildcard '!pat2'. Empty list includes everything.";
         };
 
         target = lib.mkOption {
-          type        = lib.types.str;
-          description = "Rsync destination in host:/path format (SSH transport).";
+          description = "Rsync destination for this backup source, with optional Wake-on-LAN.";
+          type = lib.types.submodule {
+            options = {
+              address = lib.mkOption {
+                type        = lib.types.str;
+                description = "Rsync destination base in host:/path format (SSH transport). Each schedule backs up to \"<address>/<scheduleName>\".";
+              };
+
+              mac = lib.mkOption {
+                type        = lib.types.nullOr lib.types.str;
+                default     = null;
+                description = "MAC address of the target for Wake-on-LAN. Null skips WOL.";
+              };
+            };
+          };
         };
 
-        targetMac = lib.mkOption {
-          type        = lib.types.nullOr lib.types.str;
-          default     = null;
-          description = "MAC address of the target for Wake-on-LAN. Null skips WOL.";
-        };
+        schedules = lib.mkOption {
+          default     = {};
+          description = "Named schedules for this backup source, each running on its own timer.";
+          type = lib.types.attrsOf (lib.types.submodule {
+            options = {
+              enable = lib.mkEnableOption "this schedule" // { default = true; };
 
-        timer = lib.mkOption {
-          type        = lib.types.str;
-          description = "Systemd OnCalendar expression (e.g. \"Mon 02:00\", \"*-*-* 03:00:00\").";
+              timer = lib.mkOption {
+                type        = lib.types.str;
+                description = "Systemd OnCalendar expression (e.g. \"Mon 02:00\", \"*-*-* 03:00:00\").";
+              };
+
+              sourceIncludes = lib.mkOption {
+                type        = lib.types.listOf lib.types.str;
+                default     = config.sourceIncludes;
+                description = "Plaintext wildcard patterns to include in the gocryptfs reverse mount for this schedule. Defaults to the source's sourceIncludes. Everything else is excluded. Implemented as: -exclude-wildcard '*' -exclude-wildcard '!pat1' -exclude-wildcard '!pat2'. Empty list includes everything.";
+              };
+            };
+          });
         };
       };
-    });
+    }));
   };
 
-  config = lib.mkIf (enabledBackups != {}) {
-    systemd.services = lib.mapAttrs' (name: backup: {
-      name  = "backup-${name}";
-      value = mkBackupService name backup;
-    }) enabledBackups;
+  config = lib.mkMerge [
+    (lib.mkIf (flatSchedules != []) {
+      systemd.services = builtins.listToAttrs (map (e: {
+        name  = "backup-${e.fullName}";
+        value = mkBackupService e;
+      }) flatSchedules);
 
-    systemd.timers = lib.mapAttrs' (name: backup: {
-      name  = "backup-${name}";
-      value = mkBackupTimer name backup;
-    }) enabledBackups;
-  };
+      systemd.timers = builtins.listToAttrs (map (e: {
+        name  = "backup-${e.fullName}";
+        value = mkBackupTimer e;
+      }) flatSchedules);
+    })
+    (lib.mkIf (sourcesWithDataPool != {}) {
+      systemd.services = lib.mapAttrs' (jobName: backup: {
+        name  = "sync-gocryptfs-reverse-conf-${jobName}";
+        value = mkSyncReverseConfService jobName backup;
+      }) sourcesWithDataPool;
+
+      systemd.timers = lib.mapAttrs' (jobName: backup: {
+        name  = "sync-gocryptfs-reverse-conf-${jobName}";
+        value = mkSyncReverseConfTimer jobName;
+      }) sourcesWithDataPool;
+    })
+  ];
 }

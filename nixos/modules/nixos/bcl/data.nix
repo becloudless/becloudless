@@ -2,6 +2,12 @@
 let
   cfg = config.bcl.data;
 
+  enabledCfg = lib.filterAttrs (_: dataCfg: dataCfg.enable) cfg;
+
+  # Every bcl.disks mount point, used as the default source folders for the
+  # global data mount below.
+  diskPaths = lib.mapAttrsToList (_: diskCfg: diskCfg.path) config.bcl.disks;
+
   singleSource = dataCfg:
     dataCfg.sourceFoldersPattern == null && builtins.length dataCfg.sourceFolders == 1;
 
@@ -72,7 +78,7 @@ let
       ];
       depends = dependsFor dataCfg;
     };
-  }) cfg;
+  }) enabledCfg;
 
 in {
   options.bcl.data = lib.mkOption {
@@ -85,10 +91,14 @@ in {
     };
     type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
       options = {
+        enable = lib.mkOption {
+          type        = lib.types.bool;
+          default     = true;
+          description = "Whether to create this data mount. Set to false to disable (e.g. to turn off the default global mount).";
+        };
         path = lib.mkOption {
           type        = lib.types.str;
-          default     = "/data/${name}";
-          description = "Mount point for the merged view. Defaults to /data/<name>.";
+          description = "Mount point for the merged view.";
         };
         sourceFolders = lib.mkOption {
           type        = lib.types.either lib.types.str (lib.types.listOf lib.types.str);
@@ -110,11 +120,25 @@ in {
     }));
   };
 
-  config = lib.mkIf (cfg != {}) {
-    assertions = lib.mapAttrsToList (name: dataCfg: {
-      assertion = dataCfg.sourceFolders != [] || dataCfg.sourceFoldersPattern != null;
-      message   = "bcl.data.${name}: at least one of sourceFolders or sourceFoldersPattern must be set.";
-    }) cfg;
-    fileSystems = fileSystemsEntries;
-  };
+  config = lib.mkMerge [
+    {
+      # Global mergerfs mount at /data aggregating every bcl.disks mount, so
+      # all disk content is browsable from one place by default. Only
+      # enabled when at least one bcl.disks entry exists. Can be
+      # overridden/disabled per field by setting bcl.data.global explicitly.
+      bcl.data.global = {
+        enable        = lib.mkDefault (config.bcl.disks != {});
+        path          = lib.mkDefault "/data";
+        sourceFolders = lib.mkDefault diskPaths;
+        mode          = lib.mkDefault "rw";
+      };
+    }
+    (lib.mkIf (enabledCfg != {}) {
+      assertions = lib.mapAttrsToList (name: dataCfg: {
+        assertion = dataCfg.sourceFolders != [] || dataCfg.sourceFoldersPattern != null;
+        message   = "bcl.data.${name}: at least one of sourceFolders or sourceFoldersPattern must be set.";
+      }) enabledCfg;
+      fileSystems = fileSystemsEntries;
+    })
+  ];
 }
