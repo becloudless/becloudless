@@ -8,6 +8,7 @@ import (
 	"github.com/awnumar/memguard"
 	"github.com/becloudless/becloudless/pkg/bcl"
 	"github.com/becloudless/becloudless/pkg/cmd"
+	"github.com/becloudless/becloudless/pkg/cmd/utils"
 	"github.com/n0rad/go-erlog/logs"
 	_ "github.com/n0rad/go-erlog/register"
 )
@@ -35,6 +36,7 @@ func handleSignals() {
 	go func() {
 		for s := range c {
 			logs.WithField("signal", s).Trace("Signal received. Purging Secrets")
+			utils.RunInterruptHook()
 			memguard.Purge()
 			switch s {
 			case os.Interrupt:

@@ -4,8 +4,10 @@ import (
 	"io"
 	"os"
 
+	"github.com/becloudless/becloudless/pkg/cmd/utils"
 	"github.com/becloudless/becloudless/pkg/nixos"
 	"github.com/n0rad/go-erlog/errs"
+	"github.com/n0rad/go-erlog/logs"
 	"github.com/n0rad/memguarded"
 	"github.com/spf13/cobra"
 )
@@ -14,6 +16,7 @@ func nixosBackupMountCmd() *cobra.Command {
 	var identityFile string
 	var sshUser string
 	var rw bool
+	var background bool
 	identityService := memguarded.NewService()
 
 	cmd := &cobra.Command{
@@ -22,7 +25,8 @@ func nixosBackupMountCmd() *cobra.Command {
 		Long: "Mounts the remote encrypted backup directory via sshfs, then decrypts it with gocryptfs\n" +
 			"using a passphrase derived from the ssh identity, the same way bcl.backups produced it.\n" +
 			"Must be run on the host that produced the backup.\n" +
-			"Mounted read-only unless --rw is passed.",
+			"Mounted read-only unless --rw is passed.\n" +
+			"By default stays in the foreground and unmounts on quit (Ctrl+C); pass --background to mount and return immediately.",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var identity io.Reader
@@ -37,16 +41,29 @@ func nixosBackupMountCmd() *cobra.Command {
 				identity = file
 			}
 
-			if err := nixos.MountBackup(args[0], args[1], identity, sshUser, rw); err != nil {
+			mountpoint := args[1]
+			if err := nixos.MountBackup(args[0], mountpoint, identity, sshUser, rw); err != nil {
 				return errs.WithE(err, "Failed to mount backup")
 			}
-			return nil
+
+			if background {
+				return nil
+			}
+
+			utils.OnInterrupt(func() {
+				if err := nixos.UmountBackup(mountpoint); err != nil {
+					logs.WithE(err).Error("Failed to unmount backup")
+				}
+			})
+			logs.WithField("mountpoint", mountpoint).Info("Staying in foreground, press Ctrl+C to unmount and exit")
+			select {}
 		},
 	}
 
 	cmd.Flags().StringVarP(&identityFile, "identity", "i", nixos.DefaultBackupIdentityFile, "ssh private key file used to reach the target and derive the decryption passphrase")
 	cmd.Flags().StringVarP(&sshUser, "user", "u", "root", "ssh user used to connect to the target (ignored if the target already specifies a user@host)")
 	cmd.Flags().BoolVar(&rw, "rw", false, "mount the backup read-write instead of read-only")
+	cmd.Flags().BoolVarP(&background, "background", "b", false, "mount and return immediately instead of staying in the foreground")
 	cmd.Flags().BoolFuncP("ask-identity", "I", "read the ssh identity content (multiline) from a secured prompt instead of --identity", func(s string) error {
 		secret, err := readMultilineSecret("SSH identity key content")
 		if err != nil {
