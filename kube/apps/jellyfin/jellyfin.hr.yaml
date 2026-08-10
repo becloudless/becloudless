@@ -10,7 +10,6 @@ spec:
     spec:
       chart: base-template
       version: 1.250501.709-Heffe9b6
-      version: 1.250501.709-Heffe9b6
       sourceRef:
         kind: HelmRepository
         name: base
@@ -77,20 +76,10 @@ spec:
 #          subPath: SSO-Auth.xml
         config:
           type: persistentVolumeClaim
-        video:
+        media:
           type: hostPath
-          path: /data/Videos
-          hostPath: /data/Videos
-          # mountPropagation: Bidirectional
-        audio:
-          type: hostPath
-          path: /data/Audio
-          hostPath: /data/Audio
-          # mountPropagation: Bidirectional
-        image:
-          type: hostPath
-          path: /data/Images
-          hostPath: /data/Images
+          path: /data/Media
+          hostPath: /data/Media
           # mountPropagation: Bidirectional
 
 
