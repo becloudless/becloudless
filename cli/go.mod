@@ -9,6 +9,7 @@ require (
 	github.com/Mic92/ssh-to-age v1.3.0
 	github.com/atombender/go-jsonschema v0.24.1
 	github.com/awnumar/memguard v0.23.0
+	github.com/becloudless/go-app v0.0.0-20260811003149-e4b397ffb434
 	github.com/client9/misspell v0.3.4
 	github.com/fzipp/gocyclo v0.6.0
 	github.com/getsops/sops/v3 v3.13.3
@@ -21,7 +22,6 @@ require (
 	github.com/hashicorp/terraform-config-inspect v0.0.0-20260709150029-2fb54c236733
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/moby/buildkit v0.32.2
-	github.com/n0rad/go-app v0.0.0-20260502170822-14ac9a7082c9
 	github.com/n0rad/go-erlog v0.0.0-20260803020042-6c728ddb3e7a
 	github.com/n0rad/gomake v0.0.0-20260423115156-cb11feadac58
 	github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260120012428-7b6c2af7698a
@@ -112,7 +112,7 @@ require (
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
-	github.com/cloudflare/circl v1.6.4 // indirect
+	github.com/cloudflare/circl v1.6.5 // indirect
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2 // indirect
 	github.com/containerd/typeurl/v2 v2.3.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
@@ -190,7 +190,7 @@ require (
 	github.com/json-iterator/go v1.1.13-0.20220915233716-71ac16282d12 // indirect
 	github.com/kevinburke/ssh_config v1.6.0 // indirect
 	github.com/kisielk/errcheck v1.5.0 // indirect
-	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
+	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
