@@ -1,0 +1,103 @@
+{
+  "Metrics": {
+    "type": "object",
+    "additionalProperties": false,
+    "patternProperties": {
+      "^[0-9a-z-]*$": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "ContainerResource",
+              "External",
+              "Object",
+              "Pods",
+              "Resource"
+            ]
+          },
+          "containerResource": {
+            "$ref": "../lib/k8s.json#/ContainerResourceMetricSource"
+          },
+          "external": {
+            "$ref": "../lib/k8s.json#/MetricSource"
+          },
+          "object": {
+            "$ref": "../lib/k8s.json#/ObjectMetricSource"
+          },
+          "pods": {
+            "$ref": "../lib/k8s.json#/MetricSource"
+          },
+          "resource": {
+            "$ref": "../lib/k8s.json#/ResourceMetricSource"
+          }
+        }
+      }
+    }
+  },
+  "Common": {
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "$ref": "../lib/utils.json#/enabled"
+      },
+      "annotations": {
+        "$ref": "../lib/k8s.json#/Annotations"
+      },
+      "labels": {
+        "$ref": "../lib/k8s.json#/Labels"
+      },
+      "nameOverride": {
+        "$ref": "../lib/utils.json#/nameOverride"
+      },
+      "minReplicas": {
+        "type": "integer",
+        "minimum": 0,
+        "default": 2,
+        "description": "The minimum amount of pods that the HPA can scale down to"
+      },
+      "maxReplicas": {
+        "type": "integer",
+        "minimum": 0,
+        "default": 50,
+        "description": "The maximum amount of pods that the HPA can scale up to"
+      },
+      "behavior": {
+        "$comment": "This is manually dereference from k8s.json#HorizontalPodAutoscalerBehavior because this specific property is broken and I dont understand why",
+        "description": "HorizontalPodAutoscalerBehavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively).",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scaleDown": {
+            "$ref": "../lib/k8s.json#/HPAScalingRules"
+          },
+          "scaleUp": {
+            "$ref": "../lib/k8s.json#/HPAScalingRules"
+          }
+        }
+      }
+    }
+  },
+  "ResourceInstance": {
+    "allOf": [
+      {
+        "additionalProperties": false,
+        "properties": {
+          "controller": {
+            "type": "string"
+          },
+          "metrics": {
+            "$ref": "#/Metrics"
+          }
+        }
+      },
+      {
+        "$ref": "#/Common"
+      }
+    ]
+  }
+}

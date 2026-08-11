@@ -1,0 +1,93 @@
+# yaml-language-server: $schema=../values.schema.json
+
+resources:
+  persistentVolumeClaims:
+    config:
+      enabled: true
+    media:
+      enabled: true
+
+  controllers:
+    third:
+      type: StatefulSet
+      volumes: &volumes
+        config:
+          type: persistentVolumeClaim
+          name: config
+        media:
+          type: persistentVolumeClaim
+          name: media
+        tests:
+          type: volumeClaim
+          path: /test
+          readOnly: true
+      containers:
+        second:
+          image:
+            repository: ghcr.io/mendhak/http-https-echo
+            tag: 31
+
+    second:
+      volumes: *volumes
+      containers:
+        second:
+          image:
+            repository: ghcr.io/mendhak/http-https-echo
+            tag: 31
+
+    main:
+      volumes: *volumes
+      containers:
+        main:
+          image:
+            repository: ghcr.io/mendhak/http-https-echo
+            tag: 31
+          securityContext:
+            procMount: "/dd"
+          probes:
+            liveness:
+              enabled: true
+            readiness:
+              enabled: true
+            startup:
+              enabled: true
+
+  services:
+    main:
+      ports:
+        http:
+          port: 8080
+
+  ingresses:
+    main:
+      enabled: true
+      hosts:
+        - host: toto.com
+          paths:
+            - service:
+                name: main
+              path: /
+
+mainWorkload:
+  enabled: true
+  datadog:
+    checks:
+      enabled: true
+      openmetrics:
+        enabled: true
+        path: "/metrics"
+        instances:
+          instance1:
+            namespace: "test"
+            metrics:
+              - "^test.+"
+          instance2:
+            namespace: "zaez"
+            metrics:
+              - "^aze.+"
+
+e2eTests:
+  testSuite:
+    - slackChannel: "#toto"
+      project: test
+      tags: ["tyty"]

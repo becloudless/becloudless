@@ -1,0 +1,13 @@
+teamShortname: ep
+
+workloads:
+  main:
+    container:
+      image:
+        repository: ghcr.io/mendhak/http-https-echo
+        tag: 31
+
+    service:
+      ports:
+        http:
+          port: 8080

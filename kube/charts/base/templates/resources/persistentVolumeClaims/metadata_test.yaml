@@ -1,0 +1,107 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: persistentVolumeClaims metadata
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default should pass
+    set:
+      resources.persistentVolumeClaims.config.enabled: true
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - notExists:
+          path: metadata.annotations
+      - equal:
+          path: metadata.labels
+          value:
+            app: RELEASE-NAME
+            app.kubernetes.io/component: config
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: RELEASE-NAME
+            helm.sh/chart: base-template-0.0.0
+
+  - it: retain enabled should pass
+    set:
+      resources.persistentVolumeClaims.config:
+        retain: true
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            helm.sh/resource-policy: keep
+      - equal:
+          path: metadata.labels
+          value:
+            app: RELEASE-NAME
+            app.kubernetes.io/component: config
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: RELEASE-NAME
+            helm.sh/chart: base-template-0.0.0
+
+  - it: custom metadata should pass
+    set:
+      resources.persistentVolumeClaims.config:
+        labels:
+          test_label: test
+        annotations:
+          test_annotation: test
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            test_annotation: test
+      - equal:
+          path: metadata.labels
+          value:
+            app: RELEASE-NAME
+            app.kubernetes.io/component: config
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: RELEASE-NAME
+            helm.sh/chart: base-template-0.0.0
+            test_label: test
+
+  - it: custom metadata with global metadata should pass
+    set:
+      global:
+        labels:
+          global_label: test
+        annotations:
+          global_annotation: test
+      resources.persistentVolumeClaims.config:
+        labels:
+          test_label: test
+        annotations:
+          test_annotation: test
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            test_annotation: test
+            global_annotation: test
+      - equal:
+          path: metadata.labels
+          value:
+            app: RELEASE-NAME
+            app.kubernetes.io/component: config
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: RELEASE-NAME
+            global_label: test
+            helm.sh/chart: base-template-0.0.0
+            test_label: test

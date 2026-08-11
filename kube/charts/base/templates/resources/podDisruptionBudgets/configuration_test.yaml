@@ -1,0 +1,103 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: podDisruptionBudget configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: pdb is enabled by default
+    documentSelector:
+      path: kind
+      value: PodDisruptionBudget
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
+  - it: pdb can be disabled
+    set:
+      resources.podDisruptionBudgets.main.enabled: false
+    asserts:
+      - containsDocument:
+          kind: PodDisruptionBudget
+        not: true
+
+  - it: default enabled pdb config with deployment
+    documentSelector:
+      path: kind
+      value: PodDisruptionBudget
+    asserts:
+      - equal:
+          path: spec.maxUnavailable
+          value: 10%
+      - notExists:
+          path: spec.minAvailable
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/component: main
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/name: RELEASE-NAME
+
+  - it: pdb minAvailable can be set
+    set:
+      resources.podDisruptionBudgets:
+        main:
+          minAvailable: 2
+          controller: main
+    documentSelector:
+      path: kind
+      value: PodDisruptionBudget
+    asserts:
+      - equal:
+          path: spec.maxUnavailable
+          value: 10%
+      - equal:
+          path: spec.minAvailable
+          value: 2
+
+  - it: second pdb can be set
+    set:
+      resources.podDisruptionBudgets:
+        second:
+          enabled: true
+          controller: main
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-second
+    asserts:
+      - isKind:
+          of: PodDisruptionBudget
+      - equal:
+          path: spec.maxUnavailable
+          value: 10%
+      - notExists:
+          path: spec.minAvailable
+
+  - it: second pdb can be set with minAvailable
+    set:
+      resources.podDisruptionBudgets:
+        second:
+          enabled: true
+          controller: second
+          minAvailable: 3
+          maxUnavailable: 30%
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-second
+    asserts:
+      - isKind:
+          of: PodDisruptionBudget
+      - equal:
+          path: spec.maxUnavailable
+          value: 30%
+      - equal:
+          path: spec.minAvailable
+          value: 3
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/component: second
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/name: RELEASE-NAME

@@ -1,0 +1,185 @@
+{
+  "container": {
+    "title": "A container",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "$ref": "../lib/utils.json#/enabled"
+      },
+      "nameOverride": {
+        "type": "string"
+      },
+      "order": {
+        "type": "integer"
+      },
+
+      "args": {
+        "title": "Container's arguments. This is the equivalent of docker's CMD",
+        "description": "Arguments to the entrypoint. The image's CMD is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. \"$$(VAR_NAME)\" will produce the string literal \"$(VAR_NAME)\". Escaped references will never be expanded, regardless of whether the variable exists or not. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell",
+        "oneOf": [
+          {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          {"type": "string"}
+        ]
+      },
+      "command": {
+        "title": "Container's command. This is the equivalent of docker's ENTRYPOINT",
+        "description": "Entrypoint array. Not executed within a shell. The image's ENTRYPOINT is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. \"$$(VAR_NAME)\" will produce the string literal \"$(VAR_NAME)\". Escaped references will never be expanded, regardless of whether the variable exists or not. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell",
+        "oneOf": [
+          {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          {"type": "string"}
+        ]
+      },
+      "dependsOn": {
+        "oneOf": [
+          {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          {"type": "string"}
+        ]
+      },
+      "env": {
+        "title": "Container's environment variables",
+        "description": "A) TZ: UTC\nB) PASSWD: '{{ .Release.Name }}'\nB) TZ:\n    value: UTC\n    dependsOn: otherVar\nD) PASSWD:\n    configMapKeyRef:\n      name: config-map-name\n      key: key-name\nE) PASSWD:\n    dependsOn:\n      - otherVar1\n      - otherVar2\n    valueFrom:\n      secretKeyRef:\n        name: secret-name\n        key: key-name",
+        "type": "object",
+        "additionalProperties": {
+          "anyOf": [
+            {"$ref": "../lib/envVars.json#/envVarValue"},
+            {"$ref": "../lib/envVars.json#/envVarItem"},
+            {"$ref": "../lib/envVars.json#/valueFromItem"}
+          ]
+        }
+      },
+      "envFrom": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "configMap": {
+              "type": "string"
+            },
+            "configMapRef": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {"type": "string"},
+                "identifier": {"type": "string"},
+                "optional": {"type": "boolean"}
+              },
+              "oneOf": [{"required": ["name"]}, {"required": ["identifier"]}]
+            },
+            "prefix": {
+              "type": ["string", "null"]
+            },
+            "secret": {
+              "type": "string"
+            },
+            "secretRef": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {"type": "string"},
+                "identifier": {"type": "string"},
+                "optional": {"type": "boolean"}
+              },
+              "oneOf": [{"required": ["name"]}, {"required": ["identifier"]}]
+            }
+          }
+        }
+      },
+      "image": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "repository": {
+            "type": "string",
+            "description": "Image repository"
+          },
+          "tag": {
+            "type": ["string", "number"],
+            "description": "Image tag"
+          }
+        }
+      },
+      "lifecycle": {
+        "$ref": "../lib/k8s.json#/Lifecycle"
+      },
+      "ports": {
+        "type": "array",
+        "items": {
+          "$ref": "../lib/k8s.json#/ContainerPort"
+        }
+      },
+      "probes": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "liveness": {
+            "$ref": "#/probe"
+          },
+          "readiness": {
+            "$ref": "#/probe"
+          },
+          "startup": {
+            "$ref": "#/probe"
+          }
+        }
+      },
+      "resources": {
+        "$ref": "../lib/k8s.json#/ResourceRequirements"
+      },
+      "restartPolicy": {
+        "$ref": "../lib/k8s.json#/RestartPolicy"
+      },
+      "securityContext": {
+        "$ref": "../lib/k8s.json#/ContainerSecurityContext"
+      },
+      "terminationMessagePath": {
+        "type": "string"
+      },
+      "terminationMessagePolicy": {
+        "type": "string",
+        "enum": ["File", "FallbackToLogsOnError"]
+      },
+      "workingDir": {
+        "type": "string"
+      }
+    }
+  },
+
+  "probe": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "default": false
+      },
+      "custom": {
+        "type": "boolean",
+        "default": false
+      },
+      "path": {
+        "type": "string"
+      },
+      "port": {
+        "type": ["number", "string"]
+      },
+      "spec": {
+        "$ref": "../lib/k8s.json#/Probe"
+      },
+      "type": {
+        "type": "string",
+        "enum": ["TCP", "HTTP", "HTTPS"]
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: horizontalPodAutoscaler validations
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: horizontalPodAutoscaler requires controller reference
+    set:
+      workloads.main.enabled: false
+      resources.horizontalPodAutoscalers:
+        main:
+          controller: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: "controller field is required for horizontalPodAutoscaler. (hpa: main)"
+
+  - it: horizontalPodAutoscaler requires real controller reference
+    set:
+      resources.horizontalPodAutoscalers:
+        main:
+          controller: main2
+    asserts:
+      - failedTemplate:
+          errorMessage: "controller field is required for horizontalPodAutoscaler. (hpa: main)"
+
+  - it: metrics is a map
+    set:
+      resources.horizontalPodAutoscalers:
+        main:
+          metrics:
+            - wrong
+    asserts:
+      - failedTemplate:
+          errorMessage: "metrics field must be a map of metric indexed by an identifier. (hpa: main)"

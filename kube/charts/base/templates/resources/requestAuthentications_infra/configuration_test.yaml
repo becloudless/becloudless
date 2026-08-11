@@ -1,0 +1,49 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: requestAuthentication configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: no requestAuthentication by default
+    asserts:
+      - containsDocument:
+          kind: RequestAuthentication
+        not: true
+
+  - it: requestAuthentication can be disabled
+    set:
+      resources.requestAuthentications.main.enabled: false
+    asserts:
+      - containsDocument:
+          kind: RequestAuthentication
+        not: true
+
+  - it: default enabled requestAuthentication
+    set:
+      resources.requestAuthentications.main:
+        workloadLabels:
+          app: test
+    documentSelector:
+      path: kind
+      value: RequestAuthentication
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+      - equal:
+          path: spec.jwtRules[0].issuer
+          value: https://blablacar.onelogin.com/oidc/2
+      - equal:
+          path: spec.jwtRules[0].jwksUri
+          value: https://blablacar.onelogin.com/oidc/2/certs
+      - equal:
+          path: spec.jwtRules[0].forwardOriginalToken
+          value: true
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: test
+      - equal:
+          path: metadata.labels.app
+          value: RELEASE-NAME

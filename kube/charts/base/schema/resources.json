@@ -1,0 +1,332 @@
+{
+  "title": "Render kubernetes resources with fully manual setup.",
+  "description": "Allow you to fully configure kubernetes resources manually. No features exists at this stage. Everything fields must be set manually. You should do set resources manually only when `features:` are not supporting your use case",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "configMaps": {
+      "title": "Render some configmaps, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the configmap",
+          "$ref": "resources/configMaps.json#/instance"
+        }
+      }
+    },
+    "controllers": {
+      "title": "Render some controllers, indexed by an identifier. Types can be Deployment, CronJobs, ...",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the controller",
+          "$ref": "resources/controllers.json#/instance"
+        }
+      }
+    },
+    "ingresses": {
+      "title": "Render some ingresses, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the ingress",
+          "$ref": "resources/ingresses.json#/instance"
+        }
+      }
+    },
+    "routes": {
+      "title": "Render some routes, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the route",
+          "$ref": "resources/routes.json#/instance"
+        }
+      }
+    },
+    "serviceAccounts": {
+      "title": "Render some serviceAccounts, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the serviceAccount",
+          "$ref": "resources/serviceAccounts.json#/instance"
+        }
+      }
+    },
+    "services": {
+      "title": "Render some services, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the service",
+          "$ref": "resources/services.json#/ResourceInstance"
+        }
+      }
+    },
+    "networkPolicies": {
+      "title": "Render some networkPolicies, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the networkPolicy",
+          "$ref": "resources/networkPolicies.json#/instance"
+        }
+      }
+    },
+    "sealedSecrets": {
+      "title": "Render some sealedSecrets, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the sealedSecret",
+          "$ref": "resources/sealedSecrets.json#/instance"
+        }
+      }
+    },
+    "alerts": {
+      "title": "Render some flux's alerts, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the alert",
+          "$ref": "resources/alerts.json#/instance"
+        }
+      }
+    },
+    "providers": {
+      "title": "Render some flux's providers, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the provider",
+          "$ref": "resources/providers.json#/instance"
+        }
+      }
+    },
+    "destinationRules": {
+      "title": "Render some istio's destinationRules, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the destinationRile",
+          "$ref": "resources/destinationRules.json#/instance"
+        }
+      }
+    },
+    "serviceEntries": {
+      "title": "Render some istio's serviceEntries, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the serviceEntry",
+          "$ref": "resources/serviceEntries.json#/instance"
+        }
+      }
+    },
+    "horizontalPodAutoscalers": {
+      "title": "Render some hpa, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the hpa",
+          "$ref": "resources/horizontalPodAutoscalers.json#/ResourceInstance"
+        }
+      }
+    },
+    "imagePolicies": {
+      "title": "Render some flux's imagePolicies, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the imagePolicy",
+          "$ref": "resources/imagePolicies.json#/instance"
+        }
+      }
+    },
+    "imageRepositories": {
+      "title": "Render some flux's imageRepositories, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the imageRepository",
+          "$ref": "resources/imageRepositories.json#/instance"
+        }
+      }
+    },
+    "persistentVolumeClaims": {
+      "title": "Render some flux's persistentVolumeClaims, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the persistentVolumeClaim",
+          "$ref": "resources/persistentVolumeClaims.json#/instance"
+        }
+      }
+    },
+    "podDisruptionBudgets": {
+      "title": "Render some flux's podDisruptionBudgets, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the podDisruptionBudget",
+          "$ref": "resources/podDisruptionBudgets.json#/ResourceInstance"
+        }
+      }
+    },
+    "kafkaUsers": {
+      "title": "Render some Strimzi Kafka users with ACLs, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the KafkaUser",
+          "$ref": "resources/kafkaUsers.json#/instance"
+        }
+      }
+    },
+    "virtualServices": {
+      "title": "Render some istio's virtualServices, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the VirtualService",
+          "$ref": "resources/virtualServices.json#/instance"
+        }
+      }
+    },
+    "sidecars": {
+      "title": "Render some istio's sidecars, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the Sidecar",
+          "$ref": "resources/sidecars.json#/instance"
+        }
+      }
+    },
+    "authorizationPolicies": {
+      "title": "Render some istio's authorizationPolicies, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the AuthorizationPolicy",
+          "$ref": "resources/authorizationPolicies.json#/instance"
+        }
+      }
+    },
+    "telemetries": {
+      "title": "Render some istio's telemetries, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the Telemetry",
+          "$ref": "resources/telemetries.json#/instance"
+        }
+      }
+    },
+    "envoyFilters": {
+      "title": "Render some istio's envoy filters, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the Envoy Filter",
+          "$ref": "resources/envoyFilters.json#/instance"
+        }
+      }
+    },
+    "datadogMetrics": {
+      "title": "Render some datadogMetrics, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the DatadogMetric",
+          "$ref": "resources/datadogMetrics.json#/instance"
+        }
+      }
+    },
+    "requestAuthentications": {
+      "title": "Render some istio's requestAuthentications, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the Request Authentication",
+          "$ref": "resources/requestAuthentications.json#/instance"
+        }
+      }
+    },
+    "persistentVolumes": {
+      "title": "Render some persistentVolumes, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the persistent volume",
+          "$ref": "resources/persistentVolumes.json#/instance"
+        }
+      }
+    },
+    "secrets": {
+      "title": "Render some secrets, indexed by an identifier",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the secret",
+          "$ref": "resources/secrets.json#/instance"
+        }
+      }
+    }
+  }
+}

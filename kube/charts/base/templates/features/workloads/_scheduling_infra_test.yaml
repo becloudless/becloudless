@@ -1,0 +1,74 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: workloads scheduling
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default strategy is spread for HA
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0]
+          value:
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - RELEASE-NAME
+                  - key: app.kubernetes.io/component
+                    operator: In
+                    values:
+                      - main
+              topologyKey: kubernetes.io/hostname
+            weight: 50
+      - equal:
+          path: spec.template.spec.topologySpreadConstraints[0]
+          value:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/component: main
+                app.kubernetes.io/instance: RELEASE-NAME
+                app.kubernetes.io/name: RELEASE-NAME
+            maxSkew: 1
+            topologyKey: topology.kubernetes.io/zone
+            whenUnsatisfiable: ScheduleAnyway
+      - equal:
+          path: spec.template.spec.topologySpreadConstraints[1]
+          value:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/component: main
+                app.kubernetes.io/instance: RELEASE-NAME
+                app.kubernetes.io/name: RELEASE-NAME
+            maxSkew: 2
+            topologyKey: kubernetes.io/hostname
+            whenUnsatisfiable: DoNotSchedule
+
+  - it: spread for HA hostname maxSkew is configurable
+    set:
+      workloads.main.scheduling.podSpreadingForHA.hostnameMaxSkew: 42
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.topologySpreadConstraints[1].maxSkew
+          value: 42
+
+  - it: spread for HA can be disabled
+    set:
+      workloads.main.scheduling.podSpreadingForHA.enabled: false
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - notExists:
+          path: spec.template.spec.topologySpreadConstraints
+      - notExists:
+          path: spec.template.spec.affinity.podAntiAffinity

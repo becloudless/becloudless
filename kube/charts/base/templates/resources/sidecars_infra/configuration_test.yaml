@@ -1,0 +1,109 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: sidecars configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: no sidecars by default
+    asserts:
+      - containsDocument:
+          kind: Sidecar
+        not: true
+
+  - it: sidecars can be disabled
+    set:
+      resources.sidecars.main.enabled: false
+    asserts:
+      - containsDocument:
+          kind: Sidecar
+        not: true
+
+  - it: default enabled sidecars
+    set:
+      resources.sidecars.main.enabled: true
+    documentSelector:
+      path: kind
+      value: Sidecar
+    asserts:
+      - equal:
+          path: metadata.labels.app
+          value: RELEASE-NAME
+
+  - it: enabled sidecars
+    set:
+      workloads.main.istio.enabled: false
+      resources.sidecars.main:
+        workloadLabels:
+          toto: titi
+        blockUndefinedOutbound: true
+        egress:
+          - hosts:
+              - google.com
+        ingress:
+          - port:
+              number: 42
+    documentSelector:
+      path: kind
+      value: Sidecar
+    asserts:
+      - equal:
+          path: spec.workloadSelector
+          value:
+            labels:
+              toto: titi
+      - equal:
+          path: spec.outboundTrafficPolicy
+          value:
+            mode: "REGISTRY_ONLY"
+      - equal:
+          path: spec.egress
+          value:
+            - hosts:
+                - google.com
+      - equal:
+          path: spec.ingress
+          value:
+            - port:
+                number: 42
+
+  - it: second sidecars can be set
+    set:
+      resources.sidecars:
+        main:
+          egress:
+            - hosts:
+                - google.com
+        second:
+          egress:
+            - hosts:
+                - google.com
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-second
+    asserts:
+      - isKind:
+          of: Sidecar
+      - equal:
+          path: spec.egress
+          value:
+            - hosts:
+                - google.com
+
+
+  - it: sidecar workloadLabels with GO tpl
+    set:
+      workloads.main.istio.enabled: false
+      resources.sidecars.main:
+        workloadLabels:
+          test: "{{ .Release.Name }}"
+    documentSelector:
+      path: kind
+      value: Sidecar
+    asserts:
+      - equal:
+          path: spec.workloadSelector
+          value:
+            labels:
+              test: RELEASE-NAME

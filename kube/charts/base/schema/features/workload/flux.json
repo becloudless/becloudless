@@ -1,0 +1,18 @@
+{
+  "description": "Flux configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "imageAutomation": {
+      "title": "automatic update of docker image as soon as a new version exists in the registry",
+      "description": "declare ImageRepository and ImagePolicy flux resources to support docker image update automation\nthen in values you just have add the comment marker to ask flux to update the line as soon as a new docker image\nis available in the docker registry.\nMarker to put in values must contain the HelmRelease name. Example: \nmainWorkload:\n  container:\n    image:\n       tag: 1.20230808143032.0-shaaa2255b4e # {\"$imagepolicy\": \"flux-system:{HELM_RELEASE_NAME}-{NAMESPACE}:tag\"}\n",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "../../lib/utils.json#/enabled"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "instance": {
+    "title": "Configure gateway routes",
+    "description": "[[ref]](https://gateway-api.sigs.k8s.io/references/spec/)",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "$ref": "../lib/utils.json#/enabled"
+      },
+      "annotations": {
+        "$ref": "../lib/k8s.json#/Annotations"
+      },
+      "labels": {
+        "$ref": "../lib/k8s.json#/Labels"
+      },
+      "nameOverride": {
+        "$ref": "../lib/utils.json#/nameOverride"
+      },
+
+      "hostnames": {
+        "type": "array",
+        "items": {"type": "string"},
+        "uniqueItems": true
+      },
+      "kind": {
+        "type": "string",
+        "enum": ["GRPCRoute", "HTTPRoute", "TCPRoute", "TLSRoute", "UDPRoute"]
+      },
+      "parentRefs": {
+        "title": "Configure the resource the route attaches to",
+        "description": "ParentReference identifies an API object (usually a Gateway) that can be considered a parent of this resource (usually a route). The only kind of parent resource with “Core” support is Gateway. This API may be extended in the future to support additional kinds of parent resources, such as HTTPRoute.\n\nNote that there are specific rules for ParentRefs which cross namespace boundaries. Cross-namespace references are only valid if they are explicitly allowed by something in the namespace they are referring to. For example: Gateway has the AllowedRoutes field, and ReferenceGrant provides a generic way to enable any other kind of cross-namespace reference.\n\nThe API object must be valid in the cluster; the Group and Kind must be registered in the cluster for this reference to be valid.",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "group": {
+              "description": "Group refers to a Kubernetes Group. It must either be an empty string or a RFC 1123 subdomain.",
+              "type": "string",
+              "pattern": "^[^/]+$",
+              "examples": [
+                "",
+                "networking.k8s.io",
+                "foo.example.com"
+              ]
+            },
+            "kind": {
+              "description": "Kind refers to a Kubernetes Kind.",
+              "type": "string",
+              "examples": [
+                "Service",
+                "HTTPRoute"
+              ]
+            },
+            "namespace": {
+              "type": "string",
+              "description": "Namespace is the namespace of the referent. When unspecified, this refers to the local namespace of the Route.",
+              "examples": [
+                "example"
+              ],
+              "pattern": "^[^.]+$"
+            },
+            "name": {
+              "description": "Name is the name of the referent.",
+              "type": "string"
+            },
+            "sectionName": {
+              "title": "Name of the section within the target resource",
+              "description": "SectionName is the name of a section within the target resource. In the following resources, SectionName is interpreted as the following:\n\nGateway: Listener Name. When both Port (experimental) and SectionName are specified, the name and port of the selected listener must match both specified values.\nService: Port Name. When both Port (experimental) and SectionName are specified, the name and port of the selected listener must match both specified values. Note that attaching Routes to Services as Parents is part of experimental Mesh support and is not supported for any other purpose.\nImplementations MAY choose to support attaching Routes to other resources. If that is the case, they MUST clearly document how SectionName is interpreted.\n\nWhen unspecified (empty string), this will reference the entire resource. For the purpose of status, an attachment is considered successful if at least one section in the parent resource accepts it. For example, Gateway listeners can restrict which Routes can attach to them by Route kind, namespace, or hostname. If 1 of 2 Gateway listeners accept attachment from the referencing Route, the Route MUST be considered successfully attached. If no Gateway listeners accept attachment from this Route, the Route MUST be considered detached from the Gateway.",
+              "type": "string"
+            }
+          },
+          "required": ["name"]
+        }
+      },
+
+      "rules": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "description": "Configure rules for routing. Defaults to the primary service.",
+          "additionalProperties": false,
+          "properties": {
+            "backendRefs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "group": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "namespace": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "port": {
+                    "type": ["string", "integer"]
+                  },
+                  "weight": {
+                    "type": "integer"
+                  }
+                }
+              }
+            },
+            "matches": {
+              "type": "array",
+              "items": {
+                "$ref": "../lib/k8s.json#/HTTPRouteMatch"
+              }
+            },
+            "filters": {
+              "type": "array",
+              "items": {
+                "$ref": "../lib/k8s.json#/HTTPRouteFilter"
+              }
+            },
+            "timeouts": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  }
+}

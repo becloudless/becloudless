@@ -1,0 +1,262 @@
+{
+    "instance": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+            "enabled": {
+                "$ref": "../lib/utils.json#/enabled"
+            },
+            "annotations": {
+                "$ref": "../lib/k8s.json#/Annotations"
+            },
+            "labels": {
+                "$ref": "../lib/k8s.json#/Labels"
+            },
+            "nameOverride": {
+                "$ref": "../lib/utils.json#/nameOverride"
+            },
+            "workloadLabels": {
+                "$ref": "../lib/k8s.json#/Labels"
+            },
+            "configPatches": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "applyTo": {
+                            "type": "string",
+                            "enum": [
+                                "INVALID",
+                                "LISTENER",
+                                "FILTER_CHAIN",
+                                "NETWORK_FILTER",
+                                "HTTP_FILTER",
+                                "ROUTE_CONFIGURATION",
+                                "VIRTUAL_HOST",
+                                "HTTP_ROUTE",
+                                "CLUSTER",
+                                "EXTENSION_CONFIG",
+                                "BOOTSTRAP",
+                                "LISTENER_FILTER"
+                            ]
+                        },
+                        "match": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "cluster": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "portNumber": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 4294967295
+                                        },
+                                        "service": {
+                                            "type": "string"
+                                        },
+                                        "subset": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "context": {
+                                    "type": "string",
+                                    "enum": [
+                                        "ANY",
+                                        "SIDECAR_INBOUND",
+                                        "SIDECAR_OUTBOUND",
+                                        "GATEWAY"
+                                    ]
+                                },
+                                "listener": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "filterChain": {
+                                            "type": "object",
+                                            "additionalProperties": false,
+                                            "properties": {
+                                                "applicationProtocols": {
+                                                    "type": "string"
+                                                },
+                                                "destinationPort": {
+                                                    "type": "integer",
+                                                    "minimum": 0,
+                                                    "maximum": 4294967295
+                                                },
+                                                "filter": {
+                                                    "type": "object",
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                        "name": {
+                                                            "type": "string"
+                                                        },
+                                                        "subFilter": {
+                                                            "type": "object",
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "name": {
+                                                                    "type": "string"
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "sni": {
+                                                    "type": "string"
+                                                },
+                                                "transportProtocol": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        },
+                                        "listenerFilter": {
+                                            "type": "string"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "portName": {
+                                            "type": "string"
+                                        },
+                                        "portNumber": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 4294967295
+                                        }
+                                    }
+                                },
+                                "proxy": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "metadata": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "proxyVersion": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "routeConfiguration": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "gateway": {
+                                            "type": "string"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "portName": {
+                                            "type": "string"
+                                        },
+                                        "portNumber": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 4294967295
+                                        },
+                                        "vhost": {
+                                            "type": "object",
+                                            "additionalProperties": false,
+                                            "properties": {
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "route": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "action": {
+                                                            "type": "string",
+                                                            "enum": [
+                                                                "ANY",
+                                                                "ROUTE",
+                                                                "REDIRECT",
+                                                                "DIRECT_RESPONSE"
+                                                            ]
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "patch": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "filterClass": {
+                                    "type": "string",
+                                    "enum": [
+                                        "UNSPECIFIED",
+                                        "AUTHN",
+                                        "AUTHZ",
+                                        "STATS"
+                                    ]
+                                },
+                                "operation": {
+                                    "type": "string",
+                                    "enum": [
+                                        "INVALID",
+                                        "MERGE",
+                                        "ADD",
+                                        "REMOVE",
+                                        "INSERT_BEFORE",
+                                        "INSERT_AFTER",
+                                        "INSERT_FIRST",
+                                        "REPLACE"
+                                    ]
+                                },
+                                "value": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "priority": {
+                "type": "integer",
+                "format": "int32"
+            },
+            "targetRefs": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "group": {
+                            "type": "string"
+                        },
+                        "kind": {
+                            "type": "string"
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "namespace": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

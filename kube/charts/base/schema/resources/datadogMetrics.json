@@ -1,0 +1,25 @@
+{
+  "instance": {
+    "description": "DatadogMetric configuration.",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "$ref": "../lib/utils.json#/enabled"
+      },
+      "annotations": {
+        "$ref": "../lib/k8s.json#/Annotations"
+      },
+      "labels": {
+        "$ref": "../lib/k8s.json#/Labels"
+      },
+      "nameOverride": {
+        "$ref": "../lib/utils.json#/nameOverride"
+      },
+      "query": {
+        "type": "string",
+        "description": "DataDog query to use in HPA"
+      }
+    }
+  }
+}

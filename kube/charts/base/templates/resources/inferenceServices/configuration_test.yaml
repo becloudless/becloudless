@@ -1,0 +1,88 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: inferenceService configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default inferenceService inherit from pod and container
+    set:
+      resources:
+        controllers:
+          main:
+            type: InferenceService
+            inferenceService:
+              predictor:
+                model:
+                  storageUri: there
+    documentSelector:
+      path: kind
+      value: InferenceService
+    asserts:
+      - equal:
+          path: spec.predictor.securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.predictor.model.image
+          value: ghcr.io/mendhak/http-https-echo:31
+      - notExists:
+          path: spec.predictor.model.name
+
+  - it: inferenceService can set specific model fields
+    set:
+      resources:
+        controllers:
+          main:
+            type: InferenceService
+            inferenceService:
+              predictor:
+                model:
+                  storageUri: there
+                  protocolVersion: v2
+                  modelFormat:
+                    name: yopla
+    documentSelector:
+      path: kind
+      value: InferenceService
+    asserts:
+      - equal:
+          path: spec.predictor.model.modelFormat.name
+          value: yopla
+      - equal:
+          path: spec.predictor.model.storageUri
+          value: there
+      - equal:
+          path: spec.predictor.model.protocolVersion
+          value: v2
+
+  - it: inferenceService can set specific predictor fields
+    set:
+      resources:
+        controllers:
+          main:
+            type: InferenceService
+            inferenceService:
+              predictor:
+                minReplicas: 1
+                maxReplicas: 2
+                scaleTarget: 42
+                scaleMetric: cpu
+                model:
+                  storageUri: there
+    documentSelector:
+      path: kind
+      value: InferenceService
+    asserts:
+      - equal:
+          path: spec.predictor.minReplicas
+          value: 1
+      - equal:
+          path: spec.predictor.maxReplicas
+          value: 2
+      - equal:
+          path: spec.predictor.scaleTarget
+          value: 42
+      - equal:
+          path: spec.predictor.scaleMetric
+          value: cpu

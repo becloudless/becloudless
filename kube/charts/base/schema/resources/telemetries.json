@@ -1,0 +1,195 @@
+{
+  "instance": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "$ref": "../lib/utils.json#/enabled"
+      },
+      "annotations": {
+        "$ref": "../lib/k8s.json#/Annotations"
+      },
+      "labels": {
+        "$ref": "../lib/k8s.json#/Labels"
+      },
+      "nameOverride": {
+        "$ref": "../lib/utils.json#/nameOverride"
+      },
+
+      "workloadLabels": {
+        "$ref": "../lib/k8s.json#/Labels"
+      },
+      "targetRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "type": "string" },
+          "name": { "type": "string" }
+        }
+      },
+      "tracing": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "match": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": { "$ref": "#/definitions/WorkloadMode" }
+              }
+            },
+            "providers": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/ProviderRef" }
+            },
+            "randomSamplingPercentage": { "type": "number" },
+            "disableSpanReporting": { "type": "boolean" },
+            "customTags": {
+              "type": "object",
+              "additionalProperties": { "$ref": "#/definitions/CustomTag" }
+            }
+          }
+        }
+      },
+      "metrics": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "providers": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/ProviderRef" }
+            },
+            "overrides": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/MetricsOverrides" }
+            },
+            "reportingInterval": { "type": "string" }
+          }
+        }
+      },
+      "accessLogging": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "match": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": { "$ref": "#/definitions/WorkloadMode" }
+              }
+            },
+            "providers": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/ProviderRef" }
+            },
+            "disabled": { "type": "boolean" },
+            "filter": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "expression": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+
+    }
+  },
+  "definitions": {
+    "ProviderRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "MetricsOverrides": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "match": { "$ref": "#/definitions/MetricSelector" },
+        "disabled": { "type": "boolean" },
+        "tagOverrides": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/definitions/TagOverride" }
+        }
+      }
+    },
+    "MetricSelector": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "type": "string",
+          "enum": [
+            "ALL_METRICS",
+            "REQUEST_COUNT",
+            "REQUEST_DURATION",
+            "REQUEST_SIZE",
+            "RESPONSE_SIZE",
+            "TCP_OPENED_CONNECTIONS",
+            "TCP_CLOSED_CONNECTIONS",
+            "TCP_SENT_BYTES",
+            "TCP_RECEIVED_BYTES",
+            "GRPC_REQUEST_MESSAGES",
+            "GRPC_RESPONSE_MESSAGES"
+          ]
+        },
+        "customMetric": { "type": "string" },
+        "mode": { "$ref": "#/definitions/WorkloadMode" }
+      }
+    },
+    "TagOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "type": "string",
+          "enum": ["UPSERT", "REMOVE"]
+        },
+        "value": { "type": "string" }
+      }
+    },
+    "CustomTag": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "literal": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "value": { "type": "string" }
+          }
+        },
+        "environment": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string" },
+            "defaultValue": { "type": "string" }
+          }
+        },
+        "header": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string" },
+            "defaultValue": { "type": "string" }
+          }
+        }
+      }
+    },
+    "WorkloadMode": {
+      "type": "string",
+      "enum": ["CLIENT_AND_SERVER", "CLIENT", "SERVER"]
+    }
+  }
+}

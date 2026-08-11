@@ -1,0 +1,59 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: pod dnsConfig
+templates:
+  - base.yaml
+values:
+  - ../../../../tests/overallValues.yaml
+tests:
+  - it: default should pass
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - notExists:
+          path: spec.template.spec.dnsConfig
+
+  - it: resourcesDefault should pass
+    set:
+      chartDefaults.resources.controller.pod:
+        dnsConfig:
+          options:
+            - name: ndots
+              value: "1"
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.dnsConfig
+          value:
+            options:
+              - name: ndots
+                value: "1"
+
+  - it: resourcesDefault with pod override should pass
+    set:
+      chartDefaults.resources.controller.pod:
+        dnsConfig:
+          options:
+            - name: ndots
+              value: "1"
+      resources:
+        controllers:
+          main:
+            pod:
+              dnsConfig:
+                options:
+                  - name: ndots
+                    value: "5"
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.dnsConfig
+          value:
+            options:
+              - name: ndots
+                value: "5"

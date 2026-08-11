@@ -1,0 +1,813 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: workloads datadog
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: unified tagging
+    set:
+      mainWorkload.datadog.enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_SERVICE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.labels['tags.datadoghq.com/service']
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_VERSION
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.labels['tags.datadoghq.com/version']
+      - equal:
+          path: spec.template.metadata.labels['tags.datadoghq.com/version']
+          value: '31'
+      - equal:
+          path: spec.template.metadata.labels['tags.datadoghq.com/service']
+          value: release-name
+
+  - it: unified tagging support templated appVersion
+    chart:
+      appVersion: 1.1.1
+    set:
+      mainWorkload.datadog.enabled: true
+      resources.controllers.main.containers.main.image:
+        tag: '{{ .Chart.AppVersion }}'
+        repository: ghcr.io/mendhak/http-https-echo
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: metadata.labels['tags.datadoghq.com/version']
+          value: '1.1.1'
+      - equal:
+          path: spec.template.metadata.labels['tags.datadoghq.com/version']
+          value: '1.1.1'
+
+  - it: override image tag on controller is seen by datadog
+    set:
+      mainWorkload.datadog.enabled: true
+      resources.controllers.main.containers.main.image:
+        repository: test
+        tag: 42
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels['tags.datadoghq.com/version']
+          value: '42'
+
+
+  - it: If we don't have unix socket, we have the env var to send traces to datadog agent
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          enabled: true
+        unixSocket:
+          enabled: false
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_AGENT_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+
+  - it: If we don't have unix socket, we have the env var to send metrics to datadog agent
+    set:
+      workloads.main.datadog:
+        dogstatsd:
+          enabled: true
+        unixSocket:
+          enabled: false
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_AGENT_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+
+  - it: if we have a traceragent and we desactivate profiling, this should be disabled
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_PROFILING_ENABLED
+            value: "false"
+
+  - it: if we have a traceragent and we activate profiling, it should be enabled
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          profiling:
+            enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_PROFILING_ENABLED
+            value: "true"
+
+  - it: if we have a traceragent and we desactivate tracing, DD_TRACE_ENABLED should be disabled
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          tracing:
+            enabled: false
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_TRACE_ENABLED
+            value: "false"
+
+  - it: if we have a traceragent and we activate tracing DD_LOGS_INJECTION should be enabled
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          logsInjection:
+            enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_LOGS_INJECTION
+            value: "true"
+
+  - it: if we have a traceragent, the DD_SERVICE_MAPPING env should be enabled
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_SERVICE_MAPPING
+            value: "cassandra:RELEASE-NAME-cassandra,kafka:RELEASE-NAME-kafka,elasticsearch:RELEASE-NAME-elasticsearch,mariadb:RELEASE-NAME-mariadb,mysql:RELEASE-NAME-mysql,redis:RELEASE-NAME-redis,rabbitmq:RELEASE-NAME-rabbitmq,postgresql:RELEASE-NAME-postgresql,postgres:RELEASE-NAME-postgres,curl:RELEASE-NAME-curl,guzzle:RELEASE-NAME-guzzle,pdo:RELEASE-NAME-pdo,phpredis:RELEASE-NAME-phpredis,oracle:RELEASE-NAME-oracle"
+
+  - it: if we have a traceragent, we can customize the generated serviceMappings using mappedServices
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          tracing:
+            serviceMapping:
+              mappedServices:
+                - "kafka"
+                - "mysql"
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_SERVICE_MAPPING
+            value: "kafka:RELEASE-NAME-kafka,mysql:RELEASE-NAME-mysql"
+
+  - it: if we have a traceragent and we activate tracing and we have socket unix, DD_TRACE_AGENT_URL should be enabled
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_TRACE_AGENT_URL
+            value: "unix:///var/run/datadog/apm.socket"
+
+  - it: if we have a traceragent and we activate tracing and we have socket unix, DD_TRACE_SAMPLE_RATE should be enabled
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_TRACE_SAMPLE_RATE
+            value: "0.01"
+
+  - it: if we have a traceragent and we activate jmx + tomcat and we have socket unix, DD_JMXFETCH_TOMCAT_ENABLED should be enabled
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          jmx:
+            tomcat:
+              enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_JMXFETCH_TOMCAT_ENABLED
+            value: "true"
+
+  - it: if we have a traceragent and we activate tracing and we have socket unix, DD_JMXFETCH_STATSD_HOST & PORT should be enabled
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          jmx:
+            tomcat:
+              enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_JMXFETCH_STATSD_HOST
+            value: "unix:///var/run/datadog/dsd.socket"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_JMXFETCH_STATSD_PORT
+            value: "0"
+
+  - it: if we have a traceragent and we activate tracing, DD_JMXFETCH_ENABLED should be enabled by default
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          jmx:
+            enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_JMXFETCH_ENABLED
+            value: "true"
+
+  - it: if we have a traceragent and we keep jmx disabled, DD_JMXFETCH_ENABLED should be disabled
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          jmx:
+            enabled: false
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_JMXFETCH_ENABLED
+            value: "false"
+
+  - it: tagquery should be enabled
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          tagQuery:
+            enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_HTTP_CLIENT_TAG_QUERY_STRING
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_HTTP_SERVER_TAG_QUERY_STRING
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_TRACE_REQUEST_HEADER_TAGS
+            value: "x-correlation-id,x-visitor-id,x-passenger-uuid,x-locale,x-client,x-currency"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_TRACE_RESPONSE_HEADER_TAGS
+            value: "x-correlation-id,x-visitor-id,x-passenger-uuid,x-locale,x-client,x-currency"
+
+  - it: tagquery should be enabled
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          tagQuery:
+            enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_HTTP_CLIENT_TAG_QUERY_STRING
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_HTTP_SERVER_TAG_QUERY_STRING
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_TRACE_REQUEST_HEADER_TAGS
+            value: "x-correlation-id,x-visitor-id,x-passenger-uuid,x-locale,x-client,x-currency"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_TRACE_RESPONSE_HEADER_TAGS
+            value: "x-correlation-id,x-visitor-id,x-passenger-uuid,x-locale,x-client,x-currency"
+
+  - it: tagquery custom specified the list should be uniq
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          tagQuery:
+            custom:
+              - x-correlation-id #already provided in the default list
+            enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_HTTP_CLIENT_TAG_QUERY_STRING
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_HTTP_SERVER_TAG_QUERY_STRING
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_TRACE_REQUEST_HEADER_TAGS
+            value: "x-correlation-id,x-visitor-id,x-passenger-uuid,x-locale,x-client,x-currency"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_TRACE_RESPONSE_HEADER_TAGS
+            value: "x-correlation-id,x-visitor-id,x-passenger-uuid,x-locale,x-client,x-currency"
+
+  - it: tagquery custom specified the list  should take into account custom
+    set:
+      workloads.main.datadog:
+        tracerAgent:
+          tagQuery:
+            custom:
+              - trip-count #add headers trip-count
+            enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_HTTP_CLIENT_TAG_QUERY_STRING
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_HTTP_SERVER_TAG_QUERY_STRING
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_TRACE_REQUEST_HEADER_TAGS
+            value: "x-correlation-id,x-visitor-id,x-passenger-uuid,x-locale,x-client,x-currency,trip-count"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_TRACE_RESPONSE_HEADER_TAGS
+            value: "x-correlation-id,x-visitor-id,x-passenger-uuid,x-locale,x-client,x-currency,trip-count"
+
+  - it: DD_ENTITY_ID should be enabled when no unixSocket
+    set:
+      workloads.main.datadog:
+        unixSocket:
+          enabled: false
+        dogstatsd:
+          enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DD_ENTITY_ID
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.uid
+
+  - it: no unixSocket should pass
+    set:
+      workloads.main:
+        datadog:
+          unixSocket:
+            enabled: false
+        volumes:
+          tmp:
+            type: emptyDir # need it because it's a mandatory field in the json schema
+            enabled: false
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].volumeMounts
+
+  - it: datadog socket volumeMounts is enabled if we enable traces and socket attribute is enabled
+    set:
+      workloads.main.datadog:
+        unixSocket:
+          enabled: true
+        tracerAgent:
+          tracing:
+            enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0]
+          value:
+            mountPath: /var/run/datadog
+            name: dsdsocket
+
+  - it: datadog socket volumeMounts is enabled if we enable dogstatsd and socket attribute is enabled
+    set:
+      workloads.main.datadog:
+        unixSocket:
+          enabled: true
+        dogstatsd:
+          enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /var/run/datadog
+            name: dsdsocket
+
+  - it: datadog log config annotation
+    set:
+      workloads.main.datadog:
+        logConfig:
+          source: java
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations['ad.datadoghq.com/main.logs']
+          value: '[{"source": "java", "service": "RELEASE-NAME"}]'
+
+  - it: datadog openmetrics annotation
+    set:
+      workloads.main.datadog:
+        checks:
+          openmetrics:
+            instances:
+              instance1:
+                metrics:
+                - metrics1
+                - metrics2
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations['ad.datadoghq.com/main.checks']
+          value: |
+            {
+              "openmetrics": {
+                "init_config": {},
+                "instances": [
+                  {
+                    "openmetrics_endpoint": "http://%%host%%:8080/metrics",
+                    "namespace": "",
+                    "metrics": [
+                      "metrics1","metrics2"
+                    ],
+                    "collect_counters_with_distributions": true,
+                    "max_returned_metrics": 20000
+                  }
+                ]
+              }
+            }
+
+  - it: datadog openmetrics port
+    set:
+      workloads.main.datadog:
+        checks:
+          openmetrics:
+            instances:
+              instance1:
+                port: 9090
+                metrics:
+                  - metrics1
+                  - metrics2
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations['ad.datadoghq.com/main.checks']
+          value: |
+            {
+              "openmetrics": {
+                "init_config": {},
+                "instances": [
+                  {
+                    "openmetrics_endpoint": "http://%%host%%:9090/metrics",
+                    "namespace": "",
+                    "metrics": [
+                      "metrics1","metrics2"
+                    ],
+                    "collect_counters_with_distributions": true,
+                    "max_returned_metrics": 20000
+                  }
+                ]
+              }
+            }
+
+  - it: datadog openmetrics path
+    set:
+      workloads.main.datadog:
+        checks:
+          openmetrics:
+            instances:
+              instance1:
+                path: /custom
+                metrics:
+                  - metrics1
+                  - metrics2
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations['ad.datadoghq.com/main.checks']
+          value: |
+            {
+              "openmetrics": {
+                "init_config": {},
+                "instances": [
+                  {
+                    "openmetrics_endpoint": "http://%%host%%:8080/custom",
+                    "namespace": "",
+                    "metrics": [
+                      "metrics1","metrics2"
+                    ],
+                    "collect_counters_with_distributions": true,
+                    "max_returned_metrics": 20000
+                  }
+                ]
+              }
+            }
+
+  - it: datadog openmetrics path with global value for all namespaces
+    set:
+      workloads.main.datadog:
+        checks:
+          openmetrics:
+            path: /custom
+            instances:
+              instance1:
+                metrics:
+                - metrics1
+                - metrics2
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations['ad.datadoghq.com/main.checks']
+          value: |
+            {
+              "openmetrics": {
+                "init_config": {},
+                "instances": [
+                  {
+                    "openmetrics_endpoint": "http://%%host%%:8080/custom",
+                    "namespace": "",
+                    "metrics": [
+                      "metrics1","metrics2"
+                    ],
+                    "collect_counters_with_distributions": true,
+                    "max_returned_metrics": 20000
+                  }
+                ]
+              }
+            }
+
+  - it: datadog openmetrics namespace and different metrics per namespace
+    set:
+      workloads.main.datadog:
+        checks:
+          openmetrics:
+            instances:
+              instance1:
+                namespace: ""
+                metrics:
+                  - metrics1
+                  - metrics2
+                path: /custom
+                port: 8090
+                max_returned_metrics: 3000
+              instance2:
+                namespace: namespace2
+                metrics:
+                  - metrics3
+                  - metrics4
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations['ad.datadoghq.com/main.checks']
+          value: |
+            {
+              "openmetrics": {
+                "init_config": {},
+                "instances": [
+                  {
+                    "openmetrics_endpoint": "http://%%host%%:8090/custom",
+                    "namespace": "",
+                    "metrics": [
+                      "metrics1","metrics2"
+                    ],
+                    "collect_counters_with_distributions": true,
+                    "max_returned_metrics": 3000
+                  },{
+                    "openmetrics_endpoint": "http://%%host%%:8080/metrics",
+                    "namespace": "namespace2",
+                    "metrics": [
+                      "metrics3","metrics4"
+                    ],
+                    "collect_counters_with_distributions": true,
+                    "max_returned_metrics": 20000
+                  }
+                ]
+              }
+            }
+
+  - it: override service name tag
+    set:
+      workloads:
+        main:
+          datadog:
+            unifiedTagging:
+              service: "my-service"
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels['tags.datadoghq.com/service']
+          value: 'my-service'
+
+  - it: datadog openmetrics should support templatized metrics
+    set:
+      workloads.main.datadog:
+        checks:
+          openmetrics:
+            instances:
+              instance1:
+                metrics:
+                  - "{{ .Release.Name }}_*"
+                  - "Foo-Bar"
+                namespace: "{{ .Release.Namespace }}"
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations['ad.datadoghq.com/main.checks']
+          value: |
+            {
+              "openmetrics": {
+                "init_config": {},
+                "instances": [
+                  {
+                    "openmetrics_endpoint": "http://%%host%%:8080/metrics",
+                    "namespace": "NAMESPACE",
+                    "metrics": [
+                      "release_name_*","foo_bar"
+                    ],
+                    "collect_counters_with_distributions": true,
+                    "max_returned_metrics": 20000
+                  }
+                ]
+              }
+            }
+
+  - it: datadog openmetrics should fail if no port defined
+    set:
+      workloads.main:
+        service:
+          enabled: false
+        datadog:
+          checks:
+            openmetrics:
+              instances:
+                instance1:
+                  metrics:
+                    - "{{ .Release.Name }}_*"
+                    - "Foo-Bar"
+                  namespace: "{{ .Release.Namespace }}"
+    asserts:
+      - failedTemplate:
+          errorMessage: "datadog openmetrics should have a http port. Please set a port attribute for your openmetrics instance (`datadog.checks.openmetrics.instances[].port`) or define a default port for your Kube service (`resources.services.main.ports.http.port`)"
+
+
+  - it: datadog openmetrics should work with a custom instance port and no services
+    set:
+      workloads.main:
+        service:
+          enabled: false
+        datadog:
+          checks:
+            openmetrics:
+              instances:
+                instance1:
+                  port: 8082
+                  metrics:
+                    - "Foo-Bar"
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations['ad.datadoghq.com/main.checks']
+          value: |
+            {
+              "openmetrics": {
+                "init_config": {},
+                "instances": [
+                  {
+                    "openmetrics_endpoint": "http://%%host%%:8082/metrics",
+                    "namespace": "",
+                    "metrics": [
+                      "foo_bar"
+                    ],
+                    "collect_counters_with_distributions": true,
+                    "max_returned_metrics": 20000
+                  }
+                ]
+              }
+            }

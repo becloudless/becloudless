@@ -1,0 +1,110 @@
+{
+  "instance": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["authorization", "kafkaCluster"],
+    "properties": {
+      "annotations": {
+        "$ref": "../lib/k8s.json#/Annotations"
+      },
+      "labels": {
+        "$ref": "../lib/k8s.json#/Labels"
+      },
+      "nameOverride": {
+        "$ref": "../lib/utils.json#/nameOverride",
+        "description": "Please note this will override only the suffix of the `KafkaUser`'s name, i.e. the part of the name usually equal to the resource's `identifier` key."
+      },
+      "kafkaCluster": {
+        "type": "string",
+        "description": "Shortcut to one of the (Kafka cluster full name × Kafka cluster namespace) combinations currently used at BlaBlaCar.",
+        "enum": ["platform", "analytics", "gillbus", "test"]
+      },
+      "applicationNamespace": {
+        "description": "The Kubernetes namespace in which the KafkaUser will be effectively used by a client. The KafkaUser's credentials secret will be marked to be replicated thereto.\n\nThis also impacts the naming of the KafkaUser. If unspecified, the Kafka cluster's namespace is used in the naming instead and (if `replicateToExtraNamespaces` is also empty) no replication is setup.",
+        "type": "string"
+      },
+      "replicateToExtraNamespaces": {
+        "description": "A list of other Kubernetes namespaces to which the KafkaUser's secret should be replicated.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "minItems": 1
+      },
+      "authorization": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["acls"],
+        "properties": {
+          "acls": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "minProperties": 2,
+              "required": ["operations", "resource"],
+              "additionalProperties": false,
+              "properties": {
+                "operations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "For information on the effect and scope of each operation, see [this documentation](https://docs.confluent.io/platform/current/security/authorization/acls/overview.html#operations).",
+                    "enum": [
+                      "Alter",
+                      "AlterConfigs",
+                      "All",
+                      "ClusterAction",
+                      "Create",
+                      "Delete",
+                      "Describe",
+                      "DescribeConfigs",
+                      "IdempotentWrite",
+                      "Read",
+                      "Write"
+                    ]
+                  }
+                },
+                "resource": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "additionalProperties": false,
+                  "description": "This object describes the scope of the ACL rule, either one or multiple topics or consumer groups, or the cluster. If the resource is the cluster, no `name` (nor `patternType`) should be specified.",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["cluster", "topic", "group", "transactionalId"]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "patternType": {
+                      "type": "string",
+                      "enum": ["literal", "prefix"]
+                    },
+                    "required": ["type"]
+                  },
+                  "allOf": [
+                    {
+                      "if": {
+                        "properties": {
+                          "type": { "const": "cluster" }
+                        }
+                      },
+                      "then": {
+                        "maxProperties": 1
+                      },
+                      "else": {
+                        "minProperties": 2
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

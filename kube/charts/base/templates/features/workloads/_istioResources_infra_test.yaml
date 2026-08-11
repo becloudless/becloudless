@@ -1,0 +1,113 @@
+suite: workloads istio resources
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: pod should have the 4 Istio's annotations when enabled
+    set:
+      mainWorkload.istio.enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations['sidecar.istio.io/proxyCPU']
+          value: 100m
+      - equal:
+          path: spec.template.metadata.annotations['sidecar.istio.io/proxyMemory']
+          value: 200Mi
+      - equal:
+          path: spec.template.metadata.annotations['sidecar.istio.io/proxyCPULimit']
+          value: "1"
+      - equal:
+          path: spec.template.metadata.annotations['sidecar.istio.io/proxyMemoryLimit']
+          value: 1Gi
+
+  - it: we can define custom Istio's resources by using the specialized helm values (recommended way to do it)
+    set:
+      workloads.main.istio:
+        proxyResources:
+          # All values here are different from the chart default values
+          requests:
+            cpu: 222m
+            memory: 222Mi
+          limits:
+            cpu: 333m
+            memory: 333Mi
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations['sidecar.istio.io/proxyCPU']
+          value: 222m
+      - equal:
+          path: spec.template.metadata.annotations['sidecar.istio.io/proxyMemory']
+          value: 222Mi
+      - equal:
+          path: spec.template.metadata.annotations['sidecar.istio.io/proxyCPULimit']
+          value: 333m
+      - equal:
+          path: spec.template.metadata.annotations['sidecar.istio.io/proxyMemoryLimit']
+          value: 333Mi
+
+  - it: we can define custom Istio's resources using the podAnnotations directly (not recommended, but for compatibility), and they overwrite the defaults from chart
+    set:
+      resources.controllers.main.pod.annotations:
+        # All values here are different from the chart default values
+        sidecar.istio.io/proxyCPU: 222m
+        sidecar.istio.io/proxyMemory: 222Mi
+        sidecar.istio.io/proxyCPULimit: 333m
+        sidecar.istio.io/proxyMemoryLimit: 333Mi
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations['sidecar.istio.io/proxyCPU']
+          value: 222m
+      - equal:
+          path: spec.template.metadata.annotations['sidecar.istio.io/proxyMemory']
+          value: 222Mi
+      - equal:
+          path: spec.template.metadata.annotations['sidecar.istio.io/proxyCPULimit']
+          value: 333m
+      - equal:
+          path: spec.template.metadata.annotations['sidecar.istio.io/proxyMemoryLimit']
+          value: 333Mi
+
+  - it: when both the podAnnotations & specialized helm values are given, then the values in podAnnotations are applied
+    set:
+      workloads.main:
+        istio:
+          proxyResources:
+            requests:
+              cpu: 888m
+              memory: 888Mi
+            limits:
+              cpu: 999m
+              memory: 999Mi
+      resources.controllers.main:
+        pod:
+          annotations:
+            sidecar.istio.io/proxyCPU: 222m
+            sidecar.istio.io/proxyMemory: 222Mi
+            sidecar.istio.io/proxyCPULimit: 333m
+            sidecar.istio.io/proxyMemoryLimit: 333Mi
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations['sidecar.istio.io/proxyCPU']
+          value: 222m
+      - equal:
+          path: spec.template.metadata.annotations['sidecar.istio.io/proxyMemory']
+          value: 222Mi
+      - equal:
+          path: spec.template.metadata.annotations['sidecar.istio.io/proxyCPULimit']
+          value: 333m
+      - equal:
+          path: spec.template.metadata.annotations['sidecar.istio.io/proxyMemoryLimit']
+          value: 333Mi

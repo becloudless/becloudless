@@ -1,0 +1,70 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: alert configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: no alert by default
+    asserts:
+      - containsDocument:
+          kind: Alert
+        not: true
+
+  - it: default enabled alert
+    set:
+      resources.alerts:
+        main:
+          enabled: true
+          provider: test
+          eventSeverity: severity
+          eventSources:
+            - kind: HelmRelease
+              name: tripSearch
+          eventMetadata:
+            toto: titi
+    documentSelector:
+      path: kind
+      value: Alert
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+      - equal:
+          path: spec.providerRef.name
+          value: test
+      - equal:
+          path: spec.eventSeverity
+          value: severity
+      - equal:
+          path: spec.eventSources
+          value:
+            - kind: HelmRelease
+              name: tripSearch
+      - equal:
+          path: spec.eventMetadata
+          value:
+            toto: titi
+      - equal:
+          path: metadata.labels.app
+          value: RELEASE-NAME
+
+  - it: second alert can be set
+    set:
+      resources.alerts:
+        second:
+          provider: test
+          eventSources:
+            - kind: HelmRelease
+              name: tripSearch
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-second
+    asserts:
+      - isKind:
+          of: Alert
+      - equal:
+          path: spec.providerRef
+          value:
+            name: test

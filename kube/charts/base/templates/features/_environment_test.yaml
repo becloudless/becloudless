@@ -1,0 +1,21 @@
+suite: features
+templates:
+  - base.yaml
+tests:
+  - it: environment is provided to rootContext
+    set:
+      kubeClusterName: prod-1
+      resources:
+        configMaps:
+          toto:
+            data:
+              test: '{{ .environment }}'
+
+    documentSelector:
+      path: kind
+      value: ConfigMap
+    asserts:
+      - equal:
+          path: data
+          value:
+            test: prod

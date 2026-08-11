@@ -1,0 +1,1069 @@
+{
+  "ConnectionPoolSettings": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "tcp": {
+        "description": "Settings common to both HTTP and TCP upstream connections",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "maxConnections": {
+            "type": "integer"
+          },
+          "connectTimeout": {
+            "$ref": "../lib/k8s.json#/Duration"
+          },
+          "tcpKeepAlive": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "probes": {
+                "description": "Maximum number of keepalive probes to send without response before deciding the connection is dead. Default is to use the OS level configuration (unless overridden, Linux defaults to 9.)",
+                "type": "integer",
+                "default": 9
+              },
+              "time": {
+                "description": "The time duration a connection needs to be idle before keep-alive probes start being sent. Default is to use the OS level configuration (unless overridden, Linux defaults to 7200s (ie 2 hours.)",
+                "$ref": "../lib/k8s.json#/Duration"
+              },
+              "interval": {
+                "description": "The time duration between keep-alive probes. Default is to use the OS level configuration (unless overridden, Linux defaults to 75s.)",
+                "$ref": "../lib/k8s.json#/Duration"
+              }
+            }
+          },
+          "maxConnectionDuration": {
+            "$ref": "../lib/k8s.json#/Duration"
+          }
+        }
+      },
+      "http": {
+        "description": "HTTP connection pool settings.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "http1MaxPendingRequests": {
+            "type": "integer"
+          },
+          "http2MaxRequests": {
+            "type": "integer"
+          },
+          "maxRequestsPerConnection": {
+            "type": "integer"
+          },
+          "maxRetries": {
+            "type": "integer"
+          },
+          "idleTimeout": {
+            "$ref": "../lib/k8s.json#/Duration"
+          },
+          "h2UpgradePolicy": {
+            "type": "string",
+            "enum": [
+              "DEFAULT",
+              "DO_NOT_UPGRADE",
+              "UPGRADE"
+            ]
+          },
+          "useClientProtocol": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  },
+  "Destination": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "host": {
+        "type": "string",
+        "description": "The name of a service from the service registry. Service names are looked up from the platform’s service registry (e.g., Kubernetes services, Consul services, etc.) and from the hosts declared by ServiceEntry. Traffic forwarded to destinations that are not found in either of the two, will be dropped."
+      },
+      "subset": {
+        "type": "string",
+        "description": "The name of a subset within the service. Applicable only to services within the mesh. The subset must be defined in a corresponding DestinationRule."
+      },
+      "port": {
+        "$ref": "#/PortSelector",
+        "description": "Specifies the port on the host that is being addressed. If a service exposes only a single port it is not required to explicitly select the port."
+      }
+    }
+  },
+  "HTTPDirectResponse": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "status": {
+        "type": "integer",
+        "minimum": 100,
+        "exclusiveMaximum": 600,
+        "description": "Specifies the HTTP response status to be returned."
+      },
+      "body": {
+        "description": "Specifies the content of the response body. If this setting is omitted, no body is included in the generated response.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "string": {
+            "type": "string",
+            "description": "response body as a string"
+          },
+          "bytes": {
+            "type": "string",
+            "description": "response body as base64 encoded bytes."
+          }
+        }
+      }
+    }
+  },
+  "HTTPMatchRequest": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "The name assigned to a match. The match’s name will be concatenated with the parent route’s name and will be logged in the access logs for requests matching this route."
+      },
+      "uri": {
+        "$ref": "#/StringMatch"
+      },
+      "scheme": {
+        "$ref": "#/StringMatch"
+      },
+      "method": {
+        "$ref": "#/StringMatch"
+      },
+      "authority": {
+        "$ref": "#/StringMatch"
+      },
+      "headers": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/StringMatch"
+        }
+      },
+      "port": {
+        "description": "\t\nSpecifies the ports on the host that is being addressed. Many services only expose a single port or label ports with the protocols they support, in these cases it is not required to explicitly select the port.",
+        "$ref": "../lib/k8s.json#/PortNumber"
+      },
+      "sourceLabels": {
+        "description": "One or more labels that constrain the applicability of a rule to source (client) workloads with the given labels. If the VirtualService has a list of gateways specified in the top-level gateways field, it must include the reserved gateway mesh for this field to be applicable.",
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        }
+      },
+      "gateways": {
+        "description": "Names of gateways where the rule should be applied. Gateway names in the top-level gateways field of the VirtualService (if any) are overridden. The gateway match is independent of sourceLabels.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "queryParams": {
+        "description": "Query parameters for matching.",
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/StringMatch"
+        }
+      },
+      "ignoreUriCase": {
+        "description": "Flag to specify whether the URI matching should be case-insensitive.",
+        "type": "boolean"
+      },
+      "withoutHeaders": {
+        "description": "withoutHeader has the same syntax with the header, but has opposite meaning. If a header is matched with a matching rule among withoutHeader, the traffic becomes not matched one.",
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/StringMatch"
+        }
+      },
+      "sourceNamespace": {
+        "type": "string",
+        "description": "Source namespace constraining the applicability of a rule to workloads in that namespace. If the VirtualService has a list of gateways specified in the top-level gateways field, it must include the reserved gateway mesh for this field to be applicable."
+      },
+      "statPrefix": {
+        "type": "string",
+        "description": "The human readable prefix to use when emitting statistics for this route. The statistics are generated with prefix route.<stat_prefix>. This should be set for highly critical routes that one wishes to get “per-route” statistics on. This prefix is only for proxy-level statistics (envoy_) and not service-level (istio_) statistics. Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-route-stat-prefix for statistics that are generated when this is configured."
+      }
+    }
+  },
+  "HTTPRedirect": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "uri": {
+        "type": "string",
+        "format": "uri",
+        "description": "On a redirect, overwrite the Path portion of the URL with this value. Note that the entire path will be replaced, irrespective of the request URI being matched as an exact path or prefix."
+      },
+      "authority": {
+        "type": "string",
+        "description": "On a redirect, overwrite the Authority/Host portion of the URL with this value."
+      },
+      "port": {
+        "description": "On a redirect, overwrite the port portion of the URL with this value.",
+        "$ref": "../lib/k8s.json#/PortNumber"
+      },
+      "derivePort": {
+        "description": "On a redirect, dynamically set the port:\n\nFROM_PROTOCOL_DEFAULT: automatically set to 80 for HTTP and 443 for HTTPS.\nFROM_REQUEST_PORT: automatically use the port of the request.",
+        "type": "string",
+        "enum": [
+          "FROM_PROTOCOL_DEFAULT",
+          "FROM_REQUEST_PORT"
+        ]
+      },
+      "scheme": {
+        "type": "string",
+        "description": "On a redirect, overwrite the scheme portion of the URL with this value. For example, http or https. If unset, the original scheme will be used. If derivePort is set to FROM_PROTOCOL_DEFAULT, this will impact the port used as well"
+      },
+      "redirectCode": {
+        "type": "integer",
+        "minimum": 100,
+        "exclusiveMaximum": 600,
+        "description": "On a redirect, Specifies the HTTP status code to use in the redirect response. The default response code is MOVED_PERMANENTLY (301).",
+        "default": 301
+      }
+    }
+  },
+  "HTTPRoute": {
+    "type": "object",
+    "description": "Describes match conditions and actions for routing HTTP/1.1, HTTP2, and gRPC traffic.",
+    "additionalProperties": false,
+    "properties": {
+      "name": {
+        "description": "The name assigned to the route for debugging purposes. The route’s name will be concatenated with the match’s name and will be logged in the access logs for requests matching this route/match.",
+        "type": "string"
+      },
+      "match": {
+        "description": "Match conditions to be satisfied for the rule to be activated. All conditions inside a single match block have AND semantics, while the list of match blocks have OR semantics. The rule is matched if any one of the match blocks succeed.",
+        "type": "array",
+        "items": {
+          "$ref": "#/HTTPMatchRequest"
+        }
+      },
+      "route": {
+        "type": "array",
+        "description": "A HTTP rule can either return a direct_response, redirect or forward (default) traffic. The forwarding target can be one of several versions of a service (see glossary in beginning of document). Weights associated with the service version determine the proportion of traffic it receives.",
+        "items": {
+          "$ref": "#/HTTPRouteDestination"
+        }
+      },
+      "redirect": {
+        "description": "A HTTP rule can either return a direct_response, redirect or forward (default) traffic. If traffic passthrough option is specified in the rule, route/redirect will be ignored. The redirect primitive can be used to send a HTTP 301 redirect to a different URI or Authority.",
+        "$ref": "#/HTTPRedirect"
+      },
+      "directResponse": {
+        "description": "A HTTP rule can either return a direct_response, redirect or forward (default) traffic. Direct Response is used to specify a fixed response that should be sent to clients.\n\nIt can be set only when Route and Redirect are empty.",
+        "$ref": "#/HTTPDirectResponse"
+      },
+      "delegate": {
+        "description": "Delegate is used to specify the particular VirtualService which can be used to define delegate HTTPRoute.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name specifies the name of the delegate VirtualService."
+          },
+          "namespace": {
+            "type": "string",
+            "description": "Namespace specifies the namespace where the delegate VirtualService resides. By default, it is same to the root’s."
+          }
+        }
+      },
+      "rewrite": {
+        "description": "Rewrite HTTP URIs and Authority headers. Rewrite cannot be used with Redirect primitive. Rewrite will be performed before forwarding.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uri": {
+            "type": "string",
+            "format": "uri",
+            "description": "rewrite the path (or the prefix) portion of the URI with this value. If the original URI was matched based on prefix, the value provided in this field will replace the corresponding matched prefix."
+          },
+          "authority": {
+            "type": "string",
+            "description": "rewrite the Authority/Host header with this value."
+          },
+          "uriRegexRewrite": {
+            "type": "object",
+            "description": "rewrite the path portion of the URI with the specified regex.",
+            "additionalProperties": false,
+            "properties": {
+              "match": {
+                "type": "string",
+                "description": "RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax)."
+              },
+              "rewrite": {
+                "type": "string",
+                "description": "The string that should replace into matching portions of original URI. Capture groups in the pattern can be referenced in the new URI."
+              }
+            }
+          }
+        }
+      },
+      "timeout": {
+        "$ref": "../lib/k8s.json#/Duration",
+        "description": "Timeout for HTTP requests, default is disabled."
+      },
+      "retries": {
+        "description": "Retry policy for HTTP requests.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "attempts": {
+            "type": "integer",
+            "description": "Number of retries to be allowed for a given request. The interval between retries will be determined automatically (25ms+). When request timeout of the HTTP route or per_try_timeout is configured, the actual number of retries attempted also depends on the specified request timeout and per_try_timeout values. MUST BE >= 0. If 0, retries will be disabled. The maximum possible number of requests made will be 1 + attempts."
+          },
+          "perTryTimeout": {
+            "$ref": "../lib/k8s.json#/Duration",
+            "description": "Timeout per attempt for a given request, including the initial call and any retries. Format: 1h/1m/1s/1ms. MUST BE >=1ms. Default is same value as request timeout of the HTTP route, which means no timeout."
+          },
+          "retryOn": {
+            "type": "string",
+            "description": "Specifies the conditions under which retry takes place. One or more policies can be specified using a ‘,’ delimited list. If retry_on specifies a valid HTTP status, it will be added to retriable_status_codes retry policy. See the retry policies and gRPC retry policies for more details."
+          },
+          "retryRemoteLocalities": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "fault": {
+        "description": "Fault injection policy to apply on HTTP traffic at the client side. Note that timeouts or retries will not be enabled when faults are enabled on the client side.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "delay": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "fixedDelay": {
+                "$ref": "../lib/k8s.json#/Duration"
+              },
+              "percentage": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "value": {
+                    "type": "number",
+                    "maximum": 100,
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "mirror": {
+        "description": "Mirror HTTP traffic to a another destination in addition to forwarding the requests to the intended destination. Mirrored traffic is on a best effort basis where the sidecar/gateway will not wait for the mirrored cluster to respond before returning the response from the original destination. Statistics will be generated for the mirrored destination.",
+        "$ref": "#/Destination"
+      },
+      "mirrors": {
+        "description": "Specifies the destinations to mirror HTTP traffic in addition to the original destination. Mirrored traffic is on a best effort basis where the sidecar/gateway will not wait for the mirrored destinations to respond before returning the response from the original destination. Statistics will be generated for the mirrored destination.",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "destination"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "destination": {
+              "$ref": "#/Destination"
+            },
+            "percentage": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "type": "integer",
+                  "maximum": 100,
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      },
+      "mirrorPercentage": {
+        "description": "Percentage of the traffic to be mirrored by the mirror field. If this field is absent, all the traffic (100%) will be mirrored. Max value is 100.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "type": "number",
+            "maximum": 100,
+            "minimum": 0
+          }
+        }
+      },
+      "corsPolicy": {
+        "description": "Cross-Origin Resource Sharing policy (CORS). Refer to CORS for further details about cross origin resource sharing.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "allowOrigins": {
+            "type": "array",
+            "description": "String patterns that match allowed origins. An origin is allowed if any of the string matchers match. If a match is found, then the outgoing Access-Control-Allow-Origin would be set to the origin as provided by the client.",
+            "items": {
+              "$ref": "#/StringMatch"
+            }
+          },
+          "allowMethods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "exposeHeaders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "maxAge": {
+            "$ref": "../lib/k8s.json#/Duration"
+          },
+          "allowCredentials": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "headers": {
+        "description": "Header manipulation rules",
+        "$ref": "#/Headers"
+      }
+    }
+  },
+  "HTTPRouteDestination": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "destination": {
+        "description": "Destination uniquely identifies the instances of a service to which the request/connection should be forwarded to.",
+        "$ref": "#/Destination"
+      },
+      "weight": {
+        "type": "integer",
+        "description": "Weight specifies the relative proportion of traffic to be forwarded to the destination. A destination will receive weight/(sum of all weights) requests. If there is only one destination in a rule, it will receive all traffic. Otherwise, if weight is 0, the destination will not receive any traffic."
+      },
+      "headers": {
+        "description": "Header manipulation rules",
+        "$ref": "#/Headers"
+      }
+    }
+  },
+  "HeaderOperations": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "set": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "Overwrite the headers specified by key with the given values"
+      },
+      "add": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "Append the given values to the headers specified by keys (will create a comma-separated list of values)"
+      },
+      "remove": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Remove the specified headers"
+      }
+    }
+  },
+  "Headers": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "request": {
+        "$ref": "#/HeaderOperations",
+        "description": "Header manipulation rules to apply before forwarding a request to the destination service"
+      },
+      "response": {
+        "$ref": "#/HeaderOperations",
+        "description": "Header manipulation rules to apply before returning a response to the caller"
+      }
+    }
+  },
+  "LoadBalancerSettings": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "simple": {
+        "type": "string",
+        "enum": [
+          "UNSPECIFIED",
+          "RANDOM",
+          "PASSTHROUGH",
+          "ROUND_ROBIN",
+          "LEAST_REQUEST"
+        ]
+      },
+      "consistentHash": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "httpHeaderName": {
+            "description": "Hash based on a specific HTTP header.",
+            "type": "string"
+          },
+          "httpCookie": {
+            "description": "Hash based on HTTP cookie.",
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "ttl": {
+                "$ref": "../lib/k8s.json#/Duration"
+              }
+            }
+          },
+          "useSourceIP": {
+            "description": "Hash based on the source IP address. This is applicable for both TCP and HTTP connections.",
+            "type": "boolean"
+          },
+          "httpQueryParameterName": {
+            "description": "Hash based on a specific HTTP query parameter.",
+            "type": "string"
+          },
+          "ringHash": {
+            "description": "The ring/modulo hash load balancer implements consistent hashing to backend hosts.",
+            "type": "object",
+            "required": [
+              "minimumRingSize"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "minimumRingSize": {
+                "type": "integer",
+                "default": 1024,
+                "description": "The minimum number of virtual nodes to use for the hash ring. Defaults to 1024. Larger ring sizes result in more granular load distributions. If the number of hosts in the load balancing pool is larger than the ring size, each host will be assigned a single virtual node."
+              }
+            }
+          },
+          "maglev": {
+            "description": "The Maglev load balancer implements consistent hashing to backend hosts.",
+            "type": "object",
+            "required": [
+              "tableSize"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "tableSize": {
+                "description": "The table size for Maglev hashing. This helps in controlling the disruption when the backend hosts change. Increasing the table size reduces the amount of disruption.",
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "localityLbSetting": {
+        "description": "Locality load balancer settings, this will override mesh wide settings in entirety, meaning no merging would be performed between this object and the object one in MeshConfig",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "distribute": {
+            "type": "array",
+            "description": "Explicitly specify loadbalancing weight across different zones and geographical locations. Refer to Locality weighted load balancing If empty, the locality weight is set according to the endpoints number within it.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "from": {
+                  "description": "Originating locality, ‘/’ separated, e.g. ‘region/zone/sub_zone’.",
+                  "type": "string"
+                },
+                "to": {
+                  "description": "Map of upstream localities to traffic distribution weights. The sum of all weights should be 100. Any locality not present will receive no traffic.",
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          },
+          "failover": {
+            "description": "Explicitly specify the region traffic will land on when endpoints in local region becomes unhealthy. Should be used together with OutlierDetection to detect unhealthy endpoints. Note: if no OutlierDetection specified, this will not take effect.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "from": {
+                  "description": "Originating region.",
+                  "type": "string"
+                },
+                "to": {
+                  "description": "Destination region the traffic will fail over to when endpoints in the ‘from’ region becomes unhealthy.",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "failoverPriority": {
+            "description": "failoverPriority is an ordered list of labels used to sort endpoints to do priority based load balancing. This is to support traffic failover across different groups of endpoints.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "enable locality load balancing, this is DestinationRule-level and will override mesh wide settings in entirety. e.g. true means that turn on locality load balancing for this DestinationRule no matter what mesh wide settings is.\n\nNo\n"
+          }
+        }
+      },
+      "warmupDurationSecs": {
+        "description": "Deprecated - Represents the warmup duration of Service. If set, the newly created endpoint of service remains in warmup mode starting from its creation time for the duration of this window and Istio progressively increases amount of traffic for that endpoint instead of sending proportional amount of traffic. This should be enabled for services that require warm up time to serve full production load with reasonable latency. Please note that this is most effective when few new endpoints come up like scale event in Kubernetes. When all the endpoints are relatively new like new deployment, this is not very effective as all endpoints end up getting same amount of requests. Currently this is only supported for ROUND_ROBIN and LEAST_REQUEST load balancers.",
+        "$ref": "../lib/k8s.json#/Duration"
+      },
+      "warmup": {
+        "description": "Represents the warmup duration of Service. If set, the newly created endpoint of service remains in warmup mode starting from its creation time for the duration of this window and Istio progressively increases amount of traffic for that endpoint instead of sending proportional amount of traffic. This should be enabled for services that require warm up time to serve full production load with reasonable latency. Please note that this is most effective when few new endpoints come up like scale event in Kubernetes. When all the endpoints are relatively new like new deployment, this is not very effective as all endpoints end up getting same amount of requests. Currently this is only supported for ROUND_ROBIN and LEAST_REQUEST load balancers",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "duration": {
+            "description": "Duration of the warmup mode",
+            "$ref": "../lib/k8s.json#/Duration"
+          },
+          "minimumPercent": {
+            "description": "This parameter control the minimum traffic percentage to send when starting the warmup mode",
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "aggression": {
+            "description": "This parameter controls the speed of traffic increase over the warmup duration.",
+            "type": "number",
+            "minimum": 1
+          }
+        }
+      }
+    }
+  },
+  "Location": {
+    "type": "string",
+    "enum": [
+      "MESH_EXTERNAL",
+      "MESH_INTERNAL"
+    ]
+  },
+  "OutlierDetection": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "splitExternalLocalOriginErrors": {
+        "type": "boolean"
+      },
+      "consecutiveLocalOriginFailures": {
+        "type": "integer"
+      },
+      "consecutiveGatewayErrors": {
+        "type": "integer"
+      },
+      "consecutive5xxErrors": {
+        "type": "integer"
+      },
+      "interval": {
+        "$ref": "../lib/k8s.json#/Duration"
+      },
+      "baseEjectionTime": {
+        "$ref": "../lib/k8s.json#/Duration"
+      },
+      "maxEjectionPercent": {
+        "type": "integer"
+      },
+      "minHealthPercent": {
+        "type": "integer"
+      }
+    }
+  },
+  "PortSelector": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "number": {
+        "$ref": "../lib/k8s.json#/PortNumber"
+      }
+    }
+  },
+  "ServiceEntry": {
+    "type": "object",
+    "required": [
+      "hosts"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "hosts": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "addresses": {
+        "description": "The virtual IP addresses associated with the service. Could be CIDR prefix. For HTTP traffic, generated route configurations will include http route domains for both the addresses and hosts field values and the destination will be identified based on the HTTP Host/Authority header. If one or more IP addresses are specified, the incoming traffic will be identified as belonging to this service if the destination IP matches the IP/CIDRs specified in the addresses field. If the Addresses field is empty, traffic will be identified solely based on the destination port. In such scenarios, the port on which the service is being accessed must not be shared by any other service in the mesh. In other words, the sidecar will behave as a simple TCP proxy, forwarding incoming traffic on a specified port to the specified destination endpoint IP/host. Unix domain socket addresses are not supported in this field.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "ports": {
+        "description": "The ports associated with the external service. If the Endpoints are Unix domain socket addresses, there must be exactly one port.",
+        "type": "array",
+        "items": {
+          "$ref": "#/ServicePort"
+        }
+      },
+      "location": {
+        "$ref": "#/Location"
+      },
+      "endpoints": {
+        "type": "array",
+        "items": {
+          "$ref": "#/WorkloadEntry"
+        }
+      },
+      "workloadSelector": {
+        "$ref": "#/WorkloadSelector"
+      },
+      "exportTo": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "subjectAltNames": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "resolution": {
+        "description": "Service resolution mode for the hosts. Care must be taken when setting the resolution mode to NONE for a TCP port without accompanying IP addresses. In such cases, traffic to any IP on said port will be allowed (i.e. 0.0.0.0:<port>).",
+        "type": "string",
+        "enum": [
+          "DNS",
+          "NONE",
+          "STATIC",
+          "DNS_ROUND_ROBIN"
+        ]
+      }
+    }
+  },
+  "ServicePort": {
+    "type": "object",
+    "required": [
+      "number",
+      "name"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "number": {
+        "$ref": "../lib/k8s.json#/PortNumber"
+      },
+      "name": {
+        "type": "string"
+      },
+      "protocol": {
+        "type": "string",
+        "enum": [
+          "HTTP",
+          "HTTPS",
+          "GRPC",
+          "HTTP2",
+          "MONGO",
+          "TCP",
+          "TLS"
+        ]
+      },
+      "targetPort": {
+        "$ref": "../lib/k8s.json#/PortNumber"
+      }
+    }
+  },
+  "StringMatch": {
+    "type": "object",
+    "oneOf": [
+      {
+        "additionalProperties": false,
+        "properties": {
+          "exact": {
+            "type": "string"
+          }
+        }
+      },
+      {
+        "additionalProperties": false,
+        "properties": {
+          "prefix": {
+            "type": "string"
+          }
+        }
+      },
+      {
+        "additionalProperties": false,
+        "properties": {
+          "regex": {
+            "type": "string"
+          }
+        }
+      }
+    ]
+  },
+  "TCPRoute": {
+    "description": "Describes match conditions and actions for routing TCP traffic.",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "match": {
+        "description": "Match conditions to be satisfied for the rule to be activated. All conditions inside a single match block have AND semantics, while the list of match blocks have OR semantics. The rule is matched if any one of the match blocks succeed.",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "destinationSubnets": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "port": {
+              "$ref": "../lib/k8s.json#/PortNumber"
+            },
+            "sourceLabels": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "gateways": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "sourceNamespace": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "route": {
+        "description": "The destination to which the connection should be forwarded to.",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "destination"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "destination": {
+              "description": "Destination uniquely identifies the instances of a service to which the request/connection should be forwarded to.",
+              "$ref": "#/Destination"
+            },
+            "weight": {
+              "description": "Weight specifies the relative proportion of traffic to be forwarded to the destination. A destination will receive weight/(sum of all weights) requests. If there is only one destination in a rule, it will receive all traffic. Otherwise, if weight is 0, the destination will not receive any traffic.",
+              "type": "integer"
+            }
+          }
+        }
+      }
+    }
+  },
+  "TLS": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "mode": {
+        "type": "string",
+        "enum": [
+          "DISABLE",
+          "SIMPLE",
+          "MUTUAL",
+          "ISTIO_MUTUAL"
+        ]
+      },
+      "clientCertificate": {
+        "type": "string"
+      },
+      "privateKey": {
+        "type": "string"
+      },
+      "caCertificates": {
+        "type": "string"
+      },
+      "credentialName": {
+        "type": "string"
+      },
+      "subjectAltNames": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "sni": {
+        "type": "string"
+      },
+      "insecureSkipVerify": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  },
+  "TrafficPolicy": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "loadBalancer": {
+        "$ref": "#/LoadBalancerSettings"
+      },
+      "connectionPool": {
+        "description": "Settings controlling the volume of connections to an upstream service",
+        "$ref": "#/ConnectionPoolSettings"
+      },
+      "outlierDetection": {
+        "$ref": "#/OutlierDetection"
+      },
+      "tls": {
+        "description": "TLS related settings for connections to the upstream service.",
+        "$ref": "#/TLS"
+      },
+      "portLevelSettings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "port": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "number": {
+                  "$ref": "../lib/k8s.json#/PortNumber"
+                }
+              }
+            },
+            "loadBalancer": {
+              "$ref": "#/LoadBalancerSettings"
+            },
+            "connectionPool": {
+              "$ref": "#/ConnectionPoolSettings"
+            },
+            "outlierDetection": {
+              "$ref": "#/OutlierDetection"
+            },
+            "tls": {
+              "description": "TLS related settings for connections to the upstream service.",
+              "$ref": "#/TLS"
+            }
+          }
+        }
+      },
+      "tunnel": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "protocol": {
+            "type": "string",
+            "enum": [
+              "CONNECT",
+              "POST"
+            ]
+          },
+          "targetHost": {
+            "type": "string"
+          },
+          "targetPort": {
+            "$ref": "../lib/k8s.json#/PortNumber"
+          }
+        }
+      }
+    }
+  },
+  "WorkloadEntry": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "address": {
+        "type": "string"
+      },
+      "ports": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "../lib/k8s.json#/PortNumber"
+        }
+      },
+      "labels": {
+        "$ref": "../lib/k8s.json#/Labels"
+      },
+      "network": {
+        "type": "string"
+      },
+      "locality": {
+        "type": "string"
+      },
+      "weight": {
+        "type": "integer"
+      },
+      "serviceAccount": {
+        "type": "string"
+      }
+    }
+  },
+  "WorkloadSelector": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "labels": {
+        "$ref": "../lib/k8s.json#/Labels"
+      }
+    }
+  }
+}

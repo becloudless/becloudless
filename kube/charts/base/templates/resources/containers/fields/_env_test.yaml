@@ -1,0 +1,163 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: container env values
+templates:
+  - base.yaml
+values:
+  - ../../../../tests/overallValues.yaml
+tests:
+  - it: KeyValue string should pass
+    set:
+      resources.controllers.main.containers.main.env:
+        string: value_of_env
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: string
+            value: value_of_env
+
+  - it: KeyValue float should pass
+    set:
+      resources.controllers.main.containers.main.env:
+        string: 4.2
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: string
+            value: "4.2"
+
+  - it: KeyValue int should pass
+    set:
+      resources.controllers.main.containers.main.env:
+        string: 1
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: string
+            value: "1"
+
+  - it: Implicit ValueFrom should pass
+    set:
+      resources.controllers.main.containers.main.env:
+        DYNAMIC_ENV:
+          fieldRef:
+            fieldPath: spec.nodeName
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DYNAMIC_ENV
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+
+  - it: Templated value should pass
+    set:
+      resources.controllers.main.containers.main.env:
+        DYNAMIC_ENV: "{{ .Release.Name }}-admin"
+        TEMPLATE_ENV:
+          valueFrom:
+            secretKeyRef:
+              name: "{{ .Release.Name }}-secret"
+              key: "{{ .Release.Name }}-key"
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DYNAMIC_ENV
+            value: RELEASE-NAME-admin
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TEMPLATE_ENV
+            valueFrom:
+              secretKeyRef:
+                key: "RELEASE-NAME-key"
+                name: "RELEASE-NAME-secret"
+
+  - it: Combined KeyValue with Explicit ValueFrom should pass
+    set:
+      resources.controllers.main.containers.main.env:
+        STATIC_ENV: static
+        DYNAMIC_ENV:
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DYNAMIC_ENV
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: STATIC_ENV
+            value: static
+
+  - it: Env vars with dependsOn should pass
+    set:
+      resources.controllers.main.containers.main.env:
+        STATIC_ENV: 1
+        DYNAMIC_ENV:
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+          dependsOn: STATIC_ENV
+        ORDERED_ENV:
+          value: true
+          dependsOn: STATIC_ENV
+        DEPENDENT_ENV:
+          value: moo_two
+          dependsOn:
+            - DYNAMIC_ENV
+            - ORDERED_ENV
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: STATIC_ENV
+            value: "1"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DYNAMIC_ENV
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ORDERED_ENV
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DEPENDENT_ENV
+            value: moo_two

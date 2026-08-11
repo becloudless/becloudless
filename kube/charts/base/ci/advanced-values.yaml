@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=../values.schema.json
+
+resources:
+  controllers:
+    main:
+      containers:
+        main:
+          image:
+            repository: ghcr.io/mendhak/http-https-echo
+            tag: 31
+
+          env:
+            HTTP_PORT: 8887
+            HTTPS_PORT: 9997
+
+          probes:
+            liveness:
+              enabled: true
+            readiness:
+              enabled: true
+            startup:
+              enabled: true
+
+        a-container:
+          dependsOn:
+            - main
+            - third-container
+          image:
+            repository: ghcr.io/mendhak/http-https-echo
+            tag: 31
+          env:
+            HTTP_PORT: 8888
+            HTTPS_PORT: 9998
+
+        third-container:
+          dependsOn: main
+          image:
+            repository: ghcr.io/mendhak/http-https-echo
+            tag: 31
+
+    second-controller:
+      type: Deployment
+      containers:
+        main:
+          image:
+            repository: ghcr.io/mendhak/http-https-echo
+            tag: 31
+          env:
+            HTTP_PORT: 8889
+            HTTPS_PORT: 9999
+
+  configMaps:
+    config:
+      enabled: true
+      data:
+        test: value 1
+
+  services:
+    main:
+      ports:
+        http:
+          port: 8080
+
+mainWorkload:
+  enabled: true

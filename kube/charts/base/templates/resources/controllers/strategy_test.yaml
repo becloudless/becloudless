@@ -1,0 +1,70 @@
+suite: controller strategy
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default strategy
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.strategy.type
+          value: RollingUpdate
+      - equal:
+          path: spec.strategy.rollingUpdate.maxSurge
+          value: 33%
+      - equal:
+          path: spec.strategy.rollingUpdate.maxUnavailable
+          value: 0
+
+  - it: custom rollingUpdate unavailable
+    set:
+      resources.controllers.main.rollingUpdate.maxUnavailable: 42
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.strategy.type
+          value: RollingUpdate
+      - equal:
+          path: spec.strategy.rollingUpdate.maxSurge
+          value: 33%
+      - equal:
+          path: spec.strategy.rollingUpdate.maxUnavailable
+          value: 42
+
+  - it: additional controllers should have default strategy
+    set:
+      resources:
+        controllers:
+          main:
+            nameOverride: first
+          second:
+            nameOverride: second
+            containers:
+              main:
+                image:
+                  repository: ghcr.io/mendhak/http-https-echo
+                  tag: 31
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-second
+        equal:
+          path: spec.strategy.rollingUpdate.maxSurge
+          value: 33%
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-second
+        equal:
+          path: spec.strategy.rollingUpdate.maxUnavailable
+          value: 0
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-second
+        equal:
+          path: spec.strategy.type
+          value: RollingUpdate

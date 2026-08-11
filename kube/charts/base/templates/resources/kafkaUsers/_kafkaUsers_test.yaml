@@ -1,0 +1,180 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: KafkaUser resources
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: KafkaUser for platform-kafka cluster
+    set:
+      resources.kafkaUsers:
+        platform-kafka-main-workload:
+          kafkaCluster: platform
+          applicationNamespace: carpool
+          authorization: &basicACLs
+            acls:
+              - operations:
+                  - "Read"
+                  - "Describe"
+                  - "DescribeConfigs"
+                resource:
+                  type: "topic"
+                  name: "some-kafka-topic"
+              - operations:
+                  - "Read"
+                resource:
+                  type: "topic"
+                  name: "some_underscored_kafka_topic"
+              - operations:
+                  - "Describe"
+                  - "Write"
+                resource:
+                  type: "transactionalId"
+                  name: "some_transactional_id"
+    documentSelector:
+      path: kind
+      value: KafkaUser
+    asserts:
+      - equal:
+          path: spec
+          value:
+            authentication:
+              type: tls
+            authorization:
+              acls:
+                - operations:
+                    - Read
+                    - Describe
+                    - DescribeConfigs
+                  resource:
+                    name: some-kafka-topic
+                    patternType: literal
+                    type: topic
+                - operations:
+                    - Read
+                  resource:
+                    name: some_underscored_kafka_topic
+                    patternType: literal
+                    type: topic
+                - operations:
+                    - Describe
+                    - Write
+                  resource:
+                    name: some_transactional_id
+                    patternType: literal
+                    type: transactionalId
+              type: simple
+            template:
+              secret:
+                metadata:
+                  annotations:
+                    replicator.v1.mittwald.de/replicate-to: carpool
+
+  - it: Secret should not be replicated to another namespace when no `applicationNamespace` is given
+    set:
+      resources.kafkaUsers:
+        platform-kafka-test-kafka-user:
+          kafkaCluster: platform
+          authorization: *basicACLs
+    documentSelector:
+      path: kind
+      value: KafkaUser
+    asserts:
+      - notExists:
+          path: spec.template
+
+  - it: Topic matching may be done through a prefix
+    set:
+      resources.kafkaUsers:
+        platform-kafka-test-kafka-user:
+          applicationNamespace: carpool
+          kafkaCluster: platform
+          authorization:
+            acls:
+              - operations:
+                  - "Read"
+                resource:
+                  type: "topic"
+                  name: "some-kafka-to"
+                  patternType: "prefix"
+    documentSelector:
+      path: kind
+      value: KafkaUser
+    asserts:
+      - equal:
+          path: spec.authorization.acls[0].resource.patternType
+          value: "prefix"
+      - equal:
+          path: spec.authorization.acls[0].resource.name
+          value: "some-kafka-to"
+
+  - it: should deploy several ACLs
+    set:
+      resources.kafkaUsers:
+        platform-kafka-test-kafka-user:
+          applicationNamespace: carpool
+          kafkaCluster: platform
+          authorization:
+            acls:
+              - operations:
+                  - "Read"
+                resource:
+                  type: "topic"
+                  name: "some-kafka-topic"
+              - operations:
+                  - "Read"
+                  - "DescribeConfigs"
+                resource:
+                  type: "group"
+                  name: "some-kafka-group"
+    documentSelector:
+      path: kind
+      value: KafkaUser
+    asserts:
+      - equal:
+          path: spec.authorization.acls[0].resource.name
+          value: "some-kafka-topic"
+      - equal:
+          path: spec.authorization.acls[0].resource.type
+          value: "topic"
+      - equal:
+          path: spec.authorization.acls[0].operations
+          value: ["Read"]
+      - equal:
+          path: spec.authorization.acls[1].resource.name
+          value: "some-kafka-group"
+      - equal:
+          path: spec.authorization.acls[1].resource.type
+          value: "group"
+      - equal:
+          path: spec.authorization.acls[1].operations
+          value: ["Read", "DescribeConfigs"]
+
+  - it: KafkaUser customize operations and replication namespaces
+    set:
+      resources.kafkaUsers:
+        platform-kafka-test-kafka-user:
+          kafkaCluster: platform
+          applicationNamespace: user
+          replicateToExtraNamespaces:
+            - dbre
+            - iam
+          authorization:
+            acls:
+              - operations:
+                  - "Write"
+                resource:
+                  type: "topic"
+                  name: "some-kafka-topic"
+    documentSelector:
+      path: kind
+      value: KafkaUser
+    asserts:
+      - equal:
+          path: spec.authorization.acls[0].operations
+          value: ["Write"]
+      - equal:
+          path: spec.template.secret.metadata.annotations
+          value:
+            replicator.v1.mittwald.de/replicate-to: "user,dbre,iam"

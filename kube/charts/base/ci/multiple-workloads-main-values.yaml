@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=../values.schema.json
+
+mainWorkload:
+  container:
+    image:
+      repository: there
+      tag: 42
+
+workloads:
+  titi:
+    container:
+      image:
+        repository: test
+        tag: 43
+
+chartDefaults:
+  workload:
+    service:
+      ports:
+        http:
+          port: 8080

@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: workloads hpa metrics cpu
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: cpu require averageUtilization
+    set:
+      mainWorkload.hpa.metrics.cpu.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: "'averageUtilization' is required for hpa metric. (workload: main,  metric: cpu)"
+
+  - it: override cpu default
+    set:
+      mainWorkload.hpa.metrics.cpu.averageUtilization: 42
+    asserts:
+      - documentSelector:
+          path: kind
+          value: HorizontalPodAutoscaler
+        equal:
+          path: spec.metrics
+          value:
+            - resource:
+                name: cpu
+                target:
+                  averageUtilization: 42
+                  type: Utilization
+              type: Resource
+
+  - it: cpu can be disabled
+    set:
+      mainWorkload.hpa.metrics.cpu.enabled: false
+    asserts:
+      - documentSelector:
+          path: kind
+          value: HorizontalPodAutoscaler
+        equal:
+          path: spec.metrics
+          value:

@@ -1,0 +1,121 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: ingress tls
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default should pass
+    set:
+      resources.ingresses.main:
+        enabled: true
+        hosts:
+          - host: toto.com
+            paths:
+              - service:
+                  name: main
+                path: /
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - notExists:
+          path: spec.tls
+
+  - it: tls enabled should pass
+    set:
+      resources.ingresses.main:
+        enabled: true
+        hosts:
+          - host: toto.com
+            paths:
+              - service:
+                  name: main
+                path: /
+        tls:
+          - secretName: test
+            hosts:
+              - hostname
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.tls[0]
+          value:
+            secretName: test
+            hosts:
+              - hostname
+
+  - it: tls enabled without secret should pass
+    set:
+      resources.ingresses.main:
+        enabled: true
+        hosts:
+          - host: toto.com
+            paths:
+              - service:
+                  name: main
+                path: /
+        tls:
+          - hosts:
+              - hostname
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.tls[0]
+          value:
+            hosts:
+              - hostname
+
+  - it: tls enabled with secret template should pass
+    set:
+      resources.ingresses.main:
+        enabled: true
+        hosts:
+          - host: toto.com
+            paths:
+              - service:
+                  name: main
+                path: /
+        tls:
+          - secretName: "{{ .Release.Name }}-secret"
+            hosts:
+              - hostname
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.tls[0]
+          value:
+            secretName: RELEASE-NAME-secret
+            hosts:
+              - hostname
+
+  - it: tls enabled with secret template evaluate empty should pass
+    set:
+      resources.ingresses.main:
+        enabled: true
+        hosts:
+          - host: toto.com
+            paths:
+              - service:
+                  name: main
+                path: /
+        tls:
+          - secretName: '{{ "" }}'
+            hosts:
+              - hostname
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.tls[0]
+          value:
+            hosts:
+              - hostname

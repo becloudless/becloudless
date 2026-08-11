@@ -1,0 +1,148 @@
+suite: features istio
+templates:
+  - base.yaml
+values:
+  - ../../tests/overallValues.yaml
+tests:
+  - it: validation by default
+    set:
+      mainWorkload.istio.enabled: true
+    documentSelector:
+      path: kind
+      value: Sidecar
+    asserts:
+      - equal:
+          path: metadata.labels["istio.io/tag"]
+          value: stable
+
+  - it: validate sidecar resource
+    set:
+      mainWorkload.istio.enabled: true
+      istio.resourceValidation.enabled: true
+    documentSelector:
+      path: kind
+      value: Sidecar
+    asserts:
+      - equal:
+          path: metadata.labels["istio.io/tag"]
+          value: stable
+
+  - it: istio tag can be overridden
+    set:
+      mainWorkload.istio.enabled: true
+      istio.resourceValidation:
+        enabled: true
+        revisionTag: canary
+    documentSelector:
+      path: kind
+      value: Sidecar
+    asserts:
+      - equal:
+          path: metadata.labels["istio.io/tag"]
+          value: canary
+
+  - it: validate virtualServices resource
+    set:
+      resources.virtualServices.main.hosts:
+        - toto
+      istio.resourceValidation.enabled: true
+    documentSelector:
+      path: kind
+      value: VirtualService
+    asserts:
+      - equal:
+          path: metadata.labels["istio.io/tag"]
+          value: stable
+
+  - it: validate destinationRule resource
+    set:
+      resources.destinationRules.main.host: toto
+      istio.resourceValidation.enabled: true
+    documentSelector:
+      path: kind
+      value: DestinationRule
+    asserts:
+      - equal:
+          path: metadata.labels["istio.io/tag"]
+          value: stable
+
+  - it: validate destinationRule resource with templated host
+    set:
+      resources.destinationRules.main.host: "{{ .Release.Name }}.{{ .Release.Namespace }}.svc.cluster.local"
+      istio.resourceValidation.enabled: true
+    documentSelector:
+      path: kind
+      value: DestinationRule
+    asserts:
+      - equal:
+          path: spec.host
+          value: RELEASE-NAME.NAMESPACE.svc.cluster.local
+
+  - it: validate serviceEntry resource
+    set:
+      resources.serviceEntries.main.hosts:
+        - toto
+      istio.resourceValidation.enabled: true
+    documentSelector:
+      path: kind
+      value: ServiceEntry
+    asserts:
+      - equal:
+          path: metadata.labels["istio.io/tag"]
+          value: stable
+
+  - it: validate authorizationPolicy resource
+    set:
+      resources.authorizationPolicies.main:
+        action: DENY
+        workloadLabels:
+          app: test
+        rules:
+        - to:
+          - operation:
+              paths: ["/headers"]
+      istio.resourceValidation.enabled: true
+    documentSelector:
+      path: kind
+      value: AuthorizationPolicy
+    asserts:
+      - equal:
+          path: metadata.labels["istio.io/tag"]
+          value: stable
+
+  - it: validate telemetry resource
+    set:
+      resources.telemetries.main:
+        workloadLabels:
+          app: test
+        metrics:
+          - providers:
+              - name: prometheus
+            overrides:
+              - match:
+                  metric: REQUEST_COUNT
+                tagOverrides:
+                  response_code:
+                    operation: REMOVE
+      istio.resourceValidation.enabled: true
+    documentSelector:
+      path: kind
+      value: Telemetry
+    asserts:
+      - equal:
+          path: metadata.labels["istio.io/tag"]
+          value: stable
+
+  - it: validate envoyfilter resource
+    set:
+      resources.envoyFilters.main:
+        workloadLabels:
+          app: test
+      istio.resourceValidation.enabled: true
+    documentSelector:
+      path: kind
+      value: EnvoyFilter
+    asserts:
+      - equal:
+          path: metadata.labels["istio.io/tag"]
+          value: stable

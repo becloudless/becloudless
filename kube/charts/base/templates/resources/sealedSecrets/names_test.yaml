@@ -1,0 +1,83 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: sealedSecret names
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default should pass
+    asserts:
+      - containsDocument:
+          kind: SealedSecret
+        not: true
+
+  - it: with disabled secret should pass
+    set:
+      resources.sealedSecrets.secret.enabled: false
+    asserts:
+      - containsDocument:
+          kind: SealedSecret
+        not: true
+
+  - it: with multiple secrets should pass
+    set:
+      resources:
+        sealedSecrets:
+          secret:
+            enabled: true
+            encryptedData: {}
+          secondary:
+            enabled: true
+            encryptedData: {}
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-secret
+        isKind:
+          of: SealedSecret
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-secret
+        exists:
+          path: metadata.name
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-secondary
+        isKind:
+          of: SealedSecret
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-secondary
+        exists:
+          path: metadata.name
+
+  - it: default name should pass
+    set:
+      resources:
+        sealedSecrets:
+          secret:
+            enabled: true
+            encryptedData: {}
+    documentSelector:
+      path: kind
+      value: SealedSecret
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-secret
+
+  - it: with nameOverride should pass
+    set:
+      resources:
+        sealedSecrets:
+          secret:
+            enabled: true
+            nameOverride: http
+            encryptedData: {}
+    documentSelector:
+      path: kind
+      value: SealedSecret
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-http

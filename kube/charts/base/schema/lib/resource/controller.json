@@ -1,0 +1,251 @@
+{
+  "typeDef": {
+    "type": "string",
+    "enum": ["Deployment", "StatefulSet", "DaemonSet", "CronJob", "Job", "InferenceService"],
+    "default": "Deployment"
+  },
+  "rollingUpdate": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "maxUnavailable": {
+        "title": "The maximum number of nodes with an existing available DaemonSet pod that can have an updated DaemonSet pod during during an update. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). This can not be 0 if MaxUnavailable is 0. Absolute number is calculated from percentage by rounding up to a minimum of 1.",
+        "description": "0 is default to not decrease the nb of replica during a deployment, to keep enough capacity to serve traffic",
+        "type": ["integer", "string"],
+        "default": 0,
+        "examples": [
+          1,
+          "25%"
+        ]
+      },
+      "maxSurge": {
+        "title": "The maximum number of nodes with an existing available DaemonSet pod that can have an updated DaemonSet pod during during an update. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%).",
+        "description": "Using a percentage scales better when app has a lot of pods (it avoids too long deployment)",
+        "type": ["integer", "string"],
+        "default": "33%",
+        "examples": [
+          1,
+          "25%"
+        ]
+
+      },
+      "partition": {
+        "type": "integer",
+        "minimum": 0,
+        "default": 0,
+        "description": "Partition indicates the ordinal at which the StatefulSet should be partitioned for updates. During a rolling update, all pods from ordinal Replicas-1 to Partition are updated. All pods from ordinal Partition-1 to 0 remain untouched. This is helpful in being able to do a canary based deployment."
+      }
+    }
+  },
+  "strategy": {
+    "type": "string",
+    "enum": [
+      "OnDelete",
+      "RollingUpdate",
+      "Recreate"
+    ]
+  },
+
+  "replicas": {
+    "type": ["integer"]
+  },
+
+  "statefulSet": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "podManagementPolicy": {
+        "type": "string",
+        "enum": ["Parallel", "OrderedReady"],
+        "default": "OrderedReady"
+      },
+      "volumeClaimTemplates": {
+        "type": "array",
+        "items": {
+          "$ref": "#/statefulSet.volumeClaimTemplate"
+        }
+      }
+    }
+  },
+
+  "statefulSet.volumeClaimTemplate": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "$ref": "../../lib/utils.json#/enabled"
+      },
+      "accessMode": {
+        "type": "string",
+        "enum": [
+          "ReadWriteOnce",
+          "ReadOnlyMany",
+          "ReadWriteMany",
+          "ReadWriteOncePod"
+        ]
+      },
+      "annotations": {
+        "$ref": "../../lib/k8s.json#/Annotations"
+      },
+      "labels": {
+        "$ref": "../../lib/k8s.json#/Labels"
+      },
+      "dataSource": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "apiGroup": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "name": {
+        "type": "string"
+      },
+      "size": {
+        "$ref": "../../lib/k8s.json#/Quantity"
+      },
+      "storageClass": {
+        "type": "string"
+      }
+    },
+    "required": ["name", "size"]
+  },
+
+  "inferenceService": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "predictor": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "model": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "modelFormat": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                }
+              },
+              "protocolVersion": {
+                "type": "string"
+              },
+              "storageUri": {
+                "type": "string"
+              }
+            }
+          },
+          "minReplicas": {
+            "type": "integer"
+          },
+          "maxReplicas": {
+            "type": "integer"
+          },
+          "scaleTarget": {
+            "type": "integer"
+          },
+          "scaleMetric": {
+            "type": "string",
+            "enum": ["cpu"]
+          }
+        }
+      }
+    }
+  },
+
+  "cronJob": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "activeDeadlineSeconds": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "backoffLimit": {
+        "type": "integer",
+        "default": 6
+      },
+      "concurrencyPolicy": {
+        "type": "string",
+        "enum": [
+          "Allow",
+          "Forbid",
+          "Replace"
+        ],
+        "default": "Forbid"
+      },
+      "failedJobsHistory": {
+        "type": "integer",
+        "minimum": 0,
+        "default": 1
+      },
+      "parallelism": {
+        "type": "integer"
+      },
+      "schedule": {
+        "type": "string",
+        "pattern": "^(?:@(?:annually|yearly|monthly|weekly|daily|midnight|hourly)|(?:(?:[*?](?:\\/\\d+)?|(?:\\d+,)*\\d+(?:-\\d+(\\/\\d+)?)?|{{.+}})[ ]?){5})$",
+        "description": "The schedule in Cron format, see https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/#schedule-syntax."
+      },
+      "startingDeadlineSeconds": {
+        "type": "integer",
+        "default": 30,
+        "minimum": 0
+      },
+      "successfulJobsHistory": {
+        "type": "integer",
+        "default": 1
+      },
+      "suspend": {
+        "type": "boolean",
+        "default": false
+      },
+      "timeZone": {
+        "type": "string"
+      },
+      "ttlSecondsAfterFinished": {
+        "type": "integer",
+        "minimum": 0
+      }
+    }
+  },
+
+  "job": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "activeDeadlineSeconds": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "backoffLimit": {
+        "type": "integer",
+        "default": 6
+      },
+      "completions": {},
+      "completionMode": {},
+      "parallelism": {
+        "type": "integer"
+      },
+      "suspend": {
+        "type": "boolean",
+        "default": false
+      },
+      "ttlSecondsAfterFinished": {
+        "type": "integer"
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "enabled": {
+    "title": "Enable the component or not. Enabled by default as soon as any attribute is set",
+    "type": "boolean",
+    "default": true
+  },
+  "nameOverride": {
+    "title": "Override the name of the resource. Default is the identifier of the resource",
+    "type": "string",
+    "pattern": "^[0-9a-z-]*$"
+  }
+}

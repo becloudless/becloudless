@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../values.schema.json
+
+resources:
+  controllers:
+    main:
+      containers:
+        main:
+          image:
+            repository: ghcr.io/mendhak/http-https-echo
+            tag: 31
+
+  services:
+    main:
+      enabled: false

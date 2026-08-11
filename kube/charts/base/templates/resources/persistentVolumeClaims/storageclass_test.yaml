@@ -1,0 +1,41 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: persistentVolumeClaims storageclass
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default should pass
+    set:
+      resources.persistentVolumeClaims.config.enabled: true
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - isNull:
+          path: spec.storageClassName
+
+  - it: custom should pass
+    set:
+      resources.persistentVolumeClaims.config:
+        storageClass: custom
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - equal:
+          path: spec.storageClassName
+          value: custom
+
+  - it: empty should pass
+    set:
+      resources.persistentVolumeClaims.config:
+        storageClass: "-"
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - equal:
+          path: spec.storageClassName
+          value: ""

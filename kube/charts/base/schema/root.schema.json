@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "'{NAME}' chart values - version '{VERSION}'",
+  "description": "base chart",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "e2eTests": {
+      "$ref": "features/e2eTests.json"
+    },
+    "checkRequiredValues": {
+      "title": "Check required values to make some fields mandatory on HelmRelease by looking for null values and fail rendering if found",
+      "type": "boolean",
+      "default": true
+    },
+    "global": {
+      "title": "Set things that will apply to all generated resources",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "labels": {
+          "$ref": "lib/k8s.json#/Labels"
+        },
+        "annotations": {
+          "$ref": "lib/k8s.json#/Annotations"
+        },
+        "legacyLabelSelector": {
+          "title": "Enable the legacy selector label (app) for workloads only. Disabled by default",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "istio": {
+      "title": "Configure istio globally",
+      "additionalProperties": false,
+      "properties": {
+        "resourceValidation": {
+          "title": "Istio resources validation",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "lib/utils.json#/enabled"
+            },
+            "revisionTag": {
+              "title": "The control plane revision tag",
+              "description": "This revision tag identify the control plane which validate the resources",
+              "type": "string",
+              "enum": ["stable", "canary"],
+              "default": "stable"
+            }
+          }
+        }
+      }
+    },
+    "chartDefaults": {
+      "title": "Configure default behavior of the chart when a new resource or a feature is enabled",
+      "$ref": "chartDefaults.json"
+    },
+    "debug": {
+      "title": "Allow debug of generated values.",
+      "description": "When enabled, a configmap named RELEASE-NAME-debug containing all rendered values is included in resources",
+      "type": "boolean",
+      "default": false
+    },
+    "kubeClusterName": {
+      "title": "Name of the Kubernetes cluster the Chart gets deployed to.",
+      "description": "This value is typically set in kube-manifests, and there is automation in place to enforce its presence.",
+      "type": "string"
+    },
+    "mainWorkload": {
+      "title": "definition of the main workload. This is a shortcut to workloads.main:",
+      "$ref": "features/workload.json"
+    },
+    "workloads": {
+      "title": "Render some workloads, indexed by an identifier",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-9a-z-]*$": {
+          "title": "Identifier of the workload",
+          "description": "All resources created for this workload will have the same identifier as this workload",
+          "$ref": "features/workload.json"
+        }
+      }
+    },
+    "resources": {
+      "$ref": "resources.json"
+    }
+  }
+}

@@ -1,0 +1,153 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: pod sidecar containers
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: with default order
+    set:
+      resources.controllers.main.containers:
+        additional1:
+          image:
+            repository: test
+            tag: test
+        additional2:
+          image:
+            repository: test
+            tag: test
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 3
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: main
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: additional1
+      - equal:
+          path: spec.template.spec.containers[2].name
+          value: additional2
+
+  # TODO: Remove this test case after "order" removal in v3
+  - it: with custom order
+    set:
+      resources.controllers.main.containers:
+        main:
+          order: 2
+        additional1:
+          order: 3
+          image:
+            repository: test
+            tag: test
+        additional2:
+          order: 1
+          image:
+            repository: test
+            tag: test
+        additional3:
+          image:
+            repository: test
+            tag: test
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 4
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: additional2
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: main
+      - equal:
+          path: spec.template.spec.containers[2].name
+          value: additional1
+      - equal:
+          path: spec.template.spec.containers[3].name
+          value: additional3
+
+  - it: with dependsOn
+    set:
+      resources.controllers.main.containers:
+        additional1:
+          dependsOn: additional3
+          image:
+            repository: test
+            tag: test
+        additional2:
+          dependsOn: additional3
+          image:
+            repository: test
+            tag: test
+        additional3:
+          dependsOn: main
+          image:
+            repository: test
+            tag: test
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 4
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: main
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: additional3
+      - equal:
+          path: spec.template.spec.containers[2].name
+          value: additional1
+      - equal:
+          path: spec.template.spec.containers[3].name
+          value: additional2
+
+  # TODO: Remove this test case after "order" removal in v3
+  - it: with both order and dependsOn
+    set:
+      resources.controllers.main.containers:
+        additional1:
+          dependsOn: additional3
+          image:
+            repository: test
+            tag: test
+        additional2:
+          dependsOn: additional3
+          order: 1
+          image:
+            repository: test
+            tag: test
+        additional3:
+          dependsOn: main
+          image:
+            repository: test
+            tag: test
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 4
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: main
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: additional3
+      - equal:
+          path: spec.template.spec.containers[2].name
+          value: additional1
+      - equal:
+          path: spec.template.spec.containers[3].name
+          value: additional2

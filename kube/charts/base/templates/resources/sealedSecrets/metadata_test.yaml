@@ -1,0 +1,131 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: sealedSecret metadata
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default metadata should pass
+    set:
+      resources:
+        sealedSecrets:
+          secret:
+            enabled: true
+            encryptedData: {}
+    documentSelector:
+      path: kind
+      value: SealedSecret
+    asserts:
+      - notExists:
+          path: metadata.annotations
+      - equal:
+          path: metadata.labels
+          value:
+            app: RELEASE-NAME
+            app.kubernetes.io/component: secret
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: RELEASE-NAME
+            helm.sh/chart: base-template-0.0.0
+      - equal:
+          path: metadata.namespace
+          value: NAMESPACE
+
+  - it: Setting SealedSecret namepace should pass
+    set:
+      resources:
+        sealedSecrets:
+          secret:
+            enabled: true
+            namespace: &namespace myFancyNamespace
+            encryptedData: {}
+    documentSelector:
+      path: kind
+      value: SealedSecret
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: *namespace
+
+  - it: custom metadata should pass
+    set:
+      resources:
+        sealedSecrets:
+          secret:
+            enabled: true
+            annotations:
+              test_annotation: test
+            labels:
+              test_label: test
+            encryptedData: {}
+    documentSelector:
+      path: kind
+      value: SealedSecret
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            test_annotation: test
+      - equal:
+          path: metadata.labels
+          value:
+            app: RELEASE-NAME
+            app.kubernetes.io/component: secret
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: RELEASE-NAME
+            helm.sh/chart: base-template-0.0.0
+            test_label: test
+
+  - it: custom metadata with global metadata should pass
+    set:
+      global:
+        labels:
+          global_label: test
+        annotations:
+          global_annotation: test
+      resources:
+        sealedSecrets:
+          secret:
+            enabled: true
+            annotations:
+              test_annotation: test
+            labels:
+              test_label: test
+            encryptedData: {}
+    documentSelector:
+      path: kind
+      value: SealedSecret
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            global_annotation: test
+            test_annotation: test
+      - equal:
+          path: metadata.labels
+          value:
+            app: RELEASE-NAME
+            app.kubernetes.io/component: secret
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: RELEASE-NAME
+            global_label: test
+            helm.sh/chart: base-template-0.0.0
+            test_label: test
+
+  - it: custom secret type should pass
+    set:
+      resources:
+        sealedSecrets:
+          secret:
+            enabled: true
+            type: &type kubernetes.io/service-account-token
+            encryptedData: {}
+    documentSelector:
+      path: kind
+      value: SealedSecret
+    asserts:
+      - equal:
+          path: spec.template.type
+          value: *type

@@ -1,0 +1,33 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: workloads flux
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: no imageAutomation by default
+    asserts:
+      - containsDocument:
+          kind: ImageRepository
+        not: true
+      - containsDocument:
+          kind: ImagePolicy
+        not: true
+
+  - it: imageAutomation Enabled
+    set:
+      workloads.main.flux.imageAutomation.enabled: true
+    asserts:
+      - documentSelector:
+          path: kind
+          value: ImagePolicy
+        equal:
+          path: metadata.name
+          value: RELEASE-NAME-NAMESPACE
+      - documentSelector:
+          path: kind
+          value: ImageRepository
+        equal:
+          path: metadata.name
+          value: RELEASE-NAME

@@ -1,0 +1,83 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: service protocols
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default should pass
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - equal:
+          path: spec.ports[0].protocol
+          value: TCP
+
+  - it: explicit TCP should pass
+    set:
+      resources.services.main.ports.http:
+        protocol: TCP
+        port: 80
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - equal:
+          path: spec.ports[0].protocol
+          value: TCP
+
+  - it: explicit UDP should pass
+    set:
+      resources.services.main.ports.http:
+        protocol: UDP
+        port: 80
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - equal:
+          path: spec.ports[0].protocol
+          value: UDP
+
+  - it: explicit HTTP should pass
+    set:
+      resources.services.main.ports.http:
+        protocol: HTTP
+        port: 80
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - equal:
+          path: spec.ports[0].protocol
+          value: TCP
+      - notExists:
+          path: metadata.annotations
+
+  - it: explicit HTTPS should pass
+    set:
+      resources.services.main.ports.http:
+        protocol: HTTPS
+        port: 80
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - equal:
+          path: spec.ports[0].protocol
+          value: TCP
+
+  - it: explicit appProtocol should pass
+    set:
+      resources.services.main.ports.http:
+        appProtocol: kubernetes.io/h2c
+        port: 80
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - equal:
+          path: spec.ports[0].appProtocol
+          value: kubernetes.io/h2c

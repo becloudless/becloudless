@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=../values.schema.json
+
+resources:
+  controllers:
+    main:
+      type: CronJob
+      cronJob:
+        timeZone: UTC
+        schedule: "{{ add .Values.resources.controllers.main.containers.main.image.tag 1 }} * * * *"
+      containers:
+        main:
+          image:
+            repository: ghcr.io/mendhak/http-https-echo
+            tag: 31
+
+  configMaps:
+    config:
+      enabled: true
+      data:
+        test: value 1
+

@@ -1,0 +1,145 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: workloads kafka
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: platform-kafka KafkaUser is created
+    set: &basicValues
+      workloads:
+        main:
+          kafka:
+            clusters:
+              platform:
+                readTopics:
+                  some-kafka-topic: {}
+                readWriteTopics:
+                  other-kafka-topic: {}
+                consumerGroup: "a-platform-test-consumer-group"
+              analytics:
+                readWriteTopics:
+                  some-analytics-topic: {}
+                writeTopics:
+                  some-writeable-topic: {}
+                transactionalId: "some-transactional-id"
+                consumerGroup: "an-analytics-test-consumer-group"
+    documentSelector:
+      path: metadata.name
+      value: namespace-release-name-platform-main
+    asserts:
+      - equal:
+          path: .spec
+          value:
+            authentication:
+              type: tls
+            authorization:
+              acls:
+                - operations:
+                    - Read
+                    - Describe
+                    - DescribeConfigs
+                  resource:
+                    name: some-kafka-topic
+                    patternType: literal
+                    type: topic
+                - operations:
+                    - Read
+                    - Write
+                    - Describe
+                    - DescribeConfigs
+                  resource:
+                    name: other-kafka-topic
+                    patternType: literal
+                    type: topic
+                - operations:
+                    - Read
+                    - Describe
+                  resource:
+                    name: a-platform-test-consumer-group
+                    patternType: literal
+                    type: group
+              type: simple
+            template:
+              secret:
+                metadata:
+                  annotations:
+                    replicator.v1.mittwald.de/replicate-to: NAMESPACE
+
+  - it: analytics-kafka KafkaUser is created
+    set: *basicValues
+    documentSelector:
+      path: metadata.name
+      value: namespace-release-name-analytics-main
+    asserts:
+      - equal:
+          path: spec
+          value:
+            authentication:
+              type: tls
+            authorization:
+              acls:
+                - operations:
+                    - Read
+                    - Write
+                    - Describe
+                    - DescribeConfigs
+                  resource:
+                    name: some-analytics-topic
+                    patternType: literal
+                    type: topic
+                - operations:
+                    - Write
+                    - Describe
+                    - DescribeConfigs
+                  resource:
+                    name: some-writeable-topic
+                    patternType: literal
+                    type: topic
+                - operations:
+                    - Write
+                    - Describe
+                  resource:
+                    name: some-transactional-id
+                    patternType: literal
+                    type: transactionalId
+                - operations:
+                    - Read
+                    - Describe
+                  resource:
+                    name: an-analytics-test-consumer-group
+                    patternType: literal
+                    type: group
+              type: simple
+            template:
+              secret:
+                metadata:
+                  annotations:
+                    replicator.v1.mittwald.de/replicate-to: NAMESPACE
+  - it: bad topic names should make the schema check fail
+    set:
+      workloads:
+        main:
+          kafka:
+            clusters:
+              platform:
+                readTopics:
+                  something-$-bad: {}
+                consumerGroup: "hey"
+    asserts:
+      - failedTemplate:
+          errorMessage: "Wrongly specified Kafka ACL resource name in KafkaUser platform-main: something-$-bad does not match the regex: /^[a-z0-9\\.\\-_]+$/"
+
+  - it: if no ACL is defined, we should not produce any KafkaUser
+    set:
+      workloads:
+        main:
+          kafka:
+            clusters:
+              platform:
+                serviceAccount: someServiceAccount
+    asserts:
+      - notEqual:
+          path: kind
+          value: KafkaUser

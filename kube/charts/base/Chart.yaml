@@ -1,0 +1,14 @@
+---
+apiVersion: v2
+name: base
+description: Base chart library supporting templating of all kind of resources with best practices
+type: library
+version: 0.0.0
+kubeVersion: ">=1.22.0-0"
+home: https://github.com/n0rad/base-helm-charts
+sources:
+  - https://github.com/n0rad/base-helm-charts/tree/main/base
+annotations:
+  # remember versions we inherit from
+  source.blablacar.version: 1.250310.2157-Hf8a240ec
+  source.k8s@home.version: 2.5.0

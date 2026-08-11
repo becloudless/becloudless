@@ -1,0 +1,61 @@
+suite: features chartDefaults
+templates:
+  - base.yaml
+values:
+  - ../../tests/overallValues.yaml
+tests:
+  - it: default inferenceService controller
+    set:
+      mainWorkload:
+        type: InferenceService
+        inferenceService:
+          predictor:
+            model:
+              storageUri: whatever
+    documentSelector:
+      path: kind
+      value: InferenceService
+    asserts:
+      - equal:
+          path: metadata.annotations['serving.kserve.io/enable-prometheus-scraping']
+          value: "true"
+
+  - it: default cronjob
+    set:
+      mainWorkload:
+        type: CronJob
+        cronJob:
+          schedule: "* * * * *"
+      chartDefaults:
+        resources:
+          controllers:
+            cronJob:
+              type: CronJob
+              cronJob:
+                concurrencyPolicy: Allow
+    documentSelector:
+      path: kind
+      value: CronJob
+    asserts:
+      - equal:
+          path: spec.concurrencyPolicy
+          value: Allow
+
+  - it: default job
+    set:
+      mainWorkload:
+        type: Job
+      chartDefaults:
+        resources:
+          controllers:
+            job:
+              type: Job
+              job:
+                backoffLimit: 7
+    documentSelector:
+      path: kind
+      value: Job
+    asserts:
+      - equal:
+          path: spec.backoffLimit
+          value: 7

@@ -1,0 +1,155 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: configMap metadata
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default metadata should pass
+    set:
+      resources:
+        configMaps:
+          config:
+            enabled: true
+    documentSelector:
+      path: kind
+      value: ConfigMap
+    asserts:
+      - notExists:
+          path: metadata.annotations
+      - equal:
+          path: metadata.labels
+          value:
+            app: RELEASE-NAME
+            app.kubernetes.io/component: config
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: RELEASE-NAME
+            helm.sh/chart: base-template-0.0.0
+
+  - it: data as object should pass
+    set:
+      resources.configMaps.config:
+            noTemplating: true
+            data:
+              test:
+                something: as object 
+                else: other
+    documentSelector:
+      path: kind
+      value: ConfigMap
+    asserts:
+      - equal:
+          path: data.test
+          value: |-
+            else: other
+            something: as object
+
+  - it: data as string should pass
+    set:
+      resources.configMaps.config:
+            noTemplating: true
+            data:
+              test: |
+                something: as object 
+                else: other
+    documentSelector:
+      path: kind
+      value: ConfigMap
+    asserts:
+      - equal:
+          path: data.test
+          value: |
+            something: as object
+            else: other
+
+  - it: templating should pass
+    set:
+      resources.configMaps.config.data.test: '{{ .Release.Name }}'
+    documentSelector:
+      path: kind
+      value: ConfigMap
+    asserts:
+      - equal:
+          path: data.test
+          value: RELEASE-NAME
+
+  - it: noTemplating should pass
+    set:
+      resources.configMaps.config:
+            noTemplating: true
+            data:
+              test: '{{ .Release.Name }}'
+    documentSelector:
+      path: kind
+      value: ConfigMap
+    asserts:
+      - equal:
+          path: data.test
+          value: '{{ .Release.Name }}'
+
+  - it: custom metadata should pass
+    set:
+      resources:
+        configMaps:
+          config:
+            enabled: true
+            annotations:
+              test_annotation: test
+            labels:
+              test_label: test
+    documentSelector:
+      path: kind
+      value: ConfigMap
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            test_annotation: test
+      - equal:
+          path: metadata.labels
+          value:
+            app: RELEASE-NAME
+            app.kubernetes.io/component: config
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: RELEASE-NAME
+            helm.sh/chart: base-template-0.0.0
+            test_label: test
+
+  - it: custom metadata with global metadata should pass
+    set:
+      global:
+        labels:
+          global_label: test
+        annotations:
+          global_annotation: test
+      resources:
+        configMaps:
+          config:
+            enabled: true
+            annotations:
+              test_annotation: test
+            labels:
+              test_label: test
+    documentSelector:
+      path: kind
+      value: ConfigMap
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            global_annotation: test
+            test_annotation: test
+      - equal:
+          path: metadata.labels
+          value:
+            app: RELEASE-NAME
+            app.kubernetes.io/component: config
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/name: RELEASE-NAME
+            global_label: test
+            helm.sh/chart: base-template-0.0.0
+            test_label: test

@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=../values.schema.json
+
+mainWorkload:
+  type: InferenceService
+  container:
+    image:
+      repository: busybox
+      tag: "1.2"
+    env:
+      # TODO: discuss about this with SRE team. This should probably be datadog features
+      DD_RUNTIME_METRICS_ENABLED: "true"
+      DD_DOGSTATSD_URL: "unix:///var/run/datadog/dsd.socket"
+      DD_REMOTE_CONFIGURATION_ENABLED: "false"
+
+  pod:
+    securityContext:
+      runAsUser: 1000
+
+  inferenceService:
+    predictor:
+      minReplicas: 2
+      maxReplicas: 50
+      scaleTarget: 70
+      scaleMetric: cpu
+      model:
+        storageUri: gs://bucket/prefix
+        protocolVersion: v2
+        modelFormat:
+          name: sklearn
+
+  datadog:
+    tracerAgent:
+      logsInjection:
+        enabled: true
+      enabled: true
+      tracing:
+        enabled: true

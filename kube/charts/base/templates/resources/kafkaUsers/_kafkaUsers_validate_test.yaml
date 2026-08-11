@@ -1,0 +1,174 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: KafkaUser validations
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+
+  - it: KafkaUser requires existing Kafka cluster to be used
+    set:
+      resources.kafkaUsers:
+        first-workload:
+          kafkaCluster: foobar-kafka
+          applicationNamespace: carpool
+          authorization: &basicACLs
+            acls:
+              - operations:
+                  - "Read"
+                  - "Describe"
+                  - "DescribeConfigs"
+                resource:
+                  type: "topic"
+                  name: "some-kafka-topic"
+    asserts:
+      - failedTemplate:
+          errorMessage: "Unsupported Kafka cluster 'foobar-kafka' for KafkaUser first-workload. Supported values are: analytics, gillbus, platform, test."
+
+  - it: KafkaUser requires a list of ACLs
+    set:
+      resources.kafkaUsers:
+        first-workload:
+          kafkaCluster: foobar-kafka
+          applicationNamespace: carpool
+          authorization:
+            acls: "oops, I forgot this block"
+    asserts:
+      - failedTemplate:
+          errorMessage: "Incorrect or missing ACL list definition in KafkaUser first-workload. The parameter block .authorization.acls should be defined and be a list. Please refer to the schema documentation."
+
+  - it: KafkaUser ACLs list elements should be maps
+    set:
+      resources.kafkaUsers:
+        first-workload:
+          kafkaCluster: foobar-kafka
+          applicationNamespace: carpool
+          authorization:
+            acls:
+              - "oops, this is a string"
+    asserts:
+      - failedTemplate:
+          errorMessage: "Incorrect type for ACL rule in KafkaUser first-workload: a string was provided, but a map was expected. Please refer to the schema documentation."
+
+  - it: KafkaUser requires ACLs to be structs, not strings
+    set:
+      resources.kafkaUsers:
+        first-workload:
+          kafkaCluster: foobar-kafka
+          applicationNamespace: carpool
+          authorization:
+            acls:
+              - "oops, wrong type"
+    asserts:
+      - failedTemplate:
+          errorMessage: "Incorrect type for ACL rule in KafkaUser first-workload: a string was provided, but a map was expected. Please refer to the schema documentation."
+
+  - it: KafkaUser requires ACLs rules to have an operations field
+    set:
+      resources.kafkaUsers:
+        first-workload:
+          kafkaCluster: foobar-kafka
+          applicationNamespace: carpool
+          authorization:
+            acls:
+              - resource:
+                  type: cluster
+    asserts:
+      - failedTemplate:
+          errorMessage: "Incorrect or missing 'operations' list in ACL rule in KafkaUser first-workload. The .operations block should be defined in each ACL rule and be a list. Please refer to the schema documentation."
+
+
+  - it: KafkaUser may have only valid ACL rule operations
+    set:
+      resources.kafkaUsers:
+        first-workload:
+          kafkaCluster: platform
+          applicationNamespace: carpool
+          authorization:
+            acls:
+              - operations:
+                  - "der Schloss"
+                resource:
+                  type: "topic"
+                  name: "some-kafka-topic"
+    asserts:
+      - failedTemplate:
+          errorMessage: "Not a valid operation value for KafkaUser first-workload: der Schloss."
+
+  - it: KafkaUser may have only valid ACL rule resources
+    set:
+      resources.kafkaUsers:
+        first-workload:
+          kafkaCluster: platform
+          applicationNamespace: carpool
+          authorization:
+            acls:
+              - operations:
+                  - "Read"
+                resource:
+                  type: "wrong"
+                  name: "some-kafka-topic"
+    asserts:
+      - failedTemplate:
+          errorMessage: "Resource block for ACL rule in KafkaUser first-workload might be missing or is referencing an unsupported resource type: wrong. The only accepted values are: cluster, group, topic."
+
+  - it: KafkaUser ACL rule should specify resource name
+    set:
+      resources.kafkaUsers:
+        first-workload:
+          kafkaCluster: platform
+          applicationNamespace: carpool
+          authorization:
+            acls:
+              - operations:
+                  - "Read"
+                resource:
+                  type: "topic"
+    asserts:
+      - failedTemplate:
+          errorMessage: "Kafka ACL value inconsistency in KafkaUser first-workload: when resource.type is \"group\", \"topic\" or \"transactionalId\", the resource name must also be specified."
+
+  - it: KafkaUser ACL rule resource patternType should be validated
+    set:
+      resources.kafkaUsers:
+        first-workload:
+          kafkaCluster: platform
+          applicationNamespace: carpool
+          authorization:
+            acls:
+              - operations:
+                  - "Read"
+                resource:
+                  type: "topic"
+                  name: "some-kafka-topic"
+                  patternType: "wrongType"
+    asserts:
+      - failedTemplate:
+          errorMessage: "Not a valid patternType value for KafkaUser first-workload: wrongType. The only accepted values are: prefix, literal."
+
+  - it: KafkaUser should specify a KafkaCluster
+    set:
+      resources.kafkaUsers:
+        first-workload:
+          applicationNamespace: carpool
+          authorization: *basicACLs
+    asserts:
+      - failedTemplate:
+          errorMessage: "No Kafka cluster specified for KafkaUser first-workload. Parameter `kafkaCluster` is mandatory."
+
+  - it: KafkaUser should use only rightly named topics
+    set:
+      resources.kafkaUsers:
+        first-workload:
+          applicationNamespace: carpool
+          authorization:
+            acls:
+              - operations:
+                  - "Read"
+                resource:
+                  type: "topic"
+                  name: "some-wrong-kafka-topïc"
+    asserts:
+      - failedTemplate:
+          errorMessage: "Wrongly specified Kafka ACL resource name in KafkaUser first-workload: some-wrong-kafka-topïc does not match the regex: /^[a-z0-9\\.\\-_]+$/"

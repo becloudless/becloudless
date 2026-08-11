@@ -1,0 +1,83 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: ingress values
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: custom host and path should pass
+    set:
+      resources.ingresses.main:
+        enabled: true
+        hosts:
+          - host: chart-test.local
+            paths:
+              - path: /test
+                service:
+                  name: main
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: chart-test.local
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: "/test"
+
+  - it: host with template should pass
+    set:
+      resources.ingresses.main:
+        enabled: true
+        hosts:
+          - host: "{{ .Release.Name }}.hostname"
+            paths: []
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: RELEASE-NAME.hostname
+
+  - it: path with template should pass
+    set:
+      resources.ingresses.main:
+        enabled: true
+        hosts:
+          - host: chart-test.local
+            paths:
+              - path: "/{{ .Release.Name }}.path"
+                service:
+                  name: main
+                  port: 4242
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: "/RELEASE-NAME.path"
+
+  - it: with defaultBackend should pass
+    set:
+      resources.ingresses.main:
+        enabled: true
+        hosts:
+          - host: toto.com
+            paths:
+              - service:
+                  name: main
+                path: /
+        defaultBackend: test
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.defaultBackend
+          value: test
+      - notExists:
+          path: spec.rules

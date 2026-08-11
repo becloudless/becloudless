@@ -1,0 +1,17 @@
+suite: features debug
+templates:
+  - base.yaml
+values:
+  - ../../tests/overallValues.yaml
+tests:
+  - it: debug create dummy
+    set:
+      debug: true
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-debug-base
+    asserts:
+      - isKind:
+          of: Dummy
+      - exists:
+          path: data.values

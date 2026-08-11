@@ -1,0 +1,159 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: controller types
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default should pass
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+      - equal:
+          path: metadata.labels['app.kubernetes.io/component']
+          value: main
+
+  - it: additional controllers should pass
+    set:
+      resources:
+        controllers:
+          main:
+            nameOverride: first
+          second:
+            nameOverride: second
+            containers:
+              main:
+                image:
+                  repository: ghcr.io/mendhak/http-https-echo
+                  tag: 31
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-first
+        equal:
+          path: metadata.labels['app.kubernetes.io/component']
+          value: main
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-second
+        equal:
+          path: metadata.labels['app.kubernetes.io/component']
+          value: second
+
+  - it: additional controllers should have app label
+    set:
+      resources:
+        controllers:
+          main:
+            nameOverride: first
+          second:
+            nameOverride: second
+            containers:
+              main:
+                image:
+                  repository: ghcr.io/mendhak/http-https-echo
+                  tag: 31
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-first
+        equal:
+          path: spec.template.metadata.labels['app']
+          value: RELEASE-NAME
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-second
+        equal:
+          path: spec.template.metadata.labels['app']
+          value: RELEASE-NAME
+
+  - it: additional controllers with nameOverride should pass
+    set:
+      resources:
+        controllers:
+          main:
+            enabled: false
+          second:
+            nameOverride: test-override
+            containers:
+              main:
+                image:
+                  repository: ghcr.io/mendhak/http-https-echo
+                  tag: 31
+    asserts:
+      - documentSelector:
+          path: kind
+          value: Deployment
+        equal:
+          path: metadata.name
+          value: RELEASE-NAME-test-override
+      - documentSelector:
+          path: kind
+          value: Deployment
+        equal:
+          path: metadata.labels['app.kubernetes.io/component']
+          value: second
+
+  - it: daemonSet should pass
+    set:
+      resources.controllers.main.type: DaemonSet
+    documentSelector:
+      path: kind
+      value: DaemonSet
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
+  - it: statefulSet should pass
+    set:
+      resources.controllers.main.type: StatefulSet
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
+  - it: cronjob should pass
+    set:
+      resources.controllers.main:
+        type: CronJob
+        cronJob:
+          schedule: '* * * * *'
+    documentSelector:
+      path: kind
+      value: CronJob
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
+  - it: disabled should pass
+    set:
+      resources.controllers.main.enabled: false
+    asserts:
+      - containsDocument:
+          kind: StatefulSet
+        not: true
+      - containsDocument:
+          kind: DaemonSet
+        not: true
+      - containsDocument:
+          kind: Controller
+        not: true
+      - containsDocument:
+          kind: Cronjob
+        not: true
+      - containsDocument:
+          kind: Job
+        not: true
+      - containsDocument:
+          kind: StatefulSet
+        not: true

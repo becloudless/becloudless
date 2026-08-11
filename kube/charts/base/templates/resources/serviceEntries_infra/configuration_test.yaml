@@ -1,0 +1,92 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: serviceEntries configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: no serviceEntries by default
+    asserts:
+      - containsDocument:
+          kind: ServiceEntry
+        not: true
+
+  - it: serviceEntries can be disabled
+    set:
+      resources.serviceEntries.main.enabled: false
+    asserts:
+      - containsDocument:
+          kind: serviceEntry
+        not: true
+
+  - it: default enabled serviceEntries
+    set:
+      resources.serviceEntries.main.hosts:
+        - toto
+    documentSelector:
+      path: kind
+      value: ServiceEntry
+    asserts:
+      - equal:
+          path: spec.hosts
+          value:
+            - toto
+      - equal:
+          path: metadata.labels.app
+          value: RELEASE-NAME
+
+  - it: enabled serviceEntries
+    set:
+      resources.serviceEntries.main:
+        hosts:
+          - toto
+        exportTo:
+          - .
+        addresses:
+          - titi
+        resolution: NONE
+        ports:
+          - number: 80
+            name: http
+        location: MESH_EXTERNAL
+    documentSelector:
+      path: kind
+      value: ServiceEntry
+    asserts:
+      - equal:
+          path: spec.hosts
+          value:
+           - toto
+      - equal:
+          path: spec.addresses
+          value:
+            - titi
+      - equal:
+          path: spec.location
+          value: MESH_EXTERNAL
+      - equal:
+          path: spec.ports
+          value:
+            - number: 80
+              name: http
+
+  - it: second serviceEntry can be set
+    set:
+      resources.serviceEntries:
+        main:
+          hosts:
+            - toto
+        second:
+          hosts:
+            - titi
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-second
+    asserts:
+      - isKind:
+          of: ServiceEntry
+      - equal:
+          path: spec.hosts
+          value:
+            - titi

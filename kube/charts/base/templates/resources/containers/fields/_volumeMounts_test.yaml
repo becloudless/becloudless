@@ -1,0 +1,320 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: container volumeMounts
+templates:
+  - base.yaml
+values:
+  - ../../../../tests/overallValues.yaml
+tests:
+  - it: default should pass
+    set:
+      resources.controllers.main.volumes:
+        config:
+          type: persistentVolumeClaim
+          name: whatever
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config
+            mountPath: /config
+
+  - it: custom support
+    set:
+      resources.controllers.main.volumes:
+        test:
+          type: custom
+          path: /data
+          volumeSpec:
+            downwardAPI:
+              items:
+                - path: "labels"
+                  fieldRef:
+                    fieldPath: metadata.labels
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: test
+            mountPath: /data
+
+  - it: advanced mount config should pass
+    set:
+      resources:
+        controllers:
+          main:
+            nameOverride: first
+            volumes:
+              global: &global
+                type: configMap
+                name: myConfigMap
+                path: /globalTest
+              data:
+                type: configMap
+                name: myConfigMap
+                containers:
+                  main:
+                    path: /data/config.yaml
+                    readOnly: false
+                    mountPropagation: HostToContainer
+                    subPath: config.yaml
+                  second-container:
+                    path: /appdata/config
+                    readOnly: true
+            containers:
+              second-container:
+                image:
+                  repository: ghcr.io/mendhak/http-https-echo
+                  tag: 31
+          second:
+            containers:
+              first-container:
+                image:
+                  repository: ghcr.io/mendhak/http-https-echo
+                  tag: 31
+            volumes:
+              global: *global
+              data:
+                type: configMap
+                name: myConfigMap
+                containers:
+                  first-container:
+                    path: /second-pod/config.yaml
+                    readOnly: false
+                    subPath: config.yaml
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-first
+        contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /globalTest
+            name: global
+
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-first
+        contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /data/config.yaml
+            name: data
+            subPath: config.yaml
+            mountPropagation: HostToContainer
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-first
+        contains:
+          path: spec.template.spec.containers[1].volumeMounts
+          content:
+            mountPath: /globalTest
+            name: global
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-first
+        contains:
+          path: spec.template.spec.containers[1].volumeMounts
+          content:
+            mountPath: /appdata/config
+            name: data
+            readOnly: true
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-second
+        contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /globalTest
+            name: global
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-second
+        contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /second-pod/config.yaml
+            name: data
+            subPath: config.yaml
+
+  - it: emptyDir should pass
+    set:
+      resources.controllers.main.volumes:
+        cache:
+          type: emptyDir
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: cache
+            mountPath: /cache
+
+  - it: custom mountPath should pass
+    set:
+      resources.controllers.main.volumes:
+        config:
+          type: persistentVolumeClaim
+          name: test
+          path: /custom
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config
+            mountPath: /custom
+
+  - it: mount with subPath should pass
+    set:
+      resources.controllers.main.volumes:
+        config:
+          type: configMap
+          name: myClaim
+          path: /config
+          subPath: "mySubPath"
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config
+            mountPath: /config
+            subPath: mySubPath
+
+  - it: hostPath with custom mountPath should pass
+    set:
+      resources.controllers.main.volumes:
+        config:
+          type: hostPath
+          hostPath: /host-data
+          path: /data
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config
+            mountPath: /data
+
+  - it: hostPath mount with subPath should pass
+    set:
+      resources.controllers.main.volumes:
+        config:
+          type: hostPath
+          hostPath: /dev
+          subPath: mySubPath
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config
+            mountPath: /dev
+            subPath: mySubPath
+
+  - it: volumeClaimTemplates with default mounts should pass
+    set:
+      resources.controllers.main:
+        type: StatefulSet
+        volumes:
+          storage:
+            type: volumeClaim
+        statefulSet:
+          volumeClaimTemplates:
+            - name: "storage"
+              accessMode: "ReadWriteOnce"
+              size: "10Gi"
+              storageClass: "storage"
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: storage
+            mountPath: /storage
+
+  - it: volumeClaimTemplates with specific path should pass
+    set:
+      resources.controllers.main:
+        type: StatefulSet
+        volumes:
+          storage:
+            type: volumeClaim
+            path: /tmp/storage
+        statefulSet:
+          volumeClaimTemplates:
+            - name: "storage"
+              accessMode: "ReadWriteOnce"
+              size: "10Gi"
+              storageClass: "storage"
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: storage
+            mountPath: /tmp/storage
+
+  - it: volumeClaimTemplates with advancedMounts should pass
+    set:
+      resources.controllers.main:
+        type: StatefulSet
+        volumes:
+          storage:
+            type: persistentVolumeClaim
+            name: storage
+            containers:
+              second-container:
+                path: /tmp/storage
+          storage2:
+            type: persistentVolumeClaim
+            name: storage
+            containers:
+              second-container:
+                path: /tmp/secondMountPoint
+        statefulSet:
+          volumeClaimTemplates:
+            - name: "storage"
+              accessMode: "ReadWriteOnce"
+              size: "10Gi"
+              storageClass: "storage"
+        containers:
+          second-container:
+            image:
+              repository: ghcr.io/mendhak/http-https-echo
+              tag: 31
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].volumeMounts
+          content:
+            name: storage
+            mountPath: /tmp/storage
+      - contains:
+          path: spec.template.spec.containers[1].volumeMounts
+          content:
+            name: storage2
+            mountPath: /tmp/secondMountPoint

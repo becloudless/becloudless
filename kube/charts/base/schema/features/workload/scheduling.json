@@ -1,0 +1,35 @@
+{
+  "description": "Setup scheduling properties (affinity, topologySpreadConstraints, tolerations) based on right sizing best practices",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "enabled": {
+      "$ref": "../../lib/utils.json#/enabled"
+    },
+    "podSpreadingForHA": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "$ref": "../../lib/utils.json#/enabled"
+        },
+        "hostnameMaxSkew": {
+          "description": "MaxSkew describes the degree to which pods may be unevenly distributed; applies to the kubernetes.io/hostname topology key",
+          "type": "integer",
+          "default": 2
+        }
+      }
+    },
+    "nodepool": {
+      "type": "string",
+      "title": "On which nodepool type the pod should be put on",
+      "description": "Note this could be replaced in the future by an application usage description instead.",
+      "enum": [
+        "volatile",
+        "bursty",
+        "common"
+      ],
+      "default": "volatile"
+    }
+  }
+}

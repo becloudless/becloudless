@@ -1,0 +1,110 @@
+{
+  "type": "object",
+  "title": "trigger e2e tests after each HR change being deployed successfully",
+  "description": "Configuration for end-to-end tests. See https://blablacar.atlassian.net/wiki/spaces/QA/pages/2917498967/Deployment+to+E2E+tests+jobs+configuration+format for more details",
+  "required": ["testSuite"],
+  "additionalProperties": false,
+  "properties": {
+    "enabled": {
+      "$ref": "../lib/utils.json#/enabled",
+      "default": false
+    },
+    "helmRelease": {
+      "title": "Name of the helmRelease to watch",
+      "description": "This is optional as soon as it's current helmRelease",
+      "type": "string",
+      "default": "'{{ include \"base.lib.chart.names.fullname\" . }}'"
+    },
+    "version": {
+      "title": "Version of the release",
+      "description": "This is automatically filled as soon as it's current helmRelease",
+      "type": "string",
+      "default": "'{{ .Values.resources.controllers.main.containers.main.image.tag }}'"
+    },
+    "defaultSlackChannel": {
+      "description": "(Optionnal) Default slack channel that should be notified about testSuite results",
+      "type": "string",
+      "pattern": "^#[a-z0-9-_]{3}.*"
+    },
+    "testSuite": {
+      "description": "Test suite list (at least one test is mandatory)",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "required": ["tags"],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "description": "Type of the test",
+            "type": "string",
+            "enum": [
+              "one-app",
+              "bus-aggregation-office",
+              "bus-aggregation-engine"
+            ],
+            "default": "one-app"
+          },
+          "project": {
+            "description": "Name of the playwright project",
+            "type": "string"
+          },
+          "tags": {
+            "description": "List of tags used to filter tests",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "slackChannel": {
+            "description": "Slack channel that should be notified about test results",
+            "type": "string",
+            "pattern": "^#[a-z0-9-_]{3}.*"
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "defaultSlackChannel": {
+            "type": "null"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "testSuite": {
+            "items": {
+              "required": ["slackChannel"]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "testSuite": {
+            "items": {
+              "properties": {
+                "type": { "const": "one-app" }
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "testSuite": {
+            "items": {
+              "required": ["project"]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

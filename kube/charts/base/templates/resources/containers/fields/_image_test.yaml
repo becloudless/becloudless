@@ -1,0 +1,46 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: container image tag
+templates:
+  - base.yaml
+values:
+  - ../../../../tests/overallValues.yaml
+tests:
+  - it: string tag should pass
+    set:
+      resources.controllers.main.containers.main.image:
+        repository: ghcr.io/mendhak/http-https-echo
+        tag: latest
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/mendhak/http-https-echo:latest
+
+  - it: integer tag should pass
+    set:
+      resources.controllers.main.containers.main.image:
+        repository: ghcr.io/mendhak/http-https-echo
+        tag: 1.23
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/mendhak/http-https-echo:1.23
+
+  - it: template tag should pass
+    set:
+      resources.controllers.main.containers.main.image:
+        repository: ghcr.io/mendhak/http-https-echo
+        tag: "{{.Chart.Version}}"
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/mendhak/http-https-echo:0.0.0

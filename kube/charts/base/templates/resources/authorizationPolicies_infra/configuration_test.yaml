@@ -1,0 +1,86 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: authorizationPolicy configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: no authorizationPolicy by default
+    asserts:
+      - containsDocument:
+          kind: AuthorizationPolicy
+        not: true
+
+  - it: authorizationPolicy can be disabled
+    set:
+      resources.authorizationPolicies.main.enabled: false
+    asserts:
+      - containsDocument:
+          kind: AuthorizationPolicy
+        not: true
+
+  - it: default enabled authorizationPolicy
+    set:
+      resources.authorizationPolicies.main:
+        action: DENY
+        workloadLabels:
+          app: test
+        rules:
+        - to:
+          - operation:
+              paths: ["/headers"]
+    documentSelector:
+      path: kind
+      value: AuthorizationPolicy
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+      - equal:
+          path: spec.action
+          value: DENY
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: test
+      - equal:
+          path: spec.rules[0].to[0].operation.paths[0]
+          value: "/headers"
+      - equal:
+          path: metadata.labels.app
+          value: RELEASE-NAME
+
+  - it: second authorizationPolicy can be set
+    set:
+      resources.authorizationPolicies:
+        main:
+          action: DENY
+          workloadLabels:
+            app: test
+          rules:
+          - to:
+            - operation:
+                paths: ["/headers"]
+        second:
+          action: DENY
+          workloadLabels:
+            app: test2
+          rules:
+          - to:
+            - operation:
+                paths: ["/headers2"]
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-second
+    asserts:
+      - isKind:
+          of: AuthorizationPolicy
+      - equal:
+          path: spec.action
+          value: DENY
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: test2
+      - equal:
+          path: spec.rules[0].to[0].operation.paths[0]
+          value: "/headers2"

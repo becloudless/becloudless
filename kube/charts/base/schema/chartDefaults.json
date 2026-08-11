@@ -1,0 +1,100 @@
+{
+  "type": "object",
+  "title": "Configure default behavior of the chart when a new resource or a feature is enabled",
+  "additionalProperties": false,
+  "properties": {
+    "e2eTests": {
+      "$ref": "features/e2eTests.json"
+    },
+    "workload": {
+      "$ref": "features/workload.json"
+    },
+    "resources": {
+      "additionalProperties": false,
+      "properties": {
+        "controllers": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "inferenceService": {
+              "title": "inference-service controller's defaults",
+              "$ref": "resources/controllers.json#/instance"
+            },
+            "cronJob": {
+              "title": "cronJob controller's defaults",
+              "$ref": "resources/controllers.json#/instance"
+            },
+            "job": {
+              "title": "job controller's defaults",
+              "$ref": "resources/controllers.json#/instance"
+            },
+            "deployment": {
+              "title": "deployment controller's defaults",
+              "$ref": "resources/controllers.json#/instance"
+            },
+            "statefulSet": {
+              "title": "statefulSet controller's defaults",
+              "$ref": "resources/controllers.json#/instance"
+            },
+            "daemonSet": {
+              "title": "daemonSet controller's defaults",
+              "$ref": "resources/controllers.json#/instance"
+            }
+          }
+        },
+        "container": {
+          "$ref": "resources/containers.json#/container"
+        },
+        "controller": {
+          "title": "all controller's defaults",
+          "$ref": "resources/controllers.json#/instance"
+        },
+        "podDisruptionBudget": {
+          "$ref": "resources/podDisruptionBudgets.json#/ResourceInstance"
+        },
+        "horizontalPodAutoscaler": {
+          "$ref": "resources/horizontalPodAutoscalers.json#/ResourceInstance"
+        },
+        "service": {
+          "$ref": "resources/services.json#/ResourceInstance"
+        },
+        "imagePolicy": {
+          "$ref": "resources/imagePolicies.json#/instance"
+        },
+        "imageRepository": {
+          "$ref": "resources/imageRepositories.json#/instance"
+        },
+        "persistentVolumeClaim": {
+          "$ref": "resources/persistentVolumeClaims.json#/instance"
+        },
+        "persistentVolume": {
+          "$ref": "resources/persistentVolumes.json#/instance"
+        },
+        "networkPolicy": {
+          "$ref": "resources/networkPolicies.json#/instance"
+        },
+        "envoyFilter": {
+          "$ref": "resources/envoyFilters.json#/instance"
+        },
+        "authorizationPolicy": {
+          "$ref": "resources/authorizationPolicies.json#/instance"
+        },
+        "telemetry": {
+          "$ref": "resources/telemetries.json#/instance"
+        },
+        "serviceEntry": {
+          "$ref": "resources/serviceEntries.json#/instance"
+        },
+        "destinationRule": {
+          "$ref": "resources/destinationRules.json#/instance"
+        },
+        "virtualService": {
+          "$ref": "resources/virtualServices.json#/instance"
+        },
+        "sidecar": {
+          "$ref": "resources/virtualServices.json#/instance"
+        }
+      }
+    }
+  }
+}

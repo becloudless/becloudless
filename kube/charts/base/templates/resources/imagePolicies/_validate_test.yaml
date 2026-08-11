@@ -1,0 +1,21 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: imagePolicy validations
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: imagePolicy requires imageRepository reference
+    set:
+      resources.imagePolicies.main.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: "imageRepository is required for imagePolicy. (imagePolicy: main)"
+
+  - it: imagePolicy requires real controller reference
+    set:
+      resources.imagePolicies.main.imageRepository: main42
+    asserts:
+      - failedTemplate:
+          errorMessage: "imageRepository is required for imagePolicy. (imagePolicy: main)"

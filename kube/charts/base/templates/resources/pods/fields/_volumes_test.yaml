@@ -1,0 +1,251 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: pod volumes
+templates:
+  - base.yaml
+values:
+  - ../../../../tests/overallValues.yaml
+tests:
+  - it: type is mandatory
+    set:
+      resources.controllers.main.volumes:
+        config:
+          enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: "volume type is mandatory. (controller: main, volume: config)"
+
+  - it: type must be valid
+    set:
+      resources.controllers.main.volumes:
+        config:
+          enabled: true
+          type: yopla
+    asserts:
+      - failedTemplate:
+          errorMessage: "Not a valid volume type. (controller: main, volume: config)"
+
+  - it: container must exists
+    set:
+      resources.controllers.main.volumes:
+        config:
+          enabled: true
+          type: configMap
+          name: config
+          containers:
+            no-exists: yopla
+    asserts:
+      - failedTemplate:
+          errorMessage: "volume specific container configuration point to a non existing container. (controller: main, volume: config, container: no-exists)"
+
+  - it: default should pass
+    set:
+      resources.controllers.main.volumes:
+        config:
+          type: persistentVolumeClaim
+          name: whatever
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0]
+          value:
+            name: config
+            persistentVolumeClaim:
+              claimName: whatever
+
+  - it: disabled resource
+    set:
+      resources.persistentVolumeClaims.test.enabled: false
+      resources.controllers.main.volumes:
+        config:
+          type: persistentVolumeClaim
+          name_resource: test
+    asserts:
+      - failedTemplate:
+          errorMessage: resource is disabled persistentVolumeClaims.test
+
+  - it: volume for init container
+    set:
+      resources.controllers.main:
+        initContainers:
+          yopla:
+            image:
+              repository: whatever
+              tag: 42
+        volumes:
+          config:
+            type: persistentVolumeClaim
+            name: whatever
+            containers:
+              yopla: {}
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].volumeMounts[0]
+          value:
+            mountPath: /config
+            name: config
+
+  - it: advanced mount config should pass
+    set:
+      resources:
+        controllers:
+          main:
+            nameOverride: first
+            volumes:
+              data:
+                type: configMap
+                name: myConfigMap
+                path: /globalTest
+                containers:
+                  main:
+                    path: /data/config.yaml
+                    readOnly: false
+                    subPath: config.yaml
+              config:
+                type: persistentVolumeClaim
+                name: test
+                readOnly: false
+                containers:
+                  main: {}
+
+          second:
+            nameOverride: second
+            containers:
+              first-container:
+                image:
+                  repository: ghcr.io/mendhak/http-https-echo
+                  tag: 31
+            volumes:
+              config:
+                type: configMap
+                name: myConfigMap
+                path: /second-pod/config.yaml
+                subPath: config.yaml
+
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-first
+        equal:
+          path: spec.template.spec.volumes
+          value:
+            - name: config
+              persistentVolumeClaim:
+                claimName: test
+            - configMap:
+                name: myConfigMap
+              name: data
+            - emptyDir: {}
+              name: tmp
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-second
+        equal:
+          path: spec.template.spec.volumes
+          value:
+            - configMap:
+                name: myConfigMap
+              name: config
+
+  - it: volume for downwardAPI
+    set:
+      resources.controllers.main:
+        containers:
+          main:
+            image:
+              repository: whatever
+              tag: 42
+        volumes:
+          podinfo:
+            type: downwardAPI
+            path: /etc/podinfo
+            fieldRefPaths:
+              labels: metadata.labels
+              annotations: metadata.annotations
+            containers:
+              main: {}
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0]
+          value:
+            mountPath: /etc/podinfo
+            name: podinfo
+      - equal:
+          path: spec.template.spec.volumes[0]
+          value:
+            name: podinfo
+            downwardAPI:
+              items:
+                - fieldRef:
+                    fieldPath: metadata.annotations
+                  path: annotations
+                - fieldRef:
+                    fieldPath: metadata.labels
+                  path: labels
+
+  - it: custom volume with go templating
+    set:
+      resources.controllers.main:
+        containers:
+          main:
+            image:
+              repository: whatever
+              tag: 42
+        volumes:
+          podinfo:
+            type: custom
+            path: /etc/podinfo
+            volumeSpec:
+              secret:
+                secretName: "{{ .Release.Name }}-secrets"
+                items:
+                - key: TEST
+                  path: test.json
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0]
+          value:
+            name: podinfo
+            secret:
+              items:
+                - key: TEST
+                  path: test.json
+              secretName: RELEASE-NAME-secrets
+
+  - it: volumeClaim should not create a volume
+    set:
+      resources:
+        controllers:
+          main:
+            nameOverride: first
+            volumes:
+              test:
+                type: volumeClaim
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-first
+        equal:
+          path: spec.template.spec.volumes
+          value:
+            - emptyDir: {}
+              name: tmp
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-first
+        equal:
+          path: spec.template.spec.containers[0].volumeMounts[0]
+          value:
+            mountPath: /test
+            name: test

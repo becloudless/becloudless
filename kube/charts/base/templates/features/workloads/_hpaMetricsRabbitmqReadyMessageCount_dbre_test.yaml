@@ -1,0 +1,87 @@
+suite: workloads hpa metrics rabbitmqReadyMessagesCount
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: rabbitmqReadyMessagesCount with defaults
+    set:
+      kubeClusterName: preprod-1
+      mainWorkload.hpa.metrics.rabbitmqReadyMessagesCount:
+        queueName: toto
+    asserts:
+      - documentSelector:
+          path: kind
+          value: HorizontalPodAutoscaler
+        equal:
+          path: spec.metrics
+          value:
+            - resource:
+                name: cpu
+                target:
+                  averageUtilization: 70
+                  type: Utilization
+              type: Resource
+            - type: External
+              external:
+                metric:
+                  name: datadogmetric@NAMESPACE:RELEASE-NAME-rabbitmqreadymessagescount
+                target:
+                  type: Value
+                  value: 5
+      - documentSelector:
+          path: kind
+          value: DatadogMetric
+        equal:
+          path: metadata.name
+          value: RELEASE-NAME-rabbitmqreadymessagescount
+      - documentSelector:
+          path: kind
+          value: DatadogMetric
+        equal:
+          path: spec.query
+          value: avg:rabbitmq.queue.messages_ready{env:preprod,rabbitmq_vhost:*,rabbitmq_queue:toto}.rollup(5)
+
+  - it: rabbitmqReadyMessagesCount with vhost
+    set:
+      kubeClusterName: preprod-1
+      mainWorkload.hpa.metrics.rabbitmqReadyMessagesCount:
+        queueName: toto
+        vhost: there
+    documentSelector:
+      path: kind
+      value: DatadogMetric
+    asserts:
+      - equal:
+          path: spec.query
+          value: avg:rabbitmq.queue.messages_ready{env:preprod,rabbitmq_vhost:there,rabbitmq_queue:toto}.rollup(5)
+
+  - it: rabbitmqReadyMessagesCount with target
+    set:
+      kubeClusterName: preprod-1
+      mainWorkload.hpa.metrics.cpu.enabled: false
+      mainWorkload.hpa.metrics.rabbitmqReadyMessagesCount:
+        queueName: toto
+        target: 42
+    documentSelector:
+      path: kind
+      value: HorizontalPodAutoscaler
+    asserts:
+      - equal:
+          path: spec.metrics
+          value:
+            - type: External
+              external:
+                metric:
+                  name: datadogmetric@NAMESPACE:RELEASE-NAME-rabbitmqreadymessagescount
+                target:
+                  type: Value
+                  value: 42
+
+
+  - it: queueName is required
+    set:
+      mainWorkload.hpa.metrics.rabbitmqReadyMessagesCount.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: "queueName is mandatory for HPA metric. (workload: main, metric: rabbitmqReadyMessagesCount)"

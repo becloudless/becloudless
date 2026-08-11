@@ -1,0 +1,51 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: persistentVolumeClaims values
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default enabled should pass
+    set:
+      resources.persistentVolumeClaims.test:
+        enabled: true
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-test
+      - equal:
+          path: spec.resources.requests.storage
+          value: 1Gi
+      - equal:
+          path: spec.accessModes
+          value:
+            - ReadWriteOnce
+
+  - it: explicit enabled should pass
+    set:
+      resources.persistentVolumeClaims.test:
+        accessMode: ReadWriteMany
+        size: 10Gi
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - equal:
+          path: spec.resources.requests.storage
+          value: 10Gi
+      - equal:
+          path: spec.accessModes
+          value:
+            - ReadWriteMany
+
+  - it: explicit disabled
+    set:
+      resources.persistentVolumeClaims.test.enabled: false
+    asserts:
+      - containsDocument:
+          kind: PersistentVolumeClaim
+        not: true

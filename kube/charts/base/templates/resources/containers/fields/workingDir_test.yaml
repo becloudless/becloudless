@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: container workingDir override
+templates:
+  - base.yaml
+values:
+  - ../../../../tests/overallValues.yaml
+tests:
+  - it: default should pass
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - documentIndex: 0
+        notExists:
+          path: spec.template.spec.containers[0].workingDir
+
+  - it: string should pass
+    set:
+      resources.controllers.main.containers.main.workingDir: /work
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].workingDir
+          value: /work
+
+  - it: quoted string should pass
+    set:
+      resources.controllers.main.containers.main.workingDir: "/work"
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].workingDir
+          value: /work

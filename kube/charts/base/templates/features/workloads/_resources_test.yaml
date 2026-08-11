@@ -1,0 +1,70 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: workloads resources
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: No resources is ok
+    set:
+      mainWorkload:
+        type: CronJob
+        cronJob:
+          schedule: "0 7 * * *"
+        serviceAccount:
+          enabled: false
+    documentSelector:
+      path: kind
+      value: CronJob
+    asserts:
+      - isNull:
+          path: spec.jobTemplate.spec.template.spec.serviceAccountName
+
+  - it: container port different than service port
+    set:
+      mainWorkload.service.ports.http:
+        port: 80
+        targetPort: 8080
+    asserts:
+    - documentSelector:
+        path: kind
+        value: Deployment
+      equal:
+          path: spec.template.spec.containers[0].ports[0].containerPort
+          value: 8080
+    - documentSelector:
+        path: kind
+        value: Service
+      equal:
+        path: spec.ports[0].targetPort
+        value: 8080
+    - documentSelector:
+        path: kind
+        value: Service
+      equal:
+        path: spec.ports[0].port
+        value: 80
+
+  - it: container port equal service port
+    set:
+      mainWorkload.service.ports.http.port: 80
+    asserts:
+      - documentSelector:
+          path: kind
+          value: Deployment
+        equal:
+          path: spec.template.spec.containers[0].ports[0].containerPort
+          value: 80
+      - documentSelector:
+          path: kind
+          value: Service
+        equal:
+          path: spec.ports[0].targetPort
+          value: 80
+      - documentSelector:
+          path: kind
+          value: Service
+        equal:
+          path: spec.ports[0].port
+          value: 80

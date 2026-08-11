@@ -1,0 +1,14 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: provider validations
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: provider requires type reference
+    set:
+      resources.providers.main.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: "type field is required for provider. (provider: main)"

@@ -1,0 +1,309 @@
+# yaml-language-server: $schema=values-default.schema.json
+
+checkRequiredValues: true
+
+global:
+  labels:
+    app: "{{ .Release.Name }}" # This is legacy and set for retro-compatibility only. Rely on `app.kubernetes.io/*` instead
+  legacyLabelSelector: false # This is legacy and set for retro-compatibility only to use the app label for workloads selector (to avoid downtime). Rely on `app.kubernetes.io/*` instead
+
+resources: {}
+
+# Configure the main workload. This is the global entrypoint for most configuration use case.
+# This is a shortcut to workloads.main:
+mainWorkload: {}
+
+workloads: {}
+
+# configure default behavior of the chart when a new resource or a feature is enabled
+chartDefaults:
+  e2eTests:
+    helmRelease: '{{ include "base.lib.chart.names.fullname" . }}' # the HR we want to watch. Current HR by default
+    version: '{{ .Values.resources.controllers.main.containers.main.image.tag }}' # the version of the application
+    testSuite: [""]
+
+  workload:
+    # the kind of controller this workload will create
+    # this is a shortcut to .resources.controllers.{{workloadId}}.type
+    type: Deployment
+
+    # configure a PodDisruptionBudget for the workload
+    # this is a shortcut to .resources.podDisruptionBudgets.{{workloadId}}:
+    pdb:
+      enabled: true
+
+    # configure an HorizontalPodAutoscaler for the workload
+    # this is a shortcut to .resources.horizontalPodAutoscalers.{{workloadId}}:
+    hpa:
+      enabled: true
+
+    # configuration of the main container of the workload
+    # this is a shortcut to .resources.controllers.{{workloadId}}.contrainers.main
+    container:
+      # We want the container declared in workload to be first in the list, if another one is set manually on the controller
+      order: 1
+      # By default the tag is retrieved from the appVersion metadata in the Chart.yaml
+      image:
+        tag: '{{ .Chart.AppVersion }}'
+
+    # configure a Service for the workload
+    # this is a shortcut to .resources.services.{{workloadId}}:
+    service:
+      enabled: true
+      primary: true
+
+    serviceAccount:
+      enabled: true
+
+    istio:
+      enabled: false
+      proxyResources:
+        requests:
+          cpu: 100m
+          memory: 200Mi
+        limits:
+          cpu: "1"
+          memory: 1Gi
+
+      blockUndefinedDependencies: true
+
+      dependencies:
+        istio-system/metadata.google.internal: {}
+        istio-system/metadata.google.internal.: {}
+
+    scheduling:
+      enabled: true
+      podSpreadingForHA:
+        enabled: true
+        hostnameMaxSkew: 2
+      nodepool: volatile
+
+    datadog:
+      enabled: false
+      #use it for jmx + tracing + dogstatsd if there features are enabled
+      unixSocket:
+        enabled: true #  If true : mount volume unix socket + add ref to unix socket +  If false to the hostIP as datadog is a daemonset  valueFrom.fieldRef.fieldPath: status.hostIP
+      unifiedTagging:
+        enabled: true # annotation in all cases + env service version if tracing or dogstatsd enabled
+      logConfig:
+        enabled: false #not needed as default json logs
+        source: "" #put java for common java as it still parse some stuff for dashboards
+      checks:
+        enabled: false
+        openmetrics:
+          enabled: false
+          path: "/metrics" # the path to scrape should be /actuator/prometheus in java.
+          collect_counters_with_distributions: true # get distribution type from prometheus histogram
+          max_returned_metrics: 20000 # recommended value with distribution (per pod)
+#         instances:
+#           instance1: # arbitral id that must be unique in order to merge the instances correctly. Not used to configure the openmetrics instance.
+#             namespace: "" #  string to prefix the name of the metric
+#             metrics: ["metricA", "metricsB"] # the list of metrics whitelist
+#             path: "/actuator/prometheus" # the path to scrape should be /actuator/prometheus in java.
+#             port: 8080 # Port to scrape
+#             max_returned_metrics: 20000 # recommended value with distribution (per pod)
+
+      tracerAgent:
+        enabled: false # switch to true with base-java as we have the agent is part of the base java Docker image
+        # Automatic MDC key injection of Trace and Spans
+        logsInjection:
+          enabled: true
+        profiling:
+          enabled: false #for cost purpose disabled by default enabled it if you need it
+        # Default values for tracing
+        tracing:
+          enabled: true
+          serviceMapping: # for kafka,mysql ... mapping tracing service
+            enabled: true
+            mappedServices:
+              - cassandra
+              - kafka
+              - elasticsearch
+              - mariadb
+              - mysql
+              - redis
+              - rabbitmq
+              - postgresql #java
+              - postgres #python
+              - curl #php
+              - guzzle #php
+              - pdo #php
+              - phpredis #php
+              - oracle # for bus aggregation
+              #- mongodb #java #TODO: confirm the exact name
+          sampleRate: 0.01 #sampling to 1%
+        jmx:
+          enabled: false #jmx is a protocol specific to java
+          tomcat: #tomcat is a jmx integration
+            enabled: false
+        tagQuery: # http headers to trace attribute
+          enabled: false
+          custom: []
+      dogstatsd:
+        enabled: false
+
+    volumes:
+      tmp:
+        # mount a /tmp folder in read-write by default
+        type: emptyDir
+        path: /tmp
+
+  resources:
+
+    controllers:
+      cronJob:
+        type: CronJob
+        cronJob:
+          concurrencyPolicy: Forbid
+          startingDeadlineSeconds: 30
+          successfulJobsHistory: 1
+          failedJobsHistory: 1
+          backoffLimit: 6
+
+      job:
+        type: Job
+        job:
+          backoffLimit: 6
+
+      inferenceService:
+        annotations:
+          serving.kserve.io/enable-prometheus-scraping: "true"
+
+    container:
+      probes:
+        liveness:
+          enabled: true
+          custom: false
+          type: TCP
+          spec:
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+
+        readiness:
+          enabled: true
+          custom: false
+          type: TCP
+          spec:
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+
+        startup:
+          enabled: true
+          custom: false
+          type: TCP
+          spec:
+            initialDelaySeconds: 0
+            timeoutSeconds: 1
+            ## This means it has a maximum of 5*30=150 seconds to start up before it fails
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 30
+
+      # TODO: set something so default is not noisy neighbour
+      resources:
+        {}
+        # limits:
+        #   cpu: 100m
+        #   memory: 128Mi
+        # requests:
+        #   cpu: 100m
+        #   memory: 128Mi
+
+      securityContext:
+        # default do not allow to escalate privilege
+        allowPrivilegeEscalation: false
+        # if you need a RW folder for temporary files, please create an empty volume instead of switching to false
+        readOnlyRootFilesystem: true
+
+    controller:
+      type: Deployment
+      strategy: RollingUpdate
+      rollingUpdate:
+        # do not decrease the nb of replica during a deployment, to keep enough capacity to serve traffic
+        maxUnavailable: 0
+        # This maxSurge value has been choosen as a tradeoff between:
+        # - too high value (that would create too many cold pods at the same time, and require too much capacity on the nodepool)
+        # - too small value (which would lead to a too-long duration for the deployment of each new version)
+        # NB: using a percentage scales better than a fixed number of pods when app has a lot of pods (it avoids too long deployment)
+        # The 33% value gives us a rollout behavior similar to "3 batches" (most of the time, or 2 batches sometimes)
+        # Example for a 15 pods app: 1 batch of 5 pods starting at the same time, then another batch of 5, then another of 5.
+        # More infos in: https://github.com/blablacar/helm-charts/pull/2458
+        maxSurge: 33%
+
+      revisionHistoryLimit: 3
+
+      pod:
+        annotations:
+          # we want all pods to be evictable
+          cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+
+        automountServiceAccountToken: true
+        enableServiceLinks: true
+
+        securityContext:
+          # default is non-root to be secured
+          # this option requires that the docker image has a user defined with numeric ID only (`USER 12345` instruction in the Dockerfile) or k8s will refuse pod's startup
+          runAsNonRoot: true
+
+    podDisruptionBudget:
+      maxUnavailable: 10%
+
+    horizontalPodAutoscaler:
+      minReplicas: 2
+      maxReplicas: 50
+      metrics:
+        cpu:
+          type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: 70
+
+    service:
+      type: ClusterIP
+
+    imagePolicy:
+      semverRange: ^1.x.x-0
+
+    imageRepository:
+      interval: 1m0s
+
+    persistentVolume:
+      accessModes:
+        - ReadWriteOnce
+      size: 1Gi
+
+    persistentVolumeClaim:
+      accessMode: ReadWriteOnce
+      size: 1Gi
+      retain: false
+
+    networkPolicy:
+      rules:
+        # Allows all ingress traffic by default.
+        ingress:
+          - {}
+        # Allows all egress traffic by default.
+        egress:
+          - {}
+
+    sidecar: {}
+    virtualService: {}
+    destinationRule: {}
+    serviceEntry: {}
+    telemetry: {}
+    authorizationPolicy: {}
+    envoyFilter: {}
+
+
+istio:
+  resourceValidation:
+    enabled: true
+    revisionTag: stable

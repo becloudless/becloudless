@@ -1,0 +1,29 @@
+{
+  "instance": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "$ref": "../lib/utils.json#/enabled"
+      },
+      "annotations": {
+        "$ref": "../lib/k8s.json#/Annotations"
+      },
+      "labels": {
+        "$ref": "../lib/k8s.json#/Labels"
+      },
+      "nameOverride": {
+        "$ref": "../lib/utils.json#/nameOverride"
+      },
+
+      "imageRepository": {
+        "type": "string"
+      },
+      "semverRange": {
+        "description": "Semver range used to identify accepted docker images tags. See https://fluxcd.io/flux/components/image/imagepolicies/#semver",
+        "type": "string",
+        "default": "^1.x.x-0"
+      }
+    }
+  }
+}

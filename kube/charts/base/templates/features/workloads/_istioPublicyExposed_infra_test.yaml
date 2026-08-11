@@ -1,0 +1,88 @@
+suite: workloads istio publicyExposed
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default should work
+    set:
+      mainWorkload:
+        istio:
+          publiclyExposed:
+            hosts:
+              - yopla
+    documentSelector:
+      path: kind
+      value: VirtualService
+    asserts:
+      - equal:
+          path: spec.hosts
+          value:
+            - yopla
+      - equal:
+          path: spec.gateways
+          value:
+            - istio-system/istio-ingressgateway-restricted
+      - equal:
+          path: spec.http
+          value:
+            - route:
+                - destination:
+                    host: RELEASE-NAME
+
+  - it: gateway can be public
+    set:
+      mainWorkload:
+        istio:
+          publiclyExposed:
+            gateway: public
+            hosts:
+              - yopla
+    documentSelector:
+      path: kind
+      value: VirtualService
+    asserts:
+      - equal:
+          path: spec.gateways
+          value:
+            - istio-system/istio-ingressgateway-public
+
+  - it: http can be custom
+    set:
+      mainWorkload:
+        istio:
+          publiclyExposed:
+            hosts:
+              - yopla
+            http:
+              - anything
+    documentSelector:
+      path: kind
+      value: VirtualService
+    asserts:
+      - equal:
+          path: spec.http
+          value:
+            - anything
+
+  - it: gateway must be valid
+    set:
+      mainWorkload:
+        istio:
+          publiclyExposed:
+            gateway: XX
+            hosts:
+              - yopla
+    asserts:
+      - failedTemplate:
+          errorMessage: "istio.publiclyExposed.gateway must be one of [restricted public] (workload: main)"
+
+  - it: hosts is mandatory
+    set:
+      mainWorkload:
+        istio:
+          publiclyExposed:
+            gateway: public
+    asserts:
+      - failedTemplate:
+          errorMessage: "hosts field is required for virtualService. (virtualService: main)"

@@ -1,0 +1,129 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: kafkaUser metadata
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: Default metadata should be added to KafkaUser
+    set:
+      resources.kafkaUsers:
+        gillbus-kafka-first-workload:
+          kafkaCluster: gillbus
+          applicationNamespace: gds-services
+          authorization: &basicACLs
+            acls:
+              - operations:
+                  - "DescribeConfigs"
+                resource:
+                  type: "cluster"
+    documentSelector:
+      path: kind
+      value: KafkaUser
+    asserts:
+      - notExists:
+          path: metadata.annotations
+      - equal:
+          path: metadata.labels["strimzi.io/cluster"]
+          value: gillbus-kafka
+      - equal:
+          path: metadata.namespace
+          value: dbre
+      - equal:
+          path: metadata.name
+          value: "gds-services-release-name-gillbus-kafka-first-workload"
+
+  - it: KafkaUser name should be customized
+    set:
+      resources.kafkaUsers:
+        platform-kafka-test-kafka-user:
+          nameOverride: my-custom-identifier
+          kafkaCluster: platform
+          authorization: *basicACLs
+    documentSelector:
+      path: kind
+      value: KafkaUser
+    asserts:
+      - equal:
+          path: metadata.name
+          value: "platform-release-name-my-custom-identifier"
+
+  - it: Custom metadata should be added to KafkaUser, Kafka cluster should change
+    set:
+      resources.kafkaUsers:
+        platform-kafka-test-kafka-user:
+          annotations:
+            my_annotation: one
+          labels:
+            my_label: two
+          kafkaCluster: platform
+          applicationNamespace: dbre
+          authorization: *basicACLs
+    documentSelector:
+      path: kind
+      value: KafkaUser
+    asserts:
+      - equal:
+          path: metadata.annotations.my_annotation
+          value: one
+      - equal:
+          path: metadata.labels["strimzi.io/cluster"]
+          value: platform-kafka
+      - equal:
+          path: metadata.labels.my_label
+          value: two
+      - equal:
+          path: metadata.namespace
+          value: platform
+      - equal:
+          path: metadata.name
+          value: "dbre-release-name-platform-kafka-test-kafka-user"
+
+
+  - it: custom metadata with global metadata should pass
+    set:
+      global:
+        annotations:
+          global_annotation: global_one
+        labels:
+          global_label: global_two
+      resources:
+        kafkaUsers:
+          test-kafka-user:
+            annotations:
+              my_annotation: one
+            labels:
+              my_label: two
+            kafkaCluster: platform
+            applicationNamespace: dbre
+            authorization: *basicACLs
+    documentSelector:
+      path: kind
+      value: KafkaUser
+    asserts:
+      - equal:
+          path: metadata.labels["strimzi.io/cluster"]
+          value: platform-kafka
+      - equal:
+          path: metadata.annotations.my_annotation
+          value: one
+      - equal:
+          path: metadata.labels.my_label
+          value: two
+      - equal:
+          path: metadata.annotations.global_annotation
+          value: global_one
+      - equal:
+          path: metadata.labels.global_label
+          value: global_two
+
+  - it: KafkaUser name cannot exceed 64 characters
+    set:
+      resources.kafkaUsers:
+        platform-kafka-test-kafka-user-with-a-very-very-long-name:
+          kafkaCluster: platform
+          applicationNamespace: dbre
+    asserts:
+      - failedTemplate:
+          errorMessage: "Error: KafkaUser name exceeds the length limit: 'dbre-release-name-platform-kafka-test-kafka-user-with-a-very-very-long-name' has length 75, but it should be at most 64."

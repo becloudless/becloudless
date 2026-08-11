@@ -1,0 +1,47 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: volumes hostpath
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: hostPath should pass
+    set:
+      resources.controllers.main.volumes:
+        hostpathmounts-data:
+          type: hostPath
+          path: /data
+          hostPath: "/tmp1"
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: hostpathmounts-data
+            hostPath:
+              path: /tmp1
+
+  - it: hostPath with type should pass
+    set:
+      resources.controllers.main.volumes:
+        hostpathmounts-with-type:
+          type: hostPath
+          hostPath: "/tmp2"
+          hostPathType: "Directory"
+          containers:
+            main:
+              path: /data2
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: hostpathmounts-with-type
+            hostPath:
+              path: /tmp2
+              type: Directory

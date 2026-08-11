@@ -1,0 +1,253 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: features workloads
+templates:
+  - base.yaml
+values:
+  - ../../tests/overallValues.yaml
+tests:
+  - it: no workload creates no resources by default
+    set:
+      workloads.main.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: Default values are applied on workload
+    asserts:
+      - containsDocument:
+          kind: Deployment
+          apiVersion: "apps/v1"
+          any: true
+      - containsDocument:
+          kind: PodDisruptionBudget
+          apiVersion: "policy/v1"
+          any: true
+      - containsDocument:
+          kind: HorizontalPodAutoscaler
+          apiVersion: "autoscaling/v2"
+          any: true
+  - it: appVersion is rendered in main controllers
+    chart:
+      appVersion: 1.1.1
+    set:
+      workloads.main.container.image:
+        repository: ghcr.io/mendhak/http-https-echo
+        tag: '{{ .Chart.AppVersion }}'
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: 'ghcr.io/mendhak/http-https-echo:1.1.1'
+  - it: can set controller stuff
+    set:
+      workloads.main:
+        labels:
+          toto: titi
+        annotations:
+          tata: ouda
+        pod:
+          annotations:
+            yopla: boom
+        volumes:
+          test:
+            type: configMap
+            name: myConfig
+        replicas: 42
+        strategy: Recreate
+        container:
+          image:
+            repository: ouda
+            tag: 43
+        initContainer:
+          image:
+            repository: genre
+            tag: 42
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: metadata.labels.toto
+          value: titi
+      - equal:
+          path: metadata.annotations.tata
+          value: ouda
+      - equal:
+          path: spec.template.metadata.annotations.yopla
+          value: boom
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            configMap:
+              name: myConfig
+            name: test
+      - equal:
+          path: spec.replicas
+          value: 42
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ouda:43
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: main
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: genre:42
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: init
+
+  - it: can set rollingUpdate
+    set:
+      workloads.main:
+        rollingUpdate:
+          maxSurge: 42%
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.strategy.rollingUpdate.maxSurge
+          value: 42%
+
+  - it: can set cronjob
+    set:
+      workloads.main:
+        type: CronJob
+        cronJob:
+          schedule: "*/20 * * * *"
+          successfulJobsHistory: 42
+    asserts:
+      - equal:
+          path: spec.successfulJobsHistoryLimit
+          value: 42
+        documentSelector:
+          path: kind
+          value: CronJob
+      - containsDocument:
+          kind: CronJob
+          apiVersion: batch/v1
+          any: true
+      - containsDocument:
+          kind: PodDisruptionBudget
+        not: true
+      - containsDocument:
+          kind: HorizontalPodAutoscaler
+        not: true
+      - containsDocument:
+          kind: Service
+        not: true
+
+  - it: can set job
+    set:
+      workloads.main:
+        type: Job
+        job:
+          backoffLimit: 42
+    documentSelector:
+      path: kind
+      value: Job
+    asserts:
+      - equal:
+          path: spec.backoffLimit
+          value: 42
+
+  - it: can set statefulSet
+    set:
+      workloads.main:
+        type: StatefulSet
+        statefulSet:
+          podManagementPolicy: Parallel
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - equal:
+          path: spec.podManagementPolicy
+          value: Parallel
+
+  - it: port is provided
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - containerPort: 8080
+              name: http
+
+  - it: service protocol can be set
+    set:
+      workloads.main.service.ports.http.protocol: TCP
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - containerPort: 8080
+              protocol: TCP
+              name: http
+
+  - it: inferenceService workload type ignore hpa
+    set:
+      workloads.main:
+        type: InferenceService
+        inferenceService:
+          predictor:
+            model:
+              storageUri: there
+    asserts:
+      - containsDocument:
+          kind: HorizontalPodAutoscaler
+        not: true
+
+
+  - it: pdb/hpa workload
+    set:
+      workloads.main:
+        pdb:
+          enabled: false
+        hpa:
+          enabled: false
+    asserts:
+      - containsDocument:
+          kind: HorizontalPodAutoscaler
+        not: true
+      - containsDocument:
+          kind: PodDisruptionBudget
+        not: true
+
+  - it: disabled serviceAccount
+    set:
+      workloads.main:
+        serviceAccount:
+          enabled: false
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - notExists:
+          path: spec.template.spec.serviceAccountName
+
+  - it: values are defaulted in place so downstream charts can rely on them
+    set:
+      debug: true
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-debug-base
+    asserts:
+      - isKind:
+          of: Dummy
+      - exists:
+          path: data.workloads.main.istio.dependencies['istio-system/metadata.google.internal']
+      - equal:
+          path: data.workloads.main.service.ports.http.port
+          value: 8080

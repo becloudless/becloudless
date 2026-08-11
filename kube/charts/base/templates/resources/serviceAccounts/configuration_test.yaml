@@ -1,0 +1,102 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: serviceAccount values
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: a serviceAccount is created by default
+    documentSelector:
+      path: kind
+      value: ServiceAccount
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
+  - it: a serviceAccount is not created when disabled
+    set:
+      resources.serviceAccounts.main.enabled: false
+      resources.controllers.main.pod.serviceAccountName_resource: ""
+    asserts:
+      - containsDocument:
+          kind: ServiceAccount
+        not: true
+
+  - it: a serviceAccount and Secret are created
+    asserts:
+      - documentSelector:
+          path: kind
+          value: ServiceAccount
+        isKind:
+          of: ServiceAccount
+      - documentSelector:
+          path: kind
+          value: ServiceAccount
+        equal:
+          path: metadata.name
+          value: &ServiceAccountName RELEASE-NAME
+      - documentSelector:
+          path: kind
+          value: ServiceAccount
+        equal:
+          path: secrets
+          value:
+            - name: RELEASE-NAME-sa-token
+      - documentSelector:
+          path: kind
+          value: Deployment
+        equal:
+          path: spec.template.spec.serviceAccountName
+          value: *ServiceAccountName
+      - documentSelector:
+          path: kind
+          value: Secret
+        equal:
+          path: metadata.name
+          value: RELEASE-NAME-sa-token
+      - documentSelector:
+          path: kind
+          value: Secret
+        equal:
+          path: metadata.annotations
+          value:
+            kubernetes.io/service-account.name: RELEASE-NAME
+
+  - it: a serviceAccount and Secret are created with custom name
+    set:
+      resources.serviceAccounts.main.nameOverride: my-account
+    asserts:
+      - documentSelector:
+          path: kind
+          value: ServiceAccount
+        equal:
+          path: metadata.name
+          value: RELEASE-NAME-my-account
+      - documentSelector:
+          path: kind
+          value: ServiceAccount
+        equal:
+          path: secrets
+          value:
+            - name: RELEASE-NAME-my-account-sa-token
+      - documentSelector:
+          path: kind
+          value: Deployment
+        equal:
+          path: spec.template.spec.serviceAccountName
+          value: RELEASE-NAME-my-account
+      - documentSelector:
+          path: kind
+          value: Secret
+        equal:
+          path: metadata.annotations
+          value:
+            kubernetes.io/service-account.name: RELEASE-NAME-my-account
+      - documentSelector:
+          path: kind
+          value: Secret
+        equal:
+          path: metadata.name
+          value: RELEASE-NAME-my-account-sa-token

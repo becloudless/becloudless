@@ -1,0 +1,65 @@
+{
+  "instance": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "$ref": "../lib/utils.json#/enabled"
+      },
+      "annotations": {
+        "$ref": "../lib/k8s.json#/Annotations"
+      },
+      "labels": {
+        "$ref": "../lib/k8s.json#/Labels"
+      },
+      "nameOverride": {
+        "$ref": "../lib/utils.json#/nameOverride"
+      },
+
+      "hosts": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "exportTo": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "addresses": {
+        "$ref": "../lib/istio.json#/ServiceEntry/properties/addresses"
+      },
+      "ports": {
+        "description": "The ports associated with the external service. If the Endpoints are Unix domain socket addresses, there must be exactly one port.",
+        "type": "array",
+        "items": {
+          "$ref": "../lib/istio.json#/ServicePort"
+        }
+      },
+      "location": {
+        "$ref": "../lib/istio.json#/Location"
+      },
+      "endpoints": {
+        "type": "array",
+        "items": {
+          "$ref": "../lib/istio.json#/WorkloadEntry"
+        }
+      },
+      "workloadSelector": {
+        "$ref": "../lib/istio.json#/WorkloadSelector"
+      },
+      "subjectAltNames": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "resolution": {
+        "$ref": "../lib/istio.json#/ServiceEntry/properties/resolution",
+        "default": "DNS"
+      }
+    }
+  }
+}

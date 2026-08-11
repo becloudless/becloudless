@@ -1,0 +1,63 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: persistentVolumeClaims claimnames
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+
+  - it: with existingClaim should pass
+    set:
+      resources.controllers.main.volumes:
+        existingClaim:
+          type: persistentVolumeClaim
+          name: myClaim
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: existingClaim
+            persistentVolumeClaim:
+              claimName: myClaim
+
+  - it: disabled suffix should pass
+    set:
+      resources.persistentVolumeClaims.test:
+        nameOverride: "-"
+      resources.controllers.main.volumes:
+        claimWithoutSuffix:
+          type: persistentVolumeClaim
+          name_resource: test
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: claimWithoutSuffix
+            persistentVolumeClaim:
+              claimName: RELEASE-NAME
+
+  - it: custom suffix should pass
+    set:
+      resources.persistentVolumeClaims.test:
+        nameOverride: suffix
+      resources.controllers.main.volumes:
+        claimWithNameOverride:
+          type: persistentVolumeClaim
+          name_resource: test
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: claimWithNameOverride
+            persistentVolumeClaim:
+              claimName: RELEASE-NAME-suffix

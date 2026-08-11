@@ -1,0 +1,60 @@
+suite: workloads istio privatelyExposed
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default should work
+    set:
+      mainWorkload:
+        istio:
+          privatelyExposed:
+            hosts:
+              - yopla
+    documentSelector:
+      path: kind
+      value: VirtualService
+    asserts:
+      - equal:
+          path: spec.hosts
+          value:
+            - yopla
+      - equal:
+          path: spec.gateways
+          value:
+            - istio-system/istio-ilbgateway
+      - equal:
+          path: spec.http
+          value:
+            - route:
+                - destination:
+                    host: RELEASE-NAME
+
+  - it: http can be custom
+    set:
+      mainWorkload:
+        istio:
+          privatelyExposed:
+            hosts:
+              - yopla
+            http:
+              - anything
+    documentSelector:
+      path: kind
+      value: VirtualService
+    asserts:
+      - equal:
+          path: spec.http
+          value:
+            - anything
+
+  - it: hosts is mandatory
+    set:
+      mainWorkload:
+        istio:
+          privatelyExposed:
+            http:
+              - anything
+    asserts:
+      - failedTemplate:
+          errorMessage: "hosts field is required for virtualService. (virtualService: main)"

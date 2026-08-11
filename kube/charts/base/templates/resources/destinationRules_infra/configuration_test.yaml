@@ -1,0 +1,78 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: destinationRules configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: no destinationRules by default
+    asserts:
+      - containsDocument:
+          kind: DestinationRule
+        not: true
+
+  - it: destinationRules can be disabled
+    set:
+      resources.destinationRules.main.enabled: false
+    asserts:
+      - containsDocument:
+          kind: DestinationRule
+        not: true
+
+  - it: default enabled destinationRules
+    set:
+      resources.destinationRules.main.host: toto
+    documentSelector:
+      path: kind
+      value: DestinationRule
+    asserts:
+      - equal:
+          path: spec.host
+          value: toto
+      - equal:
+          path: metadata.labels.app
+          value: RELEASE-NAME
+
+  - it: enabled destinationRules
+    set:
+      resources.destinationRules.main:
+        host: toto
+        trafficPolicy:
+          loadBalancer:
+            simple: LEAST_REQUEST
+        subsets:
+          - name: tls-origination
+    documentSelector:
+      path: kind
+      value: DestinationRule
+    asserts:
+      - equal:
+          path: spec.host
+          value: toto
+      - equal:
+          path: spec.trafficPolicy
+          value:
+            loadBalancer:
+              simple: LEAST_REQUEST
+      - equal:
+          path: spec.subsets
+          value:
+            - name: tls-origination
+
+  - it: second destinationRules can be set
+    set:
+      resources.destinationRules:
+        main:
+          host: toto
+        second:
+          host: titi
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-second
+    asserts:
+      - isKind:
+          of: DestinationRule
+      - equal:
+          path: spec.host
+          value: titi

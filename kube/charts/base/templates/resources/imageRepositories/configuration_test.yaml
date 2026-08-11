@@ -1,0 +1,77 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: imageRepository configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: no imageRepository by default
+    asserts:
+      - containsDocument:
+          kind: ImageRepository
+        not: true
+
+  - it: imageRepository can be disabled
+    set:
+      resources.imageRepositories.main.enabled: false
+    asserts:
+      - containsDocument:
+          kind: ImageRepository
+        not: true
+
+  - it: default enabled imageRepository
+    set:
+      resources.imageRepositories.main:
+        enabled: true
+        controllerContainer: main/main
+    documentSelector:
+      path: kind
+      value: ImageRepository
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+      - equal:
+          path: spec.image
+          value: ghcr.io/mendhak/http-https-echo
+      - equal:
+          path: metadata.labels.app
+          value: RELEASE-NAME
+
+  - it: imageRepository with interval
+    set:
+      resources.imageRepositories.main:
+        enabled: true
+        controllerContainer: main/main
+        interval: 42s
+    documentSelector:
+      path: kind
+      value: ImageRepository
+    asserts:
+      - equal:
+          path: spec.interval
+          value: 42s
+
+  - it: second imageRepository can be set
+    set:
+      resources.imageRepositories:
+        main:
+          enabled: true
+          controllerContainer: main/main
+        second:
+          enabled: true
+          controllerContainer: main/main
+          interval: 43s
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-second
+    asserts:
+      - isKind:
+          of: ImageRepository
+      - equal:
+          path: spec.interval
+          value: 43s
+      - equal:
+          path: spec.image
+          value: ghcr.io/mendhak/http-https-echo

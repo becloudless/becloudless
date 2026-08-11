@@ -1,0 +1,80 @@
+{
+  "instance": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "$ref": "../lib/utils.json#/enabled"
+      },
+      "annotations": {
+        "$ref": "../lib/k8s.json#/Annotations"
+      },
+      "labels": {
+        "$ref": "../lib/k8s.json#/Labels"
+      },
+      "nameOverride": {
+        "$ref": "../lib/utils.json#/nameOverride"
+      },
+
+      "workloadLabels": {
+        "$ref": "../lib/k8s.json#/Labels"
+      },
+      "blockUndefinedOutbound": {
+        "type": "boolean"
+      },
+      "egress": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["hosts"],
+          "additionalProperties": false,
+          "properties": {
+            "bind": {
+              "type": "string"
+            },
+            "captureMode": {
+              "type": "string"
+            },
+            "hosts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "port": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "ingress": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["port"],
+          "additionalProperties": false,
+          "properties": {
+            "bind": {
+              "type": "string"
+            },
+            "captureMode": {
+              "type": "string"
+            },
+            "connectionPool": {
+              "type": "object"
+            },
+            "defaultEndpoint": {
+              "type": "string"
+            },
+            "port": {
+              "type": "object"
+            },
+            "tls": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  }
+}

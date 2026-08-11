@@ -1,0 +1,172 @@
+{
+  "instance": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "$ref": "../lib/utils.json#/enabled"
+      },
+      "type": {
+        "$ref": "../lib/resource/controller.json#/typeDef"
+      },
+      "annotations": {
+        "$ref": "../lib/k8s.json#/Annotations"
+      },
+      "labels": {
+        "$ref": "../lib/k8s.json#/Labels"
+      },
+      "nameOverride": {
+        "$ref": "../lib/utils.json#/nameOverride"
+      },
+      "pod": {
+        "$ref": "../resources/pods.json#/options"
+      },
+      "replicas": {
+        "$ref": "../lib/resource/controller.json#/replicas"
+      },
+      "revisionHistoryLimit": {
+        "type": "integer",
+        "minimum": 0,
+        "default": 10,
+        "description": "The number of old ReplicaSets to retain to allow rollback. This is a pointer to distinguish between explicit zero and not specified."
+      },
+      "rollingUpdate": {
+        "$ref": "../lib/resource/controller.json#/rollingUpdate"
+      },
+      "strategy": {
+        "title": "Set the controller upgrade strategy",
+        "description": "For Deployments, valid values are Recreate and RollingUpdate (default).\nFor StatefulSets, valid values are OnDelete and RollingUpdate (default).\nDaemonSets/CronJobs/Jobs ignore this.",
+        "$ref": "../lib/resource/controller.json#/strategy"
+      },
+      "cronJob": {
+        "$ref": "../lib/resource/controller.json#/cronJob"
+      },
+      "job": {
+        "$ref": "../lib/resource/controller.json#/job"
+      },
+      "statefulSet": {
+        "$ref": "../lib/resource/controller.json#/statefulSet"
+      },
+      "inferenceService": {
+        "$ref": "../lib/resource/controller.json#/inferenceService"
+      },
+      "initContainers": {
+        "title": "Specify any initContainers here as dictionary items",
+        "description": "Each initContainer should have its own key\ninitContainers get sorted alphanumerically by the `<order>-<identifier>` combination\nif no order or dependsOn has been configured for them.\n",
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "../resources/containers.json#/container"
+        }
+      },
+      "containers": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "../resources/containers.json#/container"
+        }
+      },
+      "volumes": {
+        "title": "configure volumes/volumeMounts",
+        "additionalProperties": {
+          "$ref": "../lib/resource/controller-volumes.json#/item"
+        }
+      }
+    },
+
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "type": {"const": "Deployment"}
+          }
+        },
+        "then": {
+          "not": {
+            "anyOf": [
+              {"required": ["statefulSet"]},
+              {"required": ["cronJob"]},
+              {"required": ["job"]},
+              {"required": ["daemonSet"]},
+              {"required": ["inferenceService"]}
+            ]
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "type": {"const": "StatefulSet"}
+          },
+          "required": ["type"]
+        },
+        "then": {
+          "not": {
+            "anyOf": [
+              {"required": ["cronJob"]},
+              {"required": ["job"]},
+              {"required": ["daemonSet"]},
+              {"required": ["inferenceService"]}
+            ]
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "type": {"const": "CronJob"}
+          },
+          "required": ["type"]
+        },
+        "then": {
+          "allOf": [
+            {
+              "not": {
+                "anyOf": [
+                  {"required": ["statefulSet"]},
+                  {"required": ["job"]},
+                  {"required": ["daemonSet"]},
+                  {"required": ["inferenceService"]}
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "type": {"const": "Job"}
+          },
+          "required": ["type"]
+        },
+        "then": {
+          "not": {
+            "anyOf": [
+              {"required": ["statefulSet"]},
+              {"required": ["cronJob"]},
+              {"required": ["daemonSet"]},
+              {"required": ["inferenceService"]}
+            ]
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "type": {"const": "InferenceService"}
+          },
+          "required": ["type"]
+        },
+        "then": {
+          "not": {
+            "anyOf": [
+              {"required": ["deployment"]},
+              {"required": ["statefulSet"]},
+              {"required": ["cronJob"]},
+              {"required": ["daemonSet"]}
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

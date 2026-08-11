@@ -1,0 +1,147 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: volumes types
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: custom volume type should pass
+    set:
+      resources.controllers.main.volumes:
+        custom-mount:
+          type: custom
+          path: /data
+          volumeSpec:
+            downwardAPI:
+              items:
+                - path: "labels"
+                  fieldRef:
+                    fieldPath: metadata.labels
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: custom-mount
+            downwardAPI:
+              items:
+                - fieldRef:
+                    fieldPath: metadata.labels
+                  path: labels
+
+  - it: configmap volume type should pass
+    set:
+      resources.controllers.main.volumes:
+        configmap:
+          type: configMap
+          name: mySettings
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: configmap
+            configMap:
+              name: mySettings
+
+  - it: configmap volume type with name resource should pass
+    set:
+      resources.configMaps.config.data:
+        genre: ouda
+      resources.controllers.main.volumes:
+        configmap:
+          type: configMap
+          name_resource: config
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: configmap
+            configMap:
+              name: RELEASE-NAME-config
+
+  - it: name_resource is identifier by default
+    set:
+      resources.configMaps.special.data:
+        genre: ouda
+      resources.controllers.main.volumes:
+        special:
+          type: configMap
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: special
+            configMap:
+              name: RELEASE-NAME-special
+
+  - it: secret volume type should pass
+    set:
+      resources.controllers.main.volumes:
+        secret:
+          type: secret
+          name: mySettings
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: secret
+            secret:
+              secretName: mySettings
+
+  - it: secret volume type with name resource should pass
+    set:
+      resources.sealedSecrets.config:
+        encryptedData:
+          test: test
+      resources.controllers.main.volumes:
+        secret:
+          type: secret
+          name_resource: config
+          containers:
+            main:
+              path: /data
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: secret
+            secret:
+              secretName: RELEASE-NAME-config
+
+  - it: nfs volume type should pass
+    set:
+      resources.controllers.main.volumes:
+        nfs:
+          type: nfs
+          server: 10.10.0.8
+          nfsPath: /tank/nas/library
+          path: /data
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: nfs
+            nfs:
+              path: /tank/nas/library
+              server: 10.10.0.8

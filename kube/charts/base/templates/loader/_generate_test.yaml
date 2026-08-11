@@ -1,0 +1,19 @@
+suite: generate
+templates:
+  - base.yaml
+values:
+  - ../../tests/overallValues.yaml
+tests:
+  - it: resource kind is a map
+    set:
+      resources.configMaps: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "resources.configMaps must be a list of resources indexed by an identifier"
+
+  - it: resource is indexed by an id
+    set:
+      resources.configMaps.toto: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "resources.configMaps.toto must be a resource indexed by an identifier"

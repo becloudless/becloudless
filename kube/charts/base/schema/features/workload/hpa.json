@@ -1,0 +1,68 @@
+{
+  "description": "HorizontalPodAutoscaler configuration. Can only be enabled with deployment and statefulset controllers.",
+  "type": "object",
+  "allOf": [
+    {
+      "properties": {
+        "metrics": {
+          "additionalProperties": false,
+          "properties": {
+            "customs": {
+              "$ref": "../../resources/horizontalPodAutoscalers.json#/Metrics"
+            },
+            "cpu": {
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "../../lib/utils.json#/enabled"
+                },
+                "averageUtilization": {
+                  "type": "integer"
+                }
+              }
+            },
+            "datadogQuery": {
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "../../lib/utils.json#/enabled"
+                },
+                "query": {
+                  "type": "string"
+                },
+                "averageValue": {
+                  "type": "number"
+                },
+                "value": {
+                  "type": "number"
+                }
+              }
+            },
+            "rabbitmqReadyMessagesCount": {
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "$ref": "../../lib/utils.json#/enabled"
+                },
+                "vhost": {
+                  "type": "string"
+                },
+                "queueName": {
+                  "type": "string"
+                },
+                "target": {
+                  "description": "If the count of ready messages is above this value, the HPA will scale up.",
+                  "type": "integer",
+                  "default": 5
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "$ref": "../../resources/horizontalPodAutoscalers.json#/Common"
+    }
+  ]
+}

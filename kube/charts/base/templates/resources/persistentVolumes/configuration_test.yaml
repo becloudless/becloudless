@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: persistentVolume configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: persistentVolume enabled
+    set:
+      resources.persistentVolumes.main:
+        accessModes:
+          - ReadWriteOnce
+        csi:
+          driver: driver.longhorn.io
+          volumeHandle: toto42
+        storageClassName: toto
+        persistentVolumeReclaimPolicy: Reclaim
+        volumeMode: Filesystem
+        nodeAffinity:
+          required:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: XXX
+                    operator: Exists
+    documentSelector:
+      path: kind
+      value: PersistentVolume
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+      - equal:
+          path: spec.accessModes
+          value:
+            - ReadWriteOnce
+      - equal:
+          path: spec.csi
+          value:
+            driver: driver.longhorn.io
+            volumeHandle: toto42
+      - equal:
+          path: spec.storageClassName
+          value: toto
+      - equal:
+          path: spec.persistentVolumeReclaimPolicy
+          value: Reclaim
+      - equal:
+          path: spec.volumeMode
+          value: Filesystem
+      - equal:
+          path: spec.nodeAffinity
+          value:
+            required:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: XXX
+                      operator: Exists

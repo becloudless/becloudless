@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: workloads hpa
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: metrics is a map
+    set:
+      mainWorkload.hpa.metrics:
+        - type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: 70
+    asserts:
+      - failedTemplate:
+          errorMessage: "hpa.metrics field must be a map of metric indexed by an identifier. (workload: main)"

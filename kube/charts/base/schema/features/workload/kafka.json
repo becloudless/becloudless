@@ -1,0 +1,15 @@
+{
+  "description": "Kafka ACL and Spring client configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "minProperties": 1,
+  "properties": {
+    "clusters": {
+      "minProperties": 1,
+      "properties": {
+        "platform": {"$ref": "../../lib/kafka.json#/KafkaClusterClient"},
+        "analytics": {"$ref": "../../lib/kafka.json#/KafkaClusterClient"}
+      }
+    }
+  }
+}

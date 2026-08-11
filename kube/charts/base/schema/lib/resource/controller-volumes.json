@@ -1,0 +1,318 @@
+{
+  "item": {
+    "oneOf": [
+      {"$ref": "#/persistentVolumeClaimItem"},
+      {"$ref": "#/volumeClaimItem"},
+      {"$ref": "#/configMapItem"},
+      {"$ref": "#/secretItem"},
+      {"$ref": "#/nfsItem"},
+      {"$ref": "#/emptyDirItem"},
+      {"$ref": "#/hostPathItem"},
+      {"$ref": "#/downwardAPIItem"},
+      {"$ref": "#/customItem"}
+    ]
+  },
+
+  "persistentVolumeClaimItem": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "type": {
+        "const": "persistentVolumeClaim"
+      },
+      "enabled": {
+        "$ref": "../../lib/utils.json#/enabled"
+      },
+      "name": {
+        "description": "name of the PVC external to the chart",
+        "type": "string"
+      },
+      "name_resource": {
+        "description": "identifier of the PVC declared in the chart",
+        "type": "string"
+      },
+      "path": {
+        "type": "string"
+      },
+      "subPath": {
+        "type": "string"
+      },
+      "readOnly": {
+        "type": "boolean"
+      },
+      "containers": {"$ref": "#/containers"}
+    },
+    "dependencies": {
+      "name": {
+        "not": {"required": ["name_resource"]}
+      },
+      "name_resource": {
+        "not": {"required": ["name"]}
+      }
+    }
+  },
+
+  "volumeClaimItem": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "type": {
+        "const": "volumeClaim"
+      },
+      "enabled": {
+        "$ref": "../../lib/utils.json#/enabled"
+      },
+      "path": {
+        "type": "string"
+      },
+      "subPath": {
+        "type": "string"
+      },
+      "readOnly": {
+        "type": "boolean"
+      },
+      "containers": {"$ref": "#/containers"}
+    }
+  },
+
+  "configMapItem": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "type": {
+        "const": "configMap"
+      },
+      "enabled": {
+        "$ref": "../../lib/utils.json#/enabled"
+      },
+      "name": {
+        "description": "name of the configMap external to the chart",
+        "type": "string"
+      },
+      "name_resource": {
+        "description": "identifier of the configMap declared in the chart",
+        "type": "string"
+      },
+      "path": {
+        "type": "string"
+      },
+      "subPath": {
+        "type": "string"
+      },
+      "readOnly": {
+        "type": "boolean"
+      },
+      "defaultMode": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "containers": {"$ref": "#/containers"}
+    },
+    "dependencies": {
+      "name": {
+        "not": {"required": ["name_resource"]}
+      },
+      "name_resource": {
+        "not": {"required": ["name"]}
+      }
+    }
+  },
+
+  "secretItem": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "type": {
+        "const": "secret"
+      },
+      "enabled": {
+        "$ref": "../../lib/utils.json#/enabled"
+      },
+      "name": {
+        "description": "name of the secret external to the chart",
+        "type": "string"
+      },
+      "name_resource": {
+        "description": "identifier of the sealedSecret declared in the chart",
+        "type": "string"
+      },
+      "path": {
+        "type": "string"
+      },
+      "subPath": {
+        "type": "string"
+      },
+      "readOnly": {
+        "type": "boolean"
+      },
+      "defaultMode": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "containers": {"$ref": "#/containers"}
+    },
+    "dependencies": {
+      "name": {
+        "not": {"required": ["name_resource"]}
+      },
+      "name_resource": {
+        "not": {"required": ["name"]}
+      }
+    }
+  },
+
+  "nfsItem": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "type": {
+        "const": "nfs"
+      },
+      "enabled": {
+        "$ref": "../../lib/utils.json#/enabled"
+      },
+      "nfsPath": {
+        "type": "string"
+      },
+      "path": {
+        "type": "string"
+      },
+      "server": {
+        "type": "string"
+      },
+      "readOnly": {
+        "type": "boolean"
+      },
+      "containers": {"$ref": "#/containers"}
+    },
+    "required": ["server", "path"]
+  },
+
+  "emptyDirItem": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "type": {
+        "const": "emptyDir"
+      },
+      "enabled": {
+        "$ref": "../../lib/utils.json#/enabled"
+      },
+      "path": {
+        "type": "string"
+      },
+      "medium": {
+        "type": "string"
+      },
+      "sizeLimit": {
+        "type": "string"
+      },
+      "containers": {"$ref": "#/containers"}
+    }
+  },
+
+  "hostPathItem": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "type": {
+        "const": "hostPath"
+      },
+      "enabled": {
+        "$ref": "../../lib/utils.json#/enabled"
+      },
+      "path": {
+        "type": "string"
+      },
+      "subPath": {
+        "type": "string"
+      },
+      "hostPath": {
+        "type": "string"
+      },
+      "hostPathType": {
+        "type": "string"
+      },
+      "readOnly": {
+        "type": "boolean"
+      },
+      "containers": {"$ref": "#/containers"}
+    }
+  },
+
+  "downwardAPIItem": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "type": {
+        "const": "downwardAPI"
+      },
+      "enabled": {
+        "$ref": "../../lib/utils.json#/enabled"
+      },
+      "path": {
+        "type": "string"
+      },
+      "fieldRefPaths": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        }
+      },
+      "containers": {"$ref": "#/containers"}
+    }
+  },
+
+  "customItem": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "type": {
+        "const": "custom"
+      },
+      "enabled": {
+        "type": "boolean",
+        "default": true
+      },
+      "volumeSpec": {
+        "type": "object"
+      },
+      "path": {
+        "type": "string"
+      },
+      "subPath": {
+        "type": "string"
+      },
+      "readOnly": {
+        "type": "boolean"
+      },
+      "containers": {"$ref": "#/containers"}
+    },
+    "required": ["volumeSpec"]
+  },
+
+  "containers": {
+    "type": "object",
+    "additionalProperties": false,
+    "patternProperties": {
+      "^[0-9a-z-]*$": {
+        "title": "Identifier of the container where you want a specific setup",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "readOnly": {
+            "type": "boolean"
+          },
+          "subPath": {
+            "type": "string"
+          },
+          "mountPropagation": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

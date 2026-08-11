@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: volumes emptydir
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default emptyDir should pass
+    set:
+      resources.controllers.main.volumes:
+        config:
+          type: emptyDir
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0]
+          value:
+            name: config
+            emptyDir: {}
+
+  - it: emptyDir with medium should pass
+    set:
+      resources.controllers.main.volumes:
+        config:
+          type: emptyDir
+          medium: memory
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0]
+          value:
+            name: config
+            emptyDir:
+              medium: memory
+
+  - it: emptyDir with medium and sizeLimit should pass
+    set:
+      resources.controllers.main.volumes:
+        config:
+          type: emptyDir
+          medium: memory
+          sizeLimit: 1Gi
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0]
+          value:
+            name: config
+            emptyDir:
+              medium: memory
+              sizeLimit: 1Gi

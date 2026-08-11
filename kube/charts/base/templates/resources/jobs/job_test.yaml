@@ -1,0 +1,60 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: job configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default job configuration should pass
+    set:
+      resources:
+        controllers:
+          main:
+            type: Job
+    documentSelector:
+      path: kind
+      value: Job
+    asserts:
+      - notExists:
+          path: spec.suspend
+      - notExists:
+          path: spec.activeDeadlineSeconds
+      - notExists:
+          path: spec.ttlSecondsAfterFinished
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Never
+
+  - it: custom job configuration should pass
+    set:
+      resources:
+        controllers:
+          main:
+            type: Job
+            pod:
+              restartPolicy: OnFailure
+            job:
+              activeDeadlineSeconds: &activeDeadlineSeconds 900
+              suspend: &JobSuspended true
+              ttlSecondsAfterFinished: &ttlSecondsAfterFinished 3600
+              backoffLimit: 3
+    documentSelector:
+      path: kind
+      value: Job
+    asserts:
+      - equal:
+          path: spec.activeDeadlineSeconds
+          value: *activeDeadlineSeconds
+      - equal:
+          path: spec.suspend
+          value: *JobSuspended
+      - equal:
+          path: spec.ttlSecondsAfterFinished
+          value: *ttlSecondsAfterFinished
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: OnFailure
+      - equal:
+          path: spec.backoffLimit
+          value: 3

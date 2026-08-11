@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../values.schema.json
+
+debug: false
+
+resources:
+  controllers:
+    main:
+      containers:
+        second:
+          order: 2
+          image:
+            repository: toto
+            tag: 42
+
+
+workloads:
+  main:
+    container:
+      image:
+        repository: ghcr.io/mendhak/http-https-echo
+        tag: 31
+
+    service:
+      ports:
+        http:
+          port: 8080

@@ -1,0 +1,116 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: cronjob configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default cronjob configuration should pass
+    set:
+      resources:
+        controllers:
+          main:
+            type: CronJob
+            cronJob:
+              schedule: "*/20 * * * *"
+    documentSelector:
+      path: kind
+      value: CronJob
+    asserts:
+      - notExists:
+          path: spec.suspend
+      - equal:
+          path: spec.schedule
+          value: "*/20 * * * *"
+      - equal:
+          path: spec.concurrencyPolicy
+          value: Forbid
+      - equal:
+          path: spec.successfulJobsHistoryLimit
+          value: 1
+      - equal:
+          path: spec.failedJobsHistoryLimit
+          value: 1
+      - notExists:
+          path: spec.jobTemplate.spec.activeDeadlineSeconds
+      - notExists:
+          path: spec.jobTemplate.spec.ttlSecondsAfterFinished
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.restartPolicy
+          value: Never
+
+  - it: valid schedule with go template
+    set:
+      resources:
+        controllers:
+          main:
+            type: CronJob
+            containers:
+              main:
+                image:
+                  tag: "42"
+            cronJob:
+              schedule: "{{ add .Values.resources.controllers.main.containers.main.image.tag 1 }} * * * *"
+    documentSelector:
+      path: kind
+      value: CronJob
+    asserts:
+      - equal:
+          path: spec.schedule
+          value: "43 * * * *"
+
+  - it: schedule is mandatory
+    set:
+      resources:
+        controllers:
+          main:
+            type: CronJob
+    asserts:
+      - failedTemplate:
+          errorMessage: "cronJob.schedule is mandatory for CronJob controller type. (controller: main)"
+
+  - it: custom cronjob configuration should pass
+    set:
+      resources:
+        controllers:
+          main:
+            type: CronJob
+            pod:
+              restartPolicy: OnFailure
+            cronJob:
+              suspend: &CronJobSuspended true
+              schedule: &CronJobSchedule "0 3 * * *"
+              concurrencyPolicy: &CronJobConcurrencyPolicy "Forbid"
+              failedJobsHistory: &CronJobFailedJobsHistory 2
+              successfulJobsHistory: &CronJobSuccessfulJobsHistory 3
+              activeDeadlineSeconds: &activeDeadlineSeconds 900
+              ttlSecondsAfterFinished: &ttlSecondsAfterFinished 3600
+    documentSelector:
+      path: kind
+      value: CronJob
+    asserts:
+      - equal:
+          path: spec.suspend
+          value: *CronJobSuspended
+      - equal:
+          path: spec.schedule
+          value: *CronJobSchedule
+      - equal:
+          path: spec.concurrencyPolicy
+          value: *CronJobConcurrencyPolicy
+      - equal:
+          path: spec.successfulJobsHistoryLimit
+          value: *CronJobSuccessfulJobsHistory
+      - equal:
+          path: spec.failedJobsHistoryLimit
+          value: *CronJobFailedJobsHistory
+      - equal:
+          path: spec.jobTemplate.spec.activeDeadlineSeconds
+          value: *activeDeadlineSeconds
+      - equal:
+          path: spec.jobTemplate.spec.ttlSecondsAfterFinished
+          value: *ttlSecondsAfterFinished
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.restartPolicy
+          value: OnFailure

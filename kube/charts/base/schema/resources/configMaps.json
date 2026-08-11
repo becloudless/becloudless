@@ -1,0 +1,33 @@
+{
+  "instance": {
+    "title": "A configmap",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "$ref": "../lib/utils.json#/enabled"
+      },
+      "annotations": {
+        "$ref": "../lib/k8s.json#/Annotations"
+      },
+      "labels": {
+        "$ref": "../lib/k8s.json#/Labels"
+      },
+      "nameOverride": {
+        "$ref": "../lib/utils.json#/nameOverride"
+      },
+      "noTemplating": {
+        "title": "Disable templating on the configmap's data",
+        "type": "boolean",
+        "default": false
+      },
+      "data": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": {
+          "type": ["string", "object"]
+        }
+      }
+    }
+  }
+}

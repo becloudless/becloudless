@@ -1,0 +1,519 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: container probes
+templates:
+  - base.yaml
+values:
+  - ../../../../tests/overallValues.yaml
+tests:
+  - it: default should pass
+    set:
+      resources:
+        services:
+          main:
+            ports:
+              http:
+                enabled: true
+                port: &port 80
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: *port
+            timeoutSeconds: 1
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe
+          value:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: *port
+            timeoutSeconds: 1
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe
+          value:
+            failureThreshold: 30
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            successThreshold: 1
+            tcpSocket:
+              port: *port
+            timeoutSeconds: 1
+
+  - it: custom primary port should pass
+    set:
+      resources:
+        services:
+          main:
+            ports:
+              http:
+                enabled: true
+                port: 80
+              test:
+                enabled: true
+                primary: true
+                port: &port 8080
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: *port
+            timeoutSeconds: 1
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe
+          value:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: *port
+            timeoutSeconds: 1
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe
+          value:
+            failureThreshold: 30
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            successThreshold: 1
+            tcpSocket:
+              port: *port
+            timeoutSeconds: 1
+
+  - it: default with string Service port should pass
+    set:
+      resources:
+        services:
+          main:
+            ports:
+              http:
+                enabled: true
+                port: "80"
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 80
+            timeoutSeconds: 1
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe
+          value:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 80
+            timeoutSeconds: 1
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe
+          value:
+            failureThreshold: 30
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            successThreshold: 1
+            tcpSocket:
+              port: 80
+            timeoutSeconds: 1
+
+  - it: disabled service should pass
+    set:
+      workloads.main.enabled: false
+      resources:
+        controllers:
+          main:
+            containers:
+              main:
+                image:
+                  repository: test
+                  tag: 42
+        services:
+          main:
+            enabled: false
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - notExists:
+          path: spec.template.spec.containers[0].readinessProbe
+      - notExists:
+          path: spec.template.spec.containers[0].startupProbe
+
+# TODO: auto relies on the default values on the default main port of service being http by default
+#       but with workloads: there is now no service enabled by default.
+#       the feature can probably be rewritten, but its not a big deal
+#  - it: AUTO type probe should pass
+#    set:
+#      resources:
+#        services:
+#          main:
+#            ports:
+#              http:
+#                port: &port 80
+#        controllers:
+#          main:
+#            containers:
+#              main:
+#                probes:
+#                  liveness:
+#                    enabled: true
+#                    type: AUTO
+#                    path: /api/version
+#    documentSelector:
+#      path: kind
+#      value: Deployment
+#    asserts:
+#      - equal:
+#          path: spec.template.spec.containers[0].livenessProbe
+#          value:
+#            httpGet:
+#              path: /api/version
+#              port: *port
+#              scheme: HTTP
+#            initialDelaySeconds: 0
+#            periodSeconds: 10
+#            timeoutSeconds: 1
+#            failureThreshold: 3
+
+  - it: HTTP type probe should pass
+    set:
+      resources:
+        services:
+          main:
+            ports:
+              http:
+                port: &port 80
+        controllers:
+          main:
+            containers:
+              main:
+                probes:
+                  liveness:
+                    enabled: true
+                    type: HTTP
+                    path: /api/version
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            httpGet:
+              path: /api/version
+              port: *port
+              scheme: HTTP
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+
+  - it: HTTPS type probe should pass
+    set:
+      resources:
+        services:
+          main:
+            ports:
+              http:
+                port: &port 80
+        controllers:
+          main:
+            containers:
+              main:
+                probes:
+                  liveness:
+                    enabled: true
+                    type: HTTPS
+                    path: /api/version
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            httpGet:
+              path: /api/version
+              port: *port
+              scheme: HTTPS
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+
+  - it: custom liveness probe should pass
+    set:
+      resources:
+        services:
+          main:
+            ports:
+              http:
+                port: &port 80
+        controllers:
+          main:
+            containers:
+              main:
+                probes:
+                  liveness:
+                    enabled: true
+                    custom: true
+                    spec:
+                      httpGet:
+                        path: /api/version
+                        port: *port
+                      initialDelaySeconds: 0
+                      periodSeconds: 10
+                      timeoutSeconds: 1
+                      successThreshold: 1
+                      failureThreshold: 3
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            httpGet:
+              path: /api/version
+              port: *port
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+
+  - it: custom readiness probe should pass
+    set:
+      resources:
+        services:
+          main:
+            ports:
+              http:
+                port: &port 80
+        controllers:
+          main:
+            containers:
+              main:
+                probes:
+                  readiness:
+                    enabled: true
+                    custom: true
+                    spec:
+                      httpGet:
+                        path: /api/version
+                        port: *port
+                      initialDelaySeconds: 0
+                      periodSeconds: 10
+                      timeoutSeconds: 1
+                      successThreshold: 3
+                      failureThreshold: 3
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe
+          value:
+            httpGet:
+              path: /api/version
+              port: *port
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 3
+            failureThreshold: 3
+
+  - it: custom startup probe should pass
+    set:
+      resources:
+        services:
+          main:
+            ports:
+              http:
+                port: &port 80
+        controllers:
+          main:
+            containers:
+              main:
+                probes:
+                  startup:
+                    enabled: true
+                    custom: true
+                    spec:
+                      httpGet:
+                        path: /api/version
+                        port: *port
+                      initialDelaySeconds: 0
+                      periodSeconds: 10
+                      timeoutSeconds: 1
+                      successThreshold: 1
+                      failureThreshold: 3
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe
+          value:
+            httpGet:
+              path: /api/version
+              port: *port
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+
+  - it: User-defined liveness probe port should pass
+    set:
+      resources:
+        services:
+          main:
+            ports:
+              http:
+                port: &port 80
+        controllers:
+          main:
+            containers:
+              main:
+                probes:
+                  liveness:
+                    enabled: true
+                    port: &port http
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: *port
+            timeoutSeconds: 1
+
+  - it: User-defined liveness probe port should pass
+    set:
+      resources:
+        services:
+          main:
+            ports:
+              http:
+                port: &port 80
+        controllers:
+          main:
+            containers:
+              main:
+                probes:
+                  liveness:
+                    enabled: true
+                    port: &port http
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: *port
+            timeoutSeconds: 1
+
+  - it: User-defined readiness probe port should pass
+    set:
+      resources:
+        services:
+          main:
+            ports:
+              http:
+                port: &port 80
+        controllers:
+          main:
+            containers:
+              main:
+                probes:
+                  readiness:
+                    enabled: true
+                    port: &port http
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe
+          value:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: *port
+            timeoutSeconds: 1
+
+  - it: User-defined startup probe port should pass
+    set:
+      resources:
+        services:
+          main:
+            ports:
+              http:
+                port: &port 80
+        controllers:
+          main:
+            containers:
+              main:
+                probes:
+                  startup:
+                    enabled: true
+                    port: &port http
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe
+          value:
+            failureThreshold: 30
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            successThreshold: 1
+            tcpSocket:
+              port: *port
+            timeoutSeconds: 1

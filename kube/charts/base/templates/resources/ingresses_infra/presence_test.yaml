@@ -1,0 +1,102 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: ingress presence
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default should pass
+    asserts:
+      - containsDocument:
+          kind: Ingress
+        not: true
+
+  - it: explicitly disabled should pass
+    set:
+      resources.ingresses.main.enabled: false
+    asserts:
+      - containsDocument:
+          kind: Ingress
+        not: true
+
+  - it: explicitly enabled should pass
+    set:
+      resources.ingresses.main:
+        enabled: true
+        hosts:
+          - host: toto.com
+            paths:
+              - service:
+                  name: main
+                path: /
+    asserts:
+      - containsDocument:
+          kind: Ingress
+        not: true
+
+  - it: multiple enabled should pass
+    set:
+      resources:
+        ingresses:
+          main:
+            nameOverride: first
+            enabled: true
+            hosts:
+              - host: toto.com
+                paths:
+                  - service:
+                      name: main
+                    path: /
+          test:
+            enabled: true
+            hosts:
+              - host: toto.com
+                paths:
+                  - service:
+                      name: main
+                    path: /
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-first
+        isKind:
+          of: Ingress
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-test
+        isKind:
+          of: Ingress
+
+  - it: multiple with default enabled should pass
+    set:
+      resources.ingresses.main:
+        nameOverride: first
+        enabled: true
+        hosts:
+          - host: toto.com
+            paths:
+              - service:
+                  name: main
+                path: /
+
+      resources.ingresses.test:
+        labels:
+          toto: titi
+        hosts:
+          - host: toto.com
+            paths:
+              - service:
+                  name: main
+                path: /
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-first
+        isKind:
+          of: Ingress
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-test
+        isKind:
+          of: Ingress

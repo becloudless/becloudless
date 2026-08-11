@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: features mainWorkload
+templates:
+  - base.yaml
+tests:
+  - it: mainWorkload disable make no resources
+    values:
+      - ../../tests/overallValues.yaml
+    set:
+      mainWorkload.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: no resources by default
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: Cronjobs do not define HPA PDB or Service
+    set:
+      mainWorkload:
+        type: CronJob
+        cronJob: 
+          schedule: "30 * * * *"
+          timeZone: UTC
+          successfulJobsHistory: 42
+        container:
+          image:
+            repository: ghcr.io/mendhak/http-https-echo
+            tag: 31
+    asserts:
+      - equal:
+          path: spec.successfulJobsHistoryLimit
+          value: 42
+        documentSelector:
+          path: kind
+          value: CronJob
+      - containsDocument:
+          kind: PodDisruptionBudget
+        not: true
+      - containsDocument:
+          kind: HorizontalPodAutoscaler
+        not: true
+      - containsDocument:
+          kind: Service
+        not: true

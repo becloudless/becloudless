@@ -1,0 +1,234 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "enabled": {
+      "$ref": "../../lib/utils.json#/enabled"
+    },
+    "unixSocket": {
+      "$comment": "TODO: Clarify how this is used",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "unifiedTagging": {
+      "title": "Unified Tagging",
+      "description": "Enable unified tags. Sets common Datadog tags on workloads",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "service": {
+          "description": "Override service name tag. Defaults to the Helm Release name",
+          "type": "string"
+        }
+      }
+    },
+    "logConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Add pod annotations for logs",
+          "type": "boolean"
+        },
+        "source": {
+          "$comment": "TODO: Add title and/or description",
+          "type": "string"
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "openmetrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "path": {
+              "description": "Default path to scrape to get the metrics \n(can be overridden by instance)",
+              "type": "string"
+            },
+            "collect_counters_with_distributions": {
+              "description": "Collect the observation counter metrics ending in `.sum` and `.count`\n    ## when sending histogram buckets as Datadog distribution metrics. \n(can be overridden by instance)",
+              "type": "boolean"
+            },
+            "max_returned_metrics": {
+              "description": "Default maximum number of metrics sent \n(can be overridden by instance)",
+              "type": "integer",
+              "minimum": 0
+            },
+            "instances": {
+              "description": "List of OpenMetrics checks",
+              "type": "object",
+              "additionalProperties": false,
+              "patternProperties": {
+                "description": "instance of openmertics checks",
+                "^[0-9a-zA-Z-]*$": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "namespace": {
+                      "description": "Namespace of the check",
+                      "type": "string"
+                    },
+                    "path": {
+                      "description": "Path to scrap to get the metrics",
+                      "type": "string"
+                    },
+                    "metrics": {
+                      "description": "The list of whitelisted metrics",
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "max_returned_metrics": {
+                      "description": "Maximum number of metrics sent",
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "port": {
+                      "description": "Port to scrape",
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tracerAgent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "logsInjection": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Enable automatic MDC key injection for Datadog trace and span IDs",
+              "type": "boolean"
+            }
+          }
+        },
+        "profiling": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Enable Datadog profiling",
+              "type": "boolean"
+            }
+          }
+        },
+        "tracing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Enable Datadog tracing",
+              "type": "boolean"
+            },
+            "serviceMapping": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "description": "Enable service mapping",
+                  "type": "boolean"
+                },
+                "mappedServices": {
+                  "description": "Define service name mappings to allow renaming services in traces",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "sampleRate": {
+              "title": "Sample rate",
+              "description": "Configures the sampling percentage of traces. For example, 0.01 will keep 1% of traces.",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "jmx": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "tomcat": {
+              "description": "Activate Tomcat Datadog integration",
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "tagQuery": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "When set to true query string parameters and fragment get added to web client spans",
+              "type": "boolean"
+            },
+            "custom": {
+              "description": "Map of case-insensitive header keys to tag names so that tags will be added on traces",
+              "example": [
+                [
+                  "CASE-insensitive-Header:my-tag-name",
+                  "User-ID:userId",
+                  "My-Header-And-Tag-Name"
+                ]
+              ],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "dogstatsd": {
+      "$comment": "TODO: Clarify how this is used. TODO: Validation of extra fields is disabled",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

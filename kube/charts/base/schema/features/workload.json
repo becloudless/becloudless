@@ -1,0 +1,88 @@
+{
+  "type": "object",
+  "title": "Declaring a workload including all related resources",
+  "description": "",
+  "additionalProperties": false,
+  "properties": {
+    "enabled": {
+      "$ref": "../lib/utils.json#/enabled"
+    },
+    "annotations": {
+      "$ref": "../lib/k8s.json#/Annotations"
+    },
+    "labels": {
+      "$ref": "../lib/k8s.json#/Labels"
+    },
+    "container": {
+      "$ref": "../resources/containers.json#/container"
+    },
+    "initContainer": {
+      "$ref": "../resources/containers.json#/container"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["Deployment", "StatefulSet", "DaemonSet", "CronJob", "Job", "InferenceService", "singleton"],
+      "default": "Deployment"
+    },
+    "replicas": {
+      "$ref": "../lib/resource/controller.json#/replicas"
+    },
+    "strategy": {
+      "$ref": "../lib/resource/controller.json#/strategy"
+    },
+    "rollingUpdate": {
+      "$ref": "../lib/resource/controller.json#/rollingUpdate"
+    },
+    "volumes": {
+      "title": "configure volumes/volumeMounts",
+      "additionalProperties": {
+        "$ref": "../lib/resource/controller-volumes.json#/item"
+      }
+    },
+    "pod": {
+      "$ref": "../resources/pods.json#/options"
+    },
+    "service": {
+      "$ref": "../resources/services.json#/WorkloadInstance"
+    },
+    "serviceAccount": {
+      "$ref": "../resources/serviceAccounts.json#/instance"
+    },
+    "scheduling": {
+      "$ref": "../features/workload/scheduling.json"
+    },
+    "istio": {
+      "$ref": "../features/workload/istio.json"
+    },
+    "datadog": {
+      "$ref": "../features/workload/datadog.json"
+    },
+    "flux": {
+      "$ref": "../features/workload/flux.json"
+    },
+    "kafka": {
+      "$ref": "../features/workload/kafka.json"
+    },
+    "hpa": {
+      "$ref": "../features/workload/hpa.json"
+    },
+    "cronJob": {
+      "$ref": "../lib/resource/controller.json#/cronJob"
+    },
+    "job": {
+      "$ref": "../lib/resource/controller.json#/job"
+    },
+    "statefulSet": {
+      "$ref": "../lib/resource/controller.json#/statefulSet"
+    },
+    "inferenceService": {
+      "$ref": "../lib/resource/controller.json#/inferenceService"
+    },
+    "pdb": {
+      "$ref": "../resources/podDisruptionBudgets.json#/WorkloadInstance"
+    },
+    "ingress": {
+      "$ref": "../resources/ingresses.json#/instance"
+    }
+  }
+}

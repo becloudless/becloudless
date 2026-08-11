@@ -1,0 +1,23 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: sidecar validations
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: sidecar requires port on ingress
+    set:
+      resources.sidecars.main.ingress:
+        - bind: toto
+    asserts:
+      - failedTemplate:
+          errorMessage: "port is required on sidecar.ingress. (sidecar: main, ingress: 0)"
+
+  - it: sidecar requires hosts on egress
+    set:
+      resources.sidecars.main.egress:
+        - bind: toto
+    asserts:
+      - failedTemplate:
+          errorMessage: "hosts is required on sidecar.egress. (sidecar: main, egress: 0)"

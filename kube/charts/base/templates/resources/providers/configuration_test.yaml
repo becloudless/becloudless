@@ -1,0 +1,66 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: provider configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: no provider by default
+    asserts:
+      - containsDocument:
+          kind: Provider
+        not: true
+
+  - it: provider can be disabled
+    set:
+      resources.providers.main.enabled: false
+    asserts:
+      - containsDocument:
+          kind: Provider
+        not: true
+
+  - it: default enabled provider
+    set:
+      resources.providers.main:
+        type: slack
+        address: https://genre
+        secret: superSecret
+    documentSelector:
+      path: kind
+      value: Provider
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+      - equal:
+          path: spec.type
+          value: slack
+      - equal:
+          path: spec.address
+          value: https://genre
+      - equal:
+          path: spec.secretRef.name
+          value: superSecret
+      - equal:
+          path: metadata.labels.app
+          value: RELEASE-NAME
+
+  - it: second provider can be set
+    set:
+      resources.providers:
+        main:
+          enabled: true
+          type: slack
+        second:
+          enabled: true
+          type: webhook
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-second
+    asserts:
+      - isKind:
+          of: Provider
+      - equal:
+          path: spec.type
+          value: webhook

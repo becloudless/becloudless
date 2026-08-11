@@ -1,0 +1,53 @@
+{
+    "KafkaResourceMatchType": {
+        "type": "object",
+        "title": "Kafka resource match type",
+        "description": "This object specifies the method used to match one or several Kafka resources, e.g. topics, to which an ACL permission should be applied.\n\nUsually the object can be empty -- by default this will apply literal matching of the object's key to a single resource. To select a group of resources sharing the same prefix, override property `patternType` to `prefix`.",
+        "properties": {
+            "patternType": {
+                "type": "string",
+                "enum": ["literal", "prefix"],
+                "default": "literal"
+            }
+        },
+        "additionalProperties": false
+    },
+    "KafkaTopics": {
+        "type": "object",
+        "title": "A selection of Kafka topics, stored in a object of type `string -> KafkaResourceMatchType`. The key is the topic name (or its prefix) and the value is the KafkaResourceMatchType configuration (empty for literal matching by default).",
+        "patternProperties": {
+            "^[a-z0-9\\.\\-_]*$": {
+                "$ref": "#/KafkaResourceMatchType"
+            }
+        },
+        "minProperties": 1,
+        "additionalProperties": false
+    },
+    "KafkaTransactionalId": {
+        "type": "string",
+        "title": "The name of the Kafka transactional ID your Kafka user needs to be able to use.",
+        "pattern": "^[a-z0-9\\.\\-_]+$"
+    },
+    "KafkaConsumerGroup": {
+        "type": "string",
+        "title": "The name of the Kafka consumer group your Kafka user needs to be able to use. Mandatory if readable Kafka topics have been given.",
+        "pattern": "^[a-z0-9\\.\\-_]+$"
+    },
+    "KafkaClusterClient": {
+        "type": "object",
+        "title": "Client or ACL configuration towards a given Kafka cluster.",
+        "description": "Use the `readTopics`, `writeTopics` and `readWriteTopics` objects to declare the topics your app will have to read and write to.",
+        "properties": {
+            "readTopics": {"$ref": "#/KafkaTopics"},
+            "writeTopics": {"$ref": "#/KafkaTopics"},
+            "readWriteTopics": {"$ref": "#/KafkaTopics"},
+            "consumerGroup": {"$ref": "#/KafkaConsumerGroup"},
+            "transactionalId": {"$ref": "#/KafkaTransactionalId"}
+        },
+        "minProperties": 1,
+        "dependentRequired": {
+            "readWriteTopics": ["consumerGroup"],
+            "readTopics": ["consumerGroup"]
+        }
+    }
+}

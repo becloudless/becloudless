@@ -1,0 +1,85 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: workloads datadog
+templates:
+  - base.yaml
+tests:
+  - it: datadog service and version for non main workload
+    set:
+      workloads.other:
+        datadog:
+          enabled: true
+        service:
+          ports:
+            http:
+              port: 8080
+        container:
+          image:
+            repository: yopla
+            tag: "66"
+    asserts:
+      - documentSelector:
+          path: kind
+          value: Deployment
+        equal:
+          path: metadata.labels["tags.datadoghq.com/service"]
+          value: release-name-other
+      - documentSelector:
+          path: kind
+          value: Deployment
+        equal:
+          path: metadata.labels["tags.datadoghq.com/version"]
+          value: "66"
+      - documentSelector:
+          path: kind
+          value: Service
+        equal:
+          path: metadata.labels["tags.datadoghq.com/service"]
+          value: release-name-other
+      - documentSelector:
+          path: kind
+          value: Service
+        equal:
+          path: metadata.labels["tags.datadoghq.com/version"]
+          value: "66"
+
+  - it: datadog service and version override
+    set:
+      teamShortname: sre
+      workloads.other:
+        service:
+          ports:
+            http:
+              port: 8080
+        container:
+          image:
+            repository: yopla
+            tag: "66"
+        datadog:
+          unifiedTagging:
+            service: yopla
+    asserts:
+      - documentSelector:
+          path: kind
+          value: Deployment
+        equal:
+          path: metadata.labels["tags.datadoghq.com/service"]
+          value: yopla
+      - documentSelector:
+          path: kind
+          value: Deployment
+        equal:
+          path: metadata.labels["tags.datadoghq.com/version"]
+          value: "66"
+      - documentSelector:
+          path: kind
+          value: Service
+        equal:
+          path: metadata.labels["tags.datadoghq.com/service"]
+          value: yopla
+      - documentSelector:
+          path: kind
+          value: Service
+        equal:
+          path: metadata.labels["tags.datadoghq.com/version"]
+          value: "66"

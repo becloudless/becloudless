@@ -1,0 +1,64 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: route presence
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default should pass
+    asserts:
+      - containsDocument:
+          kind: HTTPRoute
+        not: true
+
+  - it: explicitly disabled should pass
+    set:
+      resources.routes.main.enabled: false
+    asserts:
+      - containsDocument:
+          kind: HTTPRoute
+        not: true
+
+  - it: explicitly enabled should pass
+    set:
+      resources.routes.main:
+        enabled: true
+        parentRefs:
+          - name: test
+            namespace: test
+    documentSelector:
+      path: kind
+      value: HTTPRoute
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
+
+  - it: multiple enabled should pass
+    set:
+      resources.routes:
+        main:
+          nameOverride: first
+          enabled: true
+          parentRefs:
+            - name: main
+              namespace: main
+        test:
+          nameOverride: second
+          enabled: true
+          parentRefs:
+            - name: test
+              namespace: test
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-first
+        isKind:
+          of: HTTPRoute
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-second
+        isKind:
+          of: HTTPRoute

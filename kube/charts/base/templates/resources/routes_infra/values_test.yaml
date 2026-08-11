@@ -1,0 +1,355 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: route values
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: setting gateway should pass
+    set:
+      resources.routes.main:
+        enabled: true
+        parentRefs:
+          - name: parentName
+            namespace: parentNamespace
+    documentSelector:
+      path: kind
+      value: HTTPRoute
+    asserts:
+      - equal:
+          path: spec.parentRefs[0].name
+          value: parentName
+      - equal:
+          path: spec.parentRefs[0].namespace
+          value: parentNamespace
+
+  - it: custom host and path should pass
+    set:
+      resources.routes.main:
+        enabled: true
+        parentRefs:
+          - name: parentName
+            namespace: parentNamespace
+        hostnames:
+          - chart-test.local
+    documentSelector:
+      path: kind
+      value: HTTPRoute
+    asserts:
+      - equal:
+          path: spec.hostnames[0]
+          value: chart-test.local
+
+  - it: custom host with template
+    set:
+      resources.routes.main:
+        enabled: true
+        parentRefs:
+          - name: parentName
+            namespace: parentNamespace
+        hostnames:
+          - "{{ .Release.Name }}.local"
+    documentSelector:
+      path: kind
+      value: HTTPRoute
+    asserts:
+      - equal:
+          path: spec.hostnames[0]
+          value: RELEASE-NAME.local
+
+  - it: path matches should only be used for HTTPRoutes and GRPCRoutes
+    set:
+      resources.routes:
+        main:
+          enabled: true
+          kind: HTTPRoute
+          parentRefs:
+            - name: parentName
+              namespace: parentNamespace
+          rules:
+            - backendRefs:
+                - name: test
+                  namespace: test
+                  kind: Service
+                  weight: 1
+              matches:
+                - path:
+                    type: PathPrefix
+                    value: /test
+              filters:
+                - type: URLRewrite
+                  urlRewrite:
+                    path:
+                      type: ReplacePrefixMatch
+                      replacePrefixMatch: ""
+              timeouts:
+                backendRequest: 30s
+        grpc:
+          enabled: true
+          kind: GRPCRoute
+          parentRefs:
+            - name: parentName
+              namespace: parentNamespace
+          rules:
+            - backendRefs:
+                - name: test
+                  namespace: test
+                  kind: Service
+                  weight: 1
+              matches:
+                - path:
+                    type: PathPrefix
+                    value: /test
+              filters:
+                - type: URLRewrite
+                  urlRewrite:
+                    path:
+                      type: ReplacePrefixMatch
+                      replacePrefixMatch: ""
+        tcp:
+          enabled: true
+          kind: TCPRoute
+          parentRefs:
+            - name: parentName
+              namespace: parentNamespace
+          rules:
+            - backendRefs:
+                - name: test
+                  namespace: test
+                  kind: Service
+                  weight: 1
+              matches:
+                - path:
+                    type: PathPrefix
+                    value: /test
+              filters:
+                - type: URLRewrite
+                  urlRewrite:
+                    path:
+                      type: ReplacePrefixMatch
+                      replacePrefixMatch: ""
+        tls:
+          enabled: true
+          kind: TLSRoute
+          parentRefs:
+            - name: parentName
+              namespace: parentNamespace
+          rules:
+            - backendRefs:
+                - name: test
+                  namespace: test
+                  kind: Service
+                  weight: 1
+              matches:
+                - path:
+                    type: PathPrefix
+                    value: /test
+              filters:
+                - type: URLRewrite
+                  urlRewrite:
+                    path:
+                      type: ReplacePrefixMatch
+                      replacePrefixMatch: ""
+        udp:
+          enabled: true
+          kind: UDPRoute
+          parentRefs:
+            - name: parentName
+              namespace: parentNamespace
+          rules:
+            - backendRefs:
+                - name: test
+                  namespace: test
+                  kind: Service
+                  weight: 1
+              matches:
+                - path:
+                    type: PathPrefix
+                    value: /test
+              filters:
+                - type: URLRewrite
+                  urlRewrite:
+                    path:
+                      type: ReplacePrefixMatch
+                      replacePrefixMatch: ""
+    asserts:
+      - documentSelector:
+          path: kind
+          value: GRPCRoute
+        equal:
+          path: spec.rules[0].matches
+          value:
+            - path:
+                type: PathPrefix
+                value: /test
+      - documentSelector:
+          path: kind
+          value: GRPCRoute
+        equal:
+          path: spec.rules[0].filters
+          value:
+            - type: URLRewrite
+              urlRewrite:
+                path:
+                  type: ReplacePrefixMatch
+                  replacePrefixMatch: ""
+      - documentSelector:
+          path: kind
+          value: HTTPRoute
+        equal:
+          path: spec.rules[0].matches
+          value:
+            - path:
+                type: PathPrefix
+                value: /test
+      - documentSelector:
+          path: kind
+          value: HTTPRoute
+        equal:
+          path: spec.rules[0].filters
+          value:
+            - type: URLRewrite
+              urlRewrite:
+                path:
+                  type: ReplacePrefixMatch
+                  replacePrefixMatch: ""
+      - documentSelector:
+          path: kind
+          value: TCPRoute
+        notExists:
+          path: spec.rules[0].matches
+      - documentSelector:
+          path: kind
+          value: TCPRoute
+        notExists:
+          path: spec.rules[0].filters
+      - documentSelector:
+          path: kind
+          value: TLSRoute
+        notExists:
+          path: spec.rules[0].matches
+      - documentSelector:
+          path: kind
+          value: TLSRoute
+        notExists:
+          path: spec.rules[0].filters
+      - documentSelector:
+          path: kind
+          value: UDPRoute
+        notExists:
+          path: spec.rules[0].matches
+      - documentSelector:
+          path: kind
+          value: UDPRoute
+        notExists:
+          path: spec.rules[0].filters
+      - documentSelector:
+          path: kind
+          value: UDPRoute
+        notExists:
+          path: spec.rules[0].timeouts
+
+  - it: hostnames shouldn't be used for TCPRoutes and UDPRoutes
+    set:
+      resources.routes:
+        main:
+          enabled: true
+          kind: TCPRoute
+          hostnames:
+            - chart-test.local
+          parentRefs:
+            - name: parentName
+              namespace: parentNamespace
+        udp:
+          enabled: true
+          kind: UDPRoute
+          hostnames:
+            - chart-test.local
+          parentRefs:
+            - name: parentName
+              namespace: parentNamespace
+    asserts:
+      - documentSelector:
+          path: kind
+          value: TCPRoute
+        notExists:
+          path: spec.hostnames
+      - documentSelector:
+          path: kind
+          value: UDPRoute
+        notExists:
+          path: spec.hostnames
+
+  - it: sectionName in parentRefs should be optional
+    set:
+      resources.routes:
+        main:
+          nameOverride: first
+          enabled: true
+          parentRefs:
+            - name: parentName
+              namespace: parentNamespace
+        second:
+          enabled: true
+          nameOverride: second    # this is not mandatory but the test looks to randomly fail without it
+          parentRefs:
+            - name: parentName
+              namespace: parentNamespace
+              sectionName: parentSection
+    asserts:
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-first
+        notExists:
+          path: spec.parentRefs[0].sectionName
+      - documentSelector:
+          path: metadata.name
+          value: RELEASE-NAME-second
+        equal:
+          path: spec.parentRefs[0].sectionName
+          value: parentSection
+
+  - it: timeouts should only be used for HTTPRoutes
+    set:
+      resources.routes:
+        main:
+          enabled: true
+          kind: HTTPRoute
+          parentRefs:
+            - name: parentName
+              namespace: parentNamespace
+          rules:
+            - backendRefs:
+                - name: test
+                  namespace: test
+              timeouts:
+                backendRequest: 30s
+        grpc:
+          enabled: true
+          kind: GRPCRoute
+          parentRefs:
+            - name: parentName
+              namespace: parentNamespace
+          rules:
+            - backendRefs:
+                - name: test
+                  namespace: test
+              matches:
+                - path:
+                    type: PathPrefix
+                    value: /test
+              timeouts:
+                backendRequest: 10s
+    asserts:
+      - documentSelector:
+          path: kind
+          value: GRPCRoute
+        notExists:
+          path: spec.rules[0].timeouts.backendRequest
+      - documentSelector:
+          path: kind
+          value: HTTPRoute
+        equal:
+          path: spec.rules[0].timeouts.backendRequest
+          value: 30s

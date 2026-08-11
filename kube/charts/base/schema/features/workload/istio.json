@@ -1,0 +1,118 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "enabled": {
+      "$ref": "../../lib/utils.json#/enabled"
+    },
+    "proxyResources": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "Istio proxy sidecar resources",
+      "description": "those will be put as annotations on the pod (because that's how istio receive sizing), might be overwritten by podAnnotations",
+      "properties": {
+        "limits": {
+          "additionalProperties": false,
+          "properties": {
+            "cpu": {
+              "type": "string",
+              "default": "1"
+            },
+            "memory": {
+              "type": "string",
+              "default": "1Gi"
+            }
+          }
+        },
+        "requests": {
+          "additionalProperties": false,
+          "properties": {
+            "cpu": {
+              "type": "string",
+              "default": "100m"
+            },
+            "memory": {
+              "type": "string",
+              "default": "200Mi"
+            }
+          }
+        }
+      }
+    },
+    "publiclyExposed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hosts"
+      ],
+      "title": "Expose the service publicly by configuring istio VirtualService",
+      "properties": {
+        "enabled": {
+          "$ref": "../../lib/utils.json#/enabled"
+        },
+        "gateway": {
+          "type": "string",
+          "enum": [
+            "public",
+            "restricted"
+          ],
+          "default": "restricted"
+        },
+        "hosts": {
+          "type": "array",
+          "item": {
+            "title": "hosts like for example XXX.tools-1.blbl.cr",
+            "type": "string"
+          }
+        },
+        "http": {
+          "title": "the istio's VirtualService http configuration",
+          "type": "array",
+          "item": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "privatelyExposed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hosts"
+      ],
+      "title": "Expose the service privately by configuring istio VirtualService",
+      "properties": {
+        "enabled": {
+          "$ref": "../../lib/utils.json#/enabled"
+        },
+        "hosts": {
+          "type": "array",
+          "item": {
+            "title": "hosts like for example XXX.tools.blabla.io",
+            "type": "string"
+          }
+        },
+        "http": {
+          "title": "the istio's VirtualService http configuration",
+          "type": "array",
+          "item": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "blockUndefinedDependencies": {
+      "type": "boolean",
+      "title": "Set passthroughCluster policy",
+      "description": "require declaring dependencies by default. This configures the sidecar CRD",
+      "default": true
+    },
+    "dependencies": {
+      "type": "object",
+      "title": "List of hosts this workload talk to.",
+      "description": "format is namespace/domain.name.svc.cluster.local or domain.name.svc.cluster.local directly. This configures the sidecar CRD egress host.",
+      "minProperties": 1,
+      "additionalProperties": true
+    }
+  }
+}

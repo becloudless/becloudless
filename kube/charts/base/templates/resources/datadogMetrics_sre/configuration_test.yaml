@@ -1,0 +1,41 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: datadogMetrics configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: set datadogMetrics query
+    set:
+      resources.datadogMetrics.main.query: "avg:system.cpu.user{*}"
+    documentSelector:
+      path: kind
+      value: DatadogMetric
+    asserts:
+      - equal:
+          path: spec.query
+          value: "avg:system.cpu.user{*}"
+
+  - it: query is mandatory
+    set:
+      resources.datadogMetrics.main:
+        enabled: true
+        toto: 42 # TODO problem with schema?
+    asserts:
+      - failedTemplate:
+          errorMessage: "query field is required for datadogMetrics. (alert: main)"
+
+  - it: query is templated
+    set:
+      resources:
+        datadogMetrics:
+          main:
+            query: "{{ .Values.resources.controllers.main.containers.main.image.tag }}"
+    documentSelector:
+      path: kind
+      value: DatadogMetric
+    asserts:
+      - equal:
+          path: spec.query
+          value: 31

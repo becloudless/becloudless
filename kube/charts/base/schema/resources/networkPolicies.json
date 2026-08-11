@@ -1,0 +1,59 @@
+{
+  "instance": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "$ref": "../lib/utils.json#/enabled"
+      },
+      "annotations": {
+        "$ref": "../lib/k8s.json#/Annotations"
+      },
+      "labels": {
+        "$ref": "../lib/k8s.json#/Labels"
+      },
+      "nameOverride": {
+        "$ref": "../lib/utils.json#/nameOverride"
+      },
+      "controller": {
+        "type": "string"
+      },
+      "podSelector": {
+        "type": "object",
+        "$ref": "../lib/k8s.json#/LabelSelector"
+      },
+      "policyTypes": {
+        "title": "The policyTypes for this networkPolicy",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["Ingress", "Egress"]
+        }
+      },
+      "rules": {
+        "type": "object",
+        "title": "The rulesets for this networkPolicy",
+        "description": "[[ref]](https://kubernetes.io/docs/concepts/services-networking/network-policies/#networkpolicy-resource)",
+        "additionalProperties": false,
+        "properties": {
+          "ingress": {
+            "title": "The ingress rules for this networkPolicy",
+            "description": "Allows all ingress traffic by default",
+            "type": "array",
+            "items": {
+              "$ref": "../lib/k8s.json#/NetworkPolicyIngressRule"
+            }
+          },
+          "egress": {
+            "title": "The egress rules for this networkPolicy",
+            "description": "Allows all egress traffic by default",
+            "type": "array",
+            "items": {
+              "$ref": "../lib/k8s.json#/NetworkPolicyEgressRule"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: podDisruptionBudget validations
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: podDisruptionBudget requires controller reference
+    set:
+      resources.podDisruptionBudgets:
+        other:
+          enabled: true
+          controller: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: "controller field is required for PodDisruptionBudget. (pdb: other)"

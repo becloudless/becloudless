@@ -1,0 +1,192 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: horizontalPodAutoscaler configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: hpa is enabled by default
+    documentSelector:
+      path: kind
+      value: HorizontalPodAutoscaler
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+
+  - it: hpa can be disabled
+    set:
+      resources.horizontalPodAutoscalers.main.enabled: false
+    asserts:
+      - containsDocument:
+          kind: HorizontalPodAutoscaler
+        not: true
+
+  - it: default enabled hpa config with deployment
+    documentSelector:
+      path: kind
+      value: HorizontalPodAutoscaler
+    asserts:
+      - equal:
+          path: spec.minReplicas
+          value: 2
+      - equal:
+          path: spec.maxReplicas
+          value: 50
+      - equal:
+          path: spec.scaleTargetRef
+          value:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: RELEASE-NAME
+      - equal:
+          path: metadata.labels.app
+          value: RELEASE-NAME
+
+  - it: hpa min max
+    set:
+      resources.horizontalPodAutoscalers:
+        main:
+          controller: main
+          minReplicas: 42
+          maxReplicas: 43
+    documentSelector:
+      path: kind
+      value: HorizontalPodAutoscaler
+    asserts:
+      - equal:
+          path: spec.minReplicas
+          value: 42
+      - equal:
+          path: spec.maxReplicas
+          value: 43
+      - equal:
+          path: spec.metrics
+          value:
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: 70
+
+  - it: second hpa can be set
+    set:
+      resources.horizontalPodAutoscalers:
+        second:
+          enabled: true
+          controller: main
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-second
+    asserts:
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: spec.minReplicas
+          value: 2
+      - equal:
+          path: spec.maxReplicas
+          value: 50
+      - equal:
+          path: spec.metrics
+          value:
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: 70
+
+  - it: second hpa can be set for second controller
+    set:
+      resources:
+        controllers:
+          second:
+            type: StatefulSet
+            containers:
+              main:
+                image:
+                  repository: test
+                  tag: 42
+      resources.horizontalPodAutoscalers:
+        second:
+          controller: second
+          nameOverride: second-hpa
+          minReplicas: 42
+          maxReplicas: 43
+          metrics:
+            toto:
+              type: Resource
+              resource:
+                name: mem
+                target:
+                  averageUtilization: 20
+                  type: Utilization
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-second-hpa
+    asserts:
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: spec.minReplicas
+          value: 42
+      - equal:
+          path: spec.maxReplicas
+          value: 43
+      - equal:
+          path: spec.metrics
+          value:
+            - resource:
+                name: cpu
+                target:
+                  averageUtilization: 70
+                  type: Utilization
+              type: Resource
+            - resource:
+                name: mem
+                target:
+                  averageUtilization: 20
+                  type: Utilization
+              type: Resource
+      - equal:
+          path: spec.scaleTargetRef
+          value:
+            apiVersion: apps/v1
+            kind: StatefulSet
+            name: RELEASE-NAME-second
+
+  - it: behavior can be set
+    set:
+      resources.horizontalPodAutoscalers:
+        main:
+          controller: main
+          minReplicas: 42
+          maxReplicas: 43
+          behavior:
+            scaleUp:
+              stabilizationWindowSeconds: 60
+            scaleDown:
+              stabilizationWindowSeconds: 30
+              policies:
+                - type: Pods
+                  periodSeconds: 60
+                  value: 1
+    documentSelector:
+      path: kind
+      value: HorizontalPodAutoscaler
+    asserts:
+      - equal:
+          path: spec.behavior.scaleUp.stabilizationWindowSeconds
+          value: 60
+      - equal:
+          path: spec.behavior.scaleDown.stabilizationWindowSeconds
+          value: 30
+      - contains:
+          path: spec.behavior.scaleDown.policies
+          content:
+            type: Pods
+            periodSeconds: 60
+            value: 1

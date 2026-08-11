@@ -1,0 +1,50 @@
+suite: workloads hpa other workloads
+templates:
+  - base.yaml
+tests:
+  - it: datadogQuery for non main workload
+    set:
+      workloads.toto:
+        container:
+          image:
+            repository: something
+            tag: 42
+        service:
+          ports:
+            http:
+              port: 8080
+        hpa:
+          metrics:
+            cpu:
+              enabled: false
+            datadogQuery:
+              enabled: true
+              query: sum:trace.servlet.request.hits{env:prod,service:pro-pim}.as_rate()
+              averageValue: 15
+    asserts:
+      - documentSelector:
+          path: kind
+          value: HorizontalPodAutoscaler
+        equal:
+          path: spec.metrics
+          value:
+            - type: External
+              external:
+                metric:
+                  name: datadogmetric@NAMESPACE:RELEASE-NAME-toto-datadogquery
+                target:
+                  type: AverageValue
+                  averageValue: 15
+
+      - documentSelector:
+          path: kind
+          value: DatadogMetric
+        equal:
+          path: spec.query
+          value: sum:trace.servlet.request.hits{env:prod,service:pro-pim}.as_rate()
+      - documentSelector:
+          path: kind
+          value: DatadogMetric
+        equal:
+          path: metadata.name
+          value: RELEASE-NAME-toto-datadogquery

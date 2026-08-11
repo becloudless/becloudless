@@ -1,0 +1,90 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: telemetry configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: no telemetry by default
+    asserts:
+      - containsDocument:
+          kind: Telemetry
+        not: true
+
+  - it: telemetry can be disabled
+    set:
+      resources.telemetries.main.enabled: false
+    asserts:
+      - containsDocument:
+          kind: telemetry
+        not: true
+
+  - it: default enabled telemetry
+    set:
+      resources.telemetries.main:
+        workloadLabels:
+          app: test
+        metrics:
+          - providers:
+              - name: prometheus
+            overrides:
+              - match:
+                  metric: REQUEST_COUNT
+                tagOverrides:
+                  response_code:
+                    operation: REMOVE
+    documentSelector:
+      path: kind
+      value: Telemetry
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: test
+      - equal:
+          path: spec.metrics[0].providers[0].name
+          value: "prometheus"
+      - equal:
+          path: spec.metrics[0].overrides[0].tagOverrides.response_code.operation
+          value: REMOVE
+
+  - it: second telemetry can be set
+    set:
+      resources.telemetries:
+        main:
+          workloadLabels:
+            app: test
+          metrics:
+            - providers:
+                - name: prometheus
+              overrides:
+                - match:
+                    metric: REQUEST_COUNT
+                  tagOverrides:
+                    response_code:
+                      operation: REMOVE
+        second:
+          tracing:
+            - randomSamplingPercentage: 10.00
+              customTags:
+                my_new_foo_tag:
+                  literal:
+                    value: "foo"
+          accessLogging:
+            - providers:
+                - name: envoy
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-second
+    asserts:
+      - isKind:
+          of: Telemetry
+      - equal:
+          path: spec.tracing[0].customTags.my_new_foo_tag.literal.value
+          value: foo
+      - equal:
+          path: spec.accessLogging[0].providers[0].name
+          value: envoy

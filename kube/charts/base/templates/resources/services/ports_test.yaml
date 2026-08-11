@@ -1,0 +1,75 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: service ports
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default should pass
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - equal:
+          path: spec.ports[0]
+          value:
+            name: http
+            port: 8080
+            protocol: TCP
+            targetPort: 8080
+
+  - it: custom name should pass
+    set:
+      resources:
+        services:
+          main:
+            ports:
+              http:
+                enabled: false
+                port: 443
+              server:
+                enabled: true
+                port: 8080
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - equal:
+          path: spec.ports[0]
+          value:
+            name: server
+            port: 8080
+            protocol: TCP
+            targetPort: 8080
+
+  - it: custom target port should pass
+    set:
+      resources:
+        services:
+          main:
+            ports:
+              http:
+                enabled: true
+                port: 8080
+                targetPort: 80
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - equal:
+          path: spec.ports[0]
+          value:
+            name: http
+            port: 8080
+            protocol: TCP
+            targetPort: 80
+
+  - it: no ports set
+    set:
+      workloads.second.container.image:
+        repository: there
+        tag: 42
+    asserts:
+      - failedTemplate:
+          errorMessage: no ports are enabled for Service with id "second"

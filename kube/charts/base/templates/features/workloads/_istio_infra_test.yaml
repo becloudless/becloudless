@@ -1,0 +1,89 @@
+suite: workloads istio
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: create a sidecar
+    set:
+      workloads.main.istio.enabled: true
+    documentSelector:
+      path: kind
+      value: Sidecar
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME
+      - equal:
+          path: spec.workloadSelector.labels
+          value:
+            app.kubernetes.io/component: main
+            app.kubernetes.io/name: RELEASE-NAME
+            app.kubernetes.io/instance: RELEASE-NAME
+      - equal:
+          path: spec.egress[0].hosts
+          value:
+            - istio-system/metadata.google.internal
+            - istio-system/metadata.google.internal.
+
+  - it: disabled istio
+    set:
+      workloads.main.istio.enabled: false
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels['sidecar.istio.io/inject']
+          value: "false"
+
+  - it: set egress hosts internal
+    set:
+      workloads.main.istio:
+        dependencies:
+          mydependency.mydependencynamespace: {}
+    documentSelector:
+      path: kind
+      value: Sidecar
+    asserts:
+      - equal:
+          path: spec.egress[0].hosts
+          value:
+            - istio-system/metadata.google.internal
+            - istio-system/metadata.google.internal.
+            - '*/mydependency.mydependencynamespace'
+
+  - it: blackhole policy is default
+    set:
+      workloads.main.istio.enabled: true
+    documentSelector:
+      path: kind
+      value: Sidecar
+    asserts:
+      - equal:
+          path: spec.outboundTrafficPolicy.mode
+          value: "REGISTRY_ONLY"
+
+  - it: set blackhole policy
+    set:
+      workloads.main.istio:
+        blockUndefinedDependencies: true
+    documentSelector:
+      path: kind
+      value: Sidecar
+    asserts:
+      - equal:
+          path: spec.outboundTrafficPolicy.mode
+          value: "REGISTRY_ONLY"
+
+  - it: set passthrougcluster policy
+    set:
+      workloads.main.istio:
+        blockUndefinedDependencies: false
+    documentSelector:
+      path: kind
+      value: Sidecar
+    asserts:
+      - equal:
+          path: spec.outboundTrafficPolicy.mode
+          value: "ALLOW_ANY"

@@ -1,0 +1,99 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: persistentVolumeClaims datasource
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: default should pass
+    set:
+      resources.persistentVolumeClaims.config.enabled: true
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - notExists:
+          path: spec.dataSource
+      - notExists:
+          path: spec.dataSourceRef
+
+  - it: with dataSource should pass
+    set:
+      resources.persistentVolumeClaims.config:
+        dataSource:
+          apiGroup: snapshot.storage.k8s.io
+          kind: VolumeSnapshot
+          name: MySnapshot
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - equal:
+          path: spec.dataSource
+          value:
+            apiGroup: snapshot.storage.k8s.io
+            kind: VolumeSnapshot
+            name: MySnapshot
+      - notExists:
+          path: spec.dataSourceRef
+
+  - it: templated dataSource name should pass
+    set:
+      resources.persistentVolumeClaims.config:
+        dataSource:
+          apiGroup: snapshot.storage.k8s.io
+          kind: VolumeSnapshot
+          name: "{{ .Release.Name }}-config"
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - equal:
+          path: spec.dataSource
+          value:
+            apiGroup: snapshot.storage.k8s.io
+            kind: VolumeSnapshot
+            name: RELEASE-NAME-config
+      - notExists:
+          path: spec.dataSourceRef
+
+  - it: with dataSourceRef should pass
+    set:
+      resources.persistentVolumeClaims.config:
+        dataSourceRef:
+          apiGroup: snapshot.storage.k8s.io
+          kind: VolumeSnapshot
+          name: MySnapshot
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - equal:
+          path: spec.dataSourceRef
+          value:
+            apiGroup: snapshot.storage.k8s.io
+            kind: VolumeSnapshot
+            name: MySnapshot
+      - notExists:
+          path: spec.dataSource
+
+  - it: templated dataSourceRef name should pass
+    set:
+      resources.persistentVolumeClaims.config:
+        dataSourceRef:
+          apiGroup: snapshot.storage.k8s.io
+          kind: VolumeSnapshot
+          name: "{{ .Release.Name }}-config"
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - equal:
+          path: spec.dataSourceRef
+          value:
+            apiGroup: snapshot.storage.k8s.io
+            kind: VolumeSnapshot
+            name: RELEASE-NAME-config
+      - notExists:
+          path: spec.dataSource

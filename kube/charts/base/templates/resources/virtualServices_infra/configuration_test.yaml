@@ -1,0 +1,118 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: virtualServices configuration
+templates:
+  - base.yaml
+values:
+  - ../../../tests/overallValues.yaml
+tests:
+  - it: no virtualServices by default
+    asserts:
+      - containsDocument:
+          kind: VirtualService
+        not: true
+
+  - it: virtualServices can be disabled
+    set:
+      resources.virtualServices.main.enabled: false
+    asserts:
+      - containsDocument:
+          kind: VirtualService
+        not: true
+
+  - it: default enabled virtualServices
+    set:
+      resources.virtualServices.main.hosts:
+        - toto
+    documentSelector:
+      path: kind
+      value: VirtualService
+    asserts:
+      - equal:
+          path: spec.hosts
+          value:
+            - toto
+      - equal:
+          path: metadata.labels.app
+          value: RELEASE-NAME
+
+  - it: enabled virtualServices
+    set:
+      resources.virtualServices.main:
+        hosts:
+          - toto
+        exportTo:
+          - .
+        gateways:
+          - titi
+        http:
+         - match: []
+        tcp:
+         - route: []
+    documentSelector:
+      path: kind
+      value: VirtualService
+    asserts:
+      - equal:
+          path: spec.hosts
+          value:
+           - toto
+      - equal:
+          path: spec.gateways
+          value:
+            - titi
+      - equal:
+          path: spec.http
+          value:
+            - match: []
+      - equal:
+          path: spec.tcp
+          value:
+            - route: []
+
+  - it: second virtualService can be set
+    set:
+      resources.virtualServices:
+        main:
+          hosts:
+            - toto
+        second:
+          hosts:
+            - titi
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-second
+    asserts:
+      - isKind:
+          of: VirtualService
+      - equal:
+          path: spec.hosts
+          value:
+            - titi
+
+  - it: hosts/http should be templatized
+    set:
+      resources.virtualServices:
+        main:
+          hosts:
+            - "{{ .Release.Name }}.{{ .Release.Namespace }}.svc.cluster.local"
+          http:
+            - name: "{{ .Release.Name }}-catch-all"
+              route:
+                - destination:
+                    host: "{{ .Release.Name }}.{{ .Release.Namespace }}.svc.cluster.local"
+    documentSelector:
+      path: kind
+      value: VirtualService
+    asserts:
+      - equal:
+          path: spec.hosts
+          value:
+            - RELEASE-NAME.NAMESPACE.svc.cluster.local
+      - equal:
+          path: spec.http
+          value:
+            - name: "RELEASE-NAME-catch-all"
+              route:
+                - destination:
+                    host: "RELEASE-NAME.NAMESPACE.svc.cluster.local"

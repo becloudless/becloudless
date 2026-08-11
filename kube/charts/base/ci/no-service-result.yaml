@@ -1,0 +1,47 @@
+---
+# Source: base-template/templates/base.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: release-name
+  labels:
+    app: release-name
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: release-name
+    helm.sh/chart: base-template-0.0.0
+spec:
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 33%
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: main
+      app.kubernetes.io/name: release-name
+      app.kubernetes.io/instance: release-name
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      labels:
+        app: release-name
+        app.kubernetes.io/component: main
+        app.kubernetes.io/instance: release-name
+        app.kubernetes.io/name: release-name
+    spec:
+      enableServiceLinks: true
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+      dnsPolicy: ClusterFirst
+      containers:
+        - image: ghcr.io/mendhak/http-https-echo:31
+          imagePullPolicy: IfNotPresent
+          name: main
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
