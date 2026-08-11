@@ -85,8 +85,29 @@
             until ${pkgs.iproute2}/bin/ip route show default | ${pkgs.gnugrep}/bin/grep -q default; do sleep 1; done
 
             # Volume to 100%
-            until pactl info >/dev/null 2>&1; do sleep 0.5; done
-            pactl set-sink-volume @DEFAULT_SINK@ 100%
+            #
+            # Waiting for `pactl info` to succeed is NOT enough: it only
+            # confirms the pipewire-pulse server itself is up, not that the
+            # actual HDMI sink node has been created yet (ALSA HDMI
+            # codec/EDID detection can still be in progress) - confirmed live
+            # on bureau-0, `pactl set-sink-volume @DEFAULT_SINK@ 100%` failed
+            # with "Failed to get sink information: No such entity" right
+            # after a successful `pactl info`, silently leaving the sink at
+            # whatever volume it already had. Wait for a real default sink
+            # name instead, and retry the volume set a few times in case of a
+            # further race between the sink appearing and it being fully
+            # usable.
+            #
+            # Run in a background subshell so a slow-to-appear sink doesn't
+            # delay starting jellyfin-desktop itself.
+            (
+              until pactl info >/dev/null 2>&1; do sleep 0.5; done
+              until [ -n "$(pactl get-default-sink 2>/dev/null)" ]; do sleep 0.5; done
+              for i in $(seq 1 10); do
+                pactl set-sink-volume @DEFAULT_SINK@ 100% && break
+                sleep 0.5
+              done
+            ) &
 
             cat > ~/.config/jellyfin-desktop/settings.json <<EOF
             {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"csd", "windowMaximized": true}
