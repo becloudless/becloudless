@@ -97,12 +97,17 @@
             # name instead, and retry the volume set a few times in case of a
             # further race between the sink appearing and it being fully
             # usable.
-            until pactl info >/dev/null 2>&1; do sleep 0.5; done
-            until [ -n "$(pactl get-default-sink 2>/dev/null)" ]; do sleep 0.5; done
-            for i in $(seq 1 10); do
-              pactl set-sink-volume @DEFAULT_SINK@ 100% && break
-              sleep 0.5
-            done
+            #
+            # Run in a background subshell so a slow-to-appear sink doesn't
+            # delay starting jellyfin-desktop itself.
+            (
+              until pactl info >/dev/null 2>&1; do sleep 0.5; done
+              until [ -n "$(pactl get-default-sink 2>/dev/null)" ]; do sleep 0.5; done
+              for i in $(seq 1 10); do
+                pactl set-sink-volume @DEFAULT_SINK@ 100% && break
+                sleep 0.5
+              done
+            ) &
 
             cat > ~/.config/jellyfin-desktop/settings.json <<EOF
             {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"csd", "windowMaximized": true}
