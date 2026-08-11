@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/becloudless/becloudless/pkg/security"
+	"github.com/becloudless/go-app"
 	"github.com/mitchellh/go-homedir"
-	"github.com/n0rad/go-app"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
