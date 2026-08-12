@@ -35,7 +35,7 @@
         (final: prev: {
           bcl = (bclFlake.packages.${final.stdenv.hostPlatform.system} or {}); # expose `becloudless` package under `bcl` namespace
         })
-        (final: prev: bclInputs.proxmox-nixos.overlays.${prev.stdenv.hostPlatform.system} final prev)
+        (final: prev: (bclInputs.proxmox-nixos.overlays.${prev.stdenv.hostPlatform.system} or (_: _: {})) final prev)
       ];
     };
 
@@ -103,7 +103,7 @@
               (final: prev: {
                 bcl = self.packages.${final.stdenv.hostPlatform.system} or {};
               })
-              (final: prev: bclInputs.proxmox-nixos.overlays.${prev.stdenv.hostPlatform.system} final prev)
+              (final: prev: (bclInputs.proxmox-nixos.overlays.${prev.stdenv.hostPlatform.system} or (_: _: {})) final prev)
             ];
 
           });
