@@ -26,6 +26,7 @@
             disko.nixosModules.disko
             impermanence.nixosModules.impermanence
             home-manager.nixosModules.home-manager
+            proxmox-nixos.nixosModules.proxmox-ve
           ];
         };
       };
@@ -49,6 +50,7 @@
         bclInputs.impermanence.nixosModules.impermanence
         bclInputs.home-manager.nixosModules.home-manager
         bclInputs.nixos-generators.nixosModules.all-formats # allow any system to be generated as iso, raw-efi, etc.
+        bclInputs.proxmox-nixos.nixosModules.proxmox-ve
     ];
 
     mkFlake = flake-and-lib-options @ {
@@ -173,6 +175,10 @@
     yaml = {
       url = "github:jim3692/yaml.nix";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    proxmox-nixos = {
+      url = "github:SaumonNet/proxmox-nixos";
     };
   };
 }
