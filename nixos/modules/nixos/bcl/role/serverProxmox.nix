@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, inputs, ... }:
 let
   srvNumber = lib.strings.toInt(builtins.substring ((builtins.stringLength config.networking.hostName) -1)  (-1) config.networking.hostName);
   cfg = config.bcl.role.serverProxmox;
@@ -13,6 +13,12 @@ in
   config = lib.mkMerge [
     { bcl.role.knownRoles = [ "serverProxmox" ]; }
     (lib.mkIf (config.bcl.role.name == "serverProxmox") {
+
+    # Scoped to only hosts using this role, so it doesn't affect pkgs for any
+    # other host or system (unlike adding it to the flake's global overlays).
+    nixpkgs.overlays = [
+      (final: prev: (inputs.proxmox-nixos.overlays.${prev.stdenv.hostPlatform.system} or (_: _: {})) final prev)
+    ];
 
     bcl.diskSystem.encrypted = true;
     bcl.boot.ssh = true; # give password for disk encryption on boot
