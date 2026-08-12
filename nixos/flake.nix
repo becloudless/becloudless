@@ -26,6 +26,7 @@
             disko.nixosModules.disko
             impermanence.nixosModules.impermanence
             home-manager.nixosModules.home-manager
+            proxmox-nixos.nixosModules.proxmox-ve
           ];
         };
       };
@@ -114,8 +115,23 @@
           overrideFlakeArgs = builtins.removeAttrs flake-and-lib-options ["bclOverrides"];
           overrideFlakes = nixpkgsLib.mapAttrs (host: overrideInput: overrideInput.mkFlake overrideFlakeArgs) bclOverrides;
           overrideConfigurations = nixpkgsLib.mapAttrs (host: flake: flake.nixosConfigurations.${host}) overrideFlakes;
+
+          # flake-utils-plus builds each host's `pkgs` (with overlays applied) by
+          # reading `self.pkgs.${system}` at nixosSystem-build time - it does NOT
+          # use whichever `mkFlake` call happens to construct a given host's
+          # nixosConfiguration. Since `self` is the *whole* (fixpoint) output of
+          # this wrapper, overridden hosts would otherwise still resolve to
+          # `baseFlake.pkgs` (missing any packages/overlays only added by the
+          # override input, e.g. `proxmox-nixos`) even though their
+          # nixosConfiguration's modules come from the override's `mkFlake`.
+          # Merge each override's per-system `pkgs` in (shallowly, per system) so
+          # `self.pkgs` carries the override's overlays too. Note this affects the
+          # `pkgs` seen by *every* host on the same system, not just the
+          # overridden ones, since `self.pkgs` is shared per-system.
+          overridePkgsBySystem = nixpkgsLib.foldl' (acc: flake: acc // (flake.pkgs or {})) {} (builtins.attrValues overrideFlakes);
         in
           baseFlake // {
+            pkgs = baseFlake.pkgs // overridePkgsBySystem;
             nixosConfigurations = baseFlake.nixosConfigurations // overrideConfigurations;
           };
   in
