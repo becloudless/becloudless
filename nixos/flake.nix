@@ -34,6 +34,7 @@
         (final: prev: {
           bcl = (bclFlake.packages.${final.stdenv.hostPlatform.system} or {}); # expose `becloudless` package under `bcl` namespace
         })
+        (final: prev: bclInputs.proxmox-nixos.overlays.${prev.stdenv.hostPlatform.system} final prev)
       ];
     };
 
@@ -49,6 +50,7 @@
         bclInputs.impermanence.nixosModules.impermanence
         bclInputs.home-manager.nixosModules.home-manager
         bclInputs.nixos-generators.nixosModules.all-formats # allow any system to be generated as iso, raw-efi, etc.
+        bclInputs.proxmox-nixos.nixosModules.proxmox-ve
     ];
 
     mkFlake = flake-and-lib-options @ {
@@ -100,6 +102,7 @@
               (final: prev: {
                 bcl = self.packages.${final.stdenv.hostPlatform.system} or {};
               })
+              (final: prev: bclInputs.proxmox-nixos.overlays.${prev.stdenv.hostPlatform.system} final prev)
             ];
 
           });
@@ -173,6 +176,10 @@
     yaml = {
       url = "github:jim3692/yaml.nix";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    proxmox-nixos = {
+      url = "github:SaumonNet/proxmox-nixos";
     };
   };
 }
