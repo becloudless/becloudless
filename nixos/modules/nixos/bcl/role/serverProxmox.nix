@@ -75,6 +75,20 @@ in
       bridges = [ "vmbr0" ];
     };
 
+    systemd.services.ssh-host-rsa-key-pub = {
+      description = "Generate ssh_host_rsa_key.pub from the private key";
+      wantedBy = [ "multi-user.target" ];
+      unitConfig.ConditionFileNotEmpty = "/nix/etc/ssh/ssh_host_rsa_key";
+      serviceConfig.Type = "oneshot";
+      path = [ pkgs.openssh ];
+      script = ''
+        if [ ! -s /nix/etc/ssh/ssh_host_rsa_key.pub ]; then
+          ssh-keygen -y -f /nix/etc/ssh/ssh_host_rsa_key > /etc/ssh/ssh_host_rsa_key.pub
+          chmod 0644 /nix/etc/ssh/ssh_host_rsa_key.pub
+        fi
+      '';
+    };
+
     environment.persistence."/nix" = {
       hideMounts = true;
       directories = [
