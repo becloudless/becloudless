@@ -55,6 +55,16 @@ in
             default = true;
             description = "Whether the VM should be running.";
           };
+          virtioVideo = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = ''
+              Whether to use VirtIO GL-accelerated video (SPICE listen type "none",
+              file-descriptor passing only). Set to false (default) to use
+              QXL video with SPICE listening on 127.0.0.1, which is required
+              for remote console access via qemu+ssh (e.g. virt-manager).
+            '';
+          };
         };
       });
       default = {};
@@ -89,6 +99,7 @@ in
           storage_vol = vm.diskPath;
           install_vol = vm.installIso;
           bridge_name = vm.bridgeName;
+          virtio_video = vm.virtioVideo;
         });
         active = vm.active;
       }) cfg.vms;
