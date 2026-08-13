@@ -106,6 +106,7 @@ in
       hideMounts = true;
       directories = [
         { directory = "/var/lib/pve-cluster"; mode = "u=rwx,g=,o="; }
+        { directory = "/var/lib/vz"; mode = "u=rwx,g=,o="; }
       ];
     };
   })
