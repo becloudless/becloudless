@@ -27,6 +27,7 @@
             impermanence.nixosModules.impermanence
             home-manager.nixosModules.home-manager
             proxmox-nixos.nixosModules.proxmox-ve
+            nixvirt.nixosModules.default
           ];
         };
       };
@@ -51,6 +52,7 @@
         bclInputs.home-manager.nixosModules.home-manager
         bclInputs.nixos-generators.nixosModules.all-formats # allow any system to be generated as iso, raw-efi, etc.
         bclInputs.proxmox-nixos.nixosModules.proxmox-ve
+        bclInputs.nixvirt.nixosModules.default
     ];
 
     mkFlake = flake-and-lib-options @ {
@@ -179,6 +181,11 @@
 
     proxmox-nixos = {
       url = "github:SaumonNet/proxmox-nixos";
+    };
+
+    nixvirt = {
+      url = "https://flakehub.com/f/AshleyYakeley/NixVirt/*.tar.gz";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 }
