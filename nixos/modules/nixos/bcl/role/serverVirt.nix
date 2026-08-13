@@ -153,6 +153,13 @@ in
         }
       ];
     };
+
+    environment.persistence."/nix" = {
+      hideMounts = true;
+      directories = [
+        "/var/lib/libvirt"
+      ];
+    };
   })
   ];
 }

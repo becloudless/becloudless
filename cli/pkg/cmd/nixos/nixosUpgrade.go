@@ -174,7 +174,7 @@ func validateOverrideInputs(flakeDir string, overrideInputs []string) error {
 
 // upgradeLocalFromGit rebuilds the current (local) system from the local infra git repository state.
 func upgradeLocalFromGit(action string, systemName string, overrideInputs []string) error {
-	logs.WithField("repo", bcl.BCL.System.Repository).Info("Update current system using local git repository state")
+	logs.WithField("repo", bcl.BCL.System.Repository).Warn("Update current system using local git repository state")
 
 	repository, err := openLocalInfraRepository()
 	if err != nil {
@@ -221,7 +221,7 @@ func upgradeLocalFromUpstream(action string, systemName string) error {
 // upgradeRemoteTargetHostFromGit builds locally from the local infra git repository state and deploys to a
 // remote host via nixos-rebuild's --target-host/--use-remote-sudo.
 func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, action string, systemName string, overrideInputs []string) error {
-	logs.WithField("repo", bcl.BCL.System.Repository).Info("Update remote system using local git repository state")
+	logs.WithField("repo", bcl.BCL.System.Repository).Warn("Update remote system using local git repository state")
 
 	repository, err := openLocalInfraRepository()
 	if err != nil {
