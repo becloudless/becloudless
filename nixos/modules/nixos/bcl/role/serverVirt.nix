@@ -99,7 +99,7 @@ in
           storage_vol = vm.diskPath;
           install_vol = vm.installIso;
           bridge_name = vm.bridgeName;
-          virtio_video = vm.virtioVideo;
+          virtio_video = false; # use QXL video with SPICE listening on 127.0.0.1
         });
         active = vm.active;
       }) cfg.vms;
