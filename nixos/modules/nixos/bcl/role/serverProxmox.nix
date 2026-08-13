@@ -75,10 +75,38 @@ in
       bridges = [ "vmbr0" ];
     };
 
+    # Proxmox itself (pvecm updatecerts, run as pveproxy's ExecStartPre) hardcodes
+    # reading /etc/ssh/ssh_host_rsa_key.pub, regardless of which host key types sshd
+    # is configured to use. sshd here only uses ed25519 (see role/global/ssh.nix), so
+    # this RSA keypair is generated purely to satisfy Proxmox and is never used by sshd.
+    # It's stored directly under /nix (persistent) like the ed25519 host key, so no
+    # sops secret is needed.
+    systemd.services.ssh-host-rsa-keygen = {
+      description = "Generate a RSA host keypair for Proxmox's internal use (not used by sshd)";
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig.Type = "oneshot";
+      path = [ pkgs.openssh ];
+      script = ''
+        if [ ! -s /nix/etc/ssh/ssh_host_rsa_key ]; then
+          ssh-keygen -t rsa -b 4096 -N "" -f /nix/etc/ssh/ssh_host_rsa_key
+        fi
+        if [ ! -s /etc/ssh/ssh_host_rsa_key.pub ]; then
+          ssh-keygen -y -f /nix/etc/ssh/ssh_host_rsa_key > /etc/ssh/ssh_host_rsa_key.pub
+          chmod 0644 /etc/ssh/ssh_host_rsa_key.pub
+        fi
+      '';
+    };
+
+    systemd.services.pveproxy = {
+      after = [ "ssh-host-rsa-keygen.service" ];
+      requires = [ "ssh-host-rsa-keygen.service" ];
+    };
+
     environment.persistence."/nix" = {
       hideMounts = true;
       directories = [
         { directory = "/var/lib/pve-cluster"; mode = "u=rwx,g=,o="; }
+        { directory = "/var/lib/vz"; mode = "u=rwx,g=,o="; }
       ];
     };
   })
