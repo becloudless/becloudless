@@ -288,17 +288,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1783240168,
-        "narHash": "sha256-9zaLOKal8uI+ecKaOBCOfGcZe/HG1xQQnlDDjPoOmwE=",
-        "owner": "AshleyYakeley",
-        "repo": "NixVirt",
-        "rev": "6d213ab42f72ba41c2eb4e6bdb97581c0642d942",
-        "type": "github"
+        "lastModified": 1748140003,
+        "narHash": "sha256-DNBZmuk1YRM2PmwbHzVdXumRjCUzQkMarg4iI/37rOQ=",
+        "rev": "5dfe108fd859b122f9a96981cb6bc12297653d6c",
+        "revCount": 407,
+        "type": "tarball",
+        "url": "https://api.flakehub.com/f/pinned/AshleyYakeley/NixVirt/0.6.0/0197059a-e45f-7446-86b5-411ccc894ab0/source.tar.gz"
       },
       "original": {
-        "owner": "AshleyYakeley",
-        "repo": "NixVirt",
-        "type": "github"
+        "type": "tarball",
+        "url": "https://flakehub.com/f/AshleyYakeley/NixVirt/0.6.0"
       }
     },
     "proxmox-nixos": {
