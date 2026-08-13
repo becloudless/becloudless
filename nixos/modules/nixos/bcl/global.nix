@@ -48,7 +48,7 @@ in {
           };
           extraGroups = lib.mkOption {
             type = lib.types.listOf lib.types.str;
-            default = [ "wheel" ];
+            default = [ "wheel" "libvirtd" ];
             description = "Additional groups for admin user ${name}.";
           };
         };
