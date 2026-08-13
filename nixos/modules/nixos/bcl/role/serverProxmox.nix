@@ -89,6 +89,11 @@ in
       '';
     };
 
+    systemd.services.pveproxy = {
+      after = [ "ssh-host-rsa-key-pub.service" ];
+      requires = [ "ssh-host-rsa-key-pub.service" ];
+    };
+
     environment.persistence."/nix" = {
       hideMounts = true;
       directories = [
