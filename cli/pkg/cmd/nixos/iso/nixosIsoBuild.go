@@ -15,10 +15,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// This matches the path used in the nixos install process
-// TODO factorize
-const InstallHostKeyTmpPath = "/tmp/install-ssh_host_ed25519_key"
-
 func nixosIsoBuildCmd() *cobra.Command {
 	var device string
 	var typeAndSystem string
@@ -51,33 +47,53 @@ func nixosIsoBuildCmd() *cobra.Command {
 			_, err = os.Stat(isoPath)
 			if err != nil || rebuild {
 
-				sopsFile := infra.GetNixosDir() + "/modules/nixos/groups/install/default.secrets.yaml"
-				logs.WithField("file", sopsFile).Info("Extracting install host key from group")
+				configAttr := infra.GetNixosDir() + "#" + typeAndSystemArray[0] + "Configurations." + typeAndSystemArray[1]
 
-				content, err := security.DecryptSopsYAMLWithAgeKey(sopsFile, "")
+				logs.WithField("system", typeAndSystemArray[1]).Info("Checking if system requires a pre-generated ssh host key")
+				keyFilePath, err := run.ExecCmdGetStdout(
+					"nix",
+					"--extra-experimental-features", "nix-command flakes",
+					"eval", configAttr+".config.bcl.role.install.sshHostKeyFile",
+					"--impure",
+					"--apply", `x: if x == null then "" else toString x`,
+					"--raw")
 				if err != nil {
-					return errs.WithE(err, "Failed to decrypt install group sops file")
+					return errs.WithE(err, "Failed to evaluate bcl.role.install.sshHostKeyFile for system")
 				}
 
-				// TODO standardize?
-				secretData := struct {
-					SshHostEd25519Key string `yaml:"ssh_host_ed25519_key"`
-				}{}
+				buildArgs := []string{"build", configAttr}
 
-				if err := yaml.Unmarshal(content, &secretData); err != nil {
-					return errs.WithE(err, "Failed to parse install group secrets yaml")
-				}
+				if keyFilePath != "" {
+					sopsFile := infra.GetNixosDir() + "/modules/nixos/groups/install/default.secrets.yaml"
+					logs.WithField("file", sopsFile).Info("Extracting install host key from group")
 
-				if err := os.WriteFile(InstallHostKeyTmpPath, []byte(secretData.SshHostEd25519Key), 0600); err != nil {
-					return errs.WithEF(err, data.WithField("file", InstallHostKeyTmpPath), "Failed to write install host key to temp file")
-				}
-				defer func() {
-					if err := os.Remove(InstallHostKeyTmpPath); err != nil {
-						logs.WithE(err).WithField("file", InstallHostKeyTmpPath).Error("Failed to remove install host key temp file")
+					content, err := security.DecryptSopsYAMLWithAgeKey(sopsFile, "")
+					if err != nil {
+						return errs.WithE(err, "Failed to decrypt install group sops file")
 					}
-				}()
 
-				logs.WithField("group", "install").Info("Building iso")
+					// TODO standardize?
+					secretData := struct {
+						SshHostEd25519Key string `yaml:"ssh_host_ed25519_key"`
+					}{}
+
+					if err := yaml.Unmarshal(content, &secretData); err != nil {
+						return errs.WithE(err, "Failed to parse install group secrets yaml")
+					}
+
+					if err := os.WriteFile(keyFilePath, []byte(secretData.SshHostEd25519Key), 0600); err != nil {
+						return errs.WithEF(err, data.WithField("file", keyFilePath), "Failed to write install host key to temp file")
+					}
+					defer func() {
+						if err := os.Remove(keyFilePath); err != nil {
+							logs.WithE(err).WithField("file", keyFilePath).Error("Failed to remove install host key temp file")
+						}
+					}()
+
+					buildArgs = append(buildArgs, "--impure")
+				}
+
+				logs.WithField("system", typeAndSystemArray[1]).Info("Building iso")
 
 				// raw-efi is building the img on TMPDIR, which may be too small, using current folder
 				dir, err := os.Getwd()
@@ -96,10 +112,11 @@ func nixosIsoBuildCmd() *cobra.Command {
 						logs.WithE(err).WithField("dir", currentTmp).Error("Failed to remove temporary build directory")
 					}
 				}()
-				if err := run.ExecCmd("nix", "build", infra.GetNixosDir()+"#"+typeAndSystemArray[0]+"Configurations."+typeAndSystemArray[1], "--impure"); err != nil {
+				if err := run.ExecCmd("nix", buildArgs...); err != nil {
 					return errs.WithE(err, "Iso build failed")
 				}
 			}
+
 
 			if device == "" {
 				logs.WithField("path", isoPath).Info("Your iso is available")
