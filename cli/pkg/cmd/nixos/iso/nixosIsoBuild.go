@@ -49,55 +49,41 @@ func nixosIsoBuildCmd() *cobra.Command {
 
 				configAttr := infra.GetNixosDir() + "#" + typeAndSystemArray[0] + "Configurations." + typeAndSystemArray[1]
 
-				logs.WithField("system", typeAndSystemArray[1]).Info("Checking if system requires a pre-generated ssh host key")
-				enableSshHostKey, err := run.ExecCmdGetStdout(
-					"nix",
-					"--extra-experimental-features", "nix-command flakes",
-					"eval", configAttr+".config.bcl.role.install.enableSshHostKey")
+				keyFile, err := os.CreateTemp("", "bcl-install-ssh-host-key-")
 				if err != nil {
-					return errs.WithE(err, "Failed to evaluate bcl.role.install.enableSshHostKey for system")
+					return errs.WithE(err, "Failed to create temp file for install host key")
+				}
+				keyFilePath := keyFile.Name()
+				keyFile.Close()
+				defer func() {
+					if err := os.Remove(keyFilePath); err != nil {
+						logs.WithE(err).WithField("file", keyFilePath).Error("Failed to remove install host key temp file")
+					}
+				}()
+
+				sopsFile := infra.GetNixosDir() + "/modules/nixos/groups/install/default.secrets.yaml"
+				logs.WithField("file", sopsFile).Info("Extracting install host key from group")
+
+				content, err := security.DecryptSopsYAMLWithAgeKey(sopsFile, "")
+				if err != nil {
+					return errs.WithE(err, "Failed to decrypt install group sops file")
 				}
 
-				buildArgs := []string{"build", configAttr}
-				var buildEnvs []string
+				// TODO standardize?
+				secretData := struct {
+					SshHostEd25519Key string `yaml:"ssh_host_ed25519_key"`
+				}{}
 
-				if enableSshHostKey == "true" {
-					keyFile, err := os.CreateTemp("", "bcl-install-ssh-host-key-")
-					if err != nil {
-						return errs.WithE(err, "Failed to create temp file for install host key")
-					}
-					keyFilePath := keyFile.Name()
-					keyFile.Close()
-					defer func() {
-						if err := os.Remove(keyFilePath); err != nil {
-							logs.WithE(err).WithField("file", keyFilePath).Error("Failed to remove install host key temp file")
-						}
-					}()
-
-					sopsFile := infra.GetNixosDir() + "/modules/nixos/groups/install/default.secrets.yaml"
-					logs.WithField("file", sopsFile).Info("Extracting install host key from group")
-
-					content, err := security.DecryptSopsYAMLWithAgeKey(sopsFile, "")
-					if err != nil {
-						return errs.WithE(err, "Failed to decrypt install group sops file")
-					}
-
-					// TODO standardize?
-					secretData := struct {
-						SshHostEd25519Key string `yaml:"ssh_host_ed25519_key"`
-					}{}
-
-					if err := yaml.Unmarshal(content, &secretData); err != nil {
-						return errs.WithE(err, "Failed to parse install group secrets yaml")
-					}
-
-					if err := os.WriteFile(keyFilePath, []byte(secretData.SshHostEd25519Key), 0600); err != nil {
-						return errs.WithEF(err, data.WithField("file", keyFilePath), "Failed to write install host key to temp file")
-					}
-
-					buildArgs = append(buildArgs, "--impure")
-					buildEnvs = append(buildEnvs, "BCL_INSTALL_SSH_HOST_KEY_FILE="+keyFilePath)
+				if err := yaml.Unmarshal(content, &secretData); err != nil {
+					return errs.WithE(err, "Failed to parse install group secrets yaml")
 				}
+
+				if err := os.WriteFile(keyFilePath, []byte(secretData.SshHostEd25519Key), 0600); err != nil {
+					return errs.WithEF(err, data.WithField("file", keyFilePath), "Failed to write install host key to temp file")
+				}
+
+				buildArgs := []string{"build", configAttr, "--impure"}
+				buildEnvs := []string{"BCL_INSTALL_SSH_HOST_KEY_FILE=" + keyFilePath}
 
 				logs.WithField("system", typeAndSystemArray[1]).Info("Building iso")
 
