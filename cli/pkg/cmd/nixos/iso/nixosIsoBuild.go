@@ -50,20 +50,30 @@ func nixosIsoBuildCmd() *cobra.Command {
 				configAttr := infra.GetNixosDir() + "#" + typeAndSystemArray[0] + "Configurations." + typeAndSystemArray[1]
 
 				logs.WithField("system", typeAndSystemArray[1]).Info("Checking if system requires a pre-generated ssh host key")
-				keyFilePath, err := run.ExecCmdGetStdout(
+				enableSshHostKey, err := run.ExecCmdGetStdout(
 					"nix",
 					"--extra-experimental-features", "nix-command flakes",
-					"eval", configAttr+".config.bcl.role.install.sshHostKeyFile",
-					"--impure",
-					"--apply", `x: if x == null then "" else toString x`,
-					"--raw")
+					"eval", configAttr+".config.bcl.role.install.enableSshHostKey")
 				if err != nil {
-					return errs.WithE(err, "Failed to evaluate bcl.role.install.sshHostKeyFile for system")
+					return errs.WithE(err, "Failed to evaluate bcl.role.install.enableSshHostKey for system")
 				}
 
 				buildArgs := []string{"build", configAttr}
+				var buildEnvs []string
 
-				if keyFilePath != "" {
+				if enableSshHostKey == "true" {
+					keyFile, err := os.CreateTemp("", "bcl-install-ssh-host-key-")
+					if err != nil {
+						return errs.WithE(err, "Failed to create temp file for install host key")
+					}
+					keyFilePath := keyFile.Name()
+					keyFile.Close()
+					defer func() {
+						if err := os.Remove(keyFilePath); err != nil {
+							logs.WithE(err).WithField("file", keyFilePath).Error("Failed to remove install host key temp file")
+						}
+					}()
+
 					sopsFile := infra.GetNixosDir() + "/modules/nixos/groups/install/default.secrets.yaml"
 					logs.WithField("file", sopsFile).Info("Extracting install host key from group")
 
@@ -84,13 +94,9 @@ func nixosIsoBuildCmd() *cobra.Command {
 					if err := os.WriteFile(keyFilePath, []byte(secretData.SshHostEd25519Key), 0600); err != nil {
 						return errs.WithEF(err, data.WithField("file", keyFilePath), "Failed to write install host key to temp file")
 					}
-					defer func() {
-						if err := os.Remove(keyFilePath); err != nil {
-							logs.WithE(err).WithField("file", keyFilePath).Error("Failed to remove install host key temp file")
-						}
-					}()
 
 					buildArgs = append(buildArgs, "--impure")
+					buildEnvs = append(buildEnvs, "BCL_INSTALL_SSH_HOST_KEY_FILE="+keyFilePath)
 				}
 
 				logs.WithField("system", typeAndSystemArray[1]).Info("Building iso")
@@ -112,7 +118,7 @@ func nixosIsoBuildCmd() *cobra.Command {
 						logs.WithE(err).WithField("dir", currentTmp).Error("Failed to remove temporary build directory")
 					}
 				}()
-				if err := run.ExecCmd("nix", buildArgs...); err != nil {
+				if _, err := run.Exec(&buildEnvs, os.Stdin, os.Stdout, os.Stderr, "nix", buildArgs...); err != nil {
 					return errs.WithE(err, "Iso build failed")
 				}
 			}
