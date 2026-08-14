@@ -1,6 +1,9 @@
 { config, lib, pkgs, options, ... }:
 let
-  isInstall = config.bcl.role.name == "install";
+  cfg = config.bcl.role;
+  isInstall = cfg.name == "install";
+  # install iso need to be built with `--impure` to include the ssh host key in the image
+  sshHostKeyFileEnv = builtins.getEnv "BCL_INSTALL_SSH_HOST_KEY_FILE";
 in {
   config = lib.mkMerge [
     { bcl.role.knownRoles = [ "install" ]; }
@@ -28,11 +31,15 @@ in {
       };
       users.groups.nixos = {};
 
-      # this is impure to include ssh host key to iso, without having it in git
-      # still it lives in the store, but there is not much secrets behind this private key
+      # give time to dhcp to get IP, so it will be display
+      services.getty.extraArgs = [ "--delay=10" ];
+      environment.etc."issue.d/ip.issue".text = "\\4\n";
+      networking.dhcpcd.runHook = "${pkgs.utillinux}/bin/agetty --reload";
+    }
+    // lib.optionalAttrs (sshHostKeyFileEnv != "") {
       environment.etc."ssh/ssh_host_ed25519_key" = {
         mode = "0600";
-        source = "${/tmp/install-ssh_host_ed25519_key}";
+        source = "${/. + sshHostKeyFileEnv}";
       };
       services.openssh.hostKeys = lib.mkForce [
         {
@@ -40,11 +47,6 @@ in {
           type = "ed25519";
         }
       ];
-
-      # give time to dhcp to get IP, so it will be display
-      services.getty.extraArgs = [ "--delay=10" ];
-      environment.etc."issue.d/ip.issue".text = "\\4\n";
-      networking.dhcpcd.runHook = "${pkgs.utillinux}/bin/agetty --reload";
     }
     // lib.optionalAttrs (options ? image && options.image ? baseName) {
 #      image.baseName = lib.mkForce "bcl";

@@ -15,10 +15,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// This matches the path used in the nixos install process
-// TODO factorize
-const InstallHostKeyTmpPath = "/tmp/install-ssh_host_ed25519_key"
-
 func nixosIsoBuildCmd() *cobra.Command {
 	var device string
 	var typeAndSystem string
@@ -51,6 +47,20 @@ func nixosIsoBuildCmd() *cobra.Command {
 			_, err = os.Stat(isoPath)
 			if err != nil || rebuild {
 
+				configAttr := infra.GetNixosDir() + "#" + typeAndSystemArray[0] + "Configurations." + typeAndSystemArray[1]
+
+				keyFile, err := os.CreateTemp("", "bcl-install-ssh-host-key-")
+				if err != nil {
+					return errs.WithE(err, "Failed to create temp file for install host key")
+				}
+				keyFilePath := keyFile.Name()
+				keyFile.Close()
+				defer func() {
+					if err := os.Remove(keyFilePath); err != nil {
+						logs.WithE(err).WithField("file", keyFilePath).Error("Failed to remove install host key temp file")
+					}
+				}()
+
 				sopsFile := infra.GetNixosDir() + "/modules/nixos/groups/install/default.secrets.yaml"
 				logs.WithField("file", sopsFile).Info("Extracting install host key from group")
 
@@ -68,16 +78,14 @@ func nixosIsoBuildCmd() *cobra.Command {
 					return errs.WithE(err, "Failed to parse install group secrets yaml")
 				}
 
-				if err := os.WriteFile(InstallHostKeyTmpPath, []byte(secretData.SshHostEd25519Key), 0600); err != nil {
-					return errs.WithEF(err, data.WithField("file", InstallHostKeyTmpPath), "Failed to write install host key to temp file")
+				if err := os.WriteFile(keyFilePath, []byte(secretData.SshHostEd25519Key), 0600); err != nil {
+					return errs.WithEF(err, data.WithField("file", keyFilePath), "Failed to write install host key to temp file")
 				}
-				defer func() {
-					if err := os.Remove(InstallHostKeyTmpPath); err != nil {
-						logs.WithE(err).WithField("file", InstallHostKeyTmpPath).Error("Failed to remove install host key temp file")
-					}
-				}()
 
-				logs.WithField("group", "install").Info("Building iso")
+				buildArgs := []string{"build", configAttr, "--impure"}
+				buildEnvs := []string{"BCL_INSTALL_SSH_HOST_KEY_FILE=" + keyFilePath}
+
+				logs.WithField("system", typeAndSystemArray[1]).Info("Building iso")
 
 				// raw-efi is building the img on TMPDIR, which may be too small, using current folder
 				dir, err := os.Getwd()
@@ -96,10 +104,11 @@ func nixosIsoBuildCmd() *cobra.Command {
 						logs.WithE(err).WithField("dir", currentTmp).Error("Failed to remove temporary build directory")
 					}
 				}()
-				if err := run.ExecCmd("nix", "build", infra.GetNixosDir()+"#"+typeAndSystemArray[0]+"Configurations."+typeAndSystemArray[1], "--impure"); err != nil {
+				if _, err := run.Exec(&buildEnvs, os.Stdin, os.Stdout, os.Stderr, "nix", buildArgs...); err != nil {
 					return errs.WithE(err, "Iso build failed")
 				}
 			}
+
 
 			if device == "" {
 				logs.WithField("path", isoPath).Info("Your iso is available")
