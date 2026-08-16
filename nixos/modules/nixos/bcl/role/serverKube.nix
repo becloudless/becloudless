@@ -2,23 +2,10 @@
 let
   srvNumber = lib.strings.toInt(builtins.substring ((builtins.stringLength config.networking.hostName) -1)  (-1) config.networking.hostName);
   cfg = config.bcl.role.serverKube;
-  cidrParts = lib.strings.splitString "/" cfg.cidr;
-  cidrPrefixLength = builtins.elemAt cidrParts 1;
-  cidrOctets = map lib.strings.toInt (lib.strings.splitString "." (builtins.elemAt cidrParts 0));
-  cidrBase = lib.concatStringsSep "." (lib.take 3 cidrOctets);
+  cidrPrefixLength = lib.bcl.net.cidrPrefixLength cfg.cidr;
+  cidrBase = lib.concatStringsSep "." (lib.take 3 (lib.strings.splitString "." (lib.bcl.net.cidrAddress cfg.cidr)));
   nodeIp = n: "${cidrBase}.${toString cfg.clusterNumber}${toString n}";
   myIp = nodeIp srvNumber;
-  pow2 = n: if n <= 0 then 1 else 2 * pow2 (n - 1);
-  ipToInt = octets: builtins.foldl' (acc: o: acc * 256 + o) 0 octets;
-  intToIp = i: lib.concatStringsSep "." (map toString [
-    (i / 16777216)
-    (lib.mod (i / 65536) 256)
-    (lib.mod (i / 256) 256)
-    (lib.mod i 256)
-  ]);
-  networkMaskInt = 4294967295 - (pow2 (32 - lib.strings.toInt cidrPrefixLength) - 1);
-  networkInt = builtins.bitAnd (ipToInt cidrOctets) networkMaskInt;
-  cidrDefaultGateway = intToIp (networkInt + 1);
 in
 {
   options.bcl.role.serverKube = {
@@ -31,13 +18,18 @@ in
     };
     cidr = lib.mkOption {
       type = lib.types.str;
-      default = "192.168.41.0/22";
+      default = "192.168.1.0/24";
       description = "CIDR of the network";
     };
     gateway = lib.mkOption {
       type = lib.types.str;
-      default = cidrDefaultGateway;
+      default = lib.bcl.net.cidrhost cfg.cidr 1;
       description = "Default gateway for the br0 bridge interface, computed as the first IP of the CIDR network by default";
+    };
+    nameservers = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ (lib.bcl.net.cidrhost cfg.cidr 1) ];
+      description = "DNS nameservers to use for this node";
     };
   };
 
@@ -82,7 +74,7 @@ in
       alias k='kubectl'
     '';
 
-    networking.nameservers = ["192.168.40.12"];
+    networking.nameservers = cfg.nameservers;
     services.resolved.dnssec = "true";
     networking.firewall.enable = false;
 
@@ -109,7 +101,7 @@ in
         KeepConfiguration = true;
       };
       address = [
-        "${myIp}/${cidrPrefixLength}"
+        "${myIp}/${toString cidrPrefixLength}"
       ];
       routes = [
         {
