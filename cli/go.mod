@@ -26,7 +26,7 @@ require (
 	github.com/n0rad/gomake v0.0.0-20260423115156-cb11feadac58
 	github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260120012428-7b6c2af7698a
 	github.com/spf13/cobra v1.10.2
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.0
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 	golang.org/x/crypto v0.55.0
 	golang.org/x/lint v0.0.0-20241112194109-818c5a804067
