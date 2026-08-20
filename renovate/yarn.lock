@@ -2495,17 +2495,17 @@ jsonata@2.2.1:
   resolved "https://registry.npmjs.org/jsonata/-/jsonata-2.2.1.tgz"
   integrity sha512-xd1uwUrKeIcJbsWhaoS3qAX4Ea8m0Mw0G5nlnAQvPT7TbZ5qaPdzBVTQia9KfyuyQm+nenfyjvzUDTRYHsC2sw==
 
-jsonc-morph@^0.3.3:
-  version "0.3.4"
-  resolved "https://registry.npmjs.org/jsonc-morph/-/jsonc-morph-0.3.4.tgz"
-  integrity sha512-tY9H0tplGdRZ0O/7N0qQGr8RuiwuAqGZfO1NCcy986qdMf2gcWTQnr2YF+Q3VkaCBKN2+mTPSZzewg3V4rWXQg==
+jsonc-morph@^0.3.5:
+  version "0.3.5"
+  resolved "https://registry.npmjs.org/jsonc-morph/-/jsonc-morph-0.3.5.tgz"
+  integrity sha512-48t3FzTaEcePC0xKtadykUy7iqMx9fpxzigbi0YtNdEiPXUr7CoM1rfyBUKg0HW167eaG0EENdjc8aowa1TMvQ==
 
-jsonc-weaver@0.2.4:
-  version "0.2.4"
-  resolved "https://registry.npmjs.org/jsonc-weaver/-/jsonc-weaver-0.2.4.tgz"
-  integrity sha512-aIKK8SOg+TdBdeML4MB++phUEdS7KWZxuaPPjxUSat8Kc/2A+2AoxmAGhvbVajNjqsgSX4dhjfCJq3QlE/NSCg==
+jsonc-weaver@0.3.1:
+  version "0.3.1"
+  resolved "https://registry.npmjs.org/jsonc-weaver/-/jsonc-weaver-0.3.1.tgz"
+  integrity sha512-a6e90+Hn5e+l7i6MC2YJ57TE6nv9gDKFyCLBIVKt0Jdv48lUBEV7StnnuwC0Y+sjnux41cnPlHJl65DH4+d9eA==
   dependencies:
-    jsonc-morph "^0.3.3"
+    jsonc-morph "^0.3.5"
 
 jsonfile@^6.0.1:
   version "6.2.1"
@@ -3490,10 +3490,10 @@ proc-log@^7.0.0:
   resolved "https://registry.npmjs.org/proc-log/-/proc-log-7.0.0.tgz"
   integrity sha512-FYgfaA69XZ93zaXLoMNQ+ViDXGGBgR8aLh03txzcFhV+9xOXx7+8DLCULrKKpR9+GsH9ZfHm82aSUPpozX0Ztg==
 
-protobufjs@8.7.1:
-  version "8.7.1"
-  resolved "https://registry.npmjs.org/protobufjs/-/protobufjs-8.7.1.tgz"
-  integrity sha512-agdGHrXNTv0IrYscJPDou/PlEJk1c/hBZ9o/B5NH2i/nSPtPqacNxzgwf1CebXxFMjMrZH5sqv9uQuw96aGt/A==
+protobufjs@8.7.2:
+  version "8.7.2"
+  resolved "https://registry.npmjs.org/protobufjs/-/protobufjs-8.7.2.tgz"
+  integrity sha512-oTVHV+oelUBtiu5iTuTNNZ0eLYsXSMxry4cgr30mayNkgIZL6qZ0IOQVPuSWGcyAaXKl/XgqwWHIC3a0khYVBA==
   dependencies:
     long "^5.3.2"
 
@@ -3607,10 +3607,10 @@ remark@15.0.1:
     remark-stringify "^11.0.0"
     unified "^11.0.0"
 
-renovate@44.31.0:
-  version "44.31.0"
-  resolved "https://registry.npmjs.org/renovate/-/renovate-44.31.0.tgz"
-  integrity sha512-tWdK/hkWTygvnoAVP+oVNUEiup+hyLkaczOaKtGgIhuzjSHh//JQeaSidj1ckpH1FVtN8dbG5qWL92NlqI0aag==
+renovate@44.32.5:
+  version "44.32.5"
+  resolved "https://registry.npmjs.org/renovate/-/renovate-44.32.5.tgz"
+  integrity sha512-YYYNLahHQIcG1jGcz1fG7yoorz32VzWchQi1nClpAHlFbBJ/tJ++O9phMLwBneAUBJrqjNKhGrzuzO2cF64nhw==
   dependencies:
     "@aws-sdk/client-codecommit" "3.1095.0"
     "@aws-sdk/client-ec2" "3.1095.0"
@@ -3690,7 +3690,7 @@ renovate@44.31.0:
     json-stringify-pretty-compact "4.0.0"
     json5 "2.2.3"
     jsonata "2.2.1"
-    jsonc-weaver "0.2.4"
+    jsonc-weaver "0.3.1"
     klona "2.0.6"
     lru-cache "11.5.2"
     luxon "3.7.2"
@@ -3707,7 +3707,7 @@ renovate@44.31.0:
     p-throttle "8.1.0"
     parse-link-header "2.0.0"
     prettier "3.8.1"
-    protobufjs "8.7.1"
+    protobufjs "8.7.2"
     punycode "2.3.1"
     remark "15.0.1"
     remark-gfm "4.0.1"
