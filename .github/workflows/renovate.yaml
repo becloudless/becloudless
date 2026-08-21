@@ -52,7 +52,7 @@ jobs:
         working-directory: renovate
         run: node_modules/yarn/bin/yarn prettier --write .
 
-      - uses: iarekylew00t/verified-bot-commit@1ccc6afd0f789e8442cff7deec3e9856a693cc7e # v2.3.4
+      - uses: iarekylew00t/verified-bot-commit@42a042b0407248f3c0acac00c389e729e3476e86 # v2.3.5
         with:
           ref: ${{ github.ref_name }}
           token: ${{ steps.github-app-token.outputs.token }}
