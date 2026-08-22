@@ -1238,10 +1238,10 @@ aws4@1.13.2:
   resolved "https://registry.npmjs.org/aws4/-/aws4-1.13.2.tgz"
   integrity sha512-lHe62zvbTB5eEABUVi/AwVh0ZKY9rMMDhmm+eeyuuUQbQ3+J+fONVQOZyj+DdrvD4BY33uYniyRJ4UJIaSKAfw==
 
-azure-devops-node-api@15.1.2:
-  version "15.1.2"
-  resolved "https://registry.npmjs.org/azure-devops-node-api/-/azure-devops-node-api-15.1.2.tgz"
-  integrity sha512-PfJTGK8oaBB3e0hilF5QE5BT0axpxssZlc0pRq3Rb0XsKr4qk1Cma+jBRRz0hE+zuUsu/7cz0WTCVo+kcVvOjw==
+azure-devops-node-api@15.1.3:
+  version "15.1.3"
+  resolved "https://registry.npmjs.org/azure-devops-node-api/-/azure-devops-node-api-15.1.3.tgz"
+  integrity sha512-YMgxCjQDqBr//vGy658tXTrXAgS2BzIChJ2Mzrq+fzLK+dh42fODWO/kEQMmtp+Rw0jNgEoUA72cHYVBrxrjRw==
   dependencies:
     tunnel "0.0.6"
     typed-rest-client "2.1.0"
@@ -2251,9 +2251,9 @@ has-symbols@^1.1.0:
   integrity sha512-1cDNdwJ2Jaohmb3sg4OmKaMBwuC48sYni5HUw2DvsC8LjGTLK9h+eb1X6RyuOHe4hT0ULCW68iomhjUoKUqlPQ==
 
 hasown@^2.0.2:
-  version "2.0.3"
-  resolved "https://registry.npmjs.org/hasown/-/hasown-2.0.3.tgz"
-  integrity sha512-ej4AhfhfL2Q2zpMmLo7U1Uv9+PyhIZpgQLGT1F9miIGmiCJIoCgSmczFdrc97mWT4kVY72KA+WnnhJ5pghSvSg==
+  version "2.0.4"
+  resolved "https://registry.npmjs.org/hasown/-/hasown-2.0.4.tgz"
+  integrity sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==
   dependencies:
     function-bind "^1.1.2"
 
@@ -3521,11 +3521,12 @@ punycode@2.3.1:
   integrity sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==
 
 qs@^6.10.3:
-  version "6.15.2"
-  resolved "https://registry.npmjs.org/qs/-/qs-6.15.2.tgz"
-  integrity sha512-Rzq0KEyX/w/tEybncDgdkZrJgVUsUMk3xjh3t5bv3S1HTAtg+uOYt72+ZfwiQwKdysThkTBdL/rTi6HDmX9Ddw==
+  version "6.15.3"
+  resolved "https://registry.npmjs.org/qs/-/qs-6.15.3.tgz"
+  integrity sha512-O9gl3zCl5h5blw1KGUzQKhA5oUXSl8rwUIM5o0S3nCXMliSvy5Dzx7/DJcI+SwgICv+IneSZwhBh1oSyEHA71A==
   dependencies:
-    side-channel "^1.1.0"
+    es-define-property "^1.0.1"
+    side-channel "^1.1.1"
 
 queue-microtask@^1.2.2:
   version "1.2.3"
@@ -3607,10 +3608,10 @@ remark@15.0.1:
     remark-stringify "^11.0.0"
     unified "^11.0.0"
 
-renovate@44.33.2:
-  version "44.33.2"
-  resolved "https://registry.npmjs.org/renovate/-/renovate-44.33.2.tgz"
-  integrity sha512-rmMaQH4jTLrVZKCYehHr2k8baYqhtoNepLHhnQ+vva8cuFbcM7PUNOJFrlXBZE/Srqv+Ck5g4Xw7yfkEBFXvSw==
+renovate@44.35.1:
+  version "44.35.1"
+  resolved "https://registry.npmjs.org/renovate/-/renovate-44.35.1.tgz"
+  integrity sha512-BUSXg66N/CPdI3kCKe8tm7RsoQPpYClQIP19j+b+CXLs1oJ/cUSpyyi1eE/4ynvq7Yjy+qjGeNJkju65edRXVw==
   dependencies:
     "@aws-sdk/client-codecommit" "3.1095.0"
     "@aws-sdk/client-ec2" "3.1095.0"
@@ -3655,7 +3656,7 @@ renovate@44.33.2:
     agentkeepalive "4.6.0"
     async-mutex "0.5.0"
     aws4 "1.13.2"
-    azure-devops-node-api "15.1.2"
+    azure-devops-node-api "15.1.3"
     bunyan "1.8.15"
     cacache "20.0.4"
     changelog-filename-regex "2.0.1"
@@ -3871,7 +3872,7 @@ shlex@3.0.0:
   resolved "https://registry.npmjs.org/shlex/-/shlex-3.0.0.tgz"
   integrity sha512-jHPXQQk9d/QXCvJuLPYMOYWez3c43sORAgcIEoV7bFv5AJSJRAOyw5lQO12PMfd385qiLRCaDt7OtEzgrIGZUA==
 
-side-channel-list@^1.0.0:
+side-channel-list@^1.0.1:
   version "1.0.1"
   resolved "https://registry.npmjs.org/side-channel-list/-/side-channel-list-1.0.1.tgz"
   integrity sha512-mjn/0bi/oUURjc5Xl7IaWi/OJJJumuoJFQJfDDyO46+hBWsfaVM65TBHq2eoZBhzl9EchxOijpkbRC8SVBQU0w==
@@ -3900,14 +3901,14 @@ side-channel-weakmap@^1.0.2:
     object-inspect "^1.13.3"
     side-channel-map "^1.0.1"
 
-side-channel@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.npmjs.org/side-channel/-/side-channel-1.1.0.tgz"
-  integrity sha512-ZX99e6tRweoUXqR+VBrslhda51Nh5MTQwou5tnUDgbtyM0dBgmhEDtWGP/xbKn6hqfPRHujUNwz5fy/wbbhnpw==
+side-channel@^1.1.1:
+  version "1.1.1"
+  resolved "https://registry.npmjs.org/side-channel/-/side-channel-1.1.1.tgz"
+  integrity sha512-6x6dK6zJdpTzF4sQeNYxwtvBzf6Eg4GtlesS94HOvTudUeyK2WXAaIfmDgsyslYrRBeFIlsi54AYsFGUuhmvrQ==
   dependencies:
     es-errors "^1.3.0"
-    object-inspect "^1.13.3"
-    side-channel-list "^1.0.0"
+    object-inspect "^1.13.4"
+    side-channel-list "^1.0.1"
     side-channel-map "^1.0.1"
     side-channel-weakmap "^1.0.2"
 
