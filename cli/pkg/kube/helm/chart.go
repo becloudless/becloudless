@@ -62,23 +62,27 @@ func OpenChart(chartPath string, settings *cli.EnvSettings) (*Chart, error) {
 	}, nil
 }
 
-func (ct *Chart) UpdateDependencies() error {
+func (c *Chart) IsLibraryChart() bool {
+	return c.chart.Metadata.Type == "library"
+}
+
+func (c *Chart) UpdateDependencies() error {
 	// Check if the chart has dependencies
-	if ct.chart.Metadata.Dependencies == nil || len(ct.chart.Metadata.Dependencies) == 0 {
-		logs.WithField("chart", ct.chart.Metadata.Name).Debug("No dependencies found, skipping dependency update")
+	if c.chart.Metadata.Dependencies == nil || len(c.chart.Metadata.Dependencies) == 0 {
+		logs.WithField("chart", c.chart.Metadata.Name).Debug("No dependencies found, skipping dependency update")
 		return nil
 	}
 
 	// Create dependency manager
 	man := &downloader.Manager{
 		Out:              os.Stdout,
-		ChartPath:        ct.path,
-		Keyring:          ct.settings.RepositoryConfig,
+		ChartPath:        c.path,
+		Keyring:          c.settings.RepositoryConfig,
 		SkipUpdate:       false,
-		Getters:          getter.All(ct.settings),
-		RepositoryConfig: ct.settings.RepositoryConfig,
-		RepositoryCache:  ct.settings.RepositoryCache,
-		Debug:            ct.settings.Debug,
+		Getters:          getter.All(c.settings),
+		RepositoryConfig: c.settings.RepositoryConfig,
+		RepositoryCache:  c.settings.RepositoryCache,
+		Debug:            c.settings.Debug,
 	}
 
 	// Download dependencies
@@ -89,49 +93,15 @@ func (ct *Chart) UpdateDependencies() error {
 	return nil
 }
 
-func (ct *Chart) render(values map[string]interface{}, kubeVersion string, output io.Writer) error {
-	// Create install action (used for templating)
-	install := action.NewInstall(ct.actionConfig)
-	install.DryRun = true
-	install.ReleaseName = "test-release"
-	install.Replace = true
-	install.ClientOnly = true
-	install.APIVersions = []string{}
-	install.IncludeCRDs = true
-
-	// Set the Kubernetes version used for Capabilities.KubeVersion, since
-	// ClientOnly mode otherwise falls back to Helm's default (v1.20.0),
-	// which can be incompatible with a chart's kubeVersion constraint.
-	parsedKubeVersion, err := chartutil.ParseKubeVersion(kubeVersion)
-	if err != nil {
-		return errs.WithEF(err, data.WithField("kubeVersion", kubeVersion), "Failed to parse kube version")
-	}
-	install.KubeVersion = parsedKubeVersion
-
-	release, err := install.Run(ct.chart, values)
-	if err != nil {
-		return errs.WithE(err, "Failed to run the templating")
-	}
-
-	if _, err := output.Write([]byte(release.Manifest)); err != nil {
-		return errs.WithE(err, "Failed to write manifest to output")
-	}
-
-	return nil
-}
-
-const ciTestFileSuffix = "-values.yaml"
-const ciResultFileSuffix = "-result.yaml"
-
-func (ct *Chart) RunCITests() error {
-	logs.WithField("chart", ct.chart.Metadata.Name).Info("Running chart CI tests")
+func (c *Chart) RunCITests() error {
+	logs.WithField("chart", c.chart.Metadata.Name).Info("Running chart CI tests")
 
 	// read ci/ folder for file with -values.yaml
-	ciDir := filepath.Join(ct.path, "ci")
+	ciDir := filepath.Join(c.path, "ci")
 	files, err := os.ReadDir(ciDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			logs.WithField("chart", ct.chart.Metadata.Name).Info("No ci/ directory found, skipping CI tests")
+			logs.WithField("chart", c.chart.Metadata.Name).Info("No ci/ directory found, skipping CI tests")
 			return nil
 		}
 		return errs.WithE(err, "Failed to read ci/ directory")
@@ -157,10 +127,57 @@ func (ct *Chart) RunCITests() error {
 			}
 			defer resultFile.Close()
 
-			if err := ct.render(values.AsMap(), "1.31.0", resultFile); err != nil {
+			if err := c.render(values.AsMap(), "1.31.0", resultFile); err != nil {
 				return errs.WithEF(err, data.WithField("file", valuesPath), "Failed to render chart with CI values")
 			}
 		}
+	}
+
+	return nil
+}
+
+/////////
+
+const ciTestFileSuffix = "-values.yaml"
+const ciResultFileSuffix = "-result.yaml"
+
+func (c *Chart) PrepareDownstreamChart(outputDir string) (*Chart, error) {
+	// create temporary directory for the downstream chart
+	tempDir, err := os.MkdirTemp("", "downstream-chart-*")
+	if err != nil {
+		return nil, errs.WithE(err, "Failed to create temporary directory for downstream chart")
+	}
+
+	// prepate the downstream chart directories and files
+
+}
+
+func (c *Chart) render(values map[string]interface{}, kubeVersion string, output io.Writer) error {
+	// Create install action (used for templating)
+	install := action.NewInstall(c.actionConfig)
+	install.DryRun = true
+	install.ReleaseName = "test-release"
+	install.Replace = true
+	install.ClientOnly = true
+	install.APIVersions = []string{}
+	install.IncludeCRDs = true
+
+	// Set the Kubernetes version used for Capabilities.KubeVersion, since
+	// ClientOnly mode otherwise falls back to Helm's default (v1.20.0),
+	// which can be incompatible with a chart's kubeVersion constraint.
+	parsedKubeVersion, err := chartutil.ParseKubeVersion(kubeVersion)
+	if err != nil {
+		return errs.WithEF(err, data.WithField("kubeVersion", kubeVersion), "Failed to parse kube version")
+	}
+	install.KubeVersion = parsedKubeVersion
+
+	release, err := install.Run(c.chart, values)
+	if err != nil {
+		return errs.WithE(err, "Failed to run the templating")
+	}
+
+	if _, err := output.Write([]byte(release.Manifest)); err != nil {
+		return errs.WithE(err, "Failed to write manifest to output")
 	}
 
 	return nil
