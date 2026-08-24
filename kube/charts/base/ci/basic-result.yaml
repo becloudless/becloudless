@@ -1,0 +1,533 @@
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: test-release
+  labels:
+    app: test-release
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+    tags.datadoghq.com/service: test-release
+    tags.datadoghq.com/version: "31"
+spec:
+  maxUnavailable: 10%
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: main
+      app.kubernetes.io/instance: test-release
+      app.kubernetes.io/name: test-release
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: test-release
+  labels:
+    app: test-release
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+    tags.datadoghq.com/service: test-release
+    tags.datadoghq.com/version: "31"
+secrets:
+  - name: test-release-sa-token
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/service-account-token
+metadata:
+  name: test-release-sa-token
+  namespace: 
+  labels:
+    app: test-release
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+    tags.datadoghq.com/service: test-release
+    tags.datadoghq.com/version: "31"
+  annotations:
+    kubernetes.io/service-account.name: test-release
+---
+# Source: base-test/templates/loader.yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: test-release-config
+  labels:
+    app: test-release
+    app.kubernetes.io/component: config
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+    tags.datadoghq.com/service: test-release
+    tags.datadoghq.com/version: "31"
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "1Gi"
+---
+# Source: base-test/templates/loader.yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: test-release-media
+  labels:
+    app: test-release
+    app.kubernetes.io/component: media
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+    tags.datadoghq.com/service: test-release
+    tags.datadoghq.com/version: "31"
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "1Gi"
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-release
+  labels:
+    app: test-release
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    app.kubernetes.io/service: test-release
+    helm.sh/chart: base-test-0.0.0
+    tags.datadoghq.com/service: test-release
+    tags.datadoghq.com/version: "31"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: test-release
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-release
+  labels:
+    app: test-release
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+    tags.datadoghq.com/service: test-release
+    tags.datadoghq.com/version: "31"
+spec:
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 33%
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: main
+      app.kubernetes.io/name: test-release
+      app.kubernetes.io/instance: test-release
+  template:
+    metadata:
+      annotations:
+        ad.datadoghq.com/main.checks: |
+          {
+            "openmetrics": {
+              "init_config": {},
+              "instances": [
+                {
+                  "openmetrics_endpoint": "http://%%host%%:8080/metrics",
+                  "namespace": "test",
+                  "metrics": [
+                    "^test.+"
+                  ],
+                  "collect_counters_with_distributions": true,
+                  "max_returned_metrics": 20000
+                },{
+                  "openmetrics_endpoint": "http://%%host%%:8080/metrics",
+                  "namespace": "zaez",
+                  "metrics": [
+                    "^aze.+"
+                  ],
+                  "collect_counters_with_distributions": true,
+                  "max_returned_metrics": 20000
+                }
+              ]
+            }
+          }
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      labels:
+        app: test-release
+        app.kubernetes.io/component: main
+        app.kubernetes.io/instance: test-release
+        app.kubernetes.io/name: test-release
+        sidecar.istio.io/inject: "false"
+        tags.datadoghq.com/service: test-release
+        tags.datadoghq.com/version: "31"
+    spec:
+      enableServiceLinks: true
+      serviceAccountName: test-release
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+      dnsPolicy: ClusterFirst
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - test-release
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                  - main
+              topologyKey: kubernetes.io/hostname
+            weight: 50
+      topologySpreadConstraints:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: main
+              app.kubernetes.io/instance: test-release
+              app.kubernetes.io/name: test-release
+          maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: main
+              app.kubernetes.io/instance: test-release
+              app.kubernetes.io/name: test-release
+          maxSkew: 2
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+      containers:
+        - env:
+          - name: DD_SERVICE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.labels['tags.datadoghq.com/service']
+          - name: DD_TRACE_ENABLED
+            value: "true"
+          - name: DD_VERSION
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.labels['tags.datadoghq.com/version']
+          image: ghcr.io/mendhak/http-https-echo:31
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+          name: main
+          readinessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+          securityContext:
+            allowPrivilegeEscalation: false
+            procMount: /dd
+            readOnlyRootFilesystem: true
+          startupProbe:
+            failureThreshold: 30
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+          volumeMounts:
+          - mountPath: /config
+            name: config
+          - mountPath: /var/run/datadog
+            name: dsdsocket
+          - mountPath: /media
+            name: media
+          - mountPath: /test
+            name: tests
+            readOnly: true
+          - mountPath: /tmp
+            name: tmp
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: config
+        - hostPath:
+            path: /var/run/datadog
+          name: dsdsocket
+        - name: media
+          persistentVolumeClaim:
+            claimName: media
+        - emptyDir: {}
+          name: tmp
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-release-second
+  labels:
+    app: test-release
+    app.kubernetes.io/component: second
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+    tags.datadoghq.com/service: test-release
+    tags.datadoghq.com/version: "31"
+spec:
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 33%
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: second
+      app.kubernetes.io/name: test-release
+      app.kubernetes.io/instance: test-release
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      labels:
+        app: test-release
+        app.kubernetes.io/component: second
+        app.kubernetes.io/instance: test-release
+        app.kubernetes.io/name: test-release
+        tags.datadoghq.com/service: test-release
+        tags.datadoghq.com/version: "31"
+    spec:
+      enableServiceLinks: true
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+      dnsPolicy: ClusterFirst
+      containers:
+        - image: ghcr.io/mendhak/http-https-echo:31
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+          name: second
+          readinessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          startupProbe:
+            failureThreshold: 30
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+          volumeMounts:
+          - mountPath: /config
+            name: config
+          - mountPath: /media
+            name: media
+          - mountPath: /test
+            name: tests
+            readOnly: true
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: config
+        - name: media
+          persistentVolumeClaim:
+            claimName: media
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: test-release
+  labels:
+    app: test-release
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+    tags.datadoghq.com/service: test-release
+    tags.datadoghq.com/version: "31"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: test-release
+  minReplicas: 2
+  maxReplicas: 50
+  metrics:
+    - resource:
+        name: cpu
+        target:
+          averageUtilization: 70
+          type: Utilization
+      type: Resource
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: test-release-third
+  labels:
+    app: test-release
+    app.kubernetes.io/component: third
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+    tags.datadoghq.com/service: test-release
+    tags.datadoghq.com/version: "31"
+spec:
+  revisionHistoryLimit: 3
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: third
+      app.kubernetes.io/name: test-release
+      app.kubernetes.io/instance: test-release
+  serviceName: test-release
+  template:
+    metadata:
+      annotations: 
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      labels: 
+        app: test-release
+        app.kubernetes.io/component: third
+        app.kubernetes.io/instance: test-release
+        app.kubernetes.io/name: test-release
+        tags.datadoghq.com/service: test-release
+        tags.datadoghq.com/version: "31"
+    spec: 
+      enableServiceLinks: true
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+      dnsPolicy: ClusterFirst
+      containers:
+        - image: ghcr.io/mendhak/http-https-echo:31
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+          name: second
+          readinessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          startupProbe:
+            failureThreshold: 30
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+          volumeMounts:
+          - mountPath: /config
+            name: config
+          - mountPath: /media
+            name: media
+          - mountPath: /test
+            name: tests
+            readOnly: true
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: config
+        - name: media
+          persistentVolumeClaim:
+            claimName: media
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-release
+  labels:
+    app: test-release
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+    tags.datadoghq.com/service: test-release
+    tags.datadoghq.com/version: "31"
+spec:
+  rules:
+    - host: "toto.com"
+      http:
+        paths:
+          - path: "/"
+            pathType: Prefix
+            backend:
+              service:
+                name: test-release
+                port:
+                  number: 8080

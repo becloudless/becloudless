@@ -1,0 +1,172 @@
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: test-release
+  labels:
+    app: test-release
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+    tags.datadoghq.com/service: test-release
+    tags.datadoghq.com/version: "1.2"
+spec:
+  maxUnavailable: 10%
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: main
+      app.kubernetes.io/instance: test-release
+      app.kubernetes.io/name: test-release
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: test-release
+  labels:
+    app: test-release
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+    tags.datadoghq.com/service: test-release
+    tags.datadoghq.com/version: "1.2"
+secrets:
+  - name: test-release-sa-token
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/service-account-token
+metadata:
+  name: test-release-sa-token
+  namespace: 
+  labels:
+    app: test-release
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+    tags.datadoghq.com/service: test-release
+    tags.datadoghq.com/version: "1.2"
+  annotations:
+    kubernetes.io/service-account.name: test-release
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: test-release
+  labels:
+    app: test-release
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+    tags.datadoghq.com/service: test-release
+    tags.datadoghq.com/version: "1.2"
+  annotations:
+    serving.kserve.io/enable-prometheus-scraping: "true"
+spec:
+  predictor:
+    minReplicas: 2
+    maxReplicas: 50
+    scaleTarget: 70
+    scaleMetric: cpu
+    enableServiceLinks: true
+    serviceAccountName: test-release
+    automountServiceAccountToken: true
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+    dnsPolicy: ClusterFirst
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - test-release
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                - main
+            topologyKey: kubernetes.io/hostname
+          weight: 50
+    topologySpreadConstraints:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/component: main
+            app.kubernetes.io/instance: test-release
+            app.kubernetes.io/name: test-release
+        maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/component: main
+            app.kubernetes.io/instance: test-release
+            app.kubernetes.io/name: test-release
+        maxSkew: 2
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+    volumes:
+      - hostPath:
+          path: /var/run/datadog
+        name: dsdsocket
+      - emptyDir: {}
+        name: tmp
+    model:
+      
+      image: busybox:1.2
+      imagePullPolicy: IfNotPresent
+      securityContext: 
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+      env: 
+        - name: DD_DOGSTATSD_URL
+          value: unix:///var/run/datadog/dsd.socket
+        - name: DD_JMXFETCH_ENABLED
+          value: "false"
+        - name: DD_LOGS_INJECTION
+          value: "true"
+        - name: DD_PROFILING_ENABLED
+          value: "false"
+        - name: DD_REMOTE_CONFIGURATION_ENABLED
+          value: "false"
+        - name: DD_RUNTIME_METRICS_ENABLED
+          value: "true"
+        - name: DD_SERVICE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['tags.datadoghq.com/service']
+        - name: DD_SERVICE_MAPPING
+          value: cassandra:test-release-cassandra,kafka:test-release-kafka,elasticsearch:test-release-elasticsearch,mariadb:test-release-mariadb,mysql:test-release-mysql,redis:test-release-redis,rabbitmq:test-release-rabbitmq,postgresql:test-release-postgresql,postgres:test-release-postgres,curl:test-release-curl,guzzle:test-release-guzzle,pdo:test-release-pdo,phpredis:test-release-phpredis,oracle:test-release-oracle
+        - name: DD_TRACE_AGENT_URL
+          value: unix:///var/run/datadog/apm.socket
+        - name: DD_TRACE_ENABLED
+          value: "true"
+        - name: DD_TRACE_SAMPLE_RATE
+          value: "0.01"
+        - name: DD_VERSION
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['tags.datadoghq.com/version']
+      volumeMounts: 
+        - mountPath: /var/run/datadog
+          name: dsdsocket
+        - mountPath: /tmp
+          name: tmp
+      modelFormat:
+        name: sklearn
+      protocolVersion: v2
+      storageUri: gs://bucket/prefix

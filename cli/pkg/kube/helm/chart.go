@@ -217,6 +217,17 @@ func (c *Chart) PrepareTestChart() error {
 		return errs.WithE(err, "Failed to update dependencies")
 	}
 
+	// Reload the chart now that dependencies have been downloaded into the
+	// charts/ directory, otherwise the in-memory chart (loaded above, before
+	// dependencies existed on disk) won't include the dependency's templates
+	// (e.g. named templates like "base.loader.all"), causing rendering to
+	// fail or produce no output.
+	reloadedChart, err := loader.LoadDir(tempDir)
+	if err != nil {
+		return errs.WithE(err, "Failed to reload chart after updating dependencies")
+	}
+	c.testChart.chart = reloadedChart
+
 	return nil
 }
 

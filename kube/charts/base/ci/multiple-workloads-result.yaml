@@ -1,0 +1,438 @@
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: test-release-titi
+  labels:
+    app: test-release
+    app.kubernetes.io/component: titi
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+spec:
+  maxUnavailable: 10%
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: titi
+      app.kubernetes.io/instance: test-release
+      app.kubernetes.io/name: test-release
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: test-release-toto
+  labels:
+    app: test-release
+    app.kubernetes.io/component: toto
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+spec:
+  maxUnavailable: 10%
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: toto
+      app.kubernetes.io/instance: test-release
+      app.kubernetes.io/name: test-release
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: test-release-titi
+  labels:
+    app: test-release
+    app.kubernetes.io/component: titi
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+secrets:
+  - name: test-release-titi-sa-token
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: test-release-toto
+  labels:
+    app: test-release
+    app.kubernetes.io/component: toto
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+secrets:
+  - name: test-release-toto-sa-token
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/service-account-token
+metadata:
+  name: test-release-titi-sa-token
+  namespace: 
+  labels:
+    app: test-release
+    app.kubernetes.io/component: titi
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+  annotations:
+    kubernetes.io/service-account.name: test-release-titi
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/service-account-token
+metadata:
+  name: test-release-toto-sa-token
+  namespace: 
+  labels:
+    app: test-release
+    app.kubernetes.io/component: toto
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+  annotations:
+    kubernetes.io/service-account.name: test-release-toto
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-release-titi
+  labels:
+    app: test-release
+    app.kubernetes.io/component: titi
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    app.kubernetes.io/service: test-release-titi
+    helm.sh/chart: base-test-0.0.0
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/component: titi
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: test-release
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-release-toto
+  labels:
+    app: test-release
+    app.kubernetes.io/component: toto
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    app.kubernetes.io/service: test-release-toto
+    helm.sh/chart: base-test-0.0.0
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/component: toto
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: test-release
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-release-titi
+  labels:
+    app: test-release
+    app.kubernetes.io/component: titi
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+spec:
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 33%
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: titi
+      app.kubernetes.io/name: test-release
+      app.kubernetes.io/instance: test-release
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      labels:
+        app: test-release
+        app.kubernetes.io/component: titi
+        app.kubernetes.io/instance: test-release
+        app.kubernetes.io/name: test-release
+        sidecar.istio.io/inject: "false"
+    spec:
+      enableServiceLinks: true
+      serviceAccountName: test-release-titi
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+      dnsPolicy: ClusterFirst
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - test-release
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                  - titi
+              topologyKey: kubernetes.io/hostname
+            weight: 50
+      topologySpreadConstraints:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: titi
+              app.kubernetes.io/instance: test-release
+              app.kubernetes.io/name: test-release
+          maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: titi
+              app.kubernetes.io/instance: test-release
+              app.kubernetes.io/name: test-release
+          maxSkew: 2
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+      containers:
+        - image: test:43
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+          name: main
+          ports:
+          - containerPort: 8080
+            name: http
+          readinessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          startupProbe:
+            failureThreshold: 30
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+          volumeMounts:
+          - mountPath: /tmp
+            name: tmp
+      volumes:
+        - emptyDir: {}
+          name: tmp
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-release-toto
+  labels:
+    app: test-release
+    app.kubernetes.io/component: toto
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+spec:
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 33%
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: toto
+      app.kubernetes.io/name: test-release
+      app.kubernetes.io/instance: test-release
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+      labels:
+        app: test-release
+        app.kubernetes.io/component: toto
+        app.kubernetes.io/instance: test-release
+        app.kubernetes.io/name: test-release
+        sidecar.istio.io/inject: "false"
+    spec:
+      enableServiceLinks: true
+      serviceAccountName: test-release-toto
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+      dnsPolicy: ClusterFirst
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - test-release
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                  - toto
+              topologyKey: kubernetes.io/hostname
+            weight: 50
+      topologySpreadConstraints:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: toto
+              app.kubernetes.io/instance: test-release
+              app.kubernetes.io/name: test-release
+          maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: toto
+              app.kubernetes.io/instance: test-release
+              app.kubernetes.io/name: test-release
+          maxSkew: 2
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+      containers:
+        - image: there:42
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+          name: main
+          ports:
+          - containerPort: 8080
+            name: http
+          readinessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          startupProbe:
+            failureThreshold: 30
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+          volumeMounts:
+          - mountPath: /tmp
+            name: tmp
+      volumes:
+        - emptyDir: {}
+          name: tmp
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: test-release-titi
+  labels:
+    app: test-release
+    app.kubernetes.io/component: titi
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: test-release-titi
+  minReplicas: 2
+  maxReplicas: 50
+  metrics:
+    - resource:
+        name: cpu
+        target:
+          averageUtilization: 70
+          type: Utilization
+      type: Resource
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: test-release-toto
+  labels:
+    app: test-release
+    app.kubernetes.io/component: toto
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: test-release
+    helm.sh/chart: base-test-0.0.0
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: test-release-toto
+  minReplicas: 2
+  maxReplicas: 50
+  metrics:
+    - resource:
+        name: cpu
+        target:
+          averageUtilization: 70
+          type: Utilization
+      type: Resource
