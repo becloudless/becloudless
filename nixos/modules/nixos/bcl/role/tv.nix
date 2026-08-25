@@ -112,8 +112,9 @@
             cat > ~/.config/jellyfin-desktop/settings.json <<EOF
             {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"csd", "windowMaximized": true}
             EOF
+            log_file=~/.config/jellyfin-desktop/jellyfin-desktop.log
             export JELLYFIN_DESKTOP_LOG_LEVEL=debug
-            export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
+            export JELLYFIN_DESKTOP_LOG_FILE="$log_file"
 
             # Start screensaver just before jellyfin to be hover jellyfin window
             # screensaver takes time to start and will arrive after jellyfin
@@ -129,7 +130,41 @@
               # required for CI
               export LIBGL_ALWAYS_SOFTWARE=1
             ''}
-            jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"}
+
+            # Restart jellyfin-desktop itself (not the whole sway/greetd
+            # session) whenever it exits, or whenever its own debug log
+            # reports the Jellyfin web client's connection to the server
+            # dying (JS "web socket closed" log line - happens e.g. after a
+            # server restart/network blip, and otherwise leaves the app
+            # stuck showing a disconnected UI forever). Keeping this loop
+            # inside jellyfinScript (rather than letting jellyfin-desktop's
+            # exit fall through to sway's "swaymsg exit") means
+            # screensaver.service (started once above) is never torn down
+            # by a jellyfin reconnect/crash.
+            while true; do
+              : > "$log_file"
+
+              jellyfin-desktop ${lib.optionalString config.bcl.role.tv.disableGpuCompositing "--disable-gpu-compositing"} &
+              jf_pid=$!
+
+              (
+                tail -n0 -F "$log_file" 2>/dev/null | while read -r line; do
+                  case "$line" in
+                    *"web socket closed"*)
+                      echo "detected jellyfin web socket closed, restarting jellyfin-desktop"
+                      kill "$jf_pid" 2>/dev/null
+                      break
+                      ;;
+                  esac
+                done
+              ) &
+              watcher_pid=$!
+
+              wait "$jf_pid" 2>/dev/null
+              kill "$watcher_pid" 2>/dev/null
+              pkill -f "tail -n0 -F $log_file" 2>/dev/null
+              wait "$watcher_pid" 2>/dev/null
+            done
           '';
           swayConfig = pkgs.writeText "tv-sway-config" ''
             default_border none
