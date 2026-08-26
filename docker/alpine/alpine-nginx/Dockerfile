@@ -1,4 +1,4 @@
-FROM alpine:3.21.2
+FROM alpine:3.24.1
 
 RUN apk add --no-cache nginx nginx-mod-stream
 
