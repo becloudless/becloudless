@@ -22,6 +22,9 @@ spec:
   values:
     enablePSP: false
 
+    csi:
+      kubeletRootDir: /var/lib/kubelet
+
     defaultSettings:
       autoDeletePodWhenVolumeDetachedUnexpectedly: true
       nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
