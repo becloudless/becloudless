@@ -21,6 +21,15 @@ in
         CIDR of the cluster network, e.g. 
         '';
     };
+    # list of vlanName ->  vlanId
+    vlans = lib.mkOption {
+      type = lib.types.attrsOf lib.types.int;
+      default = {};
+      description = ''
+        List of VLANs in the cluster, as a map of vlanName -> vlanId.
+        Each VLAN will be created as a bridge (see bcl.vlan) that VMs can attach to via their `bridgeName`.
+      '';
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -31,7 +40,6 @@ in
       nameservers = cfg.nameservers;
     };
 
-    # loop over vlan and set the address and gateway for each vlan, based on the node number
     bcl.vlan = lib.mapAttrs (_: vlan: lib.mkIf (vlan.address != null) {
       address = "${lib.bcl.net.cidrhost vlan.address nodeNumber}/${toString (lib.bcl.net.cidrPrefixLength vlan.address)}";
     }) cfg.vlans; 
