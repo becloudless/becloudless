@@ -2,6 +2,13 @@
   cfg = config.bcl.cluster;
   nodeNumber = lib.strings.toInt (builtins.elemAt (builtins.match "(.*[^0-9])?([0-9]+)" config.networking.hostName) 1);
   nodeIp = lib.bcl.net.cidrhost cfg.cidr nodeNumber;
+
+  # Derives a VLAN's /24 subnet from its id, reusing the first two octets of
+  # the cluster's own CIDR (e.g. cidr "192.168.41.0/22" + vlan id 11 ->
+  # "192.168.11.0/24"), matching the convention used in the network's
+  # RouterOS config (VLAN 11 -> 192.168.11.0/24, VLAN 22 -> 192.168.22.0/24).
+  cidrBase = lib.concatStringsSep "." (lib.take 2 (lib.strings.splitString "." (lib.bcl.net.cidrAddress cfg.cidr)));
+  vlanCidr = id: "${cidrBase}.${toString id}.0/24";
 in
 {
   options.bcl.cluster = {
@@ -27,7 +34,9 @@ in
       default = {};
       description = ''
         List of VLANs in the cluster, as a map of vlanName -> vlanId.
-        Each VLAN will be created as a bridge (see bcl.vlan) that VMs can attach to via their `bridgeName`.
+        Each VLAN's subnet, gateway and nameservers are derived from its id
+        (see `vlanCidr` above); each VLAN is created as a bridge (see
+        bcl.network.vlans) that VMs can attach to via their `bridgeName`.
       '';
     };
   };
@@ -36,13 +45,12 @@ in
     bcl.network = {
       bridge = true; # so VMs and containers can attach to the untagged network
       address = "${nodeIp}/${toString (lib.bcl.net.cidrPrefixLength cfg.cidr)}";
-      gateway = lib.bcl.net.cidrhost cfg.cidr 1; # gateway is always the first address in the cluster network by default
-      nameservers = cfg.nameservers;
     };
 
-    bcl.vlan = lib.mapAttrs (_: vlan: lib.mkIf (vlan.address != null) {
-      address = "${lib.bcl.net.cidrhost vlan.address nodeNumber}/${toString (lib.bcl.net.cidrPrefixLength vlan.address)}";
-    }) cfg.vlans; 
+    bcl.network.vlans = lib.mapAttrs (_: id: {
+      inherit id;
+      address = "${lib.bcl.net.cidrhost (vlanCidr id) nodeNumber}/24";
+    }) cfg.vlans;
 
   };
 }

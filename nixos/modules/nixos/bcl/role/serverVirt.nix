@@ -1,14 +1,5 @@
 { config, lib, pkgs, ... }:
-let
-  cfg = config.bcl.role.serverVirt;
-in
 {
-  options.bcl.role.serverVirt = {
-    # TODO remove and take it from networking range instead
-    cidr = lib.mkOption { type = lib.types.str; example = "192.168.41.0/24"; };
-  };
-
-  ####################
 
   config = lib.mkMerge [
     { bcl.role.knownRoles = [ "serverVirt" ]; }
