@@ -1,11 +1,35 @@
-{ config, lib, pkgs, inputs, ... }:
+{ config, lib, pkgs, ... }:
 let
-  srvNumber = lib.strings.toInt(builtins.substring ((builtins.stringLength config.networking.hostName) -1)  (-1) config.networking.hostName);
   cfg = config.bcl.role.serverVirt;
+  srvNumber = lib.strings.toInt (builtins.elemAt (builtins.match "(.*[^0-9])?([0-9]+)" config.networking.hostName) 1);
+  nodeIp = lib.bcl.net.cidrhost cfg.cidr srvNumber;
 in
 {
   options.bcl.role.serverVirt = {
-    clusterNumber = lib.mkOption {type = lib.types.int; default = 1;};
+    # TODO remove and take it from networking range instead
+    cidr = lib.mkOption { type = lib.types.str; example = "192.168.41.0/24"; };
+
+    interface = lib.mkOption {
+      type = lib.types.str;
+      default = "en* eth*";
+      description = ''
+        systemd-networkd match pattern for the single physical interface used
+        for both the host's untagged network (via `bcl.network`) and any
+        tagged VLANs (via `bcl.vlan`) attachable to VMs.
+      '';
+    };
+
+    gateway = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = "192.168.40.10";
+      description = "Default gateway for the untagged network.";
+    };
+
+    nameservers = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = ["192.168.40.12"];
+      description = "DNS nameservers to use for this host.";
+    };
   };
 
   ####################
@@ -26,42 +50,21 @@ in
       mergerfs
     ];
 
-    networking.nameservers = ["192.168.40.12"];
     services.resolved.dnssec = "true";
     networking.firewall.enable = false;
 
-    systemd.network.enable = true;
-    systemd.network.networks.net = {
-      matchConfig = {
-        Name = "en* eth*";
-      };
-      networkConfig = {
-        IgnoreCarrierLoss = true;
-        Bridge = "vmbr0";
-      };
+    # Untagged (native VLAN) network: the host's own static ip/route/dns,
+    # carried directly on the physical interface (not attached to VMs).
+    bcl.network = {
+      interface = cfg.interface;
+      address = [ "${nodeIp}/${toString (lib.bcl.net.cidrPrefixLength cfg.cidr)}" ];
+      gateway = cfg.gateway;
+      nameservers = cfg.nameservers;
     };
-    systemd.network.netdevs.vmbr0.netdevConfig = {
-      Kind = "bridge";
-      Name = "vmbr0";
-    };
-    systemd.network.networks.vmbr0 = {
-      matchConfig = {
-        Name = "vmbr0";
-      };
-      networkConfig = {
-        IgnoreCarrierLoss = true;
-        KeepConfiguration = true;
-      };
-      address = [
-        "192.168.41.${toString cfg.clusterNumber}${toString srvNumber}/22"
-      ];
-      routes = [
-        {
-          Gateway = "192.168.40.10";
-          GatewayOnLink = true;
-        }
-      ];
-    };
+
+    # Tagged VLANs stacked on the same physical interface; each becomes a
+    # bridge (see bcl.vlan) that VMs can attach to via their `bridgeName`.
+    bcl.vlan.interface = cfg.interface;
   })
   ];
 }
