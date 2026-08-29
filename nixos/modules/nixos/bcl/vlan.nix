@@ -2,7 +2,7 @@
 let
   cfg = config.bcl.vlan;
   bridgeName = name: "br-${name}";
-  vlanSubmodule = lib.types.submodule {
+  vlanSubmodule = lib.types.submodule ({ config, ... }: {
     options = {
       id = lib.mkOption {
         type = lib.types.ints.between 1 4094;
@@ -19,23 +19,32 @@ let
         '';
       };
       address = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [];
-        description = "Static addresses (CIDR notation) to assign to this VLAN (or its bridge).";
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Static address (CIDR notation) to assign to this VLAN (or its bridge).";
+        example = "192.168.10.42/24";
       };
-      routes = lib.mkOption {
-        type = lib.types.listOf lib.types.attrs;
-        default = [];
-        description = "Extra systemd-networkd [Route] sections for this VLAN (or its bridge).";
+      gateway = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = lib.mapNullable (a: lib.bcl.net.cidrhost a 1) config.address;
+        defaultText = lib.literalExpression "first address of `address`";
+        description = "Default gateway for this VLAN (or its bridge).";
+      };
+      nameservers = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = lib.optional (config.address != null) (lib.bcl.net.cidrhost config.address 1);
+        defaultText = lib.literalExpression "[ first address of `address` ]";
+        description = "DNS nameservers to use for this VLAN (or its bridge).";
       };
     };
-  };
+  });
   bridgedVlans = lib.filterAttrs (_: vlan: vlan.bridge) cfg.vlans;
 in
 {
   options.bcl.vlan = {
     interface = lib.mkOption {
       type = lib.types.str;
+      default = "en* eth*";
       description = ''
         systemd-networkd match pattern for the physical interface the VLANs
         are stacked on top of (e.g. "eth0" or "en* eth*").
@@ -80,9 +89,13 @@ in
         matchConfig.Name = name;
         networkConfig = {
           IgnoreCarrierLoss = true;
-        } // (lib.optionalAttrs vlan.bridge { Bridge = bridgeName name; });
-        address = lib.optionals (!vlan.bridge) vlan.address;
-        routes = lib.optionals (!vlan.bridge) vlan.routes;
+        } // (lib.optionalAttrs vlan.bridge { Bridge = bridgeName name; })
+          // (lib.optionalAttrs (!vlan.bridge) { DNS = vlan.nameservers; });
+        address = lib.optionals (!vlan.bridge) (lib.optional (vlan.address != null) vlan.address);
+        routes = lib.optionals (!vlan.bridge) (lib.optional (vlan.gateway != null) {
+          Gateway = vlan.gateway;
+          GatewayOnLink = true;
+        });
       }) cfg.vlans)
       // (lib.mapAttrs' (name: vlan:
         lib.nameValuePair (bridgeName name) {
@@ -90,9 +103,13 @@ in
           networkConfig = {
             IgnoreCarrierLoss = true;
             KeepConfiguration = true;
+            DNS = vlan.nameservers;
           };
-          address = vlan.address;
-          routes = vlan.routes;
+          address = lib.optional (vlan.address != null) vlan.address;
+          routes = lib.optional (vlan.gateway != null) {
+            Gateway = vlan.gateway;
+            GatewayOnLink = true;
+          };
         }
       ) bridgedVlans)
       // {

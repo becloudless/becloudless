@@ -44,8 +44,13 @@ in
           };
           bridgeName = lib.mkOption {
             type = lib.types.str;
-            default = "vmbr0";
-            description = "Network bridge the VM's NIC attaches to.";
+            default = "br0";
+            description = ''
+              Network bridge the VM's NIC attaches to, e.g. "br0" (the
+              untagged network bridge created by `bcl.network` when
+              `bcl.network.bridge` is true), or a `bcl.vlan.vlans.<name>`
+              bridge (default "br-<name>") for a tagged VLAN.
+            '';
           };
           active = lib.mkOption {
             type = lib.types.bool;
