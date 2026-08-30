@@ -75,10 +75,10 @@ in
           }
         ) cfg.vlans)
         # Attaches these VLANs to the trunk interface's own .network file
-        # (see bcl.network's "bcl-physical" key); `vlan` is a listOf str
-        # NixOS option, so this merges additively with bcl.network's own
-        # definition of the same "bcl-physical" key instead of conflicting.
-        { bcl-physical.vlan = lib.attrNames cfg.vlans; }
+        # (see bcl.network's "net" key); `vlan` is a listOf str NixOS
+        # option, so this merges additively with bcl.network's own
+        # definition of the same "net" key instead of conflicting.
+        { net.vlan = lib.attrNames cfg.vlans; }
       ];
     })
   ];

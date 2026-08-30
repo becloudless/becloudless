@@ -87,12 +87,13 @@ in
       };
     };
 
-    # NOTE: keyed as "bcl-physical" so this merges with any other module
-    # (e.g. bcl.role.serverVirt's VLAN trunk config) targeting the same
-    # physical interface into a single systemd-networkd .network file,
-    # instead of two separate files both matching cfg.interface
-    # (systemd-networkd only applies the first matching file per interface).
-    systemd.network.networks.bcl-physical = {
+    # NOTE: keyed as "net" so this merges with any other module (e.g.
+    # hardware-specific overrides, bcl.role.serverVirt's VLAN trunk config)
+    # targeting the same physical interface into a single systemd-networkd
+    # .network file, instead of two separate files both matching
+    # cfg.interface (systemd-networkd only applies the first matching file
+    # per interface).
+    systemd.network.networks.net = {
       matchConfig.Name = cfg.interface;
       networkConfig = {
         IgnoreCarrierLoss = true;
@@ -105,7 +106,7 @@ in
       });
     };
 
-    systemd.network.networks.bcl-network-bridge = lib.mkIf cfg.bridge {
+    systemd.network.networks.br0 = lib.mkIf cfg.bridge {
       matchConfig.Name = "br0";
       networkConfig = {
         IgnoreCarrierLoss = true;
