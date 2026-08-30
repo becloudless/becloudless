@@ -1,5 +1,27 @@
 { config, lib, pkgs, ... }:
+let
+  cfg = config.bcl.role.serverVirt;
+  bridgeName = name: "br-${name}";
+in
 {
+  options.bcl.role.serverVirt = {
+    vlans = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.submodule {
+        options.id = lib.mkOption {
+          type = lib.types.ints.between 1 4094;
+          description = "802.1Q VLAN ID.";
+        };
+      });
+      default = {};
+      description = ''
+        Declarative 802.1Q VLAN sub-interfaces stacked on top of
+        `bcl.network.interface`. Each attribute name is used as the VLAN's
+        netdev/interface name, and gets its own bridge (`br-<name>`) that
+        VMs can attach to (see `bcl.vm.vms.<name>.bridgeName`). The host
+        itself has no IP address on these VLANs/bridges, only VMs do.
+      '';
+    };
+  };
 
   config = lib.mkMerge [
     { bcl.role.knownRoles = [ "serverVirt" ]; }
@@ -22,5 +44,44 @@
     services.resolved.dnssec = "true";
     networking.firewall.enable = false;
   })
+    (lib.mkIf (cfg.vlans != {}) {
+      systemd.network.enable = true;
+
+      systemd.network.netdevs = lib.mkMerge [
+        (lib.mapAttrs (name: vlan: {
+          netdevConfig = {
+            Kind = "vlan";
+            Name = name;
+          };
+          vlanConfig.Id = vlan.id;
+        }) cfg.vlans)
+        (lib.mapAttrs' (name: _:
+          lib.nameValuePair (bridgeName name) {
+            netdevConfig = {
+              Kind = "bridge";
+              Name = bridgeName name;
+            };
+          }
+        ) cfg.vlans)
+      ];
+
+      systemd.network.networks = lib.mkMerge [
+        (lib.mapAttrs (name: _: {
+          matchConfig.Name = name;
+          networkConfig.Bridge = bridgeName name;
+        }) cfg.vlans)
+        (lib.mapAttrs' (name: _:
+          lib.nameValuePair (bridgeName name) {
+            matchConfig.Name = bridgeName name;
+            networkConfig.IgnoreCarrierLoss = true;
+          }
+        ) cfg.vlans)
+        # Attaches these VLANs to the trunk interface's own .network file
+        # (see bcl.network's "bcl-physical" key); `vlan` is a listOf str
+        # NixOS option, so this merges additively with bcl.network's own
+        # definition of the same "bcl-physical" key instead of conflicting.
+        { bcl-physical.vlan = lib.attrNames cfg.vlans; }
+      ];
+    })
   ];
 }
