@@ -1,6 +1,14 @@
 { config, lib, ... }:
 let
   cfg = config.bcl.network;
+
+  # Effective address: explicit `address` takes precedence; otherwise, if
+  # `cidr` is set, derive it from the hostname's trailing digits (see
+  # `bcl.network.cidr`'s description).
+  effectiveAddress =
+    if cfg.address != null then cfg.address
+    else if cfg.cidr != null then lib.bcl.net.cidrHostFromHostname cfg.cidr config.networking.hostName
+    else null;
 in
 {
   options.bcl.network = {
@@ -44,15 +52,15 @@ in
 
     gateway = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
-      default = lib.mapNullable (a: lib.bcl.net.cidrhost a 1) cfg.address;
-      defaultText = lib.literalExpression "first address of `bcl.network.address`";
+      default = lib.mapNullable (a: lib.bcl.net.cidrhost a 1) effectiveAddress;
+      defaultText = lib.literalExpression "first address of `bcl.network.address`/`bcl.network.cidr`";
       description = "Default gateway for the untagged network.";
     };
 
     nameservers = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = lib.optional (cfg.address != null) (lib.bcl.net.cidrhost cfg.address 1);
-      defaultText = lib.literalExpression "[ first address of `bcl.network.address` ]";
+      default = lib.optional (effectiveAddress != null) (lib.bcl.net.cidrhost effectiveAddress 1);
+      defaultText = lib.literalExpression "[ first address of `bcl.network.address`/`bcl.network.cidr` ]";
       description = "DNS nameservers to use for this host.";
     };
   };
@@ -68,7 +76,7 @@ in
         }
       ];
     }
-    (lib.mkIf (cfg.address != null || cfg.bridge) {
+    (lib.mkIf (effectiveAddress != null || cfg.bridge) {
     systemd.network.enable = true;
     networking.nameservers = cfg.nameservers;
 
@@ -90,7 +98,7 @@ in
         IgnoreCarrierLoss = true;
       } // (lib.optionalAttrs cfg.bridge { Bridge = "br0"; })
         // (lib.optionalAttrs (!cfg.bridge) { DNS = cfg.nameservers; });
-      address = lib.optionals (!cfg.bridge) (lib.optional (cfg.address != null) cfg.address);
+      address = lib.optionals (!cfg.bridge) (lib.optional (effectiveAddress != null) effectiveAddress);
       routes = lib.optionals (!cfg.bridge) (lib.optional (cfg.gateway != null) {
         Gateway = cfg.gateway;
         GatewayOnLink = true;
@@ -104,7 +112,7 @@ in
         KeepConfiguration = true;
         DNS = cfg.nameservers;
       };
-      address = lib.optional (cfg.address != null) cfg.address;
+      address = lib.optional (effectiveAddress != null) effectiveAddress;
       routes = lib.optional (cfg.gateway != null) {
         Gateway = cfg.gateway;
         GatewayOnLink = true;

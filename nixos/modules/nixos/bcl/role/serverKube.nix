@@ -2,9 +2,7 @@
 let
   srvNumber = lib.strings.toInt(builtins.substring ((builtins.stringLength config.networking.hostName) -1)  (-1) config.networking.hostName);
   cfg = config.bcl.role.serverKube;
-  cidrPrefixLength = lib.bcl.net.cidrPrefixLength cfg.cidr;
-  cidrBase = lib.concatStringsSep "." (lib.take 3 (lib.strings.splitString "." (lib.bcl.net.cidrAddress cfg.cidr)));
-  nodeIp = n: "${cidrBase}.${toString cfg.clusterNumber}${toString n}";
+  nodeIp = n: lib.bcl.net.cidrhost config.bcl.network.cidr (cfg.clusterNumber * 10 + n);
   myIp = nodeIp srvNumber;
 in
 {
@@ -15,21 +13,6 @@ in
       type = lib.types.int;
       default = 1;
       description = "Number of master nodes in the cluster";
-    };
-    cidr = lib.mkOption {
-      type = lib.types.str;
-      default = "192.168.1.0/24";
-      description = "CIDR of the network";
-    };
-    gateway = lib.mkOption {
-      type = lib.types.str;
-      default = lib.bcl.net.cidrhost cfg.cidr 1;
-      description = "Default gateway for the br0 bridge interface, computed as the first IP of the CIDR network by default";
-    };
-    nameservers = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ (lib.bcl.net.cidrhost cfg.cidr 1) ];
-      description = "DNS nameservers to use for this node";
     };
   };
 
@@ -44,6 +27,8 @@ in
 
     bcl.role.setAdminPassword = true; # being able to log in to console
     security.sudo.wheelNeedsPassword = false;
+
+    bcl.network.bridge = true; # we need a bridge for kube
 
     environment.systemPackages = with pkgs; [
       kubernetes
@@ -74,42 +59,8 @@ in
       alias k='kubectl'
     '';
 
-    networking.nameservers = cfg.nameservers;
     services.resolved.dnssec = "true";
     networking.firewall.enable = false;
-
-    systemd.network.enable = true;
-    systemd.network.networks.net = {
-      matchConfig = {
-        Name = "en* eth*";
-      };
-      networkConfig = {
-        IgnoreCarrierLoss = true;
-        Bridge = "br0";
-      };
-    };
-    systemd.network.netdevs.br0.netdevConfig = {
-      Kind = "bridge";
-      Name = "br0";
-    };
-    systemd.network.networks.br0 = {
-      matchConfig = {
-        Name = "br0";
-      };
-      networkConfig = {
-        IgnoreCarrierLoss = true;
-        KeepConfiguration = true;
-      };
-      address = [
-        "${myIp}/${toString cidrPrefixLength}"
-      ];
-      routes = [
-        {
-          Gateway = cfg.gateway;
-          GatewayOnLink = true;
-        }
-      ];
-    };
 
     systemd.network.networks.kube = {
       matchConfig = {
