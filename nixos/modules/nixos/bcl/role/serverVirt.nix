@@ -1,22 +1,18 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.bcl.role.serverVirt;
-  bridgeName = name: "br-${name}";
+  bridgeName = name: "br${name}";
 in
 {
   options.bcl.role.serverVirt = {
     vlans = lib.mkOption {
-      type = lib.types.attrsOf (lib.types.submodule {
-        options.id = lib.mkOption {
-          type = lib.types.ints.between 1 4094;
-          description = "802.1Q VLAN ID.";
-        };
-      });
+      type = lib.types.attrsOf (lib.types.ints.between 1 4094);
       default = {};
       description = ''
         Declarative 802.1Q VLAN sub-interfaces stacked on top of
         `bcl.network.interface`. Each attribute name is used as the VLAN's
-        netdev/interface name, and gets its own bridge (`br-<name>`) that
+        netdev/interface name, and its value is the VLAN id (e.g.
+        `vlan41 = 41;`). Each VLAN gets its own bridge (`br<name>`) that
         VMs can attach to (see `bcl.vm.vms.<name>.bridgeName`). The host
         itself has no IP address on these VLANs/bridges, only VMs do.
       '';
@@ -39,7 +35,9 @@ in
       mergerfs
     ];
 
-    bcl.cluster.enable = true;
+    bcl.network = {
+      bridge = true; # so VMs and containers can attach to the untagged network
+    };
 
     services.resolved.dnssec = "true";
     networking.firewall.enable = false;
@@ -48,12 +46,12 @@ in
       systemd.network.enable = true;
 
       systemd.network.netdevs = lib.mkMerge [
-        (lib.mapAttrs (name: vlan: {
+        (lib.mapAttrs (name: vlanId: {
           netdevConfig = {
             Kind = "vlan";
             Name = name;
           };
-          vlanConfig.Id = vlan.id;
+          vlanConfig.Id = vlanId;
         }) cfg.vlans)
         (lib.mapAttrs' (name: _:
           lib.nameValuePair (bridgeName name) {

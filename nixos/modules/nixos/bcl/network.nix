@@ -13,6 +13,24 @@ in
       '';
     };
 
+    address = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Static address (CIDR notation) for the untagged network.";
+      example = "192.168.1.20/24";
+    };
+
+    cidr = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        CIDR of the network.
+        Used to derive the host's IP address from the hostname using last digits.
+        (e.g. hostname 'srv25' with cidr '192.168.1.0/24' gives address '192.168.1.25/24').
+      '';
+      example = "192.168.1.0/24";
+    };
+
     bridge = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -22,13 +40,6 @@ in
         When true, the bridge interface is named "br0" and `address`/`gateway`
         are applied to that bridge instead of the raw physical interface.
       '';
-    };
-
-    address = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "Static address (CIDR notation) for the untagged network.";
-      example = "192.168.1.20/24";
     };
 
     gateway = lib.mkOption {
@@ -48,7 +59,16 @@ in
 
   ####################
 
-  config = lib.mkIf (cfg.address != null || cfg.bridge) {
+  config = lib.mkMerge [
+    {
+      assertions = [
+        {
+          assertion = !(cfg.address != null && cfg.cidr != null);
+          message = "bcl.network.address and bcl.network.cidr are mutually exclusive; unset one of them.";
+        }
+      ];
+    }
+    (lib.mkIf (cfg.address != null || cfg.bridge) {
     systemd.network.enable = true;
     networking.nameservers = cfg.nameservers;
 
@@ -90,5 +110,6 @@ in
         GatewayOnLink = true;
       };
     };
-  };
+    })
+  ];
 }
