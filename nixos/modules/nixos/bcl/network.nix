@@ -24,7 +24,7 @@ in
     address = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      description = "Static address (CIDR notation) for the untagged network.";
+      description = "Static address (CIDR notation).";
       example = "192.168.1.20/24";
     };
 
