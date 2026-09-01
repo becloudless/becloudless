@@ -222,8 +222,8 @@ in
     '';
 
     environment.etc."crictl.yaml".text = ''
-      runtime-endpoint: "unix:///var/run/crio/crio.sock"
-      image-endpoint: "unix:///var/run/crio/crio.sock"
+      runtime-endpoint: "unix:///run/containerd/containerd.sock"
+      image-endpoint: "unix:///run/containerd/containerd.sock"
     '';
 
     # systemctl stop kubeadm kubelet
@@ -302,7 +302,7 @@ in
         localAPIEndpoint:
           advertiseAddress: "${myIp}"
         nodeRegistration:
-          criSocket: unix:///var/run/crio/crio.sock
+          criSocket: unix:///run/containerd/containerd.sock
           taints: []
       '';
 

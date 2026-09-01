@@ -20,9 +20,9 @@ A desktop or laptop for daily use. Enables a graphical environment, user-facing 
 
 ### `serverKube`
 
-A Kubernetes worker/control-plane node. Enables CRI-O, kubeadm, Longhorn prerequisites, and high-availability keepalived. No graphical environment.
+A Kubernetes worker/control-plane node. Enables containerd, kubeadm, Longhorn prerequisites, and high-availability keepalived. No graphical environment.
 
-Related role modules: `serverKubeCrio`, `serverKubeCerts`, `serverKubeHap`.
+Related role modules: `serverKubeContainerd`, `serverKubeCerts`, `serverKubeHap`.
 
 **Typical hardware:** bare-metal server, NUC, OrangePi.
 
