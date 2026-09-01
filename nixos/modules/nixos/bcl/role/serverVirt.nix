@@ -39,6 +39,18 @@ in
       bridge = true; # so VMs and containers can attach to the untagged network
     };
 
+
+    # BTRFS
+    bcl.diskSystem.nixFsFormat = "btrfs";
+    services.beesd.filesystems = {
+      nix = {
+        spec = "LABEL=disk-main-nix";
+        hashTableSizeMB = 2048;
+        verbosity = "crit";
+        extraOptions = [ "--loadavg-target" "5.0" ];
+      };
+    };
+
     services.resolved.dnssec = "true";
     networking.firewall.enable = false;
   })
