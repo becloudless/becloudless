@@ -114,7 +114,7 @@ in
   config = lib.mkIf (cfg.vms != {}) {
     virtualisation.libvirt.enable = true; # also enables virtualisation.libvirtd
     virtualisation.libvirt.swtpm.enable = true; # emulated TPM, needed for windows template
-    virtualisation.libvirtd.vhostUserPackages = lib.mkIf (vmsWithGuestNix != {}) [ pkgs.virtiofsd ];
+    virtualisation.libvirtd.qemu.vhostUserPackages = lib.mkIf (vmsWithGuestNix != {}) [ pkgs.virtiofsd ];
 
     virtualisation.libvirt.connections."qemu:///system".domains =
       lib.mapAttrsToList (name: vm:
