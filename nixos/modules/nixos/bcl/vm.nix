@@ -8,6 +8,20 @@ let
       unit = lib.mkOption { type = lib.types.str; default = "GiB"; };
     };
   };
+  guestNixSubmodule = lib.types.submodule {
+    options = {
+      quota = lib.mkOption {
+        type = lib.types.str;
+        description = ''
+          btrfs qgroup size limit (e.g. "20G") applied to this VM's dedicated
+          /nix subvolume on the host.
+        '';
+      };
+    };
+  };
+  # Host-side btrfs subvolume backing a VM's shared /nix (see guestNix below).
+  guestNixSubvolPath = name: "/nix/vms/${name}";
+  vmsWithGuestNix = lib.filterAttrs (_: vm: vm.guestNix != null) cfg.vms;
 in
 {
   options.bcl.vm = {
@@ -64,6 +78,27 @@ in
               for remote console access via qemu+ssh (e.g. virt-manager).
             '';
           };
+          guestNix = lib.mkOption {
+            type = lib.types.nullOr guestNixSubmodule;
+            default = null;
+            description = ''
+              When set, this VM's entire /nix is a dedicated btrfs subvolume
+              on the host's own /nix filesystem (created at
+              `/nix/vms/<name>`, quota-limited via btrfs qgroups), shared
+              read-write into the guest over virtiofs (mount tag "nix").
+              Living on the host's /nix filesystem also lets bees (see
+              `services.beesd`) deduplicate store paths shared between the
+              host and any such guests, since bees deduplication crosses
+              subvolume boundaries within the same filesystem.
+
+              The guest's own NixOS config must mount it, e.g.:
+                fileSystems."/nix" = {
+                  device = "nix";
+                  fsType = "virtiofs";
+                  neededForBoot = true;
+                };
+            '';
+          };
         };
       });
       default = {};
@@ -79,35 +114,81 @@ in
   config = lib.mkIf (cfg.vms != {}) {
     virtualisation.libvirt.enable = true; # also enables virtualisation.libvirtd
     virtualisation.libvirt.swtpm.enable = true; # emulated TPM, needed for windows template
+    virtualisation.libvirtd.vhostUserPackages = lib.mkIf (vmsWithGuestNix != {}) [ pkgs.virtiofsd ];
 
     virtualisation.libvirt.connections."qemu:///system".domains =
-      lib.mapAttrsToList (name: vm: {
-        definition = nixvirt.lib.domain.writeXML (nixvirt.lib.domain.templates.${vm.template} {
-          inherit name;
-          uuid = vm.uuid;
-          memory = vm.memory;
-          storage_vol = vm.diskPath;
-          install_vol = vm.installIso;
-          bridge_name = vm.bridgeName;
-          virtio_video = false; # use QXL video with SPICE listening on 127.0.0.1
-        });
-        active = vm.active;
-      }) cfg.vms;
+      lib.mapAttrsToList (name: vm:
+        let
+          domainDef = nixvirt.lib.domain.templates.${vm.template} {
+            inherit name;
+            uuid = vm.uuid;
+            memory = vm.memory;
+            storage_vol = vm.diskPath;
+            install_vol = vm.installIso;
+            bridge_name = vm.bridgeName;
+            virtio_video = false; # use QXL video with SPICE listening on 127.0.0.1
+          };
+          finalDomainDef = if vm.guestNix != null then
+            domainDef // {
+              # Required for virtiofs: guest and virtiofsd share memory.
+              memoryBacking = {
+                source = { type = "memfd"; };
+                access = { mode = "shared"; };
+              };
+              devices = domainDef.devices // {
+                filesystem = [
+                  {
+                    type = "mount";
+                    accessmode = "passthrough";
+                    driver = { type = "virtiofs"; };
+                    source = { dir = guestNixSubvolPath name; };
+                    target = { dir = "nix"; };
+                  }
+                ];
+              };
+            }
+          else domainDef;
+        in {
+          definition = nixvirt.lib.domain.writeXML finalDomainDef;
+          active = vm.active;
+        }
+      ) cfg.vms;
 
     # Create missing disk images before libvirtd starts the VMs that need them.
-    systemd.services = lib.mapAttrs' (name: vm:
-      lib.nameValuePair "bcl-vm-disk-${name}" {
-        description = "Create qcow2 disk image for VM ${name}";
-        wantedBy = [ "multi-user.target" ];
-        before = [ "libvirtd.service" ];
-        unitConfig.ConditionPathExists = "!${vm.diskPath}";
-        serviceConfig.Type = "oneshot";
-        path = [ pkgs.qemu ];
-        script = ''
-          mkdir -p "$(dirname ${vm.diskPath})"
-          qemu-img create -f qcow2 ${vm.diskPath} ${vm.diskSize}
-        '';
-      }
-    ) (lib.filterAttrs (_: vm: vm.diskSize != null) cfg.vms);
+    systemd.services =
+      lib.mapAttrs' (name: vm:
+        lib.nameValuePair "bcl-vm-disk-${name}" {
+          description = "Create qcow2 disk image for VM ${name}";
+          wantedBy = [ "multi-user.target" ];
+          before = [ "libvirtd.service" ];
+          unitConfig.ConditionPathExists = "!${vm.diskPath}";
+          serviceConfig.Type = "oneshot";
+          path = [ pkgs.qemu ];
+          script = ''
+            mkdir -p "$(dirname ${vm.diskPath})"
+            qemu-img create -f qcow2 ${vm.diskPath} ${vm.diskSize}
+          '';
+        }
+      ) (lib.filterAttrs (_: vm: vm.diskSize != null) cfg.vms)
+      //
+      # Create and quota-limit the host btrfs subvolume backing each VM's
+      # shared /nix, before libvirtd starts the VM that needs it.
+      lib.mapAttrs' (name: vm:
+        lib.nameValuePair "bcl-vm-nix-subvol-${name}" {
+          description = "Create quota-limited btrfs subvolume for VM ${name}'s /nix";
+          wantedBy = [ "multi-user.target" ];
+          before = [ "libvirtd.service" ];
+          unitConfig.RequiresMountsFor = "/nix";
+          unitConfig.ConditionPathExists = "!${guestNixSubvolPath name}";
+          serviceConfig.Type = "oneshot";
+          path = [ pkgs.btrfs-progs ];
+          script = ''
+            btrfs quota enable /nix
+            mkdir -p "$(dirname ${guestNixSubvolPath name})"
+            btrfs subvolume create ${guestNixSubvolPath name}
+            btrfs qgroup limit ${vm.guestNix.quota} ${guestNixSubvolPath name}
+          '';
+        }
+      ) vmsWithGuestNix;
   };
 }
