@@ -37,32 +37,39 @@ in {
         `devices` still needs a disk for /boot (and the tmpfs root).
       '';
     };
-    kubeletPartition = lib.mkOption {
-      type = lib.types.nullOr (lib.types.submodule {
+    extraPartitions = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
         options = {
+          mountpoint = lib.mkOption {
+            type = lib.types.str;
+            default = "/var/lib/${name}";
+            description = "Where to mount this dedicated partition.";
+          };
           size = lib.mkOption {
             type = lib.types.str;
-            description = ''
-              Size (e.g. "10G") of a dedicated partition mounted at
-              /var/lib/kubelet, created directly on disk instead of relying
-              on an impermanence bind-mount from /nix. Useful when
-              nixFsFormat = "virtiofs", since cadvisor (used by kubelet)
-              does not recognize virtiofs-backed directories and fails with
-              "could not find device in cached partitions map".
-            '';
+            description = "Size of the partition, e.g. \"10G\".";
           };
           format = lib.mkOption {
             type = lib.types.str;
             default = "ext4";
-            description = "Filesystem format for the /var/lib/kubelet partition (ext4 or xfs, per what cadvisor/Longhorn support).";
+            description = "Filesystem format (ext4 or xfs, per what cadvisor/Longhorn support).";
           };
         };
-      });
-      default = null;
+      }));
+      default = { };
       description = ''
-        Experimental. When set, creates a dedicated partition for
-        /var/lib/kubelet. Currently only supported with gpt = true and a
-        single device.
+        Experimental. Extra dedicated partitions created directly on disk
+        instead of relying on impermanence bind-mounts from /nix. Needed
+        when nixFsFormat = "virtiofs", since several things cannot work on
+        top of virtiofs (a FUSE filesystem):
+        - cadvisor (used by kubelet) does not recognize virtiofs-backed
+          directories, failing with "could not find device in cached
+          partitions map" (affects /var/lib/kubelet).
+        - overlayfs (containerd's snapshotter) cannot mount its
+          upperdir/workdir/lowerdir on virtiofs, failing with
+          "failed to mount rootfs component: ... invalid argument" (affects
+          /var/lib/containerd).
+        Currently only supported with gpt = true and a single device.
       '';
     };
   };
@@ -91,12 +98,12 @@ in {
 
     assertions = [
       {
-        assertion = cfg.kubeletPartition == null || cfg.gpt;
-        message = "bcl.diskSystem.kubeletPartition currently requires bcl.diskSystem.gpt = true.";
+        assertion = cfg.extraPartitions == { } || cfg.gpt;
+        message = "bcl.diskSystem.extraPartitions currently requires bcl.diskSystem.gpt = true.";
       }
       {
-        assertion = cfg.kubeletPartition == null || !isMultiDevice;
-        message = "bcl.diskSystem.kubeletPartition currently only supports a single device.";
+        assertion = cfg.extraPartitions == { } || !isMultiDevice;
+        message = "bcl.diskSystem.extraPartitions currently only supports a single device.";
       }
     ];
 
@@ -158,20 +165,18 @@ in {
               priority = 1;
             };
             ESP = {
-              size = if isVirtiofsNix && cfg.kubeletPartition == null then "100%" else "1G";
+              size = if isVirtiofsNix && cfg.extraPartitions == { } then "100%" else "1G";
               type = "EF00";
               content = bootContent;
             };
-          } // lib.optionalAttrs (cfg.kubeletPartition != null) {
-            kubelet = {
-              size = cfg.kubeletPartition.size;
-              content = {
-                type = "filesystem";
-                format = cfg.kubeletPartition.format;
-                mountpoint = "/var/lib/kubelet";
-              };
+          } // lib.mapAttrs (_: p: {
+            size = p.size;
+            content = {
+              type = "filesystem";
+              format = p.format;
+              mountpoint = p.mountpoint;
             };
-          } // lib.optionalAttrs (!isVirtiofsNix) {
+          }) cfg.extraPartitions // lib.optionalAttrs (!isVirtiofsNix) {
             nix = {
               size = "100%";
               content = nixContent;

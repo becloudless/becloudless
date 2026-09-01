@@ -312,7 +312,7 @@ in
       directories = [
         { directory = "/var/lib/longhorn"; mode = "u=rwx,g=,o="; }
         { directory = "/var/lib/etcd"; mode = "u=rwx,g=,o="; }
-      ] ++ lib.optional (config.bcl.diskSystem.kubeletPartition == null)
+      ] ++ lib.optional (!lib.any (p: p.mountpoint == "/var/lib/kubelet") (lib.attrValues config.bcl.diskSystem.extraPartitions))
         { directory = "/var/lib/kubelet"; mode = "u=rwx,g=,o="; };
     };
   })
