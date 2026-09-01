@@ -14,10 +14,9 @@
       };
     };
 
-    environment.persistence."/nix" = {
+    environment.persistence.${config.bcl.diskSystem.persistRoot} = {
       hideMounts = true;
-      directories = lib.optional (!lib.any (p: p.mountpoint == "/var/lib/containerd") (lib.attrValues config.bcl.diskSystem.extraPartitions))
-        { directory = "/var/lib/containerd"; mode = "u=rwx,g=,o="; };
+      directories = lib.optional (!(config.fileSystems ? "/var/lib/containerd")) { directory = "/var/lib/containerd"; mode = "u=rwx,g=,o="; };
     };
   };
 

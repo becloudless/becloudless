@@ -307,13 +307,12 @@ in
       '';
 
 
-    environment.persistence."/nix" = {
+    environment.persistence.${config.bcl.diskSystem.persistRoot} = {
       hideMounts = true;
-      directories = [
-        { directory = "/var/lib/longhorn"; mode = "u=rwx,g=,o="; }
-        { directory = "/var/lib/etcd"; mode = "u=rwx,g=,o="; }
-      ] ++ lib.optional (!lib.any (p: p.mountpoint == "/var/lib/kubelet") (lib.attrValues config.bcl.diskSystem.extraPartitions))
-        { directory = "/var/lib/kubelet"; mode = "u=rwx,g=,o="; };
+      directories =
+        lib.optional (!(config.fileSystems ? "/var/lib/kubelet")) { directory = "/var/lib/kubelet"; mode = "u=rwx,g=,o="; }
+        ++ lib.optional (!(config.fileSystems ? "/var/lib/longhorn")) { directory = "/var/lib/longhorn"; mode = "u=rwx,g=,o="; }
+        ++ lib.optional (!(config.fileSystems ? "/var/lib/etcd")) { directory = "/var/lib/etcd"; mode = "u=rwx,g=,o="; };
     };
   })
   ];

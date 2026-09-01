@@ -22,6 +22,24 @@ let
   # Host-side btrfs subvolume backing a VM's shared /nix (see guestNix below).
   guestNixSubvolPath = name: "/nix/vms/${name}";
   vmsWithGuestNix = lib.filterAttrs (_: vm: vm.guestNix != null) cfg.vms;
+  volumeSubmodule = lib.types.submodule {
+    options = {
+      size = lib.mkOption {
+        type = lib.types.str;
+        description = ''
+          Virtual size (e.g. "20G") of a thin logical volume created in the
+          host's `bcl.diskSystem.lvmPool`, attached to this VM as a raw
+          virtio-blk block device identified in the guest by serial number
+          (matching the volume's attribute name) - see
+          `bcl.diskSystem.extraDisks` on the guest side.
+        '';
+      };
+    };
+  };
+  lvName = vmName: volName: "${vmName}-${volName}";
+  # vda is the main qcow2 disk; extra volumes get vdb, vdc, ...
+  volumeTargetDev = index: "vd" + builtins.substring index 1 "bcdefghijklmnopqrstuvwxyz";
+  vmsWithVolumes = lib.filterAttrs (_: vm: vm.volumes != { }) cfg.vms;
 in
 {
   options.bcl.vm = {
@@ -99,6 +117,19 @@ in
                 };
             '';
           };
+          volumes = lib.mkOption {
+            type = lib.types.attrsOf volumeSubmodule;
+            default = { };
+            description = ''
+              Extra raw block devices attached to this VM, each backed by a
+              dedicated thin logical volume in the host's
+              `bcl.diskSystem.lvmPool` (requires it to be set). Useful for
+              things that need a real (non-virtiofs) block device in the
+              guest, e.g. a /persist volume for kubelet/containerd state, or
+              a dedicated disk for Longhorn - see `bcl.diskSystem.extraDisks`
+              on the guest side, which mounts them by matching serial number.
+            '';
+          };
         };
       });
       default = {};
@@ -136,7 +167,7 @@ in
             # the CDROM first.
             os = rawDomainDef.os // { boot = [ { dev = "hd"; } { dev = "cdrom"; } ]; };
           };
-          finalDomainDef = if vm.guestNix != null then
+          domainDefWithGuestNix = if vm.guestNix != null then
             domainDef // {
               # Required for virtiofs: guest and virtiofsd share memory.
               memoryBacking = {
@@ -156,6 +187,21 @@ in
               };
             }
           else domainDef;
+          volumeDisks = lib.imap0 (index: volName: {
+            type = "block";
+            device = "disk";
+            driver = { name = "qemu"; type = "raw"; cache = "none"; };
+            source = { dev = "/dev/${config.bcl.diskSystem.lvmPool.vgName}/${lvName name volName}"; };
+            target = { dev = volumeTargetDev index; bus = "virtio"; };
+            serial = volName;
+          }) (lib.attrNames vm.volumes);
+          finalDomainDef = if vm.volumes != { } then
+            domainDefWithGuestNix // {
+              devices = domainDefWithGuestNix.devices // {
+                disk = domainDefWithGuestNix.devices.disk ++ volumeDisks;
+              };
+            }
+          else domainDefWithGuestNix;
         in {
           definition = nixvirt.lib.domain.writeXML finalDomainDef;
           active = vm.active;
@@ -212,6 +258,56 @@ in
             btrfs qgroup limit ${vm.guestNix.quota} ${guestNixSubvolPath name}
           '';
         }
-      ) vmsWithGuestNix;
+      ) vmsWithGuestNix
+      //
+      # Create (and grow-only resize) the thin logical volumes backing each
+      # VM's extra block-device volumes, before libvirtd starts the VM that
+      # needs them. Re-run automatically whenever a volume's size changes,
+      # same rationale as bcl-vm-disk-<name> above.
+      builtins.listToAttrs (lib.flatten (lib.mapAttrsToList (name: vm:
+        lib.mapAttrsToList (volName: vol:
+          let
+            vg = config.bcl.diskSystem.lvmPool.vgName;
+            pool = config.bcl.diskSystem.lvmPool.poolName;
+            lv = lvName name volName;
+          in {
+            name = "bcl-vm-lv-${name}-${volName}";
+            value = {
+              description = "Create/resize thin LV for VM ${name}'s ${volName} volume";
+              wantedBy = [ "multi-user.target" ];
+              before = [ "libvirtd.service" ];
+              serviceConfig.Type = "oneshot";
+              path = [ pkgs.lvm2 pkgs.coreutils ];
+              script = ''
+                if ! lvs "${vg}/${lv}" >/dev/null 2>&1; then
+                  lvcreate --yes --thin -V ${vol.size} -n ${lv} ${vg}/${pool}
+                else
+                  current_bytes=$(lvs --noheadings --units b --nosuffix -o lv_size "${vg}/${lv}" | tr -d ' ')
+                  target_bytes=$(numfmt --from=iec ${vol.size})
+                  if [ "$target_bytes" -gt "$current_bytes" ]; then
+                    echo "Growing LV ${vg}/${lv} to ${vol.size}"
+                    lvresize -L ${vol.size} "${vg}/${lv}"
+                  elif [ "$target_bytes" -lt "$current_bytes" ]; then
+                    echo "bcl.vm.vms.${name}.volumes.${volName}.size (${vol.size}) is smaller than the current LV size; refusing to shrink automatically" >&2
+                  fi
+                fi
+              '';
+            };
+          }
+        ) vm.volumes
+      ) vmsWithVolumes));
+
+    assertions = [
+      {
+        assertion = vmsWithVolumes == { } || config.bcl.diskSystem.lvmPool != null;
+        message = "bcl.vm.vms.<name>.volumes requires bcl.diskSystem.lvmPool to be set on this host.";
+      }
+    ];
+
+    # Thin LV block devices need to be accessible to the qemu process
+    # libvirtd spawns (group "kvm" by default in NixOS).
+    services.udev.extraRules = lib.mkIf (vmsWithVolumes != { }) ''
+      SUBSYSTEM=="block", ENV{DM_VG_NAME}=="${config.bcl.diskSystem.lvmPool.vgName}", GROUP="kvm", MODE="0660"
+    '';
   };
 }

@@ -41,7 +41,7 @@ in
 
 
     # BTRFS
-    bcl.diskSystem.nixFsFormat = "btrfs";
+    bcl.diskSystem.nix.format = "btrfs";
     services.beesd.filesystems = {
       nix = {
         spec = "/nix";
