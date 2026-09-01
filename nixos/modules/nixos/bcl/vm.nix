@@ -119,7 +119,7 @@ in
     virtualisation.libvirt.connections."qemu:///system".domains =
       lib.mapAttrsToList (name: vm:
         let
-          domainDef = nixvirt.lib.domain.templates.${vm.template} {
+          rawDomainDef = nixvirt.lib.domain.templates.${vm.template} {
             inherit name;
             uuid = vm.uuid;
             memory = vm.memory;
@@ -127,6 +127,14 @@ in
             install_vol = vm.installIso;
             bridge_name = vm.bridgeName;
             virtio_video = false; # use QXL video with SPICE listening on 127.0.0.1
+          };
+          domainDef = rawDomainDef // {
+            # Boot from disk first, only falling back to the CDROM (install
+            # ISO) if the disk has no bootable system yet - standard
+            # BIOS/UEFI boot order semantics (each entry tried in turn until
+            # one succeeds), instead of NixVirt's default of always booting
+            # the CDROM first.
+            os = rawDomainDef.os // { boot = [ { dev = "hd"; } { dev = "cdrom"; } ]; };
           };
           finalDomainDef = if vm.guestNix != null then
             domainDef // {
