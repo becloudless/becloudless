@@ -44,8 +44,10 @@ in
           };
           bridgeName = lib.mkOption {
             type = lib.types.str;
-            default = "vmbr0";
-            description = "Network bridge the VM's NIC attaches to.";
+            default = "br0";
+            description = ''
+              Network bridge the VM's NIC attaches to, e.g. "br0".
+            '';
           };
           active = lib.mkOption {
             type = lib.types.bool;

@@ -27,6 +27,14 @@ let
     addrInt = ipToInt (octetsOf parts.address);
     maskInt = 4294967295 - (pow2 (32 - parts.prefixLength) - 1);
   in builtins.bitAnd addrInt maskInt;
+
+  # Extracts the trailing numeric suffix from a hostname (e.g. "srv23" -> 23,
+  # "srv" -> 0). Used to derive a per-host number from the `<group><number>`
+  # hostname naming convention used across bcl roles (e.g. cluster 2, node 3
+  # -> hostname "srv23" -> host number 23).
+  hostNumberSuffix = hostName: let
+    m = builtins.match "^.*[^0-9]([0-9]+)$" hostName;
+  in if m == null then 0 else lib.strings.toInt (builtins.elemAt m 0);
 in {
   net = rec {
     # Returns the address part of a CIDR string, e.g. "192.168.41.0" for "192.168.41.0/22".
@@ -50,5 +58,13 @@ in {
         then networkInt + maxHosts + hostnum
         else networkInt + hostnum;
     in intToIp resultInt;
+
+    inherit hostNumberSuffix;
+
+    # Computes a host's IP address (CIDR notation) within `cidr` from the
+    # trailing numeric suffix of `hostName` (e.g. cidr "192.168.1.0/24" +
+    # hostName "srv25" -> "192.168.1.25/24").
+    cidrHostFromHostname = cidr: hostName:
+      "${cidrhost cidr (hostNumberSuffix hostName)}/${toString (cidrPrefixLength cidr)}";
   };
 }

@@ -1,14 +1,23 @@
-{ config, lib, pkgs, inputs, ... }:
+{ config, lib, pkgs, ... }:
 let
-  srvNumber = lib.strings.toInt(builtins.substring ((builtins.stringLength config.networking.hostName) -1)  (-1) config.networking.hostName);
   cfg = config.bcl.role.serverVirt;
+  vlanName = id: "vlan${toString id}";
+  bridgeName = id: "br${toString id}";
 in
 {
   options.bcl.role.serverVirt = {
-    clusterNumber = lib.mkOption {type = lib.types.int; default = 1;};
+    vlans = lib.mkOption {
+      type = lib.types.listOf (lib.types.ints.between 1 4094);
+      default = [];
+      description = ''
+        Declarative 802.1Q VLAN sub-interfaces stacked on top of
+        `bcl.network.interface` (e.g. `[ 41 43 ]`). Each VLAN gets its own
+        bridge (`br<id>`) that VMs can attach to (see
+        `bcl.vm.vms.<name>.bridgeName`). The host itself has no IP address
+        on these VLANs/bridges, only VMs do.
+      '';
+    };
   };
-
-  ####################
 
   config = lib.mkMerge [
     { bcl.role.knownRoles = [ "serverVirt" ]; }
@@ -26,42 +35,47 @@ in
       mergerfs
     ];
 
-    networking.nameservers = ["192.168.40.12"];
+    bcl.network = {
+      bridge = true; # so VMs and containers can attach to the untagged network
+    };
+
     services.resolved.dnssec = "true";
     networking.firewall.enable = false;
-
-    systemd.network.enable = true;
-    systemd.network.networks.net = {
-      matchConfig = {
-        Name = "en* eth*";
-      };
-      networkConfig = {
-        IgnoreCarrierLoss = true;
-        Bridge = "vmbr0";
-      };
-    };
-    systemd.network.netdevs.vmbr0.netdevConfig = {
-      Kind = "bridge";
-      Name = "vmbr0";
-    };
-    systemd.network.networks.vmbr0 = {
-      matchConfig = {
-        Name = "vmbr0";
-      };
-      networkConfig = {
-        IgnoreCarrierLoss = true;
-        KeepConfiguration = true;
-      };
-      address = [
-        "192.168.41.${toString cfg.clusterNumber}${toString srvNumber}/22"
-      ];
-      routes = [
-        {
-          Gateway = "192.168.40.10";
-          GatewayOnLink = true;
-        }
-      ];
-    };
   })
+    (lib.mkIf (cfg.vlans != []) {
+      systemd.network.enable = true;
+
+      systemd.network.netdevs = lib.mkMerge [
+        (lib.listToAttrs (map (id: lib.nameValuePair (vlanName id) {
+          netdevConfig = {
+            Kind = "vlan";
+            Name = vlanName id;
+          };
+          vlanConfig.Id = id;
+        }) cfg.vlans))
+        (lib.listToAttrs (map (id: lib.nameValuePair (bridgeName id) {
+          netdevConfig = {
+            Kind = "bridge";
+            Name = bridgeName id;
+          };
+        }) cfg.vlans))
+      ];
+
+      systemd.network.networks = lib.mkMerge [
+        (lib.listToAttrs (map (id: lib.nameValuePair (vlanName id) {
+          matchConfig.Name = vlanName id;
+          networkConfig.Bridge = bridgeName id;
+        }) cfg.vlans))
+        (lib.listToAttrs (map (id: lib.nameValuePair (bridgeName id) {
+          matchConfig.Name = bridgeName id;
+          networkConfig.IgnoreCarrierLoss = true;
+        }) cfg.vlans))
+        # Attaches these VLANs to the trunk interface's own .network file
+        # (see bcl.network's "net" key); `vlan` is a listOf str NixOS
+        # option, so this merges additively with bcl.network's own
+        # definition of the same "net" key instead of conflicting.
+        { net.vlan = map vlanName cfg.vlans; }
+      ];
+    })
   ];
 }
