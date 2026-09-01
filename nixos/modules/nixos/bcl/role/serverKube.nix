@@ -310,10 +310,10 @@ in
     environment.persistence."/nix" = {
       hideMounts = true;
       directories = [
-        { directory = "/var/lib/kubelet"; mode = "u=rwx,g=,o="; }
         { directory = "/var/lib/longhorn"; mode = "u=rwx,g=,o="; }
         { directory = "/var/lib/etcd"; mode = "u=rwx,g=,o="; }
-      ];
+      ] ++ lib.optional (config.bcl.diskSystem.kubeletPartition == null)
+        { directory = "/var/lib/kubelet"; mode = "u=rwx,g=,o="; };
     };
   })
   ];

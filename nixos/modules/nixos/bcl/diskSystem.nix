@@ -37,6 +37,34 @@ in {
         `devices` still needs a disk for /boot (and the tmpfs root).
       '';
     };
+    kubeletPartition = lib.mkOption {
+      type = lib.types.nullOr (lib.types.submodule {
+        options = {
+          size = lib.mkOption {
+            type = lib.types.str;
+            description = ''
+              Size (e.g. "10G") of a dedicated partition mounted at
+              /var/lib/kubelet, created directly on disk instead of relying
+              on an impermanence bind-mount from /nix. Useful when
+              nixFsFormat = "virtiofs", since cadvisor (used by kubelet)
+              does not recognize virtiofs-backed directories and fails with
+              "could not find device in cached partitions map".
+            '';
+          };
+          format = lib.mkOption {
+            type = lib.types.str;
+            default = "ext4";
+            description = "Filesystem format for the /var/lib/kubelet partition (ext4 or xfs, per what cadvisor/Longhorn support).";
+          };
+        };
+      });
+      default = null;
+      description = ''
+        Experimental. When set, creates a dedicated partition for
+        /var/lib/kubelet. Currently only supported with gpt = true and a
+        single device.
+      '';
+    };
   };
 
   ###################
@@ -60,6 +88,17 @@ in {
     '';
 
     fileSystems."/nix".neededForBoot = true;
+
+    assertions = [
+      {
+        assertion = cfg.kubeletPartition == null || cfg.gpt;
+        message = "bcl.diskSystem.kubeletPartition currently requires bcl.diskSystem.gpt = true.";
+      }
+      {
+        assertion = cfg.kubeletPartition == null || !isMultiDevice;
+        message = "bcl.diskSystem.kubeletPartition currently only supports a single device.";
+      }
+    ];
 
     # disko do not set it when msdos table partition
     boot.loader.grub.devices = lib.mkIf (!cfg.gpt) cfg.devices;
@@ -119,9 +158,18 @@ in {
               priority = 1;
             };
             ESP = {
-              size = if isVirtiofsNix then "100%" else "1G";
+              size = if isVirtiofsNix && cfg.kubeletPartition == null then "100%" else "1G";
               type = "EF00";
               content = bootContent;
+            };
+          } // lib.optionalAttrs (cfg.kubeletPartition != null) {
+            kubelet = {
+              size = cfg.kubeletPartition.size;
+              content = {
+                type = "filesystem";
+                format = cfg.kubeletPartition.format;
+                mountpoint = "/var/lib/kubelet";
+              };
             };
           } // lib.optionalAttrs (!isVirtiofsNix) {
             nix = {

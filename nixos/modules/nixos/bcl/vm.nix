@@ -162,19 +162,34 @@ in
         }
       ) cfg.vms;
 
-    # Create missing disk images before libvirtd starts the VMs that need them.
+    # Create missing disk images (and grow existing ones) before libvirtd
+    # starts the VMs that need them. Re-run automatically whenever diskSize
+    # changes, since that value is embedded in the script below and thus
+    # changes the unit's definition (triggering a restart on switch).
+    # Shrinking is never done automatically (data-loss risk); if the target
+    # size is smaller than the current image size, we just log and skip.
     systemd.services =
       lib.mapAttrs' (name: vm:
         lib.nameValuePair "bcl-vm-disk-${name}" {
-          description = "Create qcow2 disk image for VM ${name}";
+          description = "Create/resize qcow2 disk image for VM ${name}";
           wantedBy = [ "multi-user.target" ];
           before = [ "libvirtd.service" ];
-          unitConfig.ConditionPathExists = "!${vm.diskPath}";
           serviceConfig.Type = "oneshot";
-          path = [ pkgs.qemu ];
+          path = [ pkgs.qemu pkgs.jq pkgs.coreutils ];
           script = ''
             mkdir -p "$(dirname ${vm.diskPath})"
-            qemu-img create -f qcow2 ${vm.diskPath} ${vm.diskSize}
+            if [ ! -e ${vm.diskPath} ]; then
+              qemu-img create -f qcow2 ${vm.diskPath} ${vm.diskSize}
+            else
+              current_bytes=$(qemu-img info --output=json ${vm.diskPath} | jq -r '."virtual-size"')
+              target_bytes=$(numfmt --from=iec ${vm.diskSize})
+              if [ "$target_bytes" -gt "$current_bytes" ]; then
+                echo "Growing disk image ${vm.diskPath} for VM ${name} to ${vm.diskSize}"
+                qemu-img resize ${vm.diskPath} ${vm.diskSize}
+              elif [ "$target_bytes" -lt "$current_bytes" ]; then
+                echo "bcl.vm.vms.${name}.diskSize (${vm.diskSize}) is smaller than the current disk image size; refusing to shrink automatically" >&2
+              fi
+            fi
           '';
         }
       ) (lib.filterAttrs (_: vm: vm.diskSize != null) cfg.vms)
