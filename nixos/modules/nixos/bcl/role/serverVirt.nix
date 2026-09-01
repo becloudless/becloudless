@@ -46,7 +46,7 @@ in
       nix = {
         spec = "/nix";
         hashTableSizeMB = 96;
-        verbosity = "crit";
+        verbosity = "debug";
         extraOptions = [ "--loadavg-target" "5.0" ];
       };
     };
