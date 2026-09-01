@@ -45,7 +45,7 @@ in
     services.beesd.filesystems = {
       nix = {
         spec = "/nix";
-        hashTableSizeMB = 2048;
+        hashTableSizeMB = 96;
         verbosity = "crit";
         extraOptions = [ "--loadavg-target" "5.0" ];
       };
