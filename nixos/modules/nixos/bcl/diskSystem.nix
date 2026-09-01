@@ -25,6 +25,11 @@ in {
       default = null;
       description = "U-Boot package to flash to the beginning of the disk (before partitions).";
     };
+    nixFsFormat = lib.mkOption {
+      type = lib.types.str;
+      default = "ext4";
+      description = "Filesystem format used for the /nix partition.";
+    };
   };
 
   ###################
@@ -82,12 +87,12 @@ in {
           passwordFile = "/root/secret.key"; # the install script provide this file
           content = {
             type = "filesystem";
-            format = "ext4";
+            format = cfg.nixFsFormat;
             mountpoint = "/nix";
           };
         } else {
           type = "filesystem";
-          format = "ext4";
+          format = cfg.nixFsFormat;
           mountpoint = "/nix";
         };
 
@@ -175,12 +180,12 @@ in {
                 passwordFile = "/root/secret.key"; # the install script provide this file
                 content = {
                   type = "filesystem";
-                  format = "ext4";
+                  format = cfg.nixFsFormat;
                   mountpoint = "/nix";
                 };
               } else {
                 type = "filesystem";
-                format = "ext4";
+                format = cfg.nixFsFormat;
                 mountpoint = "/nix";
               };
             };
