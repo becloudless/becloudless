@@ -8,6 +8,7 @@ with lib.bcl;
 let
   cfg = config.bcl.diskSystem;
   isMultiDevice = (builtins.length cfg.devices) > 1;
+  isVirtiofsNix = cfg.nixFsFormat == "virtiofs";
 in {
   options.bcl.diskSystem = {
     enable = lib.mkEnableOption "Enable the default settings?";
@@ -28,7 +29,13 @@ in {
     nixFsFormat = lib.mkOption {
       type = lib.types.str;
       default = "ext4";
-      description = "Filesystem format used for the /nix partition.";
+      description = ''
+        Filesystem format used for the /nix partition. Special value
+        "virtiofs" skips partitioning a /nix on disk entirely and instead
+        mounts /nix from the host over virtiofs (mount tag "nix") - see
+        `bcl.vm.vms.<name>.guestNix` on the hypervisor side. In that case
+        `devices` still needs a disk for /boot (and the tmpfs root).
+      '';
     };
   };
 
@@ -62,6 +69,11 @@ in {
         "/" = {
           fsType = "tmpfs";
           mountOptions = ["defaults" "size=5G" "mode=755"];
+        };
+      } // lib.optionalAttrs isVirtiofsNix {
+        "/nix" = {
+          fsType = "virtiofs";
+          device = "nix";
         };
       };
 
@@ -107,10 +119,11 @@ in {
               priority = 1;
             };
             ESP = {
-              size = "1G";
+              size = if isVirtiofsNix then "100%" else "1G";
               type = "EF00";
               content = bootContent;
             };
+          } // lib.optionalAttrs (!isVirtiofsNix) {
             nix = {
               size = "100%";
               content = nixContent;
@@ -120,21 +133,19 @@ in {
           type = "table";
           format = "msdos";
           partitions = [ # MSDOS
-           {
+           ({
              name = "boot";
              part-type = "primary";
              start = "1M";
-             end = "1G";
              bootable = true;
              content = bootContent;
-           }
-           {
+           } // lib.optionalAttrs (!isVirtiofsNix) { end = "1G"; })
+         ] ++ lib.optional (!isVirtiofsNix) {
              name = "nix";
              part-type = "primary";
              start = "1G";
              content = nixContent;
-           }
-         ];
+           };
         };
 
         mkDisk = index: device: {
@@ -155,7 +166,7 @@ in {
         };
       in builtins.listToAttrs (lib.imap1 (i: v: (mkDisk i v)) cfg.devices);
 
-      mdadm = lib.mkIf isMultiDevice {
+      mdadm = lib.mkIf isMultiDevice ({
         boot = {
           type = "mdadm";
           level = 1;
@@ -166,6 +177,7 @@ in {
             mountpoint = "/boot";
           };
         };
+      } // lib.optionalAttrs (!isVirtiofsNix) {
         nix = {
           type = "mdadm";
           level = 0;
@@ -191,7 +203,7 @@ in {
             };
           };
         };
-      };
+      });
 
     };
   };
