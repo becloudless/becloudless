@@ -14,6 +14,7 @@
         "virtio_scsi"
         "9p"
         "9pnet_virtio"
+        "virtiofs"
       ];
       boot.initrd.kernelModules = [
         "virtio_balloon"
