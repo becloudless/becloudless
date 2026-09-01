@@ -44,7 +44,7 @@ in
     bcl.diskSystem.nixFsFormat = "btrfs";
     services.beesd.filesystems = {
       nix = {
-        spec = "LABEL=disk-main-nix";
+        spec = "/nix";
         hashTableSizeMB = 2048;
         verbosity = "crit";
         extraOptions = [ "--loadavg-target" "5.0" ];
