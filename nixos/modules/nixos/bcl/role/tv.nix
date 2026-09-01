@@ -36,6 +36,11 @@
 
     bcl.users.users.tv = {};
 
+    hardware.graphics = {
+      enable = true;
+    };
+
+
     services.greetd = {
       enable = true;
       settings.default_session = {

@@ -20,6 +20,10 @@ in
     bcl.role.setAdminPassword = true;
     bcl.keepassxc.enable = true;
 
+    hardware.graphics = {
+      enable = true;
+    };
+
     programs.firefox = {
       enable = true;
     };
