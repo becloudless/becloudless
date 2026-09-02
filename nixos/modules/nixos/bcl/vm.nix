@@ -28,14 +28,9 @@ in
             default = { count = 4; unit = "GiB"; };
             description = "Amount of RAM for the VM.";
           };
-          diskPath = lib.mkOption {
-            type = lib.types.path;
-            description = "Path to the qcow2 disk image backing this VM.";
-          };
           diskSize = lib.mkOption {
-            type = lib.types.nullOr lib.types.str;
-            default = null;
-            description = "If set (e.g. \"20G\"), create diskPath as a new qcow2 image of this size when it doesn't already exist.";
+            type = lib.types.str;
+            description = "Size of the LVM thin volume backing this VM's root disk (e.g. \"20G\"). Created/grown automatically.";
           };
           installIso = lib.mkOption {
             type = lib.types.nullOr lib.types.path;
@@ -80,34 +75,63 @@ in
     virtualisation.libvirt.enable = true; # also enables virtualisation.libvirtd
     virtualisation.libvirt.swtpm.enable = true; # emulated TPM, needed for windows template
 
+    # Let libvirtd's qemu process (group "kvm") open the LVM thin volumes used as VM root disks.
+    services.udev.extraRules = ''
+      SUBSYSTEM=="block", ENV{DM_VG_NAME}=="data", GROUP="kvm", MODE="0660"
+    '';
+
     virtualisation.libvirt.connections."qemu:///system".domains =
       lib.mapAttrsToList (name: vm: {
-        definition = nixvirt.lib.domain.writeXML (nixvirt.lib.domain.templates.${vm.template} {
-          inherit name;
-          uuid = vm.uuid;
-          memory = vm.memory;
-          storage_vol = vm.diskPath;
-          install_vol = vm.installIso;
-          bridge_name = vm.bridgeName;
-          virtio_video = false; # use QXL video with SPICE listening on 127.0.0.1
-        });
+        definition = nixvirt.lib.domain.writeXML (
+          let
+            base = nixvirt.lib.domain.templates.${vm.template} {
+              inherit name;
+              uuid = vm.uuid;
+              memory = vm.memory;
+              storage_vol = null; # root disk attached below as a raw LVM block device
+              install_vol = vm.installIso;
+              bridge_name = vm.bridgeName;
+              virtio_video = false; # use QXL video with SPICE listening on 127.0.0.1
+            };
+          in
+          base // {
+            devices = base.devices // {
+              disk = [{
+                type = "block";
+                device = "disk";
+                driver = { name = "qemu"; type = "raw"; cache = "none"; };
+                source = { dev = "/dev/data/${name}"; };
+                target = { dev = "vda"; bus = "virtio"; };
+              }] ++ base.devices.disk;
+            };
+          }
+        );
         active = vm.active;
       }) cfg.vms;
 
-    # Create missing disk images before libvirtd starts the VMs that need them.
+    # Create or grow (never shrink) the LVM thin volume backing each VM's root disk,
+    # before libvirtd starts the VMs that need them.
     systemd.services = lib.mapAttrs' (name: vm:
-      lib.nameValuePair "bcl-vm-disk-${name}" {
-        description = "Create qcow2 disk image for VM ${name}";
+      lib.nameValuePair "bcl-vm-lv-${name}" {
+        description = "Create/grow LVM thin volume for VM ${name}";
         wantedBy = [ "multi-user.target" ];
         before = [ "libvirtd.service" ];
-        unitConfig.ConditionPathExists = "!${vm.diskPath}";
         serviceConfig.Type = "oneshot";
-        path = [ pkgs.qemu ];
+        path = [ pkgs.lvm2 pkgs.coreutils ];
         script = ''
-          mkdir -p "$(dirname ${vm.diskPath})"
-          qemu-img create -f qcow2 ${vm.diskPath} ${vm.diskSize}
+          set -e
+          if ! lvs "data/${name}" >/dev/null 2>&1; then
+            lvcreate --yes -V ${vm.diskSize} -n "${name}" --thinpool="thinpool" "data"
+          else
+            current=$(lvs --noheadings --units b --nosuffix -o lv_size "data/${name}" | tr -d ' ')
+            target=$(numfmt --from=iec ${vm.diskSize})
+            if [ "$target" -gt "$current" ]; then
+              lvresize -L ${vm.diskSize} "data/${name}"
+            fi
+          fi
         '';
       }
-    ) (lib.filterAttrs (_: vm: vm.diskSize != null) cfg.vms);
+    ) cfg.vms;
   };
 }
+
