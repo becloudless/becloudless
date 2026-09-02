@@ -29,15 +29,12 @@ in
     bcl.role.setAdminPassword = true; # being able to log in to console
     security.sudo.wheelNeedsPassword = false;
 
-    environment.systemPackages = with pkgs; [
-      virtiofsd # folder mounting for VMs
-      ssh-to-age
-      mergerfs
-    ];
+    bcl.diskSystem.nixSize = "50G";
 
     bcl.network = {
-      bridge = true; # so VMs and containers can attach to the untagged network
+      bridge = true; # so VMs can attach to the untagged network
     };
+
 
     services.resolved.dnssec = "true";
     networking.firewall.enable = false;

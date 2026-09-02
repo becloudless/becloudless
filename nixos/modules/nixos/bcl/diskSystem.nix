@@ -8,6 +8,7 @@ with lib.bcl;
 let
   cfg = config.bcl.diskSystem;
   isMultiDevice = (builtins.length cfg.devices) > 1;
+  hasDataPartition = cfg.nixSize != "100%";
 in {
   options.bcl.diskSystem = {
     enable = lib.mkEnableOption "Enable the default settings?";
@@ -19,6 +20,11 @@ in {
     devices = lib.mkOption {
       type = with lib.types; listOf str;
       default = [ ];
+    };
+    nixSize = lib.mkOption {
+      type = lib.types.str;
+      default = "100%";
+      description = "Size allocated to the /nix partition (e.g. \"100%\" or \"200G\"). If not \"100%\", the remaining disk space is used to create a /data partition.";
     };
     ubootPackage = lib.mkOption {
       type = with lib.types; nullOr package;
@@ -91,6 +97,14 @@ in {
           mountpoint = "/nix";
         };
 
+        dataContent = if isMultiDevice then {
+          type = "mdraid";
+          name = "data";
+        } else {
+          type = "lvm_pv";
+          vg = "data";
+        };
+
         diskContent = if cfg.gpt then {
           type = "gpt";
           partitions = {
@@ -107,8 +121,13 @@ in {
               content = bootContent;
             };
             nix = {
-              size = "100%";
+              size = cfg.nixSize;
               content = nixContent;
+            };
+          } // lib.optionalAttrs hasDataPartition {
+            data = {
+              size = "100%";
+              content = dataContent;
             };
           };
         } else {
@@ -123,13 +142,17 @@ in {
              bootable = true;
              content = bootContent;
            }
-           {
+           ({
              name = "nix";
              part-type = "primary";
              start = "1G";
              content = nixContent;
-           }
-         ];
+           } // lib.optionalAttrs hasDataPartition { end = cfg.nixSize; })
+         ] ++ lib.optional hasDataPartition {
+           name = "data";
+           part-type = "primary";
+           content = dataContent;
+         };
         };
 
         mkDisk = index: device: {
@@ -150,7 +173,7 @@ in {
         };
       in builtins.listToAttrs (lib.imap1 (i: v: (mkDisk i v)) cfg.devices);
 
-      mdadm = lib.mkIf isMultiDevice {
+      mdadm = lib.mkIf isMultiDevice ({
         boot = {
           type = "mdadm";
           level = 1;
@@ -167,7 +190,7 @@ in {
           content = {
             type = "gpt";
             partitions.primary = {
-              size = "100%";
+              size = cfg.nixSize;
               content = if cfg.encrypted then {
                 type = "luks";
                 name = "nix";
@@ -183,6 +206,27 @@ in {
                 format = "ext4";
                 mountpoint = "/nix";
               };
+            };
+          };
+        };
+      } // lib.optionalAttrs hasDataPartition {
+        data = {
+          type = "mdadm";
+          level = 0;
+          content = {
+            type = "lvm_pv";
+            vg = "data";
+          };
+        };
+      });
+
+      lvm_vg = lib.mkIf hasDataPartition {
+        data = {
+          type = "lvm_vg";
+          lvs = {
+            thinpool = {
+              size = "100%";
+              lvm_type = "thin-pool";
             };
           };
         };
