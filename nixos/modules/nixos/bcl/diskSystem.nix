@@ -100,6 +100,15 @@ in {
         dataContent = if isMultiDevice then {
           type = "mdraid";
           name = "data";
+        } else if cfg.encrypted then {
+          type = "luks";
+          name = "data";
+          settings.allowDiscards = true;
+          passwordFile = "/root/secret.key"; # the install script provide this file
+          content = {
+            type = "lvm_pv";
+            vg = "data";
+          };
         } else {
           type = "lvm_pv";
           vg = "data";
@@ -213,7 +222,16 @@ in {
         data = {
           type = "mdadm";
           level = 0;
-          content = {
+          content = if cfg.encrypted then {
+            type = "luks";
+            name = "data";
+            settings.allowDiscards = true;
+            passwordFile = "/root/secret.key"; # the install script provide this file
+            content = {
+              type = "lvm_pv";
+              vg = "data";
+            };
+          } else {
             type = "lvm_pv";
             vg = "data";
           };
