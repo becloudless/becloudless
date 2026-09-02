@@ -52,7 +52,7 @@ in
 
     gateway = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
-      default = lib.mapNullable (a: lib.bcl.net.cidrhost a 1) effectiveAddress;
+      default = lib.mapNullable (a: lib.bcl.net.cidrhost a -1) effectiveAddress;
       defaultText = lib.literalExpression "first address of `bcl.network.address`/`bcl.network.cidr`";
       description = "Default gateway for the untagged network.";
     };
