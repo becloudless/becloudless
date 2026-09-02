@@ -8,6 +8,7 @@ with lib.bcl;
 let
   cfg = config.bcl.diskSystem;
   isMultiDevice = (builtins.length cfg.devices) > 1;
+  hasDataPartition = cfg.nixSize != "100%";
 in {
   options.bcl.diskSystem = {
     enable = lib.mkEnableOption "Enable the default settings?";
@@ -19,6 +20,11 @@ in {
     devices = lib.mkOption {
       type = with lib.types; listOf str;
       default = [ ];
+    };
+    nixSize = lib.mkOption {
+      type = lib.types.str;
+      default = "100%";
+      description = "Size allocated to the /nix partition (e.g. \"100%\" or \"200G\"). If not \"100%\", the remaining disk space is used to create a /data partition.";
     };
     ubootPackage = lib.mkOption {
       type = with lib.types; nullOr package;
@@ -51,6 +57,49 @@ in {
 
     # disko do not set it when msdos table partition
     boot.loader.grub.devices = lib.mkIf (!cfg.gpt) cfg.devices;
+
+    # Auto-grow the underlying partition(s)/LUKS/filesystem when the disk
+    # (e.g. a VM's virtual disk) is enlarged. Only supported for the
+    # simple single-device GPT layout (partition labels are only
+    # predictable/addressable in that case).
+    systemd.services.bcl-diskgrow = lib.mkIf (!isMultiDevice && cfg.gpt) {
+      description = "Grow disk partition(s)/LUKS/filesystem to fill the underlying device";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "local-fs.target" ];
+      serviceConfig.Type = "oneshot";
+      path = [ pkgs.util-linux pkgs.e2fsprogs pkgs.lvm2 ] ++ lib.optional cfg.encrypted pkgs.cryptsetup;
+      script =
+        let
+          growPartition = target: ''
+            partLabel="disk-main-${target}"
+            if [ -e "/dev/disk/by-partlabel/$partLabel" ]; then
+              partDev=$(readlink -f "/dev/disk/by-partlabel/$partLabel")
+              partName=$(basename "$partDev")
+              partNum=$(cat "/sys/class/block/$partName/partition")
+              parentName=$(basename "$(readlink -f "/sys/class/block/$partName/..")")
+              parentDev="/dev/$parentName"
+              echo ", +" | sfdisk --no-reread -N "$partNum" "$parentDev" || true
+              partx -u "$parentDev" || true
+            fi
+          '';
+          growLuks = target: lib.optionalString cfg.encrypted ''
+            cryptsetup resize "${target}" || true
+          '';
+          nixFsDevice = if cfg.encrypted then "/dev/mapper/nix" else ''"$(readlink -f /dev/disk/by-partlabel/disk-main-nix)"'';
+          dataPvDevice = if cfg.encrypted then "/dev/mapper/data" else ''"$(readlink -f /dev/disk/by-partlabel/disk-main-data)"'';
+        in
+        ''
+          ${growPartition "nix"}
+          ${growLuks "nix"}
+          resize2fs ${nixFsDevice} || true
+        ''
+        + lib.optionalString hasDataPartition ''
+          ${growPartition "data"}
+          ${growLuks "data"}
+          pvresize ${dataPvDevice} || true
+          lvextend -l +100%FREE data/thinpool || true
+        '';
+    };
 
     disko.devices = {
       nodev = {
@@ -91,6 +140,23 @@ in {
           mountpoint = "/nix";
         };
 
+        dataContent = if isMultiDevice then {
+          type = "mdraid";
+          name = "data";
+        } else if cfg.encrypted then {
+          type = "luks";
+          name = "data";
+          settings.allowDiscards = true;
+          passwordFile = "/root/secret.key"; # the install script provide this file
+          content = {
+            type = "lvm_pv";
+            vg = "data";
+          };
+        } else {
+          type = "lvm_pv";
+          vg = "data";
+        };
+
         diskContent = if cfg.gpt then {
           type = "gpt";
           partitions = {
@@ -107,8 +173,13 @@ in {
               content = bootContent;
             };
             nix = {
-              size = "100%";
+              size = cfg.nixSize;
               content = nixContent;
+            };
+          } // lib.optionalAttrs hasDataPartition {
+            data = {
+              size = "100%";
+              content = dataContent;
             };
           };
         } else {
@@ -123,13 +194,17 @@ in {
              bootable = true;
              content = bootContent;
            }
-           {
+           ({
              name = "nix";
              part-type = "primary";
              start = "1G";
              content = nixContent;
-           }
-         ];
+           } // lib.optionalAttrs hasDataPartition { end = cfg.nixSize; })
+         ] ++ lib.optional hasDataPartition {
+           name = "data";
+           part-type = "primary";
+           content = dataContent;
+         };
         };
 
         mkDisk = index: device: {
@@ -150,7 +225,7 @@ in {
         };
       in builtins.listToAttrs (lib.imap1 (i: v: (mkDisk i v)) cfg.devices);
 
-      mdadm = lib.mkIf isMultiDevice {
+      mdadm = lib.mkIf isMultiDevice ({
         boot = {
           type = "mdadm";
           level = 1;
@@ -167,7 +242,7 @@ in {
           content = {
             type = "gpt";
             partitions.primary = {
-              size = "100%";
+              size = cfg.nixSize;
               content = if cfg.encrypted then {
                 type = "luks";
                 name = "nix";
@@ -183,6 +258,36 @@ in {
                 format = "ext4";
                 mountpoint = "/nix";
               };
+            };
+          };
+        };
+      } // lib.optionalAttrs hasDataPartition {
+        data = {
+          type = "mdadm";
+          level = 0;
+          content = if cfg.encrypted then {
+            type = "luks";
+            name = "data";
+            settings.allowDiscards = true;
+            passwordFile = "/root/secret.key"; # the install script provide this file
+            content = {
+              type = "lvm_pv";
+              vg = "data";
+            };
+          } else {
+            type = "lvm_pv";
+            vg = "data";
+          };
+        };
+      });
+
+      lvm_vg = lib.mkIf hasDataPartition {
+        data = {
+          type = "lvm_vg";
+          lvs = {
+            thinpool = {
+              size = "100%";
+              lvm_type = "thin-pool";
             };
           };
         };

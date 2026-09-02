@@ -1,0 +1,149 @@
+{ config, lib, pkgs, inputs, ... }:
+let
+  cfg = config.bcl.role.serverVirt;
+  nixvirt = inputs.nixvirt;
+  unitSuffixes = { K = "KiB"; M = "MiB"; G = "GiB"; T = "TiB"; };
+  parseMemory = str:
+    let
+      m = builtins.match "([0-9]+)([KMGT])" str;
+    in
+    if m == null then
+      throw "bcl.role.serverVirt.vms.<name>.memory: \"${str}\" must match <number><K|M|G|T>, e.g. \"4096M\" or \"4G\""
+    else {
+      count = lib.toInt (builtins.elemAt m 0);
+      unit = unitSuffixes.${builtins.elemAt m 1};
+    };
+in
+{
+  options.bcl.role.serverVirt = {
+    defaultIso = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = "Default ISO image to attach as an install CDROM for VMs that don't set their own installIso.";
+    };
+    vms = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.submodule {
+        options = {
+          uuid = lib.mkOption {
+            type = lib.types.str;
+            description = "Libvirt domain UUID (generate once with `uuidgen`, then keep it stable).";
+          };
+          template = lib.mkOption {
+            type = lib.types.enum [ "linux" "windows" ];
+            default = "linux";
+            description = "Which NixVirt domain template to use.";
+          };
+          memory = lib.mkOption {
+            type = lib.types.str;
+            default = "4G";
+            description = "Amount of RAM for the VM, as <number><K|M|G|T>, e.g. \"4096M\" or \"4G\".";
+          };
+          diskSize = lib.mkOption {
+            type = lib.types.str;
+            description = "Size of the LVM thin volume backing this VM's root disk (e.g. \"20G\"). Created/grown automatically.";
+          };
+          installIso = lib.mkOption {
+            type = lib.types.nullOr lib.types.path;
+            default = null;
+            description = "ISO image to attach as an install CDROM, or null to fall back to bcl.role.serverVirt.defaultIso.";
+          };
+          bridgeName = lib.mkOption {
+            type = lib.types.str;
+            default = "br0";
+            description = ''
+              Network bridge the VM's NIC attaches to, e.g. "br0".
+            '';
+          };
+          active = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Whether the VM should be running.";
+          };
+          virtioVideo = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = ''
+              Whether to use VirtIO GL-accelerated video (SPICE listen type "none",
+              file-descriptor passing only). Set to false (default) to use
+              QXL video with SPICE listening on 127.0.0.1, which is required
+              for remote console access via qemu+ssh (e.g. virt-manager).
+            '';
+          };
+        };
+      });
+      default = {};
+      description = ''
+        Declarative libvirt VMs (domains) managed via NixVirt.
+        Any VM not listed here will be undefined/removed by NixVirt on activation.
+      '';
+    };
+  };
+
+  ####################
+
+  config = lib.mkIf (cfg.vms != {}) {
+    virtualisation.libvirt.enable = true; # also enables virtualisation.libvirtd
+    virtualisation.libvirt.swtpm.enable = true; # emulated TPM, needed for windows template
+
+    # Let libvirtd's qemu process (group "kvm") open the LVM thin volumes used as VM root disks.
+    services.udev.extraRules = ''
+      SUBSYSTEM=="block", ENV{DM_VG_NAME}=="data", GROUP="kvm", MODE="0660"
+    '';
+
+    virtualisation.libvirt.connections."qemu:///system".domains =
+      lib.mapAttrsToList (name: vm: {
+        definition = nixvirt.lib.domain.writeXML (
+          let
+            base = nixvirt.lib.domain.templates.${vm.template} {
+              inherit name;
+              uuid = vm.uuid;
+              memory = parseMemory vm.memory;
+              storage_vol = null; # root disk attached below as a raw LVM block device
+              install_vol = if vm.installIso != null then vm.installIso else cfg.defaultIso;
+              bridge_name = vm.bridgeName;
+              virtio_video = false; # use QXL video with SPICE listening on 127.0.0.1
+            };
+          in
+          base // {
+            os = base.os // {
+              boot = [ { dev = "hd"; } { dev = "cdrom"; } ];
+            };
+            devices = base.devices // {
+              disk = [{
+                type = "block";
+                device = "disk";
+                driver = { name = "qemu"; type = "raw"; cache = "none"; discard = "unmap"; };
+                source = { dev = "/dev/data/${name}"; };
+                target = { dev = "vda"; bus = "virtio"; };
+              }] ++ base.devices.disk;
+            };
+          }
+        );
+        active = vm.active;
+      }) cfg.vms;
+
+    # Create or grow (never shrink) the LVM thin volume backing each VM's root disk,
+    # before libvirtd starts the VMs that need them.
+    systemd.services = lib.mapAttrs' (name: vm:
+      lib.nameValuePair "bcl-vm-lv-${name}" {
+        description = "Create/grow LVM thin volume for VM ${name}";
+        wantedBy = [ "multi-user.target" ];
+        before = [ "libvirtd.service" ];
+        serviceConfig.Type = "oneshot";
+        path = [ pkgs.lvm2 pkgs.coreutils ];
+        script = ''
+          set -e
+          if ! lvs "data/${name}" >/dev/null 2>&1; then
+            lvcreate --yes -V ${vm.diskSize} -n "${name}" --thinpool="thinpool" "data"
+          else
+            current=$(lvs --noheadings --units b --nosuffix -o lv_size "data/${name}" | tr -d ' ')
+            target=$(numfmt --from=iec ${vm.diskSize})
+            if [ "$target" -gt "$current" ]; then
+              lvresize -L ${vm.diskSize} "data/${name}"
+            fi
+          fi
+        '';
+      }
+    ) cfg.vms;
+  };
+}

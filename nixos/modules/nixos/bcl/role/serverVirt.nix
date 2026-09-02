@@ -13,8 +13,8 @@ in
         Declarative 802.1Q VLAN sub-interfaces stacked on top of
         `bcl.network.interface` (e.g. `[ 41 43 ]`). Each VLAN gets its own
         bridge (`br<id>`) that VMs can attach to (see
-        `bcl.vm.vms.<name>.bridgeName`). The host itself has no IP address
-        on these VLANs/bridges, only VMs do.
+        `bcl.role.serverVirt.vms.<name>.bridgeName`). The host itself has no
+        IP address on these VLANs/bridges, only VMs do.
       '';
     };
   };
@@ -29,15 +29,12 @@ in
     bcl.role.setAdminPassword = true; # being able to log in to console
     security.sudo.wheelNeedsPassword = false;
 
-    environment.systemPackages = with pkgs; [
-      virtiofsd # folder mounting for VMs
-      ssh-to-age
-      mergerfs
-    ];
+    bcl.diskSystem.nixSize = "50G"; # enough space for nix store
 
     bcl.network = {
-      bridge = true; # so VMs and containers can attach to the untagged network
+      bridge = true; # so VMs can attach to the untagged network
     };
+
 
     services.resolved.dnssec = "true";
     networking.firewall.enable = false;
