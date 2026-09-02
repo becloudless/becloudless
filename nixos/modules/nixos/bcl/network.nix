@@ -80,6 +80,8 @@ in
     systemd.network.enable = true;
     networking.nameservers = cfg.nameservers;
 
+    boot.initrd.kernelModules = lib.mkIf cfg.bridge [ "bridge" ];
+
     systemd.network.netdevs = lib.mkIf cfg.bridge {
       br0.netdevConfig = {
         Kind = "bridge";
