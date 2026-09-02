@@ -29,7 +29,7 @@ in
     bcl.role.setAdminPassword = true; # being able to log in to console
     security.sudo.wheelNeedsPassword = false;
 
-    bcl.diskSystem.nixSize = "50G";
+    bcl.diskSystem.nixSize = "50G"; # enough space for nix store
 
     bcl.network = {
       bridge = true; # so VMs can attach to the untagged network
