@@ -1,6 +1,6 @@
 { config, lib, pkgs, inputs, ... }:
 let
-  cfg = config.bcl.vm;
+  cfg = config.bcl.role.serverVirt;
   nixvirt = inputs.nixvirt;
   memorySubmodule = lib.types.submodule {
     options = {
@@ -10,7 +10,7 @@ let
   };
 in
 {
-  options.bcl.vm = {
+  options.bcl.role.serverVirt = {
     vms = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule {
         options = {
@@ -134,4 +134,3 @@ in
     ) cfg.vms;
   };
 }
-
