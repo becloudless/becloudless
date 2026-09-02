@@ -19,7 +19,7 @@
 
     programs.ssh.extraConfig = ''
       Host gitea.${config.bcl.global.domain}
-        ProxyCommand ${pkgs.nmap}/bin/ncat --ssl --sni ssh-%h %h 443
+        ProxyCommand ${pkgs.nmap}/bin/ncat --ssl --ssl-servername ssh-%h %h 443
     '';
 
     programs.ssh.knownHosts = {
