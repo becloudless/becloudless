@@ -112,7 +112,7 @@ in
               disk = [{
                 type = "block";
                 device = "disk";
-                driver = { name = "qemu"; type = "raw"; cache = "none"; };
+                driver = { name = "qemu"; type = "raw"; cache = "none"; discard = "unmap"; };
                 source = { dev = "/dev/data/${name}"; };
                 target = { dev = "vda"; bus = "virtio"; };
               }] ++ base.devices.disk;

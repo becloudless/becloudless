@@ -58,6 +58,49 @@ in {
     # disko do not set it when msdos table partition
     boot.loader.grub.devices = lib.mkIf (!cfg.gpt) cfg.devices;
 
+    # Auto-grow the underlying partition(s)/LUKS/filesystem when the disk
+    # (e.g. a VM's virtual disk) is enlarged. Only supported for the
+    # simple single-device GPT layout (partition labels are only
+    # predictable/addressable in that case).
+    systemd.services.bcl-diskgrow = lib.mkIf (!isMultiDevice && cfg.gpt) {
+      description = "Grow disk partition(s)/LUKS/filesystem to fill the underlying device";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "local-fs.target" ];
+      serviceConfig.Type = "oneshot";
+      path = [ pkgs.util-linux pkgs.e2fsprogs pkgs.lvm2 ] ++ lib.optional cfg.encrypted pkgs.cryptsetup;
+      script =
+        let
+          growPartition = target: ''
+            partLabel="disk-main-${target}"
+            if [ -e "/dev/disk/by-partlabel/$partLabel" ]; then
+              partDev=$(readlink -f "/dev/disk/by-partlabel/$partLabel")
+              partName=$(basename "$partDev")
+              partNum=$(cat "/sys/class/block/$partName/partition")
+              parentName=$(basename "$(readlink -f "/sys/class/block/$partName/..")")
+              parentDev="/dev/$parentName"
+              echo ", +" | sfdisk --no-reread -N "$partNum" "$parentDev" || true
+              partx -u "$parentDev" || true
+            fi
+          '';
+          growLuks = target: lib.optionalString cfg.encrypted ''
+            cryptsetup resize "${target}" || true
+          '';
+          nixFsDevice = if cfg.encrypted then "/dev/mapper/nix" else ''"$(readlink -f /dev/disk/by-partlabel/disk-main-nix)"'';
+          dataPvDevice = if cfg.encrypted then "/dev/mapper/data" else ''"$(readlink -f /dev/disk/by-partlabel/disk-main-data)"'';
+        in
+        ''
+          ${growPartition "nix"}
+          ${growLuks "nix"}
+          resize2fs ${nixFsDevice} || true
+        ''
+        + lib.optionalString hasDataPartition ''
+          ${growPartition "data"}
+          ${growLuks "data"}
+          pvresize ${dataPvDevice} || true
+          lvextend -l +100%FREE data/thinpool || true
+        '';
+    };
+
     disko.devices = {
       nodev = {
         "/" = {
