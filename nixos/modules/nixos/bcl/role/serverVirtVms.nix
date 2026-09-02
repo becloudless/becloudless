@@ -100,6 +100,9 @@ in
             };
           in
           base // {
+            os = base.os // {
+              boot = [ { dev = "hd"; } { dev = "cdrom"; } ];
+            };
             devices = base.devices // {
               disk = [{
                 type = "block";
