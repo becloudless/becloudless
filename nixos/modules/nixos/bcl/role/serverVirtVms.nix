@@ -2,12 +2,17 @@
 let
   cfg = config.bcl.role.serverVirt;
   nixvirt = inputs.nixvirt;
-  memorySubmodule = lib.types.submodule {
-    options = {
-      count = lib.mkOption { type = lib.types.int; default = 4; };
-      unit = lib.mkOption { type = lib.types.str; default = "GiB"; };
+  unitSuffixes = { K = "KiB"; M = "MiB"; G = "GiB"; T = "TiB"; };
+  parseMemory = str:
+    let
+      m = builtins.match "([0-9]+)([KMGT])" str;
+    in
+    if m == null then
+      throw "bcl.role.serverVirt.vms.<name>.memory: \"${str}\" must match <number><K|M|G|T>, e.g. \"4096M\" or \"4G\""
+    else {
+      count = lib.toInt (builtins.elemAt m 0);
+      unit = unitSuffixes.${builtins.elemAt m 1};
     };
-  };
 in
 {
   options.bcl.role.serverVirt = {
@@ -29,9 +34,9 @@ in
             description = "Which NixVirt domain template to use.";
           };
           memory = lib.mkOption {
-            type = memorySubmodule;
-            default = { count = 4; unit = "GiB"; };
-            description = "Amount of RAM for the VM.";
+            type = lib.types.str;
+            default = "4G";
+            description = "Amount of RAM for the VM, as <number><K|M|G|T>, e.g. \"4096M\" or \"4G\".";
           };
           diskSize = lib.mkOption {
             type = lib.types.str;
@@ -92,7 +97,7 @@ in
             base = nixvirt.lib.domain.templates.${vm.template} {
               inherit name;
               uuid = vm.uuid;
-              memory = vm.memory;
+              memory = parseMemory vm.memory;
               storage_vol = null; # root disk attached below as a raw LVM block device
               install_vol = if vm.installIso != null then vm.installIso else cfg.defaultIso;
               bridge_name = vm.bridgeName;
