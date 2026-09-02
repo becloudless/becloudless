@@ -6,7 +6,7 @@
 
     environment.systemPackages = with pkgs; [
       git
-      openssl # ssh over tls
+      nmap # ssh over tls
     ];
 
     home-manager.users.root = { lib, pkgs, ... }: {

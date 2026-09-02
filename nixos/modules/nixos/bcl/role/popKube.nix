@@ -38,7 +38,7 @@ in
         bash
         gitMinimal
         openssh
-        openssl
+        nmap
         kubectl
         bcl.bcl
       ];
