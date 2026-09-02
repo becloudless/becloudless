@@ -11,6 +11,11 @@ let
 in
 {
   options.bcl.role.serverVirt = {
+    defaultIso = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = "Default ISO image to attach as an install CDROM for VMs that don't set their own installIso.";
+    };
     vms = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule {
         options = {
@@ -35,7 +40,7 @@ in
           installIso = lib.mkOption {
             type = lib.types.nullOr lib.types.path;
             default = null;
-            description = "ISO image to attach as an install CDROM, or null.";
+            description = "ISO image to attach as an install CDROM, or null to fall back to bcl.role.serverVirt.defaultIso.";
           };
           bridgeName = lib.mkOption {
             type = lib.types.str;
@@ -89,7 +94,7 @@ in
               uuid = vm.uuid;
               memory = vm.memory;
               storage_vol = null; # root disk attached below as a raw LVM block device
-              install_vol = vm.installIso;
+              install_vol = if vm.installIso != null then vm.installIso else cfg.defaultIso;
               bridge_name = vm.bridgeName;
               virtio_video = false; # use QXL video with SPICE listening on 127.0.0.1
             };
