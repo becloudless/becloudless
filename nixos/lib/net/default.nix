@@ -66,5 +66,10 @@ in {
     # hostName "srv25" -> "192.168.1.25/24").
     cidrHostFromHostname = cidr: hostName:
       "${cidrhost cidr (hostNumberSuffix hostName)}/${toString (cidrPrefixLength cidr)}";
+
+    # Adds an integer offset to a plain IPv4 address (no CIDR/prefix), e.g.
+    # `ipAdd "192.168.1.11" 2` -> "192.168.1.13". The address is added as a
+    # single 32-bit integer, so octet rollover is handled correctly.
+    ipAdd = ip: offset: intToIp (ipToInt (octetsOf ip) + offset);
   };
 }

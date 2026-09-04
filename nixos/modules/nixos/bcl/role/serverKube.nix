@@ -2,13 +2,17 @@
 let
   srvNumber = lib.strings.toInt(builtins.substring ((builtins.stringLength config.networking.hostName) -1)  (-1) config.networking.hostName);
   cfg = config.bcl.role.serverKube;
-  nodeIp = n: lib.bcl.net.cidrhost config.bcl.network.cidr (cfg.clusterNumber * 10 + n);
+  nodeIp = n: lib.bcl.net.ipAdd cfg.firstNodeIp (n - 1);
+  nodeName = n: "srv${toString n}";
   myIp = nodeIp srvNumber;
 in
 {
   options.bcl.role.serverKube = {
     clusterName = lib.mkOption {type = lib.types.str;};
-    clusterNumber = lib.mkOption {type = lib.types.int; default = 1;};
+    firstNodeIp = lib.mkOption {
+      type = lib.types.str;
+      description = "IP address of the first master node (node 1). Other master node IPs are computed by adding their node index minus one to this address.";
+    };
     masterNodeCount = lib.mkOption {
       type = lib.types.int;
       default = 1;
@@ -83,7 +87,7 @@ in
         # Check if this node needs to be added to an existing etcd cluster
         ETCD_DIR="/var/lib/etcd"
         MY_IP="${myIp}"
-        MY_NAME="srv${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}"
+        MY_NAME="${nodeName srvNumber}"
         FIRST_NODE_IP="${nodeIp 1}"
 
         # If etcd data doesn't exist and this is not the first node, check if we need to join an existing cluster
@@ -208,16 +212,15 @@ in
     };
 
     networking.extraHosts = ''
-      127.0.0.1       srv${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}.h.${config.bcl.global.domain} ${config.networking.hostName} localhost
       127.0.0.1       kube.${config.bcl.global.domain}
 
-      ${nodeIp 1}   srv${toString config.bcl.role.serverKube.clusterNumber}1
-      ${nodeIp 2}   srv${toString config.bcl.role.serverKube.clusterNumber}2
-      ${nodeIp 3}   srv${toString config.bcl.role.serverKube.clusterNumber}3
-      ${nodeIp 4}   srv${toString config.bcl.role.serverKube.clusterNumber}4
-      ${nodeIp 5}   srv${toString config.bcl.role.serverKube.clusterNumber}5
-      ${nodeIp 6}   srv${toString config.bcl.role.serverKube.clusterNumber}6
-      ${nodeIp 7}   srv${toString config.bcl.role.serverKube.clusterNumber}7
+      ${nodeIp 1}   ${nodeName 1}
+      ${nodeIp 2}   ${nodeName 2}
+      ${nodeIp 3}   ${nodeName 3}
+      ${nodeIp 4}   ${nodeName 4}
+      ${nodeIp 5}   ${nodeName 5}
+      ${nodeIp 6}   ${nodeName 6}
+      ${nodeIp 7}   ${nodeName 7}
     '';
 
     environment.etc."crictl.yaml".text = ''
@@ -263,9 +266,9 @@ in
             peerCertSANs:
             - "${myIp}"
             extraArgs:
-              initial-cluster: ${lib.concatMapStringsSep "," (n: "srv${toString config.bcl.role.serverKube.clusterNumber}${toString n}=https://${nodeIp n}:2380") (lib.genList (n: n + 1) cfg.masterNodeCount)}
+              initial-cluster: ${lib.concatMapStringsSep "," (n: "${nodeName n}=https://${nodeIp n}:2380") (lib.genList (n: n + 1) cfg.masterNodeCount)}
               initial-cluster-state: new
-              name: srv${toString config.bcl.role.serverKube.clusterNumber}${toString srvNumber}
+              name: ${nodeName srvNumber}
               listen-peer-urls: https://${myIp}:2380
               listen-client-urls: https://${myIp}:2379
               advertise-client-urls: https://${myIp}:2379
@@ -285,7 +288,15 @@ in
           - ${nodeIp 5}
           - ${nodeIp 6}
           - ${nodeIp 7}
+          - ${nodeName 1}
+          - ${nodeName 2}
+          - ${nodeName 3}
+          - ${nodeName 4}
+          - ${nodeName 5}
+          - ${nodeName 6}
+          - ${nodeName 7}
           - 127.0.0.1
+          - 127.0.0.2
         controllerManager:
           extraArgs:
             bind-address: 0.0.0.0
