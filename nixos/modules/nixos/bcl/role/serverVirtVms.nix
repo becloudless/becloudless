@@ -85,6 +85,14 @@ in
     virtualisation.libvirt.enable = true; # also enables virtualisation.libvirtd
     virtualisation.libvirt.swtpm.enable = true; # emulated TPM, needed for windows template
 
+    # Without this, /etc/lvm/lvm.conf's thin_check_executable defaults to the
+    # FHS path "/usr/sbin/thin_check", which doesn't exist on NixOS. This
+    # makes `vgchange -aay` (run by the lvm2-activation-generator systemd
+    # units at boot) fail on thin volumes, so VM root disks (thin LVs) are
+    # left inactive after a reboot even though the thin pool itself is
+    # activated (its device-mapper devices don't depend on thin_check).
+    services.lvm.boot.thin.enable = true;
+
     # Let libvirtd's qemu process (group "kvm") open the LVM thin volumes used as VM root disks.
     services.udev.extraRules = ''
       SUBSYSTEM=="block", ENV{DM_VG_NAME}=="data", GROUP="kvm", MODE="0660"
