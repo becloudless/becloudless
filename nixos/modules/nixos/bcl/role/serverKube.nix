@@ -11,6 +11,8 @@ in
     clusterName = lib.mkOption {type = lib.types.str;};
     firstNodeIp = lib.mkOption {
       type = lib.types.str;
+      default = lib.bcl.net.cidrhost config.bcl.network.cidr 1;
+      defaultText = lib.literalExpression "first address of `bcl.network.cidr`";
       description = "IP address of the first master node (node 1). Other master node IPs are computed by adding their node index minus one to this address.";
     };
     masterNodeCount = lib.mkOption {
@@ -266,7 +268,7 @@ in
             peerCertSANs:
             - "${myIp}"
             extraArgs:
-              initial-cluster: ${lib.concatMapStringsSep "," (n: "${nodeName n}=https://${nodeIp n}:2380") (lib.genList (n: n + 1) cfg.masterNodeCount)}
+              initial-cluster: ${lib.concatMapStringsSep "," (n: "${nodeName n}=https://${nodeName n}:2380") (lib.genList (n: n + 1) cfg.masterNodeCount)}
               initial-cluster-state: new
               name: ${nodeName nodeNumber}
               listen-peer-urls: https://${myIp}:2380
