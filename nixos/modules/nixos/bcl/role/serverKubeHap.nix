@@ -1,4 +1,8 @@
 { config, lib, pkgs, ... }:
+let
+  cfg = config.bcl.role.serverKube;
+  nodeName = n: "${cfg.clusterName}${toString n}";
+in
 {
   config = lib.mkIf (config.bcl.role.name == "serverKube") {
     environment.etc."kubernetes/manifests/haproxy-apiserver.yaml".text = ''
@@ -73,13 +77,13 @@
           mode tcp
           balance roundrobin
           default-server verify none check-ssl inter 10s downinter 5s rise 2 fall 2 slowstart 60s maxconn 5000 maxqueue 5000 weight 100
-          server srv1 srv1:6443 check
-          server srv2 srv2:6443 check
-          server srv3 srv3:6443 check
-          server srv4 srv4:6443 check
-          server srv5 srv5:6443 check
-          server srv6 srv6:6443 check
-          server srv7 srv7:6443 check
+          server ${nodeName 1} ${nodeName 1}:6443 check
+          server ${nodeName 2} ${nodeName 2}:6443 check
+          server ${nodeName 3} ${nodeName 3}:6443 check
+          server ${nodeName 4} ${nodeName 4}:6443 check
+          server ${nodeName 5} ${nodeName 5}:6443 check
+          server ${nodeName 6} ${nodeName 6}:6443 check
+          server ${nodeName 7} ${nodeName 7}:6443 check
       '';
     };
   };

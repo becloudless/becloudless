@@ -1,10 +1,10 @@
 { inputs, config, lib, pkgs, ... }:
 let
-  srvNumber = lib.strings.toInt(builtins.substring ((builtins.stringLength config.networking.hostName) -1)  (-1) config.networking.hostName);
   cfg = config.bcl.role.serverKube;
   nodeIp = n: lib.bcl.net.ipAdd cfg.firstNodeIp (n - 1);
-  nodeName = n: "srv${toString n}";
-  myIp = nodeIp srvNumber;
+  nodeName = n: "${config.bcl.role.serverKube.clusterName}${toString n}";
+  nodeNumber = lib.strings.toInt(builtins.substring ((builtins.stringLength config.networking.hostName) -1)  (-1) config.networking.hostName);
+  myIp = nodeIp nodeNumber;
 in
 {
   options.bcl.role.serverKube = {
@@ -87,11 +87,11 @@ in
         # Check if this node needs to be added to an existing etcd cluster
         ETCD_DIR="/var/lib/etcd"
         MY_IP="${myIp}"
-        MY_NAME="${nodeName srvNumber}"
+        MY_NAME="${nodeName nodeNumber}"
         FIRST_NODE_IP="${nodeIp 1}"
 
         # If etcd data doesn't exist and this is not the first node, check if we need to join an existing cluster
-        if [ ! -d "$ETCD_DIR/member" ] && [ "${toString srvNumber}" != "1" ]; then
+        if [ ! -d "$ETCD_DIR/member" ] && [ "${toString nodeNumber}" != "1" ]; then
           echo "No local etcd data found, checking first node for existing cluster..."
 
           # Check if first node has a running etcd cluster
@@ -268,7 +268,7 @@ in
             extraArgs:
               initial-cluster: ${lib.concatMapStringsSep "," (n: "${nodeName n}=https://${nodeIp n}:2380") (lib.genList (n: n + 1) cfg.masterNodeCount)}
               initial-cluster-state: new
-              name: ${nodeName srvNumber}
+              name: ${nodeName nodeNumber}
               listen-peer-urls: https://${myIp}:2380
               listen-client-urls: https://${myIp}:2379
               advertise-client-urls: https://${myIp}:2379
