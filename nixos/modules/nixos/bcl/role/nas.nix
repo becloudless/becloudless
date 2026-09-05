@@ -22,6 +22,13 @@ let
       browseable = "yes";
       "read only" = if s.smb.readOnly then "yes" else "no";
       "guest ok" = if s.smb.guestOk then "yes" else "no";
+      # On an AD DC, Samba applies "vfs objects = dfs_samba4 acl_xattr" to
+      # every share by default (it's a built-in default for the AD DC server
+      # role, not something this module sets). dfs_samba4 is only meant for
+      # the sysvol/netlogon shares; applying it to a regular file share makes
+      # tree connects fail with NT_STATUS_BAD_NETWORK_NAME. Override it here
+      # to keep just acl_xattr (needed for storing NT ACLs via xattrs).
+      "vfs objects" = "acl_xattr";
     } // lib.optionalAttrs (s.smb.validUsers != [] || s.smb.validGroups != []) {
       "valid users" = s.smb.validUsers ++ map (g: "@${g}") s.smb.validGroups;
     }
