@@ -172,7 +172,7 @@ in {
 
       # So config.networking.fqdn resolves and NFSv4 idmapd's "Domain" setting
       # (nixpkgs/nixos/modules/tasks/filesystems/nfs.nix) matches the AD domain.
-      networking.domain = lib.mkDefault cfg.ad.domain;
+      networking.domain = lib.mkForce cfg.ad.domain;
 
       services.samba = {
         enable = true;
