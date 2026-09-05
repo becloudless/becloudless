@@ -188,9 +188,19 @@ in
       # more lenient about Requires= on masked units than an explicit/later
       # restart is). Instead, override it as a harmless always-successful
       # no-op so it's never masked, just a no-op dependency.
+      #
+      # NOTE: this unit's main ExecStart comes from libvirt's own shipped
+      # unit file (via `systemd.packages`), not a NixOS-authored one, so
+      # our drop-in's `serviceConfig.ExecStart` only APPENDS a second
+      # ExecStart= line rather than replacing the first - systemd runs
+      # multiple ExecStart= lines in sequence, so the original (failing on
+      # TPM2-less tmpfs-root hosts) still runs first. The empty ""  entry
+      # is required to clear the inherited ExecStart list before adding
+      # ours (systemd unit-file semantics: an empty ExecStart= resets any
+      # previously defined ExecStart= commands).
       virt-secret-init-encryption = {
         overrideStrategy = "asDropin";
-        serviceConfig.ExecStart = lib.mkForce "${pkgs.coreutils}/bin/true";
+        serviceConfig.ExecStart = lib.mkForce [ "" "${pkgs.coreutils}/bin/true" ];
       };
     };
   };
