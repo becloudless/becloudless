@@ -86,6 +86,25 @@ in
     virtualisation.libvirt.swtpm.enable = true; # emulated TPM, needed for windows template
 
     # NixVirt's own flake hardcodes `import nixpkgs { system = "x86_64-linux"; }`
+    # at the top level and uses that same instance for ITS OWN default
+    # `virtualisation.libvirt.package` (which its module then feeds into
+    # `virtualisation.libvirtd.package` via `lib.mkDefault`). Since nothing
+    # here overrode that option, on a non-x86_64-linux host (e.g. aarch64
+    # orangepi boards) this made the ENTIRE libvirtd DAEMON itself an
+    # x86_64-linux binary, silently run under QEMU user-mode/binfmt
+    # emulation at runtime (confirmed via ELF header: EM_X86_64) - not just
+    # a build-time inconvenience for NixVirt's small helper scripts, but the
+    # actual long-running libvirtd process on every boot. This is fragile:
+    # observed intermittent capability-probing crashes
+    # ("qemu_plugin_vcpu_init__async: assertion failed") from an
+    # emulated-x86_64 libvirtd in turn spawning a native aarch64
+    # qemu-system-x86_64 to probe its capabilities - nested/cross emulation
+    # for no reason, since we only ever run aarch64 (or matching-host-arch)
+    # VMs here. Force the NATIVE nixpkgs libvirt build instead (normal
+    # priority beats NixVirt module's `lib.mkDefault`).
+    virtualisation.libvirt.package = pkgs.libvirt;
+
+    # NixVirt's own flake hardcodes `import nixpkgs { system = "x86_64-linux"; }`
     # for the helper scripts it wires into `systemd.services.nixvirt`
     # (nixvirt-module-helper, virtdeclare), regardless of the host's actual
     # system. On a non-x86_64-linux host (e.g. aarch64 orangepi boards) this
