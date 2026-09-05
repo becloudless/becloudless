@@ -232,6 +232,12 @@ in {
             echo "Samba AD domain already provisioned, skipping."
             exit 0
           fi
+          # samba-tool's --configfile is loaded (read) BEFORE it's written back
+          # out as the provisioned smb.conf - loadparm errors out immediately
+          # ("Unable to load file") if the path doesn't already exist, so it
+          # must be pre-created (even empty) first.
+          mkdir -p /var/lib/samba/private
+          touch /var/lib/samba/private/provision-smb.conf
           adminPassword="$(cat ${config.sops.secrets."nas.ad.password".path})"
           samba-tool domain provision \
             --server-role=dc \
