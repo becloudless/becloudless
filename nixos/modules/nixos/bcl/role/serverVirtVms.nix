@@ -186,21 +186,38 @@ in
       # with "Unit virt-secret-init-encryption.service is masked." (this
       # only went unnoticed at boot because boot's initial transaction is
       # more lenient about Requires= on masked units than an explicit/later
-      # restart is). Instead, override it as a harmless always-successful
-      # no-op so it's never masked, just a no-op dependency.
+      # restart is).
       #
-      # NOTE: this unit's main ExecStart comes from libvirt's own shipped
+      # NOTE #2: don't turn this into a no-op (e.g. `bin/true`) either -
+      # libvirtd.service's OWN unit (`LoadCredentialEncrypted=
+      # secrets-encryption-key:/var/lib/libvirt/secrets/secrets-encryption-key`)
+      # hard-requires that encrypted-credential file to exist and be
+      # loadable; skipping its creation makes libvirtd itself fail at
+      # startup with "Failed to set up credentials: No such file or
+      # directory" / "Failed at step CREDENTIALS spawning .../libvirtd".
+      # So the file must genuinely be created - just not with `--with-key=auto`
+      # (which requires TPM2/persistent host key). `--with-key=null` stores
+      # the credential without real encryption (fine here: we don't use any
+      # libvirt "secret" objects, so this key is never actually used to
+      # protect anything sensitive).
+      #
+      # NOTE #3: this unit's main ExecStart comes from libvirt's own shipped
       # unit file (via `systemd.packages`), not a NixOS-authored one, so
       # our drop-in's `serviceConfig.ExecStart` only APPENDS a second
       # ExecStart= line rather than replacing the first - systemd runs
       # multiple ExecStart= lines in sequence, so the original (failing on
-      # TPM2-less tmpfs-root hosts) still runs first. The empty ""  entry
-      # is required to clear the inherited ExecStart list before adding
-      # ours (systemd unit-file semantics: an empty ExecStart= resets any
-      # previously defined ExecStart= commands).
+      # TPM2-less tmpfs-root hosts) would still run first. The empty ""
+      # entry is required to clear the inherited ExecStart list before
+      # adding ours (systemd unit-file semantics: an empty ExecStart=
+      # resets any previously defined ExecStart= commands).
       virt-secret-init-encryption = {
         overrideStrategy = "asDropin";
-        serviceConfig.ExecStart = lib.mkForce [ "" "${pkgs.coreutils}/bin/true" ];
+        serviceConfig.ExecStart = lib.mkForce [
+          ""
+          ''
+            ${pkgs.bash}/bin/sh -c 'umask 0077 && (${pkgs.coreutils}/bin/dd if=/dev/random status=none bs=32 count=1 | ${pkgs.systemd}/bin/systemd-creds encrypt --with-key=null --name=secrets-encryption-key - /var/lib/libvirt/secrets/secrets-encryption-key)'
+          ''
+        ];
       };
     };
   };
