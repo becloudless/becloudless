@@ -42,6 +42,11 @@ in
             default = "4G";
             description = "Amount of RAM for the VM, as <number><K|M|G|T>, e.g. \"4096M\" or \"4G\".";
           };
+          vcpu = lib.mkOption {
+            type = lib.types.ints.positive;
+            default = 2;
+            description = "Number of virtual CPUs for the VM.";
+          };
           diskSize = lib.mkOption {
             type = lib.types.str;
             description = "Size of the LVM thin volume backing this VM's root disk (e.g. \"20G\"). Created/grown automatically.";
@@ -112,6 +117,7 @@ in
               inherit name;
               uuid = vm.uuid;
               memory = parseMemory vm.memory;
+              vcpu = { count = vm.vcpu; };
               storage_vol = null; # root disk attached below as a raw LVM block device
               install_vol = if vm.installIso != null then vm.installIso else cfg.defaultIso;
               bridge_name = vm.bridgeName;
