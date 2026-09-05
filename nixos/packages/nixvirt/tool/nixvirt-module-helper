@@ -1,0 +1,83 @@
+#!/usr/bin/python3
+import sys, argparse, uuid, lxml.etree, json, libvirt, nixvirt
+
+parser = argparse.ArgumentParser(prog='nixvirt-module-helper',description='Define and control a collection of libvirt objects idempotently.')
+parser.add_argument('-v', '--verbose', action='store_true', help='report actions to stderr')
+parser.add_argument('--connect', action='store', required=True, metavar='URI', help='connection URI (e.g. qemu:///session)')
+parser.add_argument('settingspath', action='store', metavar='PATH', help='path to JSON file of settings')
+args = parser.parse_args()
+
+with open(args.settingspath,"r") as f:
+    settings = json.load(f)
+
+class TypeSpec:
+    def __init__(self,session,type,itemlist):
+        self.oc = nixvirt.getObjectConnection(session,type)
+        self.specList = [nixvirt.ObjectSpec.fromDefinitionFile(self.oc,item["definition"],item.get("active"),item.get("restart"),item) for item in itemlist]
+
+    def deleteOld(self):
+        allObjects = self.oc.getAll()
+        keepUUIDs = [objspec.specUUID for objspec in self.specList]
+        for object in allObjects:
+            if object.uuid in keepUUIDs:
+                pass
+            else:
+                object.undefine()
+
+    def define(self):
+        for objspec in self.specList:
+            objspec.define()
+
+    def defineExtra(self):
+        for objspec in self.specList:
+            objspec.defineExtra()
+
+    def setActive(self):
+        for objspec in self.specList:
+            objspec.setActive()
+
+try:
+    session = nixvirt.Session(args.connect,args.verbose)
+
+    types = [("network","networks"),("pool","pools"),("domain","domains")]
+
+    session.vreport("Examining settings")
+    typeSpecs = []
+    for (type,key) in types:
+        itemlist = settings.get(key)
+        if itemlist is not None:
+            typeSpecs.append(TypeSpec(session,type,itemlist))
+
+    # delete old stuff
+    session.vreport("Deleting old objects")
+    for typeSpec in typeSpecs:
+        typeSpec.deleteOld()
+
+    # define new stuff
+    session.vreport("Defining new objects")
+    for typeSpec in typeSpecs:
+        typeSpec.define()
+
+    # define extra stuff
+    session.vreport("Defining pool volumes")
+    for typeSpec in typeSpecs:
+        typeSpec.defineExtra()
+
+    # do activation
+    session.vreport("Setting activation state")
+    for typeSpec in typeSpecs:
+        typeSpec.setActive()
+
+    session.vreport("Done")
+
+except nixvirt.NixVirtError as err:
+    print ("NixVirt:", err, file=sys.stderr)
+    sys.exit(1)
+
+except libvirt.libvirtError as err:
+    print ("NixVirt: libvirt error:", err, file=sys.stderr)
+    sys.exit(1)
+
+except lxml.etree.XMLSyntaxError as err:
+    print ("NixVirt: XML error:", err, file=sys.stderr)
+    sys.exit(1)

@@ -42,6 +42,14 @@ in
     (lib.mkIf (cfg.vlans != []) {
       systemd.network.enable = true;
 
+      # 8021q is required to create the VLAN netdevs below; it's built as a
+      # module (not built-in) in our aarch64 kernel config
+      # (packages/orangepi-kernel/rk35xx_vendor_config: CONFIG_VLAN_8021Q=m).
+      # Without it, initrd (which reuses this whole systemd.network config
+      # via bcl.boot.nix's `initrd.systemd.network = config.systemd.network`)
+      # fails to create vlan<id> netdevs there.
+      boot.initrd.kernelModules = [ "8021q" ];
+
       systemd.network.netdevs = lib.mkMerge [
         (lib.listToAttrs (map (id: lib.nameValuePair (vlanName id) {
           netdevConfig = {
