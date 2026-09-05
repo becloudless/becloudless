@@ -176,9 +176,22 @@ in
       # persistent host key to encrypt with, so it fails with "TPM2 not
       # available and host key located on temporary file system, no
       # encryption key available.", which nixos-rebuild switch treats as a
-      # hard failure of the whole switch (exit status 4). Disable the unit
-      # since we don't need it.
-      virt-secret-init-encryption.enable = false;
+      # hard failure of the whole switch (exit status 4).
+      #
+      # NOTE: don't `enable = false` (mask) this unit - libvirtd.service
+      # itself has `Requires=`+`After=virt-secret-init-encryption.service`,
+      # and starting a *masked* required unit as part of a fresh systemd
+      # transaction (e.g. `systemctl restart libvirtd`/anything that pulls
+      # libvirtd in, like this module's own nixvirt.service) fails outright
+      # with "Unit virt-secret-init-encryption.service is masked." (this
+      # only went unnoticed at boot because boot's initial transaction is
+      # more lenient about Requires= on masked units than an explicit/later
+      # restart is). Instead, override it as a harmless always-successful
+      # no-op so it's never masked, just a no-op dependency.
+      virt-secret-init-encryption = {
+        overrideStrategy = "asDropin";
+        serviceConfig.ExecStart = lib.mkForce "${pkgs.coreutils}/bin/true";
+      };
     };
   };
 }
