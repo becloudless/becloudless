@@ -107,6 +107,8 @@ in
       SUBSYSTEM=="block", ENV{DM_VG_NAME}=="data", GROUP="kvm", MODE="0660"
     '';
 
+
+
     virtualisation.libvirt.connections."qemu:///system".domains =
       lib.mapAttrsToList (name: vm: {
         definition = nixvirt.lib.domain.writeXML (
@@ -141,7 +143,7 @@ in
 
     # Create or grow (never shrink) the LVM thin volume backing each VM's root disk,
     # before libvirtd starts the VMs that need them.
-    systemd.services = lib.mapAttrs' (name: vm:
+    systemd.services = (lib.mapAttrs' (name: vm:
       lib.nameValuePair "bcl-vm-lv-${name}" {
         description = "Create/grow LVM thin volume for VM ${name}";
         wantedBy = [ "multi-user.target" ];
@@ -161,6 +163,22 @@ in
           fi
         '';
       }
-    ) cfg.vms;
+    ) cfg.vms) // {
+      # libvirt ships virt-secret-init-encryption.service, which on first
+      # libvirtd start generates a random secret and encrypts it via
+      # `systemd-creds encrypt` (default "auto" key selection) into
+      # /var/lib/libvirt/secrets/secrets-encryption-key. This is only needed
+      # for libvirt's "secret" objects (e.g. LUKS passphrases referenced by
+      # a domain's disk XML), which we don't use here (VM root disks are
+      # plain LVM thin volumes, no libvirt secrets involved). On hosts with
+      # a tmpfs root (impermanence) and no TPM2 (e.g. aarch64 orangepi
+      # boards), systemd-creds' "auto" mode has neither a TPM2 nor a
+      # persistent host key to encrypt with, so it fails with "TPM2 not
+      # available and host key located on temporary file system, no
+      # encryption key available.", which nixos-rebuild switch treats as a
+      # hard failure of the whole switch (exit status 4). Disable the unit
+      # since we don't need it.
+      virt-secret-init-encryption.enable = false;
+    };
   };
 }
