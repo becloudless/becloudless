@@ -97,6 +97,30 @@ in {
           ${growPartition "data"}
           ${growLuks "data"}
           pvresize ${dataPvDevice} || true
+
+          # lvm2's autoactivation-generator (lvm-activate-data.service, run at
+          # boot on "PV online" udev events) can occasionally have its own
+          # `vgchange -aay` interrupted mid-thin_check (observed via
+          # journalctl: "wait4 child process ... failed: Interrupted system
+          # call" / "Check of pool data/thinpool failed" / "device-mapper:
+          # remove ioctl on (major:minor) failed: Device or resource busy").
+          # This leaves the pool's private component LVs
+          # (thinpool_tdata/thinpool_tmeta) stuck ACTIVE while the public
+          # thinpool LV itself never gets activated. LVM then refuses ANY
+          # further activation of the pool ("Activation of logical volume
+          # data/thinpool is prohibited while logical volume
+          # data/thinpool_tmeta is active."), which in turn blocks the
+          # lvextend below ("Cannot resize logical volume data/thinpool with
+          # active component LV(s).") until the strays are cleared. Self-heal
+          # this before touching the pool.
+          thinpoolOutput=$(lvchange -ay data/thinpool 2>&1) || true
+          if echo "$thinpoolOutput" | grep -q "is prohibited while logical volume"; then
+            echo "$thinpoolOutput" >&2
+            echo "Detected stray-active thin pool component LV(s) blocking activation of data/thinpool; deactivating strays and retrying..." >&2
+            lvchange -an data/thinpool_tdata data/thinpool_tmeta || true
+            lvchange -ay data/thinpool || true
+          fi
+
           lvextend -l +100%FREE data/thinpool || true
         '';
     };
