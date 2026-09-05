@@ -85,6 +85,15 @@ in
     virtualisation.libvirt.enable = true; # also enables virtualisation.libvirtd
     virtualisation.libvirt.swtpm.enable = true; # emulated TPM, needed for windows template
 
+    # NixVirt's own flake hardcodes `import nixpkgs { system = "x86_64-linux"; }`
+    # for the helper scripts it wires into `systemd.services.nixvirt`
+    # (nixvirt-module-helper, virtdeclare), regardless of the host's actual
+    # system. On a non-x86_64-linux host (e.g. aarch64 orangepi boards) this
+    # makes `nixos-rebuild`/autoUpgrade fail with "platform mismatch: Required
+    # system: 'x86_64-linux', Current system: 'aarch64-linux'" unless the
+    # host can emulate x86_64-linux locally.
+    boot.binfmt.emulatedSystems = lib.mkIf (pkgs.stdenv.hostPlatform.system != "x86_64-linux") [ "x86_64-linux" ];
+
     # Without this, /etc/lvm/lvm.conf's thin_check_executable defaults to the
     # FHS path "/usr/sbin/thin_check", which doesn't exist on NixOS. This
     # makes `vgchange -aay` (run by the lvm2-activation-generator systemd
