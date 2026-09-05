@@ -87,22 +87,37 @@ in
 
     # NixVirt's own flake hardcodes `import nixpkgs { system = "x86_64-linux"; }`
     # at the top level and uses that same instance for ITS OWN default
-    # `virtualisation.libvirt.package` (which its module then feeds into
-    # `virtualisation.libvirtd.package` via `lib.mkDefault`). Since nothing
-    # here overrode that option, on a non-x86_64-linux host (e.g. aarch64
-    # orangepi boards) this made the ENTIRE libvirtd DAEMON itself an
-    # x86_64-linux binary, silently run under QEMU user-mode/binfmt
-    # emulation at runtime (confirmed via ELF header: EM_X86_64) - not just
-    # a build-time inconvenience for NixVirt's small helper scripts, but the
-    # actual long-running libvirtd process on every boot. This is fragile:
-    # observed intermittent capability-probing crashes
+    # `virtualisation.libvirt.package` (== `cfg.package` in NixVirt's
+    # modules.nix), which its module then feeds into
+    # `virtualisation.libvirtd.package` via `lib.mkDefault`. Since nothing
+    # here overrode that, on a non-x86_64-linux host (e.g. aarch64 orangepi
+    # boards) this made the ENTIRE libvirtd DAEMON itself an x86_64-linux
+    # binary, silently run under QEMU user-mode/binfmt emulation at runtime
+    # (confirmed via ELF header: EM_X86_64) - not just a build-time
+    # inconvenience for NixVirt's small helper scripts, but the actual
+    # long-running libvirtd process on every boot. This is fragile: observed
+    # intermittent capability-probing crashes
     # ("qemu_plugin_vcpu_init__async: assertion failed") from an
     # emulated-x86_64 libvirtd in turn spawning a native aarch64
     # qemu-system-x86_64 to probe its capabilities - nested/cross emulation
     # for no reason, since we only ever run aarch64 (or matching-host-arch)
-    # VMs here. Force the NATIVE nixpkgs libvirt build instead (normal
-    # priority beats NixVirt module's `lib.mkDefault`).
-    virtualisation.libvirt.package = pkgs.libvirt;
+    # VMs here.
+    #
+    # IMPORTANT: override `virtualisation.libvirtd.package` DIRECTLY here,
+    # NOT `virtualisation.libvirt.package` (NixVirt's own `cfg.package`)!
+    # `cfg.package` is ALSO used by NixVirt's own systemd.services.nixvirt
+    # script to build its Python-bindings helper
+    # (`moduleHelperFile cfg.package` -> `packages.libvirt.override { inherit
+    # libvirt; }`, where `packages` is NixVirt's own hardcoded x86_64-linux
+    # nixpkgs instance). Overriding `cfg.package` to a NATIVE aarch64 build
+    # makes that helper try to link an x86_64 Python C-extension against an
+    # aarch64 libvirt.so -> `ld.bfd: skipping incompatible .../libvirt.so
+    # when searching for -lvirt` / `cannot find -lvirt`. Overriding only
+    # `virtualisation.libvirtd.package` fixes the actual daemon's
+    # architecture while leaving NixVirt's own helper-script build
+    # self-consistent (still x86_64, still emulated, but that's just a tiny
+    # short-lived script, not the long-running daemon).
+    virtualisation.libvirtd.package = lib.mkForce pkgs.libvirt;
 
     # NixVirt's own flake hardcodes `import nixpkgs { system = "x86_64-linux"; }`
     # for the helper scripts it wires into `systemd.services.nixvirt`
