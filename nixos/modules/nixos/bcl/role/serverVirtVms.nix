@@ -196,7 +196,22 @@ in
                 driver = { name = "qemu"; type = "raw"; cache = "none"; discard = "unmap"; };
                 source = { dev = "/dev/data/${name}"; };
                 target = { dev = "vda"; bus = "virtio"; };
-              }] ++ base.devices.disk;
+              }] ++ (
+                # NixVirt's templates (templates/domain/base.nix) attach the
+                # install CDROM via bus="sata" (q35's cdtarget). aarch64
+                # "virt" guests use AAVMF/ArmVirtQemu firmware, which
+                # (unlike x86_64 OVMF) has no AHCI/SATA driver at all - the
+                # CDROM is never visible as a bootable device, so the VM
+                # starts but silently never boots the install ISO. Move it
+                # to virtio-scsi instead (see the matching "scsi" controller
+                # added below), which ArmVirtQemu does support.
+                if pkgs.stdenv.hostPlatform.isAarch64 then
+                  map
+                    (d: if d.device == "cdrom" then d // { target = { dev = "sda"; bus = "scsi"; }; } else d)
+                    base.devices.disk
+                else
+                  base.devices.disk
+              );
             } // lib.optionalAttrs pkgs.stdenv.hostPlatform.isAarch64 {
               emulator = "${pkgs.qemu}/bin/qemu-system-aarch64";
               # Unlike q35/pc, the aarch64 "virt" machine type has no
@@ -206,8 +221,13 @@ in
               # ("unsupported configuration: USB is disabled for this
               # domain, but USB devices are present in the domain XML").
               # Add an explicit xHCI USB controller, as libvirt/QEMU expect
-              # for aarch64 "virt" guests.
-              controller = (base.devices.controller or [ ]) ++ [{ type = "usb"; model = "qemu-xhci"; }];
+              # for aarch64 "virt" guests. Also add a virtio-scsi controller
+              # for the install CDROM (moved off bus="sata" above, since
+              # ArmVirtQemu firmware has no AHCI driver).
+              controller = (base.devices.controller or [ ]) ++ [
+                { type = "usb"; model = "qemu-xhci"; }
+                { type = "scsi"; model = "virtio-scsi"; }
+              ];
               # base.nix's QXL video model (chosen above via virtio_video =
               # false, for SPICE listening on 127.0.0.1 without needing GL)
               # is an x86-specific legacy VGA-compatible PCI device - aarch64
