@@ -160,6 +160,34 @@ in
           base // {
             os = base.os // {
               boot = [ { dev = "hd"; } { dev = "cdrom"; } ];
+            } // lib.optionalAttrs pkgs.stdenv.hostPlatform.isAarch64 {
+              # NixVirt's own templates (templates/domain/base.nix) hardcode
+              # `os.type.arch = "x86_64"`, `machine = "q35"|"pc"`, and
+              # `devices.emulator = ".../qemu-system-x86_64"` unconditionally,
+              # regardless of the host's actual architecture. On an aarch64
+              # host this means every VM defined via these templates is
+              # ALWAYS an x86_64 guest requiring slow QEMU TCG software
+              # emulation (no KVM acceleration possible cross-arch), which is
+              # both wrong (we want native aarch64 guests here) and was
+              # additionally crashing during libvirt's capability-probing at
+              # domain-definition time. Override to a genuine aarch64/"virt"
+              # machine-type guest using the native qemu-system-aarch64
+              # binary (see devices.emulator override below).
+              arch = "aarch64";
+              machine = "virt";
+              # aarch64 "virt" machines have no legacy BIOS, only UEFI - need
+              # an explicit pflash loader/nvram, unlike x86_64 where NixVirt's
+              # templates rely on OVMF/`os.firmware` autoselection. Reuse
+              # `pkgs.OVMF`, the exact same package NixOS's own qemu-vm.nix
+              # (NixOS VM tests) uses for EFI firmware+variables - it's a
+              # cross-arch-aware edk2 build that produces AAVMF (ArmVirtQemu)
+              # firmware/variables when built for aarch64, rather than a
+              # separate/adhoc firmware source.
+              loader = { readonly = true; type = "pflash"; path = pkgs.OVMF.fd.firmware; };
+              nvram = {
+                template = pkgs.OVMF.fd.variables;
+                path = "/var/lib/libvirt/qemu/nvram/${name}_VARS.fd";
+              };
             };
             devices = base.devices // {
               disk = [{
@@ -169,6 +197,24 @@ in
                 source = { dev = "/dev/data/${name}"; };
                 target = { dev = "vda"; bus = "virtio"; };
               }] ++ base.devices.disk;
+            } // lib.optionalAttrs pkgs.stdenv.hostPlatform.isAarch64 {
+              emulator = "${pkgs.qemu}/bin/qemu-system-aarch64";
+              # Unlike q35/pc, the aarch64 "virt" machine type has no
+              # implicit USB controller - libvirt refuses to define a domain
+              # whose devices (base.nix's `input` tablet and `redirdev` SPICE
+              # USB channels, both bus="usb") reference USB without one
+              # ("unsupported configuration: USB is disabled for this
+              # domain, but USB devices are present in the domain XML").
+              # Add an explicit xHCI USB controller, as libvirt/QEMU expect
+              # for aarch64 "virt" guests.
+              controller = (base.devices.controller or [ ]) ++ [{ type = "usb"; model = "qemu-xhci"; }];
+              # base.nix's QXL video model (chosen above via virtio_video =
+              # false, for SPICE listening on 127.0.0.1 without needing GL)
+              # is an x86-specific legacy VGA-compatible PCI device - aarch64
+              # "virt" machines have no legacy VGA, so libvirt rejects it
+              # ("domain configuration does not support video model
+              # 'qxl'"). Use virtio-gpu instead, which aarch64 supports.
+              video = { model = { type = "virtio"; heads = 1; primary = true; }; };
             };
           }
         );
