@@ -215,6 +215,15 @@ in
               # ("domain configuration does not support video model
               # 'qxl'"). Use virtio-gpu instead, which aarch64 supports.
               video = { model = { type = "virtio"; heads = 1; primary = true; }; };
+              # base.nix's mouse/keyboard use bus="ps2" (legacy PS/2
+              # controller, another x86-specific device absent on aarch64
+              # "virt" machines: "ps2 is not supported by this QEMU
+              # binary"). Move them to the USB controller added above
+              # (tablet already uses USB).
+              input = [
+                { type = "tablet"; bus = "usb"; }
+                { type = "keyboard"; bus = "usb"; }
+              ];
             };
           }
         );
