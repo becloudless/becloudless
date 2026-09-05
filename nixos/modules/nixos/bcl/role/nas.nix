@@ -149,6 +149,8 @@ in {
         }
       ];
 
+      security.sudo.wheelNeedsPassword = false;
+
       # Kerberos realm/domain so kinit/klist and NFS's sec=krb5 work. Points at
       # ourselves when we are the DC, otherwise at the existing DC.
       security.krb5 = {
