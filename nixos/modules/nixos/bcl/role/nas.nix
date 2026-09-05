@@ -304,8 +304,7 @@ in {
         script =
           if isDc then ''
             set -euo pipefail
-            netbiosHost="$(hostname -s | tr '[:lower:]' '[:upper:]')"
-            samba-tool spn add "nfs/${fqdn}" "$netbiosHost$" || true
+            samba-tool spn add "nfs/${fqdn}" "${lib.toUpper config.networking.hostName}$" || true
             samba-tool domain exportkeytab /etc/krb5.keytab --principal="nfs/${fqdn}@${cfg.ad.realm}"
           '' else ''
             set -euo pipefail
