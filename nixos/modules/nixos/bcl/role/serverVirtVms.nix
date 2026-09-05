@@ -244,6 +244,25 @@ in
                 { type = "tablet"; bus = "usb"; }
                 { type = "keyboard"; bus = "usb"; }
               ];
+              # aarch64 "virt" guests have no legacy VGA text mode, so
+              # nothing is ever shown on the SPICE video output until the
+              # guest OS's own virtio-gpu driver initializes (10-20+ seconds
+              # into boot) - firmware, GRUB, and early kernel messages are
+              # all invisible on video. This is because ACPI's SPCR table
+              # advertises a pl011 serial UART as the primary console, so
+              # that's where all early output actually goes. Without an
+              # explicit serial/console device, none of this is viewable at
+              # all. Add the standard aarch64 pl011 serial + its pty
+              # console, so all boot output (firmware/GRUB/kernel, well
+              # before video comes up) can be viewed via `virsh console`.
+              serial = {
+                type = "pty";
+                target = { type = "system-serial"; port = 0; model = { name = "pl011"; }; };
+              };
+              console = {
+                type = "pty";
+                target = { type = "serial"; port = 0; };
+              };
             };
           }
         );
