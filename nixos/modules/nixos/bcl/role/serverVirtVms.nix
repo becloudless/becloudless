@@ -22,6 +22,22 @@ let
       hash = builtins.hashString "sha256" seed;
       octets = lib.genList (i: builtins.substring (i * 2) 2 hash) 3;
     in "52:54:00:" + lib.concatStringsSep ":" octets;
+  # Deterministic UUID derived from a seed (host+VM name), so libvirt domain
+  # UUIDs stay stable across rebuilds without needing to be manually
+  # generated/tracked per VM (previously required `uuidgen` + copy-pasting,
+  # which caused a real collision when a VM's config was copy-pasted to
+  # create another one and the uuid line wasn't updated).
+  mkStableUuid = seed:
+    let
+      hex = builtins.substring 0 32 (builtins.hashString "sha256" seed);
+    in
+    lib.concatStringsSep "-" [
+      (builtins.substring 0 8 hex)
+      (builtins.substring 8 4 hex)
+      (builtins.substring 12 4 hex)
+      (builtins.substring 16 4 hex)
+      (builtins.substring 20 12 hex)
+    ];
 in
 {
   options.bcl.role.serverVirt = {
@@ -31,11 +47,13 @@ in
       description = "Default ISO image to attach as an install CDROM for VMs that don't set their own installIso.";
     };
     vms = lib.mkOption {
-      type = lib.types.attrsOf (lib.types.submodule {
+      type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
         options = {
           uuid = lib.mkOption {
             type = lib.types.str;
-            description = "Libvirt domain UUID (generate once with `uuidgen`, then keep it stable).";
+            default = mkStableUuid "${config.networking.hostName}-${name}";
+            defaultText = lib.literalExpression ''derived from the host name and VM name'';
+            description = "Libvirt domain UUID. Defaults to a value deterministically derived from the host+VM name; only set explicitly if you need a specific value (e.g. to match a pre-existing domain).";
           };
           template = lib.mkOption {
             type = lib.types.enum [ "linux" "windows" ];
@@ -84,7 +102,7 @@ in
             '';
           };
         };
-      });
+      }));
       default = {};
       description = ''
         Declarative libvirt VMs (domains) managed via NixVirt.
