@@ -17,6 +17,11 @@ let
       count = lib.toInt (builtins.elemAt m 0);
       unit = unitSuffixes.${builtins.elemAt m 1};
     };
+  mkStableMac = seed:
+    let
+      hash = builtins.hashString "sha256" seed;
+      octets = lib.genList (i: builtins.substring (i * 2) 2 hash) 3;
+    in "52:54:00:" + lib.concatStringsSep ":" octets;
 in
 {
   options.bcl.role.serverVirt = {
@@ -121,6 +126,7 @@ in
               storage_vol = null; # root disk attached below as a raw LVM block device
               install_vol = if vm.installIso != null then vm.installIso else cfg.defaultIso;
               bridge_name = vm.bridgeName;
+              net_iface_mac = mkStableMac "${config.networking.hostName}-${name}";
               virtio_video = false; # use QXL video with SPICE listening on 127.0.0.1
             };
           in
