@@ -7,9 +7,15 @@ spec:
   isCA: true
   commonName: authelia-postgresql-ca
   secretName: authelia-postgresql-ca
+  # Never rotate the CA's private key on renewal: CNPG's leaf certs (server/app/replication)
+  # are only re-signed when this Certificate is (re)created, not on every renewal. If the CA
+  # key changed while leaf certs stayed on the old key, CNPG deadlocks (upstream bug
+  # https://github.com/cloudnative-pg/cloudnative-pg/issues/10433). Never delete this Secret
+  # manually; only the 3 leaf secrets are safe to delete/regenerate.
   privateKey:
     algorithm: ECDSA
     size: 256
+    rotationPolicy: Never
   issuerRef:
     name: self-signed
     kind: ClusterIssuer
