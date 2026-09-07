@@ -268,7 +268,7 @@ in
             peerCertSANs:
             - "${myIp}"
             extraArgs:
-              initial-cluster: ${lib.concatMapStringsSep "," (n: "${nodeName n}=https://${nodeName n}:2380") (lib.genList (n: n + 1) cfg.masterNodeCount)}
+              initial-cluster: ${lib.concatMapStringsSep "," (n: "${nodeName n}=https://${nodeIp n}:2380") (lib.genList (n: n + 1) cfg.masterNodeCount)}
               initial-cluster-state: new
               name: ${nodeName nodeNumber}
               listen-peer-urls: https://${myIp}:2380
