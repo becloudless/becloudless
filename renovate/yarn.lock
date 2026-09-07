@@ -2734,10 +2734,10 @@ luxon@3.7.2, luxon@^3.7.2:
   resolved "https://registry.npmjs.org/luxon/-/luxon-3.7.2.tgz"
   integrity sha512-vtEhXh/gNjI9Yg1u4jX/0YVPMvxzHuGgCm6tC5kZyb08yjGWGnqAjGJvcXbqQR2P3MyMEFnRbpcdFS6PBcLqew==
 
-markdown-it@14.3.0:
-  version "14.3.0"
-  resolved "https://registry.npmjs.org/markdown-it/-/markdown-it-14.3.0.tgz"
-  integrity sha512-RCEsPjR+sr0x+AuYp601tKTkgFG4YEPLCzHST3cQ/fhlJkqAkz1L2/Qbp1j9qw5SBwQHFBoW8+hoN5xssOF0Tw==
+markdown-it@14.3.1:
+  version "14.3.1"
+  resolved "https://registry.npmjs.org/markdown-it/-/markdown-it-14.3.1.tgz"
+  integrity sha512-4Ej49aYTDFIQ+uBkfX8GBvJGccoARxxPep+7aWTs55ozbjQJpW9M26Fe53vnGgvLeVzva/amzjQQaQu9w0vMhA==
   dependencies:
     argparse "^2.0.1"
     entities "^4.5.0"
@@ -2887,9 +2887,9 @@ mdast-util-to-string@^4.0.0:
     "@types/mdast" "^4.0.0"
 
 mdurl@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.npmjs.org/mdurl/-/mdurl-2.0.0.tgz"
-  integrity sha512-Lf+9+2r+Tdp5wXDXC4PcIBjTDtq4UKjCPMQhKIuzpJNW0b96kVqSwW0bT7FhRSfmAiFYgP+SCRvdrDozfh0U5w==
+  version "2.1.0"
+  resolved "https://registry.npmjs.org/mdurl/-/mdurl-2.1.0.tgz"
+  integrity sha512-1+HBaOx0zi/dQWht8rNv9MYf9qqpqL/kxI0hXImU6Y547zM6Sni8BQibt7ifgMcYtQg41ao3Ivd6cnSM86inpg==
 
 merge-stream@^2.0.0:
   version "2.0.0"
@@ -3472,10 +3472,10 @@ p-locate@^6.0.0:
   dependencies:
     p-limit "^4.0.0"
 
-p-map@7.0.6, p-map@^7.0.2:
-  version "7.0.6"
-  resolved "https://registry.npmjs.org/p-map/-/p-map-7.0.6.tgz"
-  integrity sha512-I4Prw6ivkd6p8PiYR1tXASOAOBzIJwu0TB7fqaX0c/8c3QAehNYmX57EijyGGGBt3c/BIowGwV03RVBtXvHEVg==
+p-map@7.0.7, p-map@^7.0.2:
+  version "7.0.7"
+  resolved "https://registry.npmjs.org/p-map/-/p-map-7.0.7.tgz"
+  integrity sha512-VaWRu2i4FJNRtiRWCuuQRgfQ1B7a6+gMSrO+3j0EQi/k0ULfS9kosRxGoiqwzIjZTDI02tGfk5mXXltLg6QtfQ==
 
 p-map@^2.0.0:
   version "2.1.0"
@@ -3613,10 +3613,10 @@ proc-log@^7.0.0:
   resolved "https://registry.npmjs.org/proc-log/-/proc-log-7.0.0.tgz"
   integrity sha512-FYgfaA69XZ93zaXLoMNQ+ViDXGGBgR8aLh03txzcFhV+9xOXx7+8DLCULrKKpR9+GsH9ZfHm82aSUPpozX0Ztg==
 
-protobufjs@8.7.2:
-  version "8.7.2"
-  resolved "https://registry.npmjs.org/protobufjs/-/protobufjs-8.7.2.tgz"
-  integrity sha512-oTVHV+oelUBtiu5iTuTNNZ0eLYsXSMxry4cgr30mayNkgIZL6qZ0IOQVPuSWGcyAaXKl/XgqwWHIC3a0khYVBA==
+protobufjs@8.8.0:
+  version "8.8.0"
+  resolved "https://registry.npmjs.org/protobufjs/-/protobufjs-8.8.0.tgz"
+  integrity sha512-N3xhQ5yyBx3vQq4gubBfASzYhJGNzeDbjqBpu61g7UVylsN/qyffU96TKWD3GbbLOKF82VGNRNvv1+BFgE31Eg==
   dependencies:
     long "^5.3.2"
 
@@ -3748,10 +3748,10 @@ remark@15.0.1:
     remark-stringify "^11.0.0"
     unified "^11.0.0"
 
-renovate@44.59.2:
-  version "44.59.2"
-  resolved "https://registry.npmjs.org/renovate/-/renovate-44.59.2.tgz"
-  integrity sha512-DCZfrKD9UjIli36u5l/0zMES9GVJGDsDS9rBKSgAExTfqcVcbLu6GyGNhe0Ks+3YkGo7AnwrJHhF914YHQCaPA==
+renovate@44.61.6:
+  version "44.61.6"
+  resolved "https://registry.npmjs.org/renovate/-/renovate-44.61.6.tgz"
+  integrity sha512-4g4L6rp2scv44i1KMKrDdvducrQVlG9tnzeOCDOoskkEIN+orlFM3AUjgQMfqVWe/awrNwJZVkI6ESU0wic4vA==
   dependencies:
     "@aws-sdk/client-codecommit" "3.1117.0"
     "@aws-sdk/client-ec2" "3.1117.0"
@@ -3837,7 +3837,7 @@ renovate@44.59.2:
     klona "2.0.6"
     lru-cache "11.5.2"
     luxon "3.7.2"
-    markdown-it "14.3.0"
+    markdown-it "14.3.1"
     markdown-table "3.0.4"
     minimatch "10.2.6"
     moo "0.5.3"
@@ -3845,12 +3845,12 @@ renovate@44.59.2:
     neotraverse "0.6.18"
     node-html-parser "7.1.0"
     p-all "5.0.1"
-    p-map "7.0.6"
+    p-map "7.0.7"
     p-queue "9.3.3"
     p-throttle "8.1.0"
     parse-link-header "2.0.0"
     prettier "3.8.1"
-    protobufjs "8.7.2"
+    protobufjs "8.8.0"
     punycode "2.3.1"
     remark "15.0.1"
     remark-gfm "4.0.1"
