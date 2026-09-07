@@ -273,6 +273,11 @@ in
               # current host driver and bind it to vfio-pci before starting
               # the domain, then reattach it to the host after the domain
               # stops.
+              # rom.bar = "off" disables the device's ROM BAR in the guest.
+              # Many iGPUs expose an invalid/non-VBIOS "shadowed ROM" (seen
+              # as "Invalid PCI ROM header signature" in host dmesg), which
+              # guest firmware can hang trying to probe/execute during boot
+              # if left enabled.
               hostdev = map (addr:
                 let p = parsePciAddress addr;
                 in {
@@ -282,6 +287,7 @@ in
                   source = {
                     address = { domain = p.domain; bus = p.bus; slot = p.slot; function = p.function; };
                   };
+                  rom = { bar = false; };
                 }
               ) vm.pciDevices;
             } // lib.optionalAttrs pkgs.stdenv.hostPlatform.isAarch64 {
