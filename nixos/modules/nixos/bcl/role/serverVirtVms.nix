@@ -38,6 +38,21 @@ let
       (builtins.substring 16 4 hex)
       (builtins.substring 20 12 hex)
     ];
+  # Parse a "domain:bus:slot.function" PCI address string (as printed by e.g.
+  # `lspci -D`, hex digits) into its integer components, for use in a
+  # <hostdev> device's <address> element.
+  parsePciAddress = addr:
+    let
+      m = builtins.match "([0-9a-fA-F]{4}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2})\\.([0-9a-fA-F])" addr;
+    in
+    if m == null then
+      throw "bcl.role.serverVirt.vms.<name>.pciDevices: \"${addr}\" must match <domain>:<bus>:<slot>.<function> in hex, e.g. \"0000:00:02.0\""
+    else {
+      domain = lib.fromHexString (builtins.elemAt m 0);
+      bus = lib.fromHexString (builtins.elemAt m 1);
+      slot = lib.fromHexString (builtins.elemAt m 2);
+      function = lib.fromHexString (builtins.elemAt m 3);
+    };
 in
 {
   options.bcl.role.serverVirt = {
@@ -98,6 +113,18 @@ in
               Existing block devices to attach directly as additional disks
               on this VM, alongside its LVM-thin-volume-backed root disk.
               Attached in order as vdb, vdc, etc.
+            '';
+          };
+          pciDevices = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+            description = ''
+              Host PCI device addresses to pass through directly to this VM
+              via VFIO (e.g. an iGPU for hardware video transcoding), each
+              as a "domain:bus:slot.function" hex string like "0000:00:02.0"
+              (as printed by `lspci -D`). The host must have IOMMU
+              (VT-d/AMD-Vi) enabled and the devices must be otherwise
+              unused/unbound on the host.
             '';
           };
           installIso = lib.mkOption {
@@ -240,6 +267,23 @@ in
                 else
                   base.devices.disk
               );
+            } // lib.optionalAttrs (vm.pciDevices != [ ]) {
+              # Host PCI devices (e.g. an iGPU) passed through via VFIO.
+              # managed = true tells libvirt to unbind the device from its
+              # current host driver and bind it to vfio-pci before starting
+              # the domain, then reattach it to the host after the domain
+              # stops.
+              hostdev = map (addr:
+                let p = parsePciAddress addr;
+                in {
+                  mode = "subsystem";
+                  type = "pci";
+                  managed = true;
+                  source = {
+                    address = { domain = p.domain; bus = p.bus; slot = p.slot; function = p.function; };
+                  };
+                }
+              ) vm.pciDevices;
             } // lib.optionalAttrs pkgs.stdenv.hostPlatform.isAarch64 {
               emulator = "${pkgs.qemu}/bin/qemu-system-aarch64";
               # Unlike q35/pc, the aarch64 "virt" machine type has no
