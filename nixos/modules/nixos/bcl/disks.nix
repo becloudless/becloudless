@@ -11,7 +11,9 @@ let
     if isRaid diskCfg then "/dev/md/${name}"
     else (builtins.head diskCfg.devices).path;
 
-  # fileSystems entries
+  # fileSystems entries (skipped when `mount = false` - the LUKS container is
+  # still unlocked, but its decrypted block device can be handed to a VM
+  # instead of being mounted on this host)
   fileSystemsEntries = lib.mapAttrs' (name: diskCfg: {
     name  = diskCfg.path;
     value = {
@@ -21,7 +23,7 @@ let
       fsType  = "auto";
       options = [ diskCfg.mode "defaults" "nofail" ];
     };
-  }) cfg;
+  }) (lib.filterAttrs (_: diskCfg: diskCfg.mount) cfg);
 
   # crypttab entries for encrypted disks
   # "nofail" keeps unlocking asynchronous so a missing/slow device does not
@@ -84,6 +86,19 @@ in {
           default     = true;
           description = "Wrap the filesystem in a LUKS container.";
         };
+        mount = lib.mkOption {
+          type        = lib.types.bool;
+          default     = true;
+          description = ''
+            Whether to mount the decrypted/assembled device as a filesystem
+            on this host. Set to false to only unlock the LUKS container
+            (so "/dev/mapper/<name>" exists, via crypttab) without mounting
+            it here - useful to hand the decrypted block device through to
+            a VM instead (e.g. as one of
+            bcl.role.serverVirt.vms.<name>.blockDevices, pointing at
+            "/dev/mapper/<name>"). Requires `encrypted = true`.
+          '';
+        };
         mode = lib.mkOption {
           type        = lib.types.enum [ "rw" "ro" ];
           default     = "rw";
@@ -125,6 +140,13 @@ in {
 
   config = lib.mkIf (cfg != {}) (lib.mkMerge [
 
+    {
+      assertions = lib.mapAttrsToList (name: diskCfg: {
+        assertion = !diskCfg.mount -> diskCfg.encrypted;
+        message = "bcl.disks.${name}: `mount = false` requires `encrypted = true` (there's no point unlocking a non-encrypted device before handing it to a VM - just reference its device path directly).";
+      }) cfg;
+    }
+
     # fstab
     { fileSystems = fileSystemsEntries; }
 
@@ -139,9 +161,11 @@ in {
       boot.swraid.mdadmConf = mdadmConfLines + "\n";
     })
 
-    # BTRFS scrub timers (one timer+service pair per disk with scrubInterval set)
+    # BTRFS scrub timers (one timer+service pair per disk with scrubInterval
+    # set; disks with `mount = false` have no mounted filesystem here, so
+    # skip them)
     (let
-      scrubDisks = lib.filterAttrs (_: d: d.scrubInterval != null) cfg;
+      scrubDisks = lib.filterAttrs (_: d: d.scrubInterval != null && d.mount) cfg;
     in lib.mkIf (scrubDisks != {}) {
       environment.systemPackages = [ pkgs.btrfs-progs ];
 
