@@ -20,7 +20,6 @@ spec:
     serverCASecret: lldap-postgresql-tls
 
   storage:
-    storageClass: longhorn-single-local-replica
     size: 1Gi
 
 #  bootstrap:

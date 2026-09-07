@@ -32,7 +32,6 @@ spec:
     serverCASecret: immich-postgresql-tls
 
   storage:
-    storageClass: longhorn-single-local-replica
     size: 5Gi
 
 #  bootstrap:
