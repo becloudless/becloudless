@@ -74,6 +74,16 @@ in
             type = lib.types.str;
             description = "Size of the LVM thin volume backing this VM's root disk (e.g. \"20G\"). Created/grown automatically.";
           };
+          blockDevices = lib.mkOption {
+            type = lib.types.listOf lib.types.path;
+            default = [ ];
+            description = ''
+              Paths to existing block devices (e.g. "/dev/disk/by-id/...")
+              to attach directly as additional disks on this VM, alongside
+              its LVM-thin-volume-backed root disk. Attached in order as
+              vdb, vdc, etc.
+            '';
+          };
           installIso = lib.mkOption {
             type = lib.types.nullOr lib.types.path;
             default = null;
@@ -101,6 +111,7 @@ in
               for remote console access via qemu+ssh (e.g. virt-manager).
             '';
           };
+          # <driver name='qemu' type='raw' cache='none' io='native'/>
         };
       }));
       default = {};
@@ -188,6 +199,15 @@ in
                 source = { dev = "/dev/data/${name}"; };
                 target = { dev = "vda"; bus = "virtio"; };
               }] ++ (
+                # Additional passthrough disks, attached in order as vdb, vdc, etc.
+                lib.imap0 (i: dev: {
+                  type = "block";
+                  device = "disk";
+                  driver = { name = "qemu"; type = "raw"; cache = "none"; discard = "unmap"; };
+                  source = { inherit dev; };
+                  target = { dev = "vd${builtins.substring i 1 "bcdefghijklmnop"}"; bus = "virtio"; };
+                }) vm.blockDevices
+              ) ++ (
                 # NixVirt's templates (templates/domain/base.nix) attach the
                 # install CDROM via bus="sata" (q35's cdtarget). aarch64
                 # "virt" guests use AAVMF/ArmVirtQemu firmware, which
