@@ -19,7 +19,6 @@ spec:
     serverCASecret: authelia-postgresql-tls
 
   storage:
-    storageClass: longhorn-single-local-replica
     size: 1Gi
 
   backup:
