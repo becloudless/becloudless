@@ -75,13 +75,29 @@ in
             description = "Size of the LVM thin volume backing this VM's root disk (e.g. \"20G\"). Created/grown automatically.";
           };
           blockDevices = lib.mkOption {
-            type = lib.types.listOf lib.types.path;
+            type = lib.types.listOf (lib.types.submodule {
+              options = {
+                path = lib.mkOption {
+                  type = lib.types.path;
+                  description = "Path to the existing block device (e.g. \"/dev/disk/by-id/...\") on the host.";
+                };
+                serial = lib.mkOption {
+                  type = lib.types.str;
+                  description = ''
+                    Serial identifier for this disk. Exposed inside the
+                    guest as a stable device name at
+                    "/dev/disk/by-id/virtio-<serial>", independent of the
+                    "vdb"/"vdc"/etc. name (which only reflects PCI
+                    enumeration order, not a persistent name).
+                  '';
+                };
+              };
+            });
             default = [ ];
             description = ''
-              Paths to existing block devices (e.g. "/dev/disk/by-id/...")
-              to attach directly as additional disks on this VM, alongside
-              its LVM-thin-volume-backed root disk. Attached in order as
-              vdb, vdc, etc.
+              Existing block devices to attach directly as additional disks
+              on this VM, alongside its LVM-thin-volume-backed root disk.
+              Attached in order as vdb, vdc, etc.
             '';
           };
           installIso = lib.mkOption {
@@ -200,12 +216,13 @@ in
                 target = { dev = "vda"; bus = "virtio"; };
               }] ++ (
                 # Additional passthrough disks, attached in order as vdb, vdc, etc.
-                lib.imap0 (i: dev: {
+                lib.imap0 (i: bd: {
                   type = "block";
                   device = "disk";
                   driver = { name = "qemu"; type = "raw"; cache = "none"; discard = "unmap"; };
-                  source = { inherit dev; };
+                  source = { dev = bd.path; };
                   target = { dev = "vd${builtins.substring i 1 "bcdefghijklmnop"}"; bus = "virtio"; };
+                  serial = bd.serial;
                 }) vm.blockDevices
               ) ++ (
                 # NixVirt's templates (templates/domain/base.nix) attach the
