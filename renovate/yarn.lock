@@ -889,15 +889,15 @@
   dependencies:
     cluster-key-slot "1.1.2"
 
-"@renovatebot/detect-tools@4.0.11":
-  version "4.0.11"
-  resolved "https://registry.npmjs.org/@renovatebot/detect-tools/-/detect-tools-4.0.11.tgz"
-  integrity sha512-rQ8McuE2JQkg4jmUl7l0MxwZTENOY/Z/UFWT5PYi5SzaNMXfGL/iqAMMLBYrp437pAT1rF7bwzM8xaGNOp088A==
+"@renovatebot/detect-tools@4.0.13":
+  version "4.0.13"
+  resolved "https://registry.npmjs.org/@renovatebot/detect-tools/-/detect-tools-4.0.13.tgz"
+  integrity sha512-jyAb1xJeqQpVB06kGMNLzvoPwLWp2O2yMEIj7tTjOyQ8Ga332O46BjWre9vQpxMgemDvW8LFSBhLU7pIBwo1/w==
   dependencies:
     fs-extra "^11.4.0"
     toml-eslint-parser "^1.0.3"
     upath "^3.0.8"
-    zod "^4.4.3"
+    zod "^4.5.2"
 
 "@renovatebot/good-enough-parser@2.0.1":
   version "2.0.1"
@@ -928,15 +928,15 @@
     got "^15.1.0"
     luxon "^3.7.2"
 
-"@renovatebot/pep440@5.0.0":
-  version "5.0.0"
-  resolved "https://registry.npmjs.org/@renovatebot/pep440/-/pep440-5.0.0.tgz"
-  integrity sha512-91cFM32/pnOAvC7W1W1kPPI9QM2y6OrYCeomz7pop4A+3Ksh2XnZXGznUMlzR7YbOQlg7X/MNlF27s9Yt9hhTA==
+"@renovatebot/pep440@5.0.1":
+  version "5.0.1"
+  resolved "https://registry.npmjs.org/@renovatebot/pep440/-/pep440-5.0.1.tgz"
+  integrity sha512-KmMz+X68YvrS6aN6TJWtDiH8aCIL2Igcvceh17STHxMUN3KxXsC24COoOXjMOl/Gb+okBwwduMm8PY/WY/0Cpg==
 
-"@renovatebot/pgp@1.3.17":
-  version "1.3.17"
-  resolved "https://registry.npmjs.org/@renovatebot/pgp/-/pgp-1.3.17.tgz"
-  integrity sha512-iDx7AR53Xhz6PfYEdIoiPYWq5KAvVjGUk0zVJ4U6CchbbTvSKuJ3nRLKsgA8sFKZTTuSlJLkqcL8peimkiZ27g==
+"@renovatebot/pgp@1.3.18":
+  version "1.3.18"
+  resolved "https://registry.npmjs.org/@renovatebot/pgp/-/pgp-1.3.18.tgz"
+  integrity sha512-A9THGqZbWTC7E/XO/jBnwtq5G8YehyWWHxIuHyiv0zBhTuZmb434QmeTtR2jFqT12gt9rFt4TEszAMI7QL49vQ==
 
 "@renovatebot/ruby-semver@5.0.0":
   version "5.0.0"
@@ -3748,10 +3748,10 @@ remark@15.0.1:
     remark-stringify "^11.0.0"
     unified "^11.0.0"
 
-renovate@44.61.6:
-  version "44.61.6"
-  resolved "https://registry.npmjs.org/renovate/-/renovate-44.61.6.tgz"
-  integrity sha512-4g4L6rp2scv44i1KMKrDdvducrQVlG9tnzeOCDOoskkEIN+orlFM3AUjgQMfqVWe/awrNwJZVkI6ESU0wic4vA==
+renovate@44.65.5:
+  version "44.65.5"
+  resolved "https://registry.npmjs.org/renovate/-/renovate-44.65.5.tgz"
+  integrity sha512-vZrrAL/+Rr+v9cGv24hYlLy1HnpUdH6h69KH+VQWtUvtImlYuM2jnzqerUa54gEAu5GDXIiugu5fgT59SXxx3w==
   dependencies:
     "@aws-sdk/client-codecommit" "3.1117.0"
     "@aws-sdk/client-ec2" "3.1117.0"
@@ -3784,11 +3784,11 @@ renovate@44.61.6:
     "@pnpm/parse-overrides" "1001.0.4"
     "@qnighy/marshal" "0.1.3"
     "@redis/client" "5.12.1"
-    "@renovatebot/detect-tools" "4.0.11"
+    "@renovatebot/detect-tools" "4.0.13"
     "@renovatebot/good-enough-parser" "2.0.1"
     "@renovatebot/osv-offline" "3.0.10"
-    "@renovatebot/pep440" "5.0.0"
-    "@renovatebot/pgp" "1.3.17"
+    "@renovatebot/pep440" "5.0.1"
+    "@renovatebot/pgp" "1.3.18"
     "@renovatebot/ruby-semver" "5.0.0"
     "@sindresorhus/is" "8.1.0"
     "@yarnpkg/core" "4.9.1"
@@ -3865,6 +3865,7 @@ renovate@44.61.6:
     slugify "1.6.9"
     source-map-support "0.5.21"
     strip-json-comments "5.0.3"
+    tar "7.5.22"
     toml-eslint-parser "1.0.3"
     tslib "2.8.1"
     upath "3.0.8"
@@ -3873,7 +3874,7 @@ renovate@44.61.6:
     xmldoc "2.0.3"
     yaml "2.9.0"
     yauzl "3.4.0"
-    zod "4.4.3"
+    zod "4.5.2"
   optionalDependencies:
     openpgp "6.3.1"
     re2 "1.26.1"
@@ -4197,10 +4198,10 @@ tagged-tag@^1.0.0:
   resolved "https://registry.npmjs.org/tagged-tag/-/tagged-tag-1.0.0.tgz"
   integrity sha512-yEFYrVhod+hdNyx7g5Bnkkb0G6si8HJurOoOEgC8B/O0uXLHlaey/65KRv6cuWBNhBgHKAROVpc7QyYqE5gFng==
 
-tar@^7.5.3, tar@^7.5.4:
-  version "7.5.15"
-  resolved "https://registry.npmjs.org/tar/-/tar-7.5.15.tgz"
-  integrity sha512-dzGK0boVlC4W5QFuQN1EFSl3bIDYsk7Tj40U6eIBnK2k/8ml7TZ5agbI5j5+qnoVcAA+rNtBml8SEiLxZpNqRQ==
+tar@7.5.22, tar@^7.5.3, tar@^7.5.4:
+  version "7.5.22"
+  resolved "https://registry.npmjs.org/tar/-/tar-7.5.22.tgz"
+  integrity sha512-MFO/QzvtAOmJbkhOaCTvbGcFN9L9b+JunIsDwaKljSOdcLMea3NJ1k9Usz/rjdfSXTq4dfzfeS7W4p4YOAAHeA==
   dependencies:
     "@isaacs/fs-minipass" "^4.0.0"
     chownr "^3.0.0"
@@ -4573,10 +4574,10 @@ yocto-queue@^1.0.0:
   resolved "https://registry.npmjs.org/yocto-queue/-/yocto-queue-1.2.2.tgz"
   integrity sha512-4LCcse/U2MHZ63HAJVE+v71o7yOdIe4cZ70Wpf8D/IyjDKYQLV5GD46B+hSTjJsvV5PztjvHoU580EftxjDZFQ==
 
-zod@4.4.3, zod@^4.4.3:
-  version "4.4.3"
-  resolved "https://registry.npmjs.org/zod/-/zod-4.4.3.tgz"
-  integrity sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==
+zod@4.5.2, zod@^4.5.2:
+  version "4.5.2"
+  resolved "https://registry.npmjs.org/zod/-/zod-4.5.2.tgz"
+  integrity sha512-XkYXCol10+ba/6F/cueWV+TezUeOqXW0hdeJt5CdXjTYeAgAQg5N03RQdJ80mhfFE72+pblvYMW4wy2Qp4Qbrg==
 
 zwitch@^2.0.0:
   version "2.0.4"
