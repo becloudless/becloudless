@@ -64,3 +64,27 @@ func findAvailableSystems(nixosDir string) ([]string, error) {
 	sort.Strings(results)
 	return results, nil
 }
+
+// findNamespace returns the snowfall-lib namespace used by the infra repository,
+// deduced from the single directory present under modules/nixos/.
+// TODO this is a bit fragile.
+func findNamespace(nixosDir string) (string, error) {
+	modulesDir := filepath.Join(nixosDir, "modules", "nixos")
+	entries, err := os.ReadDir(modulesDir)
+	if err != nil {
+		return "", errs.WithEF(err, data.WithField("dir", modulesDir), "Failed to read modules/nixos directory")
+	}
+
+	var namespaces []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			namespaces = append(namespaces, entry.Name())
+		}
+	}
+
+	if len(namespaces) != 1 {
+		return "", errs.WithF(data.WithField("dir", modulesDir).WithField("found", namespaces), "Expected exactly one namespace directory under modules/nixos")
+	}
+
+	return namespaces[0], nil
+}

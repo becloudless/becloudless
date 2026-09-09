@@ -61,7 +61,16 @@ func nixosIsoBuildCmd() *cobra.Command {
 					}
 				}()
 
-				sopsFile := infra.GetNixosDir() + "/modules/nixos/groups/install/default.secrets.yaml"
+				// isoConfigurations/raw-efiConfigurations are virtual (nixos-generators) systems:
+				// the flake attribute is a plain derivation with no `.config`, so the secret
+				// file can't be queried from a nixosConfiguration. Resolve it by convention
+				// instead: the group name matches the system name (e.g. groups/install).
+				namespace, err := findNamespace(infra.GetNixosDir())
+				if err != nil {
+					return errs.WithE(err, "Failed to determine snowfall namespace")
+				}
+
+				sopsFile := infra.GetNixosDir() + "/modules/nixos/" + namespace + "/groups/" + typeAndSystemArray[1] + "/default.secrets.yaml"
 				logs.WithField("file", sopsFile).Info("Extracting install host key from group")
 
 				content, err := security.DecryptSopsYAMLWithAgeKey(sopsFile, "")
@@ -108,7 +117,6 @@ func nixosIsoBuildCmd() *cobra.Command {
 					return errs.WithE(err, "Iso build failed")
 				}
 			}
-
 
 			if device == "" {
 				logs.WithField("path", isoPath).Info("Your iso is available")
