@@ -345,6 +345,18 @@ in
           }
         );
         active = vm.active;
+        # NixVirt's default ("detect restart") behavior deactivates a
+        # running domain whenever its redefined XML differs from the
+        # currently-defined one - including just the install CDROM's
+        # source path (e.g. bcl.role.serverVirt.defaultIso pointing at a
+        # new ISO, or a per-VM installIso change). That's disruptive for a
+        # VM that's already installed and running; changing the attached
+        # ISO shouldn't force a reboot. Never restart automatically here;
+        # any other definition change that genuinely needs a restart
+        # (e.g. memory/vcpu) can be applied by manually stopping/starting
+        # the VM.
+        # TODO: switch to PXE install to not having the iso attached?
+        restart = false;
       }) cfg.vms;
 
     # Create or grow (never shrink) the LVM thin volume backing each VM's root disk,
