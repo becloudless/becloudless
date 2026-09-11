@@ -28,9 +28,9 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
-	golang.org/x/crypto v0.56.0
+	golang.org/x/crypto v0.57.0
 	golang.org/x/lint v0.0.0-20241112194109-818c5a804067
-	golang.org/x/term v0.45.0
+	golang.org/x/term v0.46.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v4 v4.2.4
 )
@@ -258,12 +258,12 @@ require (
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/mod v0.40.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
 	google.golang.org/api v0.289.0 // indirect
