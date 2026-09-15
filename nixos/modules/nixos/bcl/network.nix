@@ -59,8 +59,8 @@ in
 
     nameservers = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = lib.optional (effectiveAddress != null) (lib.bcl.net.cidrhost effectiveAddress 1);
-      defaultText = lib.literalExpression "[ first address of `bcl.network.address`/`bcl.network.cidr` ]";
+      default = lib.optional (cfg.gateway != null) cfg.gateway;
+      defaultText = lib.literalExpression "[ `bcl.network.gateway` ]";
       description = "DNS nameservers to use for this host.";
     };
   };

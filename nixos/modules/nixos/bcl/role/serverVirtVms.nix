@@ -22,6 +22,37 @@ let
       hash = builtins.hashString "sha256" seed;
       octets = lib.genList (i: builtins.substring (i * 2) 2 hash) 3;
     in "52:54:00:" + lib.concatStringsSep ":" octets;
+  # Deterministic UUID derived from a seed (host+VM name), so libvirt domain
+  # UUIDs stay stable across rebuilds without needing to be manually
+  # generated/tracked per VM (previously required `uuidgen` + copy-pasting,
+  # which caused a real collision when a VM's config was copy-pasted to
+  # create another one and the uuid line wasn't updated).
+  mkStableUuid = seed:
+    let
+      hex = builtins.substring 0 32 (builtins.hashString "sha256" seed);
+    in
+    lib.concatStringsSep "-" [
+      (builtins.substring 0 8 hex)
+      (builtins.substring 8 4 hex)
+      (builtins.substring 12 4 hex)
+      (builtins.substring 16 4 hex)
+      (builtins.substring 20 12 hex)
+    ];
+  # Parse a "domain:bus:slot.function" PCI address string (as printed by e.g.
+  # `lspci -D`, hex digits) into its integer components, for use in a
+  # <hostdev> device's <address> element.
+  parsePciAddress = addr:
+    let
+      m = builtins.match "([0-9a-fA-F]{4}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2})\\.([0-9a-fA-F])" addr;
+    in
+    if m == null then
+      throw "bcl.role.serverVirt.vms.<name>.pciDevices: \"${addr}\" must match <domain>:<bus>:<slot>.<function> in hex, e.g. \"0000:00:02.0\""
+    else {
+      domain = lib.fromHexString (builtins.elemAt m 0);
+      bus = lib.fromHexString (builtins.elemAt m 1);
+      slot = lib.fromHexString (builtins.elemAt m 2);
+      function = lib.fromHexString (builtins.elemAt m 3);
+    };
 in
 {
   options.bcl.role.serverVirt = {
@@ -31,11 +62,13 @@ in
       description = "Default ISO image to attach as an install CDROM for VMs that don't set their own installIso.";
     };
     vms = lib.mkOption {
-      type = lib.types.attrsOf (lib.types.submodule {
+      type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
         options = {
           uuid = lib.mkOption {
             type = lib.types.str;
-            description = "Libvirt domain UUID (generate once with `uuidgen`, then keep it stable).";
+            default = mkStableUuid "${config.networking.hostName}-${name}";
+            defaultText = lib.literalExpression ''derived from the host name and VM name'';
+            description = "Libvirt domain UUID. Defaults to a value deterministically derived from the host+VM name; only set explicitly if you need a specific value (e.g. to match a pre-existing domain).";
           };
           template = lib.mkOption {
             type = lib.types.enum [ "linux" "windows" ];
@@ -55,6 +88,44 @@ in
           diskSize = lib.mkOption {
             type = lib.types.str;
             description = "Size of the LVM thin volume backing this VM's root disk (e.g. \"20G\"). Created/grown automatically.";
+          };
+          blockDevices = lib.mkOption {
+            type = lib.types.listOf (lib.types.submodule {
+              options = {
+                path = lib.mkOption {
+                  type = lib.types.path;
+                  description = "Path to the existing block device (e.g. \"/dev/disk/by-id/...\") on the host.";
+                };
+                serial = lib.mkOption {
+                  type = lib.types.str;
+                  description = ''
+                    Serial identifier for this disk. Exposed inside the
+                    guest as a stable device name at
+                    "/dev/disk/by-id/virtio-<serial>", independent of the
+                    "vdb"/"vdc"/etc. name (which only reflects PCI
+                    enumeration order, not a persistent name).
+                  '';
+                };
+              };
+            });
+            default = [ ];
+            description = ''
+              Existing block devices to attach directly as additional disks
+              on this VM, alongside its LVM-thin-volume-backed root disk.
+              Attached in order as vdb, vdc, etc.
+            '';
+          };
+          pciDevices = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+            description = ''
+              Host PCI device addresses to pass through directly to this VM
+              via VFIO (e.g. an iGPU for hardware video transcoding), each
+              as a "domain:bus:slot.function" hex string like "0000:00:02.0"
+              (as printed by `lspci -D`). The host must have IOMMU
+              (VT-d/AMD-Vi) enabled and the devices must be otherwise
+              unused/unbound on the host.
+            '';
           };
           installIso = lib.mkOption {
             type = lib.types.nullOr lib.types.path;
@@ -83,8 +154,9 @@ in
               for remote console access via qemu+ssh (e.g. virt-manager).
             '';
           };
+          # <driver name='qemu' type='raw' cache='none' io='native'/>
         };
-      });
+      }));
       default = {};
       description = ''
         Declarative libvirt VMs (domains) managed via NixVirt.
@@ -170,6 +242,16 @@ in
                 source = { dev = "/dev/data/${name}"; };
                 target = { dev = "vda"; bus = "virtio"; };
               }] ++ (
+                # Additional passthrough disks, attached in order as vdb, vdc, etc.
+                lib.imap0 (i: bd: {
+                  type = "block";
+                  device = "disk";
+                  driver = { name = "qemu"; type = "raw"; cache = "none"; discard = "unmap"; };
+                  source = { dev = bd.path; };
+                  target = { dev = "vd${builtins.substring i 1 "bcdefghijklmnop"}"; bus = "virtio"; };
+                  serial = bd.serial;
+                }) vm.blockDevices
+              ) ++ (
                 # NixVirt's templates (templates/domain/base.nix) attach the
                 # install CDROM via bus="sata" (q35's cdtarget). aarch64
                 # "virt" guests use AAVMF/ArmVirtQemu firmware, which
@@ -185,6 +267,29 @@ in
                 else
                   base.devices.disk
               );
+            } // lib.optionalAttrs (vm.pciDevices != [ ]) {
+              # Host PCI devices (e.g. an iGPU) passed through via VFIO.
+              # managed = true tells libvirt to unbind the device from its
+              # current host driver and bind it to vfio-pci before starting
+              # the domain, then reattach it to the host after the domain
+              # stops.
+              # rom.bar = "off" disables the device's ROM BAR in the guest.
+              # Many iGPUs expose an invalid/non-VBIOS "shadowed ROM" (seen
+              # as "Invalid PCI ROM header signature" in host dmesg), which
+              # guest firmware can hang trying to probe/execute during boot
+              # if left enabled.
+              hostdev = map (addr:
+                let p = parsePciAddress addr;
+                in {
+                  mode = "subsystem";
+                  type = "pci";
+                  managed = true;
+                  source = {
+                    address = { domain = p.domain; bus = p.bus; slot = p.slot; function = p.function; };
+                  };
+                  rom = { bar = false; };
+                }
+              ) vm.pciDevices;
             } // lib.optionalAttrs pkgs.stdenv.hostPlatform.isAarch64 {
               emulator = "${pkgs.qemu}/bin/qemu-system-aarch64";
               # Unlike q35/pc, the aarch64 "virt" machine type has no
@@ -240,6 +345,18 @@ in
           }
         );
         active = vm.active;
+        # NixVirt's default ("detect restart") behavior deactivates a
+        # running domain whenever its redefined XML differs from the
+        # currently-defined one - including just the install CDROM's
+        # source path (e.g. bcl.role.serverVirt.defaultIso pointing at a
+        # new ISO, or a per-VM installIso change). That's disruptive for a
+        # VM that's already installed and running; changing the attached
+        # ISO shouldn't force a reboot. Never restart automatically here;
+        # any other definition change that genuinely needs a restart
+        # (e.g. memory/vcpu) can be applied by manually stopping/starting
+        # the VM.
+        # TODO: switch to PXE install to not having the iso attached?
+        restart = false;
       }) cfg.vms;
 
     # Create or grow (never shrink) the LVM thin volume backing each VM's root disk,
