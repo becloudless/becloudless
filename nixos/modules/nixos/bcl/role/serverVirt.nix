@@ -74,6 +74,8 @@ in
         (lib.listToAttrs (map (id: lib.nameValuePair (bridgeName id) {
           matchConfig.Name = bridgeName id;
           networkConfig.IgnoreCarrierLoss = true;
+          # do not check the bridge for online status
+          linkConfig.RequiredForOnline = false;
         }) cfg.vlans))
         # Attaches these VLANs to the trunk interface's own .network file
         # (see bcl.network's "net" key); `vlan` is a listOf str NixOS
