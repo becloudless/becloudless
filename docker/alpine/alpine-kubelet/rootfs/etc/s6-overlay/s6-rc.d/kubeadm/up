@@ -1,1 +1,1 @@
-/etc/s6-overlay/scripts/kubeadm-init
+/etc/s6-overlay/scripts/kubeadm-bootstrap
