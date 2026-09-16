@@ -1,4 +1,4 @@
 #!/bin/sh
 exec kubelet \
-  --config=/var/lib/kubelet/config.yaml \
+  --config=/etc/kubernetes/kubelet-config.yaml \
   --kubeconfig=/etc/kubernetes/kubelet.conf
