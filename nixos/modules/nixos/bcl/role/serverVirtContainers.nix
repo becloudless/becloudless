@@ -141,7 +141,7 @@ in
         volumes = c.volumes ++ (map
           (path: "/etc/containers-files/${name}/${path}:/${path}:ro")
           (builtins.attrNames c.files));
-        extraOptions = c.extraOptions
+        extraOptions = [ "--hostname=${name}" ] ++ c.extraOptions
           ++ lib.optionals (c.network != null) (
             lib.optional (c.network.address != null) "--ip=${c.network.address}"
             ++ map (ns: "--dns=${ns}") c.network.nameservers

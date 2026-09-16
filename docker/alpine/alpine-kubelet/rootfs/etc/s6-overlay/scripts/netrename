@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+# cilium's cluster-wide DaemonSet hardcodes --devices=br0/
+# --direct-routing-device=br0 as literal command-line args, matching
+# masters' own VM NIC name ("br0"). Docker names this container's macvlan
+# interface "eth0" by convention - rename it to match what cilium expects.
+# No-op if there's no eth0 (e.g. this container uses host networking
+# instead of a dedicated macvlan) or if it's already been renamed.
+if ip link show eth0 >/dev/null 2>&1 && ! ip link show br0 >/dev/null 2>&1; then
+  ip link set eth0 down
+  ip link set eth0 name br0
+  ip link set br0 up
+fi
