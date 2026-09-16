@@ -1,20 +1,15 @@
 FROM alpine:3.24
 
 RUN apk add --no-cache \
-    curl \
     ca-certificates \
     conntrack-tools \
     iptables \
-    ebtables \
-    socat \
     containerd \
     kubelet \
     kubeadm \
-    cni-plugins
+    cni-plugins \
+    s6-overlay
 
-RUN mkdir -p /etc/containerd && containerd config default > /etc/containerd/config.toml
+COPY rootfs/ /
 
-CMD ["sh", "-c", "containerd & kubelet --fail-swap-on=false"]
-
-
-# docker run --privileged --cgroupns host -v /lib/modules:/lib/modules:ro -v /sys/fs/cgroup:/sys/fs/cgroup:rw ghcr.io/becloudless/alpine-kubelet
+ENTRYPOINT ["/init"]
