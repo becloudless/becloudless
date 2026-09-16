@@ -13,7 +13,7 @@ in
         Declarative 802.1Q VLAN sub-interfaces stacked on top of
         `bcl.network.interface` (e.g. `[ 41 43 ]`). Each VLAN gets its own
         bridge (`br<id>`) that VMs can attach to (see
-        `bcl.role.serverVirt.vms.<name>.bridgeName`). The host itself has no
+        `bcl.role.serverVirt.vms.<name>.bridge`). The host itself has no
         IP address on these VLANs/bridges, only VMs do.
       '';
     };
