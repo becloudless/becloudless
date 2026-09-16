@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+if [ -f /etc/kubernetes/kubeadm-worker.yaml ]; then
+  # Worker
+  kubeadm kubeconfig user \
+    --client-name "system:node:$(hostname)" \
+    --org system:nodes \
+    --config /etc/kubernetes/kubeadm-worker.yaml \
+    > /etc/kubernetes/kubelet.conf
+else
+  # Control plane
+  kubeadm init --skip-phases=preflight,bootstrap-token,addon/coredns,show-join-command --config=/etc/kubernetes/kubeadm.yaml
+fi
