@@ -1,10 +1,10 @@
 { config, lib, ... }:
 let
-  cfg = config.bcl.role.serverVirt;
+  cfg = config.bcl.role.server;
   macvlanNetworkName = bridge: "${bridge}-macvlan";
 in
 {
-  options.bcl.role.serverVirt.containers = lib.mkOption {
+  options.bcl.role.server.container.containers = lib.mkOption {
     type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
       options = {
         enable = lib.mkOption {
@@ -124,14 +124,14 @@ in
     '';
   };
 
-  config = lib.mkIf (cfg.containers != { }) {
+  config = lib.mkIf (cfg.container.containers != { }) {
     virtualisation.oci-containers.backend = "docker";
 
     environment.etc = lib.mkMerge (lib.mapAttrsToList
       (name: c: lib.mapAttrs'
         (path: content: lib.nameValuePair "containers-files/${name}/${path}" { text = content; })
         c.files)
-      cfg.containers);
+      cfg.container.containers);
 
     virtualisation.oci-containers.containers = lib.mapAttrs
       (name: c: ({
@@ -149,7 +149,7 @@ in
       } // lib.optionalAttrs (c.network != null) {
         networks = [ (macvlanNetworkName c.network.bridge) ];
       }))
-      cfg.containers;
+      cfg.container.containers;
 
     # For each distinct bridge referenced by a container, create a macvlan
     # Docker network attached to it, giving containers their own L2/L3
@@ -201,7 +201,7 @@ in
             '';
           })
         (lib.listToAttrs (map (c: lib.nameValuePair c.network.bridge c.network)
-          (lib.filter (c: c.network != null) (lib.attrValues cfg.containers)))))
+          (lib.filter (c: c.network != null) (lib.attrValues cfg.container.containers)))))
 
       # Every container attached to a macvlan network must wait for its
       # network to actually exist first - otherwise `docker run` fails with
@@ -212,7 +212,7 @@ in
           after = [ "docker-network-${macvlanNetworkName c.network.bridge}.service" ];
           requires = [ "docker-network-${macvlanNetworkName c.network.bridge}.service" ];
         })
-        (lib.filterAttrs (name: c: c.network != null) cfg.containers))
+        (lib.filterAttrs (name: c: c.network != null) cfg.container.containers))
     ];
   };
 }

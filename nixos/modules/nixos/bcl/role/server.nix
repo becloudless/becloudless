@@ -1,11 +1,11 @@
 { config, lib, pkgs, ... }:
 let
-  cfg = config.bcl.role.serverVirt;
+  cfg = config.bcl.role.server;
   vlanName = id: "vlan${toString id}";
   bridgeName = id: "br${toString id}";
 in
 {
-  options.bcl.role.serverVirt = {
+  options.bcl.role.server = {
     vlans = lib.mkOption {
       type = lib.types.listOf (lib.types.ints.between 1 4094);
       default = [];
@@ -13,15 +13,15 @@ in
         Declarative 802.1Q VLAN sub-interfaces stacked on top of
         `bcl.network.interface` (e.g. `[ 41 43 ]`). Each VLAN gets its own
         bridge (`br<id>`) that VMs can attach to (see
-        `bcl.role.serverVirt.vms.<name>.bridge`). The host itself has no
+        `bcl.role.server.vm.vms.<name>.bridge`). The host itself has no
         IP address on these VLANs/bridges, only VMs do.
       '';
     };
   };
 
   config = lib.mkMerge [
-    { bcl.role.knownRoles = [ "serverVirt" ]; }
-    (lib.mkIf (config.bcl.role.name == "serverVirt") {
+    { bcl.role.knownRoles = [ "server" ]; }
+    (lib.mkIf (config.bcl.role.name == "server") {
 
     bcl.diskSystem.encrypted = true;
     bcl.boot.ssh = true; # give password for disk encryption on boot
@@ -32,7 +32,7 @@ in
     bcl.diskSystem.nixSize = "50G"; # enough space for nix store
 
     bcl.network = {
-      bridge = true; # so VMs can attach to the untagged network
+      bridge = true; # so VMs and containers can attach to the untagged network
     };
 
 
