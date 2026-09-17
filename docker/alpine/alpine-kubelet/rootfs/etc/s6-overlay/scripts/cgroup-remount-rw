@@ -1,0 +1,27 @@
+#!/bin/sh
+set -e
+
+# Docker always mounts /sys/fs/cgroup read-only for non-privileged
+# containers (even with cgroup delegation via systemd's Delegate=yes on the
+# host's docker-<name>.service unit) - kubelet needs to create/write its own
+# cgroup subtree (/kubepods/...) there. Since the container holds
+# CAP_SYS_ADMIN, it can remount its own (delegated, namespaced) cgroup2
+# mount rw from the inside, without needing --privileged or a host-level
+# /sys/fs/cgroup bind mount.
+mount -o remount,rw /sys/fs/cgroup
+
+# Remounting rw alone isn't enough though: cgroup v2's "no internal process"
+# constraint means the cgroup root can't have controllers enabled
+# (subtree_control) while it still holds member processes directly (all of
+# s6/containerd/kubelet start out living directly at the container's cgroup
+# root). So first move every current process into its own leaf sub-cgroup
+# ("init"), THEN enable controllers at the root - the same fix kind/moby use
+# for running Docker/Kubernetes nested inside a container on a cgroup v2
+# host. No-op if cgroup v2 isn't in use (e.g. cgroup v1 host).
+if [ -f /sys/fs/cgroup/cgroup.controllers ]; then
+  mkdir -p /sys/fs/cgroup/init
+  while read -r pid; do
+    echo "$pid" > /sys/fs/cgroup/init/cgroup.procs 2>/dev/null || true
+  done < /sys/fs/cgroup/cgroup.procs
+  sed -e 's/ / +/g' -e 's/^/+/' < /sys/fs/cgroup/cgroup.controllers > /sys/fs/cgroup/cgroup.subtree_control
+fi
