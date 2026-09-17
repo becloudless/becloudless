@@ -7,7 +7,6 @@ import (
 
 	"github.com/becloudless/becloudless/pkg/cmd/docker"
 	"github.com/becloudless/becloudless/pkg/git"
-	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"github.com/spf13/cobra"
@@ -36,19 +35,12 @@ func CiDockerCmd() *cobra.Command {
 			}
 
 			toBuild := make(map[string]struct{})
-			for s, changeType := range changes {
+			for s, _ := range changes {
 				if !strings.HasPrefix(s, "docker/") {
 					continue
 				}
 
-				if changeType == git.ChangeDeleted {
-					continue
-				}
-
-				file, err := findDockerfileFolderFromFile(s)
-				if err != nil {
-					return errs.WithEF(err, data.WithField("file", s), "Failed to find dockerfile folder from file")
-				}
+				file := findDockerfileFolderFromFile(s)
 				if file == "" {
 					logs.WithField("change", s).Debug("Skip change in root folder")
 					continue
@@ -80,13 +72,13 @@ func CiDockerCmd() *cobra.Command {
 	return cmd
 }
 
-func findDockerfileFolderFromFile(path string) (string, error) {
+func findDockerfileFolderFromFile(path string) string {
 	if path == "" {
-		return "", nil
+		return ""
 	}
 
 	if filepath.Base(path) == "Dockerfile" {
-		return filepath.Dir(path), nil
+		return filepath.Dir(path)
 	}
 
 	// Normalize and drop the file portion
@@ -95,7 +87,7 @@ func findDockerfileFolderFromFile(path string) (string, error) {
 	for {
 		candidate := filepath.Join(dir, "Dockerfile")
 		if _, err := os.Stat(candidate); err == nil {
-			return dir, nil
+			return dir
 		}
 
 		parent := filepath.Dir(dir)
@@ -105,5 +97,5 @@ func findDockerfileFolderFromFile(path string) (string, error) {
 		dir = parent
 	}
 
-	return "", nil
+	return ""
 }
