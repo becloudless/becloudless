@@ -9,6 +9,7 @@ RUN apk add --no-cache \
     kubeadm \
     cni-plugins \
     open-iscsi \
+    etcd-ctl \
     s6-overlay
 
 COPY rootfs/ /
