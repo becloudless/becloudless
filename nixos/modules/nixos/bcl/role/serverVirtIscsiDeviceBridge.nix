@@ -3,12 +3,26 @@ let
   cfg = config.bcl.role.serverVirt;
   bridgeCfg = cfg.iscsiDeviceBridge;
 
-  # Every serverVirt container with a static macvlan IP is a candidate
-  # owner. iSCSI sessions initiated from inside that container's network
-  # namespace use this IP as their source address, which is how the host
-  # (which sees the containers' /dev, /sys, and iSCSI kernel objects, but
-  # not their private network namespaces) can tell which container a given
-  # iSCSI-attached SCSI device belongs to.
+  # When a host runs iscsid itself (services.openiscsi, see
+  # /memories/repo/lmr-container-node-iscsi-netns-limitation.md for why -
+  # containers can't run their own iscsid, their netns can't reach the
+  # kernel's iSCSI netlink socket), iSCSI sessions are initiated from the
+  # HOST's own network namespace, so their source IP is the host's own
+  # address - NOT any container's macvlan IP. IP-based owner matching
+  # therefore only works to disambiguate between MULTIPLE containers on the
+  # same host, and only if a container still ran its own iscsid (the older,
+  # broken design). Since every serverVirt host today has at most one
+  # container, we short-circuit to it unconditionally rather than relying on
+  # the (now generally false) IP-match assumption - revisit if/when a host
+  # ever needs more than one Longhorn-capable container.
+  singleContainerName =
+    let names = builtins.attrNames cfg.containers;
+    in if builtins.length names == 1 then builtins.head names else null;
+
+  # Kept as a fallback for hosts with several containers where a container
+  # might still originate its own iSCSI sessions from its own netns (e.g.
+  # not yet migrated to host-iscsid) - matches each candidate's static
+  # macvlan IP against the session's source IP.
   ipToContainer = lib.filterAttrs (ip: name: ip != null) (lib.mapAttrs'
     (name: c: lib.nameValuePair
       (if c.network != null then c.network.address else null)
@@ -61,6 +75,10 @@ let
     # retrying/erroring rather than a device being granted to the wrong
     # container).
     find_owner_container() {
+      ${lib.optionalString (singleContainerName != null) ''
+      printf '%s' ${lib.strings.escapeShellArg singleContainerName}
+      return 0
+      ''}
       hostpath=$(readlink -f "/sys/class/block/$dev/device" 2>/dev/null) || return 1
       hostnum=$(printf '%s\n' "$hostpath" | grep -oE '/host[0-9]+/' | head -1 | tr -d '/host')
       [ -n "$hostnum" ] || return 1
