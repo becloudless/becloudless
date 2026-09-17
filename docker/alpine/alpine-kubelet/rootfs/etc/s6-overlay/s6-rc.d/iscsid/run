@@ -1,8 +1,0 @@
-#!/bin/sh
-set -e
-
-if ! mountpoint -q /etc/iscsi/initiatorname.iscsi 2>/dev/null; then
-  echo "InitiatorName=$(iscsi-iname)" > /etc/iscsi/initiatorname.iscsi
-fi
-
-exec iscsid -f -n
