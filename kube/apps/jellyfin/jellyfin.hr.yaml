@@ -36,6 +36,34 @@ spec:
           startup:
             spec:
               failureThreshold: 60 # 10min, huge Jellyfin on low hardware can be slow to start
+        env:
+          # https://github.com/steelbrain/ffmpeg-over-ip/blob/main/docs/docker.md
+          # points jellyfin at the ffmpeg-over-ip client binaries (mounted over
+          # the image's own /usr/lib/jellyfin-ffmpeg/{ffmpeg,ffprobe}) instead
+          # of the local ffmpeg, so transcoding runs on the ffmpeg-over-ip
+          # server (kube/clusters/lmr2/jellyfin/ffmpeg-over-ip.yaml, lmr infra repo).
+          FFMPEG_OVER_IP_CLIENT_ADDRESS: ffmpeg-over-ip.jellyfin.svc.cluster.local:5050
+          FFMPEG_OVER_IP_CLIENT_AUTH_SECRET:
+            valueFrom:
+              secretKeyRef:
+                name: ffmpeg-over-ip-server
+                key: FFMPEG_OVER_IP_SERVER_AUTH_SECRET
+
+      initContainer:
+        image:
+          repository: debian
+          tag: bookworm-slim
+        command: ["bash", "-c"]
+        args:
+          - |
+            set -euo pipefail
+            apt-get update
+            apt-get install -y --no-install-recommends curl unzip ca-certificates
+            curl -fsSL -o /tmp/client.zip "https://github.com/steelbrain/ffmpeg-over-ip/releases/download/v5.2.1/linux-amd64-ffmpeg-over-ip-client.zip"
+            unzip -o /tmp/client.zip -d /tmp/client
+            cp /tmp/client/ffmpeg-over-ip-client /ffmpeg-bin/ffmpeg
+            cp /tmp/client/ffmpeg-over-ip-client /ffprobe-bin/ffprobe
+            chmod +x /ffmpeg-bin/ffmpeg /ffprobe-bin/ffprobe
 
       service:
         ports:
@@ -81,6 +109,22 @@ spec:
           path: /data/Media
           hostPath: /data/Media
           # mountPropagation: Bidirectional
+        ffoip-ffmpeg:
+          type: emptyDir
+          containers:
+            init:
+              path: /ffmpeg-bin
+            main:
+              path: /usr/lib/jellyfin-ffmpeg/ffmpeg
+              subPath: ffmpeg
+        ffoip-ffprobe:
+          type: emptyDir
+          containers:
+            init:
+              path: /ffprobe-bin
+            main:
+              path: /usr/lib/jellyfin-ffmpeg/ffprobe
+              subPath: ffprobe
 
 
     resources:
