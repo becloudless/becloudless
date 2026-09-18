@@ -551,8 +551,8 @@ in
           };
           dataDir = lib.mkOption {
             type = lib.types.str;
-            default = "/nix/var/lib/containers-var/${name}";
-            defaultText = lib.literalExpression ''"/nix/var/lib/containers-var/${name}"'';
+            default = "/nix/var/containers/${name}";
+            defaultText = lib.literalExpression ''"/nix/var/containers/${name}"'';
             description = "Host directory holding this node's persistent state subdirectories.";
           };
           extraVolumes = lib.mkOption {
