@@ -52,6 +52,7 @@ let
 
   capExtraOptions = [
     "--device=/dev/kmsg" # kubelet's OOM watcher needs this
+    "--device=/dev/dri" # pass through the host's GPU (iGPU/dGPU render+card nodes) for hardware-accelerated pods
     "--cap-add=NET_ADMIN" # cilium/kube-proxy manage iptables/routes/netns
     "--cap-add=NET_RAW" # cilium/kube-proxy use raw sockets (e.g. iptables, ping health checks)
     "--cap-add=SYS_ADMIN" # nested runc needs mount/unshare/pivot_root
