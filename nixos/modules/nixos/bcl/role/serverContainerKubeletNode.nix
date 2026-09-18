@@ -1,8 +1,20 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, ... }:
 let
   cfg = config.bcl.role.server;
   kn = cfg.container.kubeletNode;
   controlPlaneHost = lib.head (lib.splitString ":" kn.controlPlaneEndpoint);
+
+  # Renders `kn.taints` as a YAML block sequence of Taint objects (`- key:
+  # ...\n  value: ...\n  effect: ...`), for embedding into either a
+  # KubeletConfiguration's `registerWithTaints` or a kubeadm
+  # InitConfiguration's `nodeRegistration.taints`. `indent` must match the
+  # column the leading `-` should render at (however many spaces the
+  # surrounding YAML context is nested by), since embedded newlines in the
+  # produced string aren't touched by nix's own `''` dedenting.
+  taintsYaml = indent: lib.concatMapStringsSep "\n" (t: ''
+    ${indent}- key: "${t.key}"
+    ${indent}  value: "${t.value}"
+    ${indent}  effect: "${t.effect}"'') kn.taints;
 
   # s6-overlay compiles its service database from /etc/s6-overlay/s6-rc.d at
   # container STARTUP (not image build time), so this extra oneshot service
@@ -84,6 +96,7 @@ let
     containerRuntimeEndpoint: unix:///run/containerd/containerd.sock
     failSwapOn: false
     ${lib.optionalString (staticPodPath != null) "staticPodPath: ${staticPodPath}"}
+    ${lib.optionalString (kn.taints != [ ]) "registerWithTaints:\n${taintsYaml ""}"}
     maxPods: 200
     evictionHard:
       imagefs.available: 1%
@@ -199,7 +212,8 @@ let
           advertiseAddress: "${cp.address}"
         nodeRegistration:
           criSocket: unix:///run/containerd/containerd.sock
-          taints: []
+          taints:
+        ${taintsYaml "  "}
 
         ---
         # `kubeadm-bootstrap` (baked into the image) invokes `kubeadm init`
@@ -227,15 +241,18 @@ let
           UserNamespacesSupport: true
       '';
 
-      # iscsid runs on the true host instead (services.openiscsi below),
-      # since the container's own netns can never reach the kernel's iSCSI
-      # netlink socket. Leaving an image-baked iscsid running here too
-      # would be actively harmful: with a shared PID namespace,
-      # go-iscsi-helper's "find the iscsid process" scan could
-      # non-deterministically pick this one instead of the host's, hitting
-      # the exact same ECONNREFUSED bug. Replaced with a permanent no-op so
-      # s6 has something to keep "up" without it doing anything. See
-      # /memories/repo/lmr3-pid-host-s6-overlay-incompatibility.md.
+      # iSCSI (and hence Longhorn) fundamentally cannot work inside these
+      # containers: the kernel's iSCSI netlink socket only exists in
+      # init_net, unreachable from a container with its own macvlan network
+      # namespace - see /memories/repo/lmr3-pid-host-s6-overlay-incompatibility.md
+      # for the full history of why this was abandoned (including why
+      # `--pid=host` can't be used as a workaround either). Rather than
+      # letting the image-baked iscsid crash-loop trying and failing to
+      # bind its IPC socket, replace it with a permanent no-op so s6 has
+      # something to keep "up" without it doing anything. `kn.taints`
+      # (applied below) keeps Longhorn and any pod needing a Longhorn
+      # volume from ever being scheduled onto this node in the first
+      # place.
       "etc/s6-overlay/s6-rc.d/iscsid/run" = ''
         #!/bin/sh
         exec sleep infinity
@@ -467,6 +484,29 @@ in
         not-yet-provisioned future node names/IPs.
       '';
     };
+    taints = lib.mkOption {
+      type = lib.types.listOf (lib.types.submodule {
+        options = {
+          key = lib.mkOption { type = lib.types.str; };
+          value = lib.mkOption { type = lib.types.str; default = "true"; };
+          effect = lib.mkOption {
+            type = lib.types.enum [ "NoSchedule" "PreferNoSchedule" "NoExecute" ];
+            default = "NoSchedule";
+          };
+        };
+      });
+      default = [ { key = "bcl.io/no-persistent-storage"; value = "true"; effect = "NoSchedule"; } ];
+      description = ''
+        Taints applied to every worker/control-plane node created by this
+        preset, via kubelet's `registerWithTaints` (workers) and kubeadm's
+        `nodeRegistration.taints` (control-planes). iSCSI (and hence
+        Longhorn) cannot work inside these containers (the kernel's iSCSI
+        netlink socket only exists in init_net, unreachable from a
+        container's own network namespace), so by default these nodes are
+        tainted to keep Longhorn and any pod requiring a Longhorn volume
+        from being scheduled onto them at all.
+      '';
+    };
     masters = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule {
         options = {
@@ -537,15 +577,6 @@ in
             type = lib.types.str;
             description = "This control-plane node's address. Must also appear in `masters.<name>.address`.";
           };
-          podCIDR = lib.mkOption {
-            type = lib.types.str;
-            description = ''
-              This node's own pod CIDR (`kubectl get node <name> -o
-              jsonpath='{.spec.podCIDR}'`), used to set up a host route so
-              the host's iscsid can reach the Longhorn engine's iSCSI
-              target IP inside this node's own pod network.
-            '';
-          };
           dataDir = lib.mkOption {
             type = lib.types.str;
             default = "/nix/var/lib/containers-var/${name}";
@@ -571,17 +602,6 @@ in
               `etcd_ca_crt` and `etcd_ca_key`.
             '';
           };
-          iscsiInitiatorName = lib.mkOption {
-            type = lib.types.str;
-            example = "iqn.2016-04.com.open-iscsi:srv3";
-            description = ''
-              iSCSI initiator name for the HOST's own iscsid (services.openiscsi).
-              iscsid must run on the true host, not inside the container:
-              the kernel's iSCSI netlink socket only exists in init_net, so
-              a container with its own macvlan network namespace can never
-              reach it.
-            '';
-          };
           extraVolumes = lib.mkOption {
             type = lib.types.listOf lib.types.str;
             default = [ ];
@@ -604,10 +624,6 @@ in
       {
         assertion = (lib.length (lib.attrNames (lib.filterAttrs (n: _: lib.hasAttr n kn.controlPlanes) kn.workers))) == 0;
         message = "bcl.role.server.container.kubeletNode: the same name cannot be both a worker and a control-plane.";
-      }
-      {
-        assertion = kn.controlPlanes == { } || (lib.length (lib.attrNames kn.controlPlanes)) <= 1;
-        message = "bcl.role.server.container.kubeletNode.controlPlanes: only one control-plane container per host is supported (services.openiscsi is host-wide).";
       }
     ];
 
@@ -653,39 +669,7 @@ in
     # minikube rely on for Kubernetes-in-Docker.
     systemd.services = lib.mkMerge (
       (lib.mapAttrsToList (name: _: { "docker-${name}".serviceConfig.Delegate = "yes"; }) kn.workers)
-      ++ (lib.mapAttrsToList
-        (name: cp: {
-          "docker-${name}".serviceConfig.Delegate = "yes";
-
-          # Lets the host's iscsid (and hence Longhorn's engine, which
-          # nsenters into iscsid's own net+mount namespace to run
-          # iscsiadm) reach the Longhorn engine's iSCSI target IP inside
-          # this node's own cilium pod network - which is otherwise only
-          # routable from inside the node container itself (cilium's VXLAN
-          # datapath runs there, not on the host). Routes via this node's
-          # own macvlan IP, which the host can already reach directly on
-          # `bridge`.
-          "bcl-route-${name}-pod-cidr" = {
-            description = "Static route to ${name}'s pod CIDR via its macvlan IP";
-            after = [ "sys-subsystem-net-devices-${kn.bridge}.device" ];
-            bindsTo = [ "sys-subsystem-net-devices-${kn.bridge}.device" ];
-            wantedBy = [ "multi-user.target" ];
-            serviceConfig = {
-              Type = "oneshot";
-              RemainAfterExit = true;
-              # Full path to the binary, rather than relying on `path`/PATH
-              # resolution - systemd failed to locate a bare "ip" at deploy
-              # time despite a `path = [ pkgs.iproute2 ];`.
-              # `onlink` is required: the macvlan bridge itself has no IPv4
-              # address on the host (it's only used to attach macvlan
-              # containers), so the kernel can't verify the gateway is
-              # on-link and rejects it without this flag.
-              ExecStart = "${pkgs.iproute2}/bin/ip route replace ${cp.podCIDR} via ${cp.address} dev ${kn.bridge} onlink";
-              ExecStop = "${pkgs.iproute2}/bin/ip route del ${cp.podCIDR} via ${cp.address} dev ${kn.bridge} onlink";
-            };
-          };
-        })
-        kn.controlPlanes)
+      ++ (lib.mapAttrsToList (name: _: { "docker-${name}".serviceConfig.Delegate = "yes"; }) kn.controlPlanes)
     );
 
     systemd.tmpfiles.rules = lib.concatLists (lib.mapAttrsToList
@@ -702,18 +686,5 @@ in
         "${cp.dataDir}" = { device = cp.dataDevice; fsType = "ext4"; };
       })
       kn.controlPlanes);
-
-    # iscsid MUST run on the true host (not inside the control-plane
-    # container) because the kernel's iSCSI netlink socket (NETLINK_ISCSI,
-    # used to register new sessions) only exists in init_net - a container
-    # with its own macvlan network namespace can never reach it, causing
-    # iscsid to crash-loop with "Can not bind IPC socket" / sessions to
-    # fail with ECONNREFUSED. Only one control-plane container per host is
-    # supported (enforced by the assertion above), since this is a single
-    # host-wide setting.
-    services.openiscsi = lib.mkIf (kn.controlPlanes != { }) {
-      enable = true;
-      name = (lib.head (lib.attrValues kn.controlPlanes)).iscsiInitiatorName;
-    };
   };
 }
