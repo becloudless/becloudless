@@ -1,18 +1,18 @@
 { config, lib, pkgs, ... }:
 let
-  cfg = config.bcl.role.server;
+  cfg = config.bcl.vm;
   # Instantiated with the host's own native `pkgs`, not NixVirt's own
   # hardcoded x86_64-linux nixpkgs instance - see
   # ../../../packages/nixvirt/VENDORED.md for why this is vendored rather
   # than used as a flake input.
-  nixvirt = { lib = import ../../../../packages/nixvirt/lib.nix { packages = pkgs; }; };
+  nixvirt = { lib = import ../../../packages/nixvirt/lib.nix { packages = pkgs; }; };
   unitSuffixes = { K = "KiB"; M = "MiB"; G = "GiB"; T = "TiB"; };
   parseMemory = str:
     let
       m = builtins.match "([0-9]+)([KMGT])" str;
     in
     if m == null then
-      throw "bcl.role.server.vm.vms.<name>.memory: \"${str}\" must match <number><K|M|G|T>, e.g. \"4096M\" or \"4G\""
+      throw "bcl.vm.vms.<name>.memory: \"${str}\" must match <number><K|M|G|T>, e.g. \"4096M\" or \"4G\""
     else {
       count = lib.toInt (builtins.elemAt m 0);
       unit = unitSuffixes.${builtins.elemAt m 1};
@@ -46,7 +46,7 @@ let
       m = builtins.match "([0-9a-fA-F]{4}):([0-9a-fA-F]{2}):([0-9a-fA-F]{2})\\.([0-9a-fA-F])" addr;
     in
     if m == null then
-      throw "bcl.role.server.vm.vms.<name>.pciDevices: \"${addr}\" must match <domain>:<bus>:<slot>.<function> in hex, e.g. \"0000:00:02.0\""
+      throw "bcl.vm.vms.<name>.pciDevices: \"${addr}\" must match <domain>:<bus>:<slot>.<function> in hex, e.g. \"0000:00:02.0\""
     else {
       domain = lib.fromHexString (builtins.elemAt m 0);
       bus = lib.fromHexString (builtins.elemAt m 1);
@@ -55,13 +55,13 @@ let
     };
 in
 {
-  options.bcl.role.server = {
-    vm.defaultIso = lib.mkOption {
+  options.bcl.vm = {
+    defaultIso = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
       description = "Default ISO image to attach as an install CDROM for VMs that don't set their own installIso.";
     };
-    vm.vms = lib.mkOption {
+    vms = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
         options = {
           uuid = lib.mkOption {
@@ -130,7 +130,7 @@ in
           installIso = lib.mkOption {
             type = lib.types.nullOr lib.types.path;
             default = null;
-            description = "ISO image to attach as an install CDROM, or null to fall back to bcl.role.server.vm.defaultIso.";
+            description = "ISO image to attach as an install CDROM, or null to fall back to bcl.vm.defaultIso.";
           };
           bridge = lib.mkOption {
             type = lib.types.str;
@@ -167,7 +167,7 @@ in
 
   ####################
 
-  config = lib.mkIf (cfg.vm.vms != {}) {
+  config = lib.mkIf (cfg.vms != {}) {
     virtualisation.libvirt.enable = true; # also enables virtualisation.libvirtd
     virtualisation.libvirt.swtpm.enable = true; # emulated TPM, needed for windows template
 
@@ -210,7 +210,7 @@ in
               memory = parseMemory vm.memory;
               vcpu = { count = vm.vcpu; };
               storage_vol = null; # root disk attached below as a raw LVM block device
-              install_vol = if vm.installIso != null then vm.installIso else cfg.vm.defaultIso;
+              install_vol = if vm.installIso != null then vm.installIso else cfg.defaultIso;
               bridge_name = vm.bridge;
               net_iface_mac = mkStableMac "${config.networking.hostName}-${name}";
               virtio_video = false; # use QXL video with SPICE listening on 127.0.0.1
@@ -362,7 +362,7 @@ in
         # NixVirt's default ("detect restart") behavior deactivates a
         # running domain whenever its redefined XML differs from the
         # currently-defined one - including just the install CDROM's
-        # source path (e.g. bcl.role.server.vm.defaultIso pointing at a
+        # source path (e.g. bcl.vm.defaultIso pointing at a
         # new ISO, or a per-VM installIso change). That's disruptive for a
         # VM that's already installed and running; changing the attached
         # ISO shouldn't force a reboot. Never restart automatically here;
@@ -371,7 +371,7 @@ in
         # the VM.
         # TODO: switch to PXE install to not having the iso attached?
         restart = false;
-      }) cfg.vm.vms;
+      }) cfg.vms;
 
     # Create or grow (never shrink) the LVM thin volume backing each VM's root disk,
     # before libvirtd starts the VMs that need them.
@@ -418,7 +418,7 @@ in
           fi
         '';
       }
-    ) cfg.vm.vms) // {
+    ) cfg.vms) // {
       # libvirt ships virt-secret-init-encryption.service, which on first
       # libvirtd start generates a random secret and encrypts it via
       # `systemd-creds encrypt` (default "auto" key selection) into

@@ -611,7 +611,7 @@ in
       }
     ];
 
-    bcl.role.server.container.containers =
+    bcl.container.containers =
       (lib.mapAttrs mkWorkerContainer kn.workers)
       // (lib.mapAttrs mkControlPlaneContainer kn.controlPlanes);
 

@@ -1,10 +1,10 @@
 { config, lib, ... }:
 let
-  cfg = config.bcl.role.server;
+  cfg = config.bcl.container;
   macvlanNetworkName = bridge: "${bridge}-macvlan";
 in
 {
-  options.bcl.role.server.container.containers = lib.mkOption {
+  options.bcl.container.containers = lib.mkOption {
     type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
       options = {
         enable = lib.mkOption {
@@ -120,18 +120,18 @@ in
     }));
     default = { };
     description = ''
-      Declarative containers to run on this serverVirt host, alongside its VMs.
+      Declarative Docker containers to run on this host.
     '';
   };
 
-  config = lib.mkIf (cfg.container.containers != { }) {
+  config = lib.mkIf (cfg.containers != { }) {
     virtualisation.oci-containers.backend = "docker";
 
     environment.etc = lib.mkMerge (lib.mapAttrsToList
       (name: c: lib.mapAttrs'
         (path: content: lib.nameValuePair "containers-files/${name}/${path}" { text = content; })
         c.files)
-      cfg.container.containers);
+      cfg.containers);
 
     virtualisation.oci-containers.containers = lib.mapAttrs
       (name: c: ({
@@ -149,7 +149,7 @@ in
       } // lib.optionalAttrs (c.network != null) {
         networks = [ (macvlanNetworkName c.network.bridge) ];
       }))
-      cfg.container.containers;
+      cfg.containers;
 
     # For each distinct bridge referenced by a container, create a macvlan
     # Docker network attached to it, giving containers their own L2/L3
@@ -201,7 +201,7 @@ in
             '';
           })
         (lib.listToAttrs (map (c: lib.nameValuePair c.network.bridge c.network)
-          (lib.filter (c: c.network != null) (lib.attrValues cfg.container.containers)))))
+          (lib.filter (c: c.network != null) (lib.attrValues cfg.containers)))))
 
       # Every container attached to a macvlan network must wait for its
       # network to actually exist first - otherwise `docker run` fails with
@@ -212,7 +212,7 @@ in
           after = [ "docker-network-${macvlanNetworkName c.network.bridge}.service" ];
           requires = [ "docker-network-${macvlanNetworkName c.network.bridge}.service" ];
         })
-        (lib.filterAttrs (name: c: c.network != null) cfg.container.containers))
+        (lib.filterAttrs (name: c: c.network != null) cfg.containers))
     ];
   };
 }
