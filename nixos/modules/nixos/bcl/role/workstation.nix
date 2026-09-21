@@ -29,6 +29,7 @@ in
     };
 
     environment.systemPackages = with pkgs; [
+      file
       # System
       wavemon powertop htop iftop lsof dfc psmisc ncdu tree nmon
       s-tui stress
