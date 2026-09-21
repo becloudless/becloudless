@@ -1,0 +1,70 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: metadata computation (namespace, labels, annotations)
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: defaults the namespace to the release namespace when not set
+    set:
+      resources:
+        configMaps:
+          plain:
+            data:
+              key: value
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: default
+
+  - it: uses the explicit namespace override when set
+    set:
+      resources:
+        configMaps:
+          withNamespaceOverride:
+            namespace: custom-ns
+            data:
+              key: value
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: custom-ns
+
+  - it: renders labels and annotations when provided
+    set:
+      resources:
+        configMaps:
+          withLabelsAndAnnotations:
+            labels:
+              app: myapp
+              tier: backend
+            annotations:
+              team: platform
+              note: hello
+            data:
+              key: value
+    asserts:
+      - equal:
+          path: metadata.labels
+          value:
+            app: myapp
+            tier: backend
+      - equal:
+          path: metadata.annotations
+          value:
+            team: platform
+            note: hello
+
+  - it: omits labels and annotations keys entirely when not provided
+    set:
+      resources:
+        configMaps:
+          plain:
+            data:
+              key: value
+    asserts:
+      - notExists:
+          path: metadata.labels
+      - notExists:
+          path: metadata.annotations

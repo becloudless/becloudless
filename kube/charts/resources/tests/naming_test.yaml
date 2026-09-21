@@ -1,0 +1,84 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: resource naming (nameOverride, fullNameOverride, "main" id)
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: names the resource "<release>-<id>" when no override is given
+    set:
+      resources:
+        secrets:
+          plain:
+            stringData:
+              a: b
+    asserts:
+      - equal:
+          path: metadata.name
+          value: test-release-plain
+
+  - it: names the resource "<release>-<nameOverride>" when nameOverride is set
+    set:
+      resources:
+        secrets:
+          customId:
+            nameOverride: my-custom-id
+            stringData:
+              a: b
+    asserts:
+      - equal:
+          path: metadata.name
+          value: test-release-my-custom-id
+
+  - it: collapses the name to the release name alone when nameOverride is "main"
+    set:
+      resources:
+        secrets:
+          collapsedToRelease:
+            nameOverride: main
+            stringData:
+              a: b
+    asserts:
+      - equal:
+          path: metadata.name
+          value: test-release
+
+  - it: collapses the name to the release name alone when the id itself is "main"
+    set:
+      resources:
+        secrets:
+          main:
+            stringData:
+              a: b
+    asserts:
+      - equal:
+          path: metadata.name
+          value: test-release
+
+  - it: uses fullNameOverride verbatim, ignoring the release name entirely
+    set:
+      resources:
+        secrets:
+          normal:
+            stringData:
+              a: b
+          fullyOverridden:
+            fullNameOverride: totally-custom-name
+            stringData:
+              a: b
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: metadata.name
+          value: totally-custom-name
+        documentSelector:
+          path: metadata.name
+          value: totally-custom-name
+      - equal:
+          path: metadata.name
+          value: test-release-normal
+        documentSelector:
+          path: metadata.name
+          value: test-release-normal
