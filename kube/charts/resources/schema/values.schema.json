@@ -11,6 +11,9 @@
             "clusterIssuers": {
               "$ref": "./resources/clusterIssuers.json"
             },
+            "clusterPolicies": {
+              "$ref": "./resources/clusterPolicies.json"
+            },
             "clusterRoleBindings": {
               "$ref": "./resources/clusterRoleBindings.json"
             },
@@ -44,8 +47,14 @@
             "horizontalPodAutoscalers": {
               "$ref": "./resources/horizontalPodAutoscalers.json"
             },
+            "ingressRouteTCPs": {
+              "$ref": "./resources/ingressRouteTCPs.json"
+            },
             "ingresses": {
               "$ref": "./resources/ingresses.json"
+            },
+            "issuers": {
+              "$ref": "./resources/issuers.json"
             },
             "jobs": {
               "$ref": "./resources/jobs.json"
@@ -53,8 +62,14 @@
             "kustomizations": {
               "$ref": "./resources/kustomizations.json"
             },
+            "middlewares": {
+              "$ref": "./resources/middlewares.json"
+            },
             "namespaces": {
               "$ref": "./resources/namespaces.json"
+            },
+            "networkAttachmentDefinitions": {
+              "$ref": "./resources/networkAttachmentDefinitions.json"
             },
             "networkPolicies": {
               "$ref": "./resources/networkPolicies.json"
@@ -73,6 +88,9 @@
             },
             "receivers": {
               "$ref": "./resources/receivers.json"
+            },
+            "recurringJobs": {
+              "$ref": "./resources/recurringJobs.json"
             },
             "roleBindings": {
               "$ref": "./resources/roleBindings.json"
@@ -101,11 +119,20 @@
             "services": {
               "$ref": "./resources/services.json"
             },
+            "settings": {
+              "$ref": "./resources/settings.json"
+            },
             "statefulSets": {
               "$ref": "./resources/statefulSets.json"
             },
+            "storageClasses": {
+              "$ref": "./resources/storageClasses.json"
+            },
             "stringSecrets": {
               "$ref": "./resources/stringSecrets.json"
+            },
+            "volumeSnapshotClasses": {
+              "$ref": "./resources/volumeSnapshotClasses.json"
             }
           },
           "type": "object"
@@ -127,6 +154,13 @@
             "$ref": "./resources/clusterIssuers.json"
           },
           "description": "ClusterIssuer instances, keyed by id.",
+          "type": "object"
+        },
+        "clusterPolicies": {
+          "additionalProperties": {
+            "$ref": "./resources/clusterPolicies.json"
+          },
+          "description": "ClusterPolicy instances, keyed by id.",
           "type": "object"
         },
         "clusterRoleBindings": {
@@ -206,11 +240,25 @@
           "description": "HorizontalPodAutoscaler instances, keyed by id.",
           "type": "object"
         },
+        "ingressRouteTCPs": {
+          "additionalProperties": {
+            "$ref": "./resources/ingressRouteTCPs.json"
+          },
+          "description": "IngressRouteTCP instances, keyed by id.",
+          "type": "object"
+        },
         "ingresses": {
           "additionalProperties": {
             "$ref": "./resources/ingresses.json"
           },
           "description": "Ingress instances, keyed by id.",
+          "type": "object"
+        },
+        "issuers": {
+          "additionalProperties": {
+            "$ref": "./resources/issuers.json"
+          },
+          "description": "Issuer instances, keyed by id.",
           "type": "object"
         },
         "jobs": {
@@ -227,11 +275,25 @@
           "description": "Kustomization instances, keyed by id.",
           "type": "object"
         },
+        "middlewares": {
+          "additionalProperties": {
+            "$ref": "./resources/middlewares.json"
+          },
+          "description": "Middleware instances, keyed by id.",
+          "type": "object"
+        },
         "namespaces": {
           "additionalProperties": {
             "$ref": "./resources/namespaces.json"
           },
           "description": "Namespace instances, keyed by id.",
+          "type": "object"
+        },
+        "networkAttachmentDefinitions": {
+          "additionalProperties": {
+            "$ref": "./resources/networkAttachmentDefinitions.json"
+          },
+          "description": "NetworkAttachmentDefinition instances, keyed by id.",
           "type": "object"
         },
         "networkPolicies": {
@@ -274,6 +336,13 @@
             "$ref": "./resources/receivers.json"
           },
           "description": "Receiver instances, keyed by id.",
+          "type": "object"
+        },
+        "recurringJobs": {
+          "additionalProperties": {
+            "$ref": "./resources/recurringJobs.json"
+          },
+          "description": "RecurringJob instances, keyed by id.",
           "type": "object"
         },
         "roleBindings": {
@@ -339,6 +408,13 @@
           "description": "Service instances, keyed by id.",
           "type": "object"
         },
+        "settings": {
+          "additionalProperties": {
+            "$ref": "./resources/settings.json"
+          },
+          "description": "Setting instances, keyed by id.",
+          "type": "object"
+        },
         "statefulSets": {
           "additionalProperties": {
             "$ref": "./resources/statefulSets.json"
@@ -346,11 +422,25 @@
           "description": "StatefulSet instances, keyed by id.",
           "type": "object"
         },
+        "storageClasses": {
+          "additionalProperties": {
+            "$ref": "./resources/storageClasses.json"
+          },
+          "description": "StorageClass instances, keyed by id.",
+          "type": "object"
+        },
         "stringSecrets": {
           "additionalProperties": {
             "$ref": "./resources/stringSecrets.json"
           },
           "description": "StringSecret instances, keyed by id.",
+          "type": "object"
+        },
+        "volumeSnapshotClasses": {
+          "additionalProperties": {
+            "$ref": "./resources/volumeSnapshotClasses.json"
+          },
+          "description": "VolumeSnapshotClass instances, keyed by id.",
           "type": "object"
         }
       },

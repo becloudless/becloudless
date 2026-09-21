@@ -1,0 +1,102 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "allowVolumeExpansion": {
+      "description": "allowVolumeExpansion shows whether the storage class allow volume expand.",
+      "type": "boolean"
+    },
+    "allowedTopologies": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "description": "A topology selector term represents the result of label queries. A null or empty topology selector term matches no objects. The requirements of them are ANDed. It provides a subset of functionality as NodeSelectorTerm. This is an alpha feature and may change in the future.",
+        "properties": {
+          "matchLabelExpressions": {
+            "additionalProperties": {
+              "additionalProperties": false,
+              "description": "A topology selector requirement is a selector that matches given label. This is an alpha feature and may change in the future.",
+              "properties": {
+                "key": {
+                  "default": "",
+                  "description": "key is the label key that the selector applies to.",
+                  "type": "string"
+                },
+                "values": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "values is an array of string values. One value must match the label to be selected. Each entry in values is ORed.",
+                  "type": "object"
+                }
+              },
+              "required": [
+                "key",
+                "values"
+              ],
+              "type": "object"
+            },
+            "description": "matchLabelExpressions is a list of topology selector requirements by labels. Usage: Fields of type []TopologySelectorTerm must be listType=atomic. A list of topology selector requirements by labels.",
+            "type": "object"
+          }
+        },
+        "type": "object",
+        "x-kubernetes-map-type": "atomic"
+      },
+      "description": "allowedTopologies restrict the node topologies where volumes can be dynamically provisioned. Each volume plugin defines its own supported topology specifications. An empty TopologySelectorTerm list means there is no topology restriction. This field is only honored by servers that enable the VolumeScheduling feature.",
+      "type": "object"
+    },
+    "annotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "metadata.annotations for this resource.",
+      "type": "object"
+    },
+    "fullNameOverride": {
+      "description": "Replaces the entire computed resource name, ignoring the release name and id.",
+      "type": "string"
+    },
+    "labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "metadata.labels for this resource.",
+      "type": "object"
+    },
+    "mountOptions": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "mountOptions controls the mountOptions for dynamically provisioned PersistentVolumes of this storage class. e.g. [\"ro\", \"soft\"]. Not validated - mount of the PVs will simply fail if one is invalid.",
+      "type": "object"
+    },
+    "nameOverride": {
+      "description": "Replaces just the id part of the computed resource name (\u003cRelease.Name\u003e-\u003cid\u003e).",
+      "type": "string"
+    },
+    "namespace": {
+      "description": "metadata.namespace for this resource. Defaults to the release namespace.",
+      "type": "string"
+    },
+    "parameters": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "parameters holds the parameters for the provisioner that should create volumes of this storage class.",
+      "type": "object"
+    },
+    "provisioner": {
+      "default": "",
+      "description": "provisioner indicates the type of the provisioner.",
+      "type": "string"
+    },
+    "reclaimPolicy": {
+      "description": "reclaimPolicy controls the reclaimPolicy for dynamically provisioned PersistentVolumes of this storage class. Defaults to Delete.",
+      "type": "string"
+    },
+    "volumeBindingMode": {
+      "description": "volumeBindingMode indicates how PersistentVolumeClaims should be provisioned and bound.  When unset, VolumeBindingImmediate is used. This field is only honored by servers that enable the VolumeScheduling feature.",
+      "type": "string"
+    }
+  },
+  "type": "object"
+}

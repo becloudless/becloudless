@@ -1,0 +1,4 @@
+resources:
+  settings:
+    main:
+      value: "1"

@@ -106,11 +106,39 @@ resources:
     component: io.k8s.api.networking.v1.NetworkPolicy
     apiVersion: networking.k8s.io/v1
     kind: NetworkPolicy
+  storageClasses:
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__storage.k8s.io__v1_openapi.json
+    component: io.k8s.api.storage.v1.StorageClass
+    apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+    contentIsSpec: false
+  volumeSnapshotClasses:
+    url: https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+    apiVersion: snapshot.storage.k8s.io/v1
+    kind: VolumeSnapshotClass
+    crdVersion: v1
+    contentIsSpec: false
   sealedSecrets:
     url: https://raw.githubusercontent.com/bitnami-labs/sealed-secrets/main/helm/sealed-secrets/crds/bitnami.com_sealedsecrets.yaml
     apiVersion: bitnami.com/v1alpha1
     kind: SealedSecret
     crdVersion: v1alpha1
+  clusterPolicies:
+    url: https://raw.githubusercontent.com/kyverno/kyverno/main/config/crds/kyverno/kyverno.io_clusterpolicies.yaml
+    apiVersion: kyverno.io/v1
+    kind: ClusterPolicy
+    crdVersion: v1
+  recurringJobs:
+    url: https://raw.githubusercontent.com/longhorn/longhorn/master/deploy/longhorn.yaml
+    apiVersion: longhorn.io/v1beta2
+    kind: RecurringJob
+    crdVersion: v1beta2
+  settings:
+    url: https://raw.githubusercontent.com/longhorn/longhorn/master/deploy/longhorn.yaml
+    apiVersion: longhorn.io/v1beta2
+    kind: Setting
+    crdVersion: v1beta2
+    contentIsSpec: false
   routes:
     url: https://raw.githubusercontent.com/openshift/api/master/route/v1/zz_generated.crd-manifests/routes.crd.yaml
     apiVersion: route.openshift.io/v1
@@ -146,6 +174,11 @@ resources:
     apiVersion: cert-manager.io/v1
     kind: Certificate
     crdVersion: v1
+  issuers:
+    url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_issuers.yaml
+    apiVersion: cert-manager.io/v1
+    kind: Issuer
+    crdVersion: v1
   clusterIssuers:
     url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_clusterissuers.yaml
     apiVersion: cert-manager.io/v1
@@ -176,3 +209,18 @@ resources:
     apiVersion: secretgenerator.mittwald.de/v1alpha1
     kind: StringSecret
     crdVersion: v1alpha1
+  ingressRouteTCPs:
+    url: https://raw.githubusercontent.com/traefik/traefik/master/docs/content/reference/dynamic-configuration/traefik.io_ingressroutetcps.yaml
+    apiVersion: traefik.io/v1alpha1
+    kind: IngressRouteTCP
+    crdVersion: v1alpha1
+  middlewares:
+    url: https://raw.githubusercontent.com/traefik/traefik/master/docs/content/reference/dynamic-configuration/traefik.io_middlewares.yaml
+    apiVersion: traefik.io/v1alpha1
+    kind: Middleware
+    crdVersion: v1alpha1
+  networkAttachmentDefinitions:
+    url: https://raw.githubusercontent.com/k8snetworkplumbingwg/network-attachment-definition-client/master/artifacts/networks-crd.yaml
+    apiVersion: k8s.cni.cncf.io/v1
+    kind: NetworkAttachmentDefinition
+    crdVersion: v1

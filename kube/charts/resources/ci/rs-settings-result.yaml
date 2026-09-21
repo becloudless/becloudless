@@ -1,0 +1,8 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: longhorn.io/v1beta2
+kind: Setting
+metadata:
+  name: test-release
+  namespace: default
+value: "1"

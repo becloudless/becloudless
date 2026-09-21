@@ -61,7 +61,7 @@ func fetchAndTransformSchema(client *http.Client, e *entry, dest string) error {
 	var kindSchema map[string]interface{}
 	switch {
 	case e.crdVersion != "":
-		schema, err := fetchCRDManifestSchema(client, e.url, e.crdVersion)
+		schema, err := fetchCRDManifestSchema(client, e.url, e.crdVersion, e.kind)
 		if err != nil {
 			return err
 		}

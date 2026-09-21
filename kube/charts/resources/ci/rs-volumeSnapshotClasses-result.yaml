@@ -1,0 +1,11 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: test-release
+  namespace: default
+deletionPolicy: Delete
+driver: driver.longhorn.io
+parameters:
+  type: snap
