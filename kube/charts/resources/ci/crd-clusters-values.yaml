@@ -1,0 +1,6 @@
+resources:
+  clusters:
+    main:
+      instances: 3
+      storage:
+        size: 10Gi

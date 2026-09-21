@@ -1,0 +1,14 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  backupOwnerReference: self
+  cluster:
+    name: authelia-postgresql
+  immediate: true
+  method: volumeSnapshot
+  schedule: 0 0 4 * * *

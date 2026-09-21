@@ -1,0 +1,9 @@
+resources:
+  scheduledBackups:
+    main:
+      schedule: "0 0 4 * * *"
+      cluster:
+        name: authelia-postgresql
+      backupOwnerReference: self
+      immediate: true
+      method: volumeSnapshot
