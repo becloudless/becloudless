@@ -46,11 +46,11 @@ func extractContentTransform(kindSchema map[string]interface{}, e *entry) (map[s
 
 // stripRequiredTransform moves the schema's top-level "required" list (if
 // any) out of the schema and into e.required, since
-// .Values.resources.<name>.<id> and .Values.defaultValues.<name> share this
-// exact schema and a defaultValues entry - a partial overlay - shouldn't be
-// forced to satisfy "required" on its own. The extracted fields are instead
-// enforced at render time on the merged resource (see generateTemplate and
-// templates/_requireFields.tpl).
+// .Values.resources.<name>.<id> and .Values.defaults.resources.<name> share
+// this exact schema and a defaults.resources entry - a partial overlay -
+// shouldn't be forced to satisfy "required" on its own. The extracted fields
+// are instead enforced at render time on the merged resource (see
+// generateTemplate and templates/_requireFields.tpl).
 func stripRequiredTransform(schema map[string]interface{}, e *entry) (map[string]interface{}, error) {
 	var required []string
 	if req, ok := schema["required"].([]interface{}); ok {

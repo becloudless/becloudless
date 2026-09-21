@@ -1,85 +1,90 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
   "properties": {
-    "defaultValues": {
+    "defaults": {
       "properties": {
-        "clusterRoleBindings": {
-          "$ref": "./resources/clusterRoleBindings.json"
-        },
-        "clusterRoles": {
-          "$ref": "./resources/clusterRoles.json"
-        },
-        "configMaps": {
-          "$ref": "./resources/configMaps.json"
-        },
-        "cronJobs": {
-          "$ref": "./resources/cronJobs.json"
-        },
-        "daemonSets": {
-          "$ref": "./resources/daemonSets.json"
-        },
-        "deployments": {
-          "$ref": "./resources/deployments.json"
-        },
-        "gitRepositories": {
-          "$ref": "./resources/gitRepositories.json"
-        },
-        "helmReleases": {
-          "$ref": "./resources/helmReleases.json"
-        },
-        "helmRepositories": {
-          "$ref": "./resources/helmRepositories.json"
-        },
-        "horizontalPodAutoscalers": {
-          "$ref": "./resources/horizontalPodAutoscalers.json"
-        },
-        "ingresses": {
-          "$ref": "./resources/ingresses.json"
-        },
-        "jobs": {
-          "$ref": "./resources/jobs.json"
-        },
-        "kustomizations": {
-          "$ref": "./resources/kustomizations.json"
-        },
-        "namespaces": {
-          "$ref": "./resources/namespaces.json"
-        },
-        "ociRepositories": {
-          "$ref": "./resources/ociRepositories.json"
-        },
-        "persistentVolumeClaims": {
-          "$ref": "./resources/persistentVolumeClaims.json"
-        },
-        "persistentVolumes": {
-          "$ref": "./resources/persistentVolumes.json"
-        },
-        "podDisruptionBudgets": {
-          "$ref": "./resources/podDisruptionBudgets.json"
-        },
-        "roleBindings": {
-          "$ref": "./resources/roleBindings.json"
-        },
-        "roles": {
-          "$ref": "./resources/roles.json"
-        },
-        "routes": {
-          "$ref": "./resources/routes.json"
-        },
-        "sealedSecrets": {
-          "$ref": "./resources/sealedSecrets.json"
-        },
-        "secrets": {
-          "$ref": "./resources/secrets.json"
-        },
-        "serviceAccounts": {
-          "$ref": "./resources/serviceAccounts.json"
-        },
-        "services": {
-          "$ref": "./resources/services.json"
-        },
-        "statefulSets": {
-          "$ref": "./resources/statefulSets.json"
+        "resources": {
+          "properties": {
+            "clusterRoleBindings": {
+              "$ref": "./resources/clusterRoleBindings.json"
+            },
+            "clusterRoles": {
+              "$ref": "./resources/clusterRoles.json"
+            },
+            "configMaps": {
+              "$ref": "./resources/configMaps.json"
+            },
+            "cronJobs": {
+              "$ref": "./resources/cronJobs.json"
+            },
+            "daemonSets": {
+              "$ref": "./resources/daemonSets.json"
+            },
+            "deployments": {
+              "$ref": "./resources/deployments.json"
+            },
+            "gitRepositories": {
+              "$ref": "./resources/gitRepositories.json"
+            },
+            "helmReleases": {
+              "$ref": "./resources/helmReleases.json"
+            },
+            "helmRepositories": {
+              "$ref": "./resources/helmRepositories.json"
+            },
+            "horizontalPodAutoscalers": {
+              "$ref": "./resources/horizontalPodAutoscalers.json"
+            },
+            "ingresses": {
+              "$ref": "./resources/ingresses.json"
+            },
+            "jobs": {
+              "$ref": "./resources/jobs.json"
+            },
+            "kustomizations": {
+              "$ref": "./resources/kustomizations.json"
+            },
+            "namespaces": {
+              "$ref": "./resources/namespaces.json"
+            },
+            "ociRepositories": {
+              "$ref": "./resources/ociRepositories.json"
+            },
+            "persistentVolumeClaims": {
+              "$ref": "./resources/persistentVolumeClaims.json"
+            },
+            "persistentVolumes": {
+              "$ref": "./resources/persistentVolumes.json"
+            },
+            "podDisruptionBudgets": {
+              "$ref": "./resources/podDisruptionBudgets.json"
+            },
+            "roleBindings": {
+              "$ref": "./resources/roleBindings.json"
+            },
+            "roles": {
+              "$ref": "./resources/roles.json"
+            },
+            "routes": {
+              "$ref": "./resources/routes.json"
+            },
+            "sealedSecrets": {
+              "$ref": "./resources/sealedSecrets.json"
+            },
+            "secrets": {
+              "$ref": "./resources/secrets.json"
+            },
+            "serviceAccounts": {
+              "$ref": "./resources/serviceAccounts.json"
+            },
+            "services": {
+              "$ref": "./resources/services.json"
+            },
+            "statefulSets": {
+              "$ref": "./resources/statefulSets.json"
+            }
+          },
+          "type": "object"
         }
       },
       "type": "object"

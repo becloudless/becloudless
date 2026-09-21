@@ -9,8 +9,9 @@
   {{- end }}
   {{- $required := .required | default list }}
 
-  {{- $defaultsAll := $rootContext.Values.defaultValues | default dict }}
-  {{- $default := get $defaultsAll $name | default dict }}
+  {{- $defaultsAll := $rootContext.Values.defaults | default dict }}
+  {{- $defaultsResourcesAll := $defaultsAll.resources | default dict }}
+  {{- $default := get $defaultsResourcesAll $name | default dict }}
   {{- $resourcesAll := $rootContext.Values.resources | default dict }}
 
   {{- range $id, $resource := (get $resourcesAll $name | default dict) }}

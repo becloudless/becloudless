@@ -1,8 +1,9 @@
-defaultValues:
-  configMaps:
-    labels:
-      app: shared-default
-      team: platform
+defaults:
+  resources:
+    configMaps:
+      labels:
+        app: shared-default
+        team: platform
 
 resources:
   configMaps:

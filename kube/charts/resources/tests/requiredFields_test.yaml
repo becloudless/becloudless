@@ -45,14 +45,15 @@ tests:
     asserts:
       - notFailedTemplate: {}
 
-  - it: is satisfied by fields coming only from defaultValues (merged before validation)
+  - it: is satisfied by fields coming only from defaults.resources (merged before validation)
     set:
-      defaultValues:
-        horizontalPodAutoscalers:
-          scaleTargetRef:
-            apiVersion: apps/v1
-            kind: Deployment
-            name: myapp
+      defaults:
+        resources:
+          horizontalPodAutoscalers:
+            scaleTargetRef:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: myapp
       resources:
         horizontalPodAutoscalers:
           myhpa:
