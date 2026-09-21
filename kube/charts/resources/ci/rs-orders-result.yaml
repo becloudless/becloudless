@@ -1,0 +1,12 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: acme.cert-manager.io/v1
+kind: Order
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  request: MIIBCjCB...

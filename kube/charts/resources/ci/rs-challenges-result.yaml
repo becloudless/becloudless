@@ -1,0 +1,21 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: acme.cert-manager.io/v1
+kind: Challenge
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  authorizationURL: https://acme-v02.api.letsencrypt.org/acme/authz/1234
+  dnsName: myapp.example.com
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  key: abc123.xyz789
+  solver:
+    http01:
+      ingress:
+        ingressClassName: nginx
+  token: abc123
+  type: HTTP-01
+  url: https://acme-v02.api.letsencrypt.org/acme/chall/1234

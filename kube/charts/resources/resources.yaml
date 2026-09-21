@@ -121,6 +121,11 @@ resources:
     apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     crdVersion: v1
+  grpcRoutes:
+    url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_grpcroutes.yaml
+    apiVersion: gateway.networking.k8s.io/v1
+    kind: GRPCRoute
+    crdVersion: v1
   storageClasses:
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__storage.k8s.io__v1_openapi.json
     component: io.k8s.api.storage.v1.StorageClass
@@ -214,6 +219,16 @@ resources:
     apiVersion: cert-manager.io/v1
     kind: ClusterIssuer
     crdVersion: v1
+  orders:
+    url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/acme.cert-manager.io_orders.yaml
+    apiVersion: acme.cert-manager.io/v1
+    kind: Order
+    crdVersion: v1
+  challenges:
+    url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/acme.cert-manager.io_challenges.yaml
+    apiVersion: acme.cert-manager.io/v1
+    kind: Challenge
+    crdVersion: v1
   clusters:
     url: https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/main/config/crd/bases/postgresql.cnpg.io_clusters.yaml
     apiVersion: postgresql.cnpg.io/v1
@@ -239,6 +254,11 @@ resources:
     apiVersion: notification.toolkit.fluxcd.io/v1
     kind: Receiver
     crdVersion: v1
+  providers:
+    url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_providers.yaml
+    apiVersion: notification.toolkit.fluxcd.io/v1beta3
+    kind: Provider
+    crdVersion: v1beta3
   stringSecrets:
     url: https://raw.githubusercontent.com/mittwald/kubernetes-secret-generator/master/deploy/crds/secretgenerator.mittwald.de_stringsecrets_crd.yaml
     apiVersion: secretgenerator.mittwald.de/v1alpha1
