@@ -1,0 +1,136 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: basic rendering of all supported kinds
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: renders a configMap with data and binaryData
+    set:
+      resources:
+        configMaps:
+          toto:
+            labels:
+              app: genre
+              truc: bidule
+            data:
+              something: interesting
+            binaryData:
+              blob: aGVsbG8=
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: apiVersion
+          value: v1
+      - equal:
+          path: metadata.name
+          value: test-release-toto
+      - equal:
+          path: metadata.namespace
+          value: default
+      - equal:
+          path: metadata.labels
+          value:
+            app: genre
+            truc: bidule
+      - equal:
+          path: data.something
+          value: interesting
+      - equal:
+          path: binaryData.blob
+          value: aGVsbG8=
+
+  - it: renders a secret with its content at the root (not wrapped in spec)
+    set:
+      resources:
+        secrets:
+          titi:
+            labels:
+              app: genre2
+              truc: bidule2
+            stringData:
+              something: interesting
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Secret
+      - equal:
+          path: metadata.name
+          value: test-release-titi
+      - equal:
+          path: metadata.labels
+          value:
+            app: genre2
+            truc: bidule2
+      - equal:
+          path: stringData.something
+          value: interesting
+      - notExists:
+          path: spec
+
+  - it: renders a horizontalPodAutoscaler with its content wrapped in spec
+    set:
+      resources:
+        horizontalPodAutoscalers:
+          myhpa:
+            nameOverride: override
+            scaleTargetRef:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: myapp
+            minReplicas: 1
+            maxReplicas: 3
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: apiVersion
+          value: autoscaling/v2
+      - equal:
+          path: metadata.name
+          value: test-release-override
+      - equal:
+          path: spec.minReplicas
+          value: 1
+      - equal:
+          path: spec.maxReplicas
+          value: 3
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: myapp
+
+  - it: renders a service with its content wrapped in spec and a fullNameOverride
+    set:
+      resources:
+        services:
+          myservice:
+            fullNameOverride: fulloverride
+            selector:
+              app: myapp
+            ports:
+              - port: 80
+                targetPort: 8080
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: fulloverride
+      - equal:
+          path: spec.selector.app
+          value: myapp
+      - equal:
+          path: spec.ports[0].port
+          value: 80
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 8080
