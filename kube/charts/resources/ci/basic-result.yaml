@@ -48,6 +48,26 @@ spec:
     app: myapp
 ---
 # Source: resources-test/templates/loader.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-release-myapp
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+      - image: myimage:latest
+        name: myapp
+---
+# Source: resources-test/templates/loader.yaml
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:

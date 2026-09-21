@@ -1,0 +1,114 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "annotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "metadata.annotations for this resource.",
+      "type": "object"
+    },
+    "fullNameOverride": {
+      "description": "Replaces the entire computed resource name, ignoring the release name and id.",
+      "type": "string"
+    },
+    "labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "metadata.labels for this resource.",
+      "type": "object"
+    },
+    "nameOverride": {
+      "description": "Replaces just the id part of the computed resource name (\u003cRelease.Name\u003e-\u003cid\u003e).",
+      "type": "string"
+    },
+    "namespace": {
+      "description": "metadata.namespace for this resource. Defaults to the release namespace.",
+      "type": "string"
+    },
+    "rules": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "description": "PolicyRule holds information that describes a policy rule, but does not contain information about who the rule applies to or which namespace the rule applies to.",
+        "properties": {
+          "apiGroups": {
+            "additionalProperties": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "description": "apiGroups is the name of the APIGroup that contains the resources.  If multiple API groups are specified, any action requested against one of the enumerated resources in any API group will be allowed. \"\" represents the core API group and \"*\" represents all API groups.",
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nonResourceURLs": {
+            "additionalProperties": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "description": "nonResourceURLs is a set of partial urls that a user should have access to.  *s are allowed, but only as the full, final step in the path Since non-resource URLs are not namespaced, this field is only applicable for ClusterRoles referenced from a ClusterRoleBinding. Rules can either apply to API resources (such as \"pods\" or \"secrets\") or non-resource URL paths (such as \"/api\"),  but not both.",
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "resourceNames": {
+            "additionalProperties": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "description": "resourceNames is an optional white list of names that the rule applies to.  An empty set means that everything is allowed.",
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "resources": {
+            "additionalProperties": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "description": "resources is a list of resources this rule applies to. '*' represents all resources.",
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "verbs": {
+            "additionalProperties": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "description": "verbs is a list of Verbs that apply to ALL the ResourceKinds contained in this rule. '*' represents all verbs.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "verbs"
+        ],
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "description": "rules holds all the PolicyRules for this Role",
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "type": "object"
+}

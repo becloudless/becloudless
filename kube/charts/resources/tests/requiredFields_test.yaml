@@ -61,6 +61,54 @@ tests:
     asserts:
       - notFailedTemplate: {}
 
+  - it: fails with a clear error when a required field is missing (selector)
+    set:
+      resources:
+        deployments:
+          myapp:
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                containers:
+                  - name: myapp
+                    image: myimage:latest
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.deployments.myapp: "selector" is required'
+
+  - it: fails with a clear error when a required field is missing (template)
+    set:
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.deployments.myapp: "template" is required'
+
+  - it: passes when all required fields are present (deployments)
+    set:
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                containers:
+                  - name: myapp
+                    image: myimage:latest
+    asserts:
+      - notFailedTemplate: {}
+
   - it: kinds without required fields (e.g. configMaps) are unaffected
     set:
       resources:
