@@ -23,7 +23,8 @@ type entry struct {
 	url           string
 	apiVersion    string
 	kind          string
-	contentIsSpec bool // defaults to true; set contentIsSpec: false in CRDs.yaml to override
+	contentIsSpec bool     // defaults to true; set contentIsSpec: false in CRDs.yaml to override
+	required      []string // top-level required fields, extracted from the upstream k8s schema
 }
 
 func main() {
@@ -72,17 +73,20 @@ func fetchSchemas(dir string, entries []entry) error {
 	client := &http.Client{Timeout: 30 * time.Second}
 
 	var failed []string
-	for _, e := range entries {
+	for i := range entries {
+		e := &entries[i]
 		if e.url == "" {
 			continue
 		}
 		dest := filepath.Join(schemaDir, e.name+".json")
 		fmt.Printf("fetching %s -> %s\n", e.url, dest)
-		if err := fetchAndTransformSchema(client, e, dest); err != nil {
+		required, err := fetchAndTransformSchema(client, *e, dest)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "  failed: %v\n", err)
 			failed = append(failed, e.name)
 			continue
 		}
+		e.required = required
 	}
 
 	if len(failed) > 0 {
@@ -95,40 +99,48 @@ func fetchSchemas(dir string, entries []entry) error {
 // transforms it into the instance schema used for
 // .Values.resources.<name>.<id> (see buildInstanceSchema), and writes that
 // transformed schema to dest. schema/resources/<name>.json therefore holds
-// the ready-to-use instance schema, not the raw upstream k8s schema.
-func fetchAndTransformSchema(client *http.Client, e entry, dest string) error {
+// the ready-to-use instance schema, not the raw upstream k8s schema. The
+// instance schema never contains a top-level "required": required fields are
+// returned separately so callers can generate template-based validation
+// instead (see generateTemplate/resources.generic.requireFields), since
+// .Values.resources.<name>.<id> and .Values.defaultValues.<name> share the
+// exact same schema and only the merged result must satisfy "required".
+func fetchAndTransformSchema(client *http.Client, e entry, dest string) ([]string, error) {
 	resp, err := client.Get(e.url)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status %s", resp.Status)
+		return nil, fmt.Errorf("unexpected status %s", resp.Status)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var kindSchema map[string]interface{}
 	if err := json.Unmarshal(body, &kindSchema); err != nil {
-		return fmt.Errorf("parse fetched schema: %w", err)
+		return nil, fmt.Errorf("parse fetched schema: %w", err)
 	}
 
-	instance, err := buildInstanceSchema(kindSchema, e)
+	instance, required, err := buildInstanceSchema(kindSchema, e)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	out, err := json.MarshalIndent(instance, "", "  ")
 	if err != nil {
-		return fmt.Errorf("marshal instance schema: %w", err)
+		return nil, fmt.Errorf("marshal instance schema: %w", err)
 	}
 	out = append(out, '\n')
 
-	return os.WriteFile(dest, out, 0o644)
+	if err := os.WriteFile(dest, out, 0o644); err != nil {
+		return nil, err
+	}
+	return required, nil
 }
 
 // generateTemplate writes templates/_generated.tpl: a "resources.render"
@@ -151,13 +163,19 @@ func generateTemplate(dir string, entries []entry) error {
 			return fmt.Errorf("entry %q is missing apiVersion/kind in CRDs.yaml", e.name)
 		}
 
-		if e.contentIsSpec {
-			fmt.Fprintf(&sb, `  {{- include "resources.generic.renderAll" (dict "rootContext" $rootContext "name" %q "apiVersion" %q "kind" %q) }}
-`, e.name, e.apiVersion, e.kind)
-		} else {
-			fmt.Fprintf(&sb, `  {{- include "resources.generic.renderAll" (dict "rootContext" $rootContext "name" %q "apiVersion" %q "kind" %q "contentIsSpec" false) }}
-`, e.name, e.apiVersion, e.kind)
+		args := []string{fmt.Sprintf(`"rootContext" $rootContext "name" %q "apiVersion" %q "kind" %q`, e.name, e.apiVersion, e.kind)}
+		if !e.contentIsSpec {
+			args = append(args, `"contentIsSpec" false`)
 		}
+		if len(e.required) > 0 {
+			quoted := make([]string, len(e.required))
+			for i, r := range e.required {
+				quoted[i] = fmt.Sprintf("%q", r)
+			}
+			args = append(args, fmt.Sprintf(`"required" (list %s)`, strings.Join(quoted, " ")))
+		}
+		fmt.Fprintf(&sb, `  {{- include "resources.generic.renderAll" (dict %s) }}
+`, strings.Join(args, " "))
 	}
 	sb.WriteString("{{- end }}\n")
 
@@ -206,13 +224,21 @@ func metadataSchemaProperties() map[string]interface{} {
 //
 // and merging in the well-known metadata fields (labels, annotations,
 // namespace, nameOverride, fullNameOverride).
-func buildInstanceSchema(kindSchema map[string]interface{}, e entry) (map[string]interface{}, error) {
+//
+// The returned schema never has a top-level "required": since
+// .Values.resources.<name>.<id> and .Values.defaultValues.<name> share this
+// exact schema (a defaultValues entry is a partial overlay and should not be
+// forced to satisfy "required" on its own), any top-level "required" found in
+// the upstream k8s schema is extracted and returned separately instead, so it
+// can be enforced on the MERGED resource via generated template validation
+// (see generateTemplate and resources.generic.requireFields).
+func buildInstanceSchema(kindSchema map[string]interface{}, e entry) (map[string]interface{}, []string, error) {
 	var instance map[string]interface{}
 	if e.contentIsSpec {
 		props, _ := kindSchema["properties"].(map[string]interface{})
 		spec, _ := props["spec"].(map[string]interface{})
 		if spec == nil {
-			return nil, fmt.Errorf("%s: expected top-level \"spec\" property in schema", e.name)
+			return nil, nil, fmt.Errorf("%s: expected top-level \"spec\" property in schema", e.name)
 		}
 		instance = spec
 	} else {
@@ -241,6 +267,16 @@ func buildInstanceSchema(kindSchema map[string]interface{}, e entry) (map[string
 		}
 	}
 
+	var required []string
+	if req, ok := instance["required"].([]interface{}); ok {
+		for _, r := range req {
+			if s, _ := r.(string); s != "" {
+				required = append(required, s)
+			}
+		}
+	}
+	delete(instance, "required")
+
 	mergedProps := map[string]interface{}{}
 	if p, ok := instance["properties"].(map[string]interface{}); ok {
 		for k, v := range p {
@@ -253,16 +289,17 @@ func buildInstanceSchema(kindSchema map[string]interface{}, e entry) (map[string
 	instance["properties"] = mergedProps
 	instance["type"] = "object"
 
-	return instance, nil
+	return instance, required, nil
 }
 
 // generateValuesSchema writes schema/values.schema.json: a JSON Schema
 // describing .Values.resources.<kind>.<id> and .Values.defaultValues.<kind>.
 // Each kind's instance schema lives in schema/resources/<name>.json (written
-// by fetchAndTransformSchema), so .Values.resources.<kind> is wired to that
-// file via "$ref". .Values.defaultValues.<kind> is wired via "$ref" to a
-// sibling schema/resources/<name>.defaults.json, which is the same schema
-// with "required" stripped, since defaults are a partial overlay.
+// by fetchAndTransformSchema) and has no top-level "required" (see
+// buildInstanceSchema), so both .Values.resources.<kind> and
+// .Values.defaultValues.<kind> can safely $ref that same single file -
+// required-field validation on the merged resource is instead generated
+// into templates/_generated.tpl (see resources.generic.requireFields).
 //
 // NOTE: this is intentionally NOT written to the chart root as
 // values.schema.json yet (Helm only auto-validates that exact path), since
@@ -270,48 +307,17 @@ func buildInstanceSchema(kindSchema map[string]interface{}, e entry) (map[string
 // here. Wiring it up as the chart's actual values.schema.json (inlining the
 // referenced schemas, or otherwise) is deferred to later.
 func generateValuesSchema(dir string, entries []entry) error {
-	resourcesDir := filepath.Join(dir, "schema", "resources")
 	resourcesProps := map[string]interface{}{}
 	defaultValuesProps := map[string]interface{}{}
 
 	for _, e := range entries {
-		schemaPath := filepath.Join(resourcesDir, e.name+".json")
-		data, err := os.ReadFile(schemaPath)
-		if err != nil {
-			return fmt.Errorf("read %s: %w", schemaPath, err)
-		}
-		var instance map[string]interface{}
-		if err := json.Unmarshal(data, &instance); err != nil {
-			return fmt.Errorf("parse %s: %w", schemaPath, err)
-		}
-
 		resourcesProps[e.name] = map[string]interface{}{
 			"type":                 "object",
 			"description":          fmt.Sprintf("%s instances, keyed by id.", e.kind),
 			"additionalProperties": map[string]interface{}{"$ref": "./resources/" + e.name + ".json"},
 		}
 
-		// Defaults are a partial overlay merged into every instance of this
-		// kind, so they shouldn't be constrained by "required". Write that
-		// variant to its own file and $ref it, rather than inlining it.
-		defaultInstance := map[string]interface{}{}
-		for k, v := range instance {
-			if k == "required" {
-				continue
-			}
-			defaultInstance[k] = v
-		}
-		defaultsOut, err := json.MarshalIndent(defaultInstance, "", "  ")
-		if err != nil {
-			return fmt.Errorf("marshal %s defaults schema: %w", e.name, err)
-		}
-		defaultsOut = append(defaultsOut, '\n')
-		defaultsDest := filepath.Join(resourcesDir, e.name+".defaults.json")
-		if err := os.WriteFile(defaultsDest, defaultsOut, 0o644); err != nil {
-			return fmt.Errorf("write %s: %w", defaultsDest, err)
-		}
-
-		defaultValuesProps[e.name] = map[string]interface{}{"$ref": "./resources/" + e.name + ".defaults.json"}
+		defaultValuesProps[e.name] = map[string]interface{}{"$ref": "./resources/" + e.name + ".json"}
 	}
 
 	schema := map[string]interface{}{

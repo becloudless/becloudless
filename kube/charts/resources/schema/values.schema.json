@@ -4,16 +4,16 @@
     "defaultValues": {
       "properties": {
         "configMaps": {
-          "$ref": "./resources/configMaps.defaults.json"
+          "$ref": "./resources/configMaps.json"
         },
         "horizontalPodAutoscalers": {
-          "$ref": "./resources/horizontalPodAutoscalers.defaults.json"
+          "$ref": "./resources/horizontalPodAutoscalers.json"
         },
         "secrets": {
-          "$ref": "./resources/secrets.defaults.json"
+          "$ref": "./resources/secrets.json"
         },
         "services": {
-          "$ref": "./resources/services.defaults.json"
+          "$ref": "./resources/services.json"
         }
       },
       "type": "object"
