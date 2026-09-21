@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// entry represents one resource kind declared in CRDs.yaml, e.g.:
+// entry represents one resource kind declared in resources.yaml, e.g.:
 //
 //	configMaps:
 //	  url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
@@ -24,15 +24,15 @@ type entry struct {
 	url           string
 	apiVersion    string
 	kind          string
-	contentIsSpec bool     // defaults to true; set contentIsSpec: false in CRDs.yaml to override
+	contentIsSpec bool     // defaults to true; set contentIsSpec: false in resources.yaml to override
 	crdVersion    string   // optional; set to fetch the schema from a CRD manifest (YAML) instead of Kubernetes' own OpenAPI v3 spec
 	component     string   // optional; set to the fully-qualified component name (e.g. io.k8s.api.core.v1.ConfigMap) to fetch from a Kubernetes OpenAPI v3 spec document at url (see fetchOpenAPIV3Schema)
 	required      []string // top-level required fields, extracted from the upstream k8s schema by stripRequiredTransform
 }
 
-// parseCRDs is a minimal parser for the restricted YAML shape used by CRDs.yaml:
+// parseCRDs is a minimal parser for the restricted YAML shape used by resources.yaml:
 //
-//	crds:
+//	resources:
 //	  <name>:
 //	    url: <value>
 //	    apiVersion: <value>
@@ -70,7 +70,7 @@ func parseCRDs(path string) ([]entry, error) {
 
 		switch {
 		case indent == 0:
-			// top-level key, e.g. "crds:" — nothing to do.
+			// top-level key, e.g. "resources:" — nothing to do.
 			continue
 		case indent == 2 && strings.HasSuffix(trimmed, ":"):
 			flush()

@@ -53,7 +53,7 @@ func fetchOpenAPIDocument(client *http.Client, url string) (map[string]interface
 // recursively resolved (inlined) against the same document's
 // components.schemas map.
 //
-// This lets CRDs.yaml treat Kubernetes' own upstream OpenAPI v3 spec as the
+// This lets resources.yaml treat Kubernetes' own upstream OpenAPI v3 spec as the
 // source of truth for built-in kinds, instead of a third-party pre-flattened
 // JSON schema mirror (e.g. yannh/kubernetes-json-schema).
 func fetchOpenAPIV3Schema(client *http.Client, url, component string) (map[string]interface{}, error) {

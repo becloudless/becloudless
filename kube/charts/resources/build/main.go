@@ -1,6 +1,6 @@
 // Command build regenerates this chart's derived artifacts
 // (schema/resources/*.json, schema/values.schema.json and
-// templates/_generated.tpl) from CRDs.yaml. Run it from the chart's root
+// templates/_generated.tpl) from resources.yaml. Run it from the chart's root
 // directory:
 //
 //	go run ./build
