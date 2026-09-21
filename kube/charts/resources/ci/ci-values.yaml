@@ -1,0 +1,24 @@
+resources:
+  configMaps:
+    labels:
+      app: genre
+      truc: bidule
+    toto:
+      data:
+        something: interesting
+  secrets:
+    labels:
+      app: genre2
+      truc: bidule2
+    titi:
+      stringData:
+        something: interesting
+  horizontalPodAutoscalers:
+    myhpa:
+      spec:
+        scaleTargetRef:
+          apiVersion: apps/v1
+          kind: Deployment
+          name: myapp
+        minReplicas: 1
+        maxReplicas: 3

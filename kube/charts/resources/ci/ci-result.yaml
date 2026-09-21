@@ -1,0 +1,32 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: labels
+stringData:
+  {}
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: titi
+stringData:
+  something: interesting
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: labels
+data:
+  {}
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: toto
+data:
+  something: interesting
