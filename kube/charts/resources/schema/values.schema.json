@@ -56,6 +56,9 @@
             "namespaces": {
               "$ref": "./resources/namespaces.json"
             },
+            "networkPolicies": {
+              "$ref": "./resources/networkPolicies.json"
+            },
             "ociRepositories": {
               "$ref": "./resources/ociRepositories.json"
             },
@@ -67,6 +70,9 @@
             },
             "podDisruptionBudgets": {
               "$ref": "./resources/podDisruptionBudgets.json"
+            },
+            "receivers": {
+              "$ref": "./resources/receivers.json"
             },
             "roleBindings": {
               "$ref": "./resources/roleBindings.json"
@@ -97,6 +103,9 @@
             },
             "statefulSets": {
               "$ref": "./resources/statefulSets.json"
+            },
+            "stringSecrets": {
+              "$ref": "./resources/stringSecrets.json"
             }
           },
           "type": "object"
@@ -225,6 +234,13 @@
           "description": "Namespace instances, keyed by id.",
           "type": "object"
         },
+        "networkPolicies": {
+          "additionalProperties": {
+            "$ref": "./resources/networkPolicies.json"
+          },
+          "description": "NetworkPolicy instances, keyed by id.",
+          "type": "object"
+        },
         "ociRepositories": {
           "additionalProperties": {
             "$ref": "./resources/ociRepositories.json"
@@ -251,6 +267,13 @@
             "$ref": "./resources/podDisruptionBudgets.json"
           },
           "description": "PodDisruptionBudget instances, keyed by id.",
+          "type": "object"
+        },
+        "receivers": {
+          "additionalProperties": {
+            "$ref": "./resources/receivers.json"
+          },
+          "description": "Receiver instances, keyed by id.",
           "type": "object"
         },
         "roleBindings": {
@@ -321,6 +344,13 @@
             "$ref": "./resources/statefulSets.json"
           },
           "description": "StatefulSet instances, keyed by id.",
+          "type": "object"
+        },
+        "stringSecrets": {
+          "additionalProperties": {
+            "$ref": "./resources/stringSecrets.json"
+          },
+          "description": "StringSecret instances, keyed by id.",
           "type": "object"
         }
       },

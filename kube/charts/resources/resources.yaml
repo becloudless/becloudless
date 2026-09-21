@@ -101,6 +101,11 @@ resources:
     component: io.k8s.api.networking.v1.Ingress
     apiVersion: networking.k8s.io/v1
     kind: Ingress
+  networkPolicies:
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__networking.k8s.io__v1_openapi.json
+    component: io.k8s.api.networking.v1.NetworkPolicy
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
   sealedSecrets:
     url: https://raw.githubusercontent.com/bitnami-labs/sealed-secrets/main/helm/sealed-secrets/crds/bitnami.com_sealedsecrets.yaml
     apiVersion: bitnami.com/v1alpha1
@@ -161,3 +166,13 @@ resources:
     apiVersion: external-secrets.io/v1
     kind: SecretStore
     crdVersion: v1
+  receivers:
+    url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_receivers.yaml
+    apiVersion: notification.toolkit.fluxcd.io/v1
+    kind: Receiver
+    crdVersion: v1
+  stringSecrets:
+    url: https://raw.githubusercontent.com/mittwald/kubernetes-secret-generator/master/deploy/crds/secretgenerator.mittwald.de_stringsecrets_crd.yaml
+    apiVersion: secretgenerator.mittwald.de/v1alpha1
+    kind: StringSecret
+    crdVersion: v1alpha1

@@ -1,0 +1,10 @@
+resources:
+  networkPolicies:
+    main:
+      policyTypes:
+        - Ingress
+      podSelector:
+        matchLabels:
+          acme.cert-manager.io/http01-solver: "true"
+      ingress:
+        - {}
