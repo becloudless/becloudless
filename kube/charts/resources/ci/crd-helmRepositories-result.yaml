@@ -1,0 +1,9 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  url: https://charts.bitnami.com/bitnami

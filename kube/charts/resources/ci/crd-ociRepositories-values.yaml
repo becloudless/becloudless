@@ -1,0 +1,7 @@
+resources:
+  ociRepositories:
+    main:
+      interval: 5m
+      url: oci://ghcr.io/stefanprodan/manifests/podinfo
+      ref:
+        tag: latest

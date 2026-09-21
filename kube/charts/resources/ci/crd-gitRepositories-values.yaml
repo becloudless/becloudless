@@ -1,0 +1,7 @@
+resources:
+  gitRepositories:
+    main:
+      interval: 5m
+      url: https://github.com/fluxcd/flux2-kustomize-helm-example
+      ref:
+        branch: main

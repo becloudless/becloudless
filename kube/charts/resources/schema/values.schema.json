@@ -21,8 +21,14 @@
         "deployments": {
           "$ref": "./resources/deployments.json"
         },
+        "gitRepositories": {
+          "$ref": "./resources/gitRepositories.json"
+        },
         "helmReleases": {
           "$ref": "./resources/helmReleases.json"
+        },
+        "helmRepositories": {
+          "$ref": "./resources/helmRepositories.json"
         },
         "horizontalPodAutoscalers": {
           "$ref": "./resources/horizontalPodAutoscalers.json"
@@ -38,6 +44,9 @@
         },
         "namespaces": {
           "$ref": "./resources/namespaces.json"
+        },
+        "ociRepositories": {
+          "$ref": "./resources/ociRepositories.json"
         },
         "persistentVolumeClaims": {
           "$ref": "./resources/persistentVolumeClaims.json"
@@ -119,11 +128,25 @@
           "description": "Deployment instances, keyed by id.",
           "type": "object"
         },
+        "gitRepositories": {
+          "additionalProperties": {
+            "$ref": "./resources/gitRepositories.json"
+          },
+          "description": "GitRepository instances, keyed by id.",
+          "type": "object"
+        },
         "helmReleases": {
           "additionalProperties": {
             "$ref": "./resources/helmReleases.json"
           },
           "description": "HelmRelease instances, keyed by id.",
+          "type": "object"
+        },
+        "helmRepositories": {
+          "additionalProperties": {
+            "$ref": "./resources/helmRepositories.json"
+          },
+          "description": "HelmRepository instances, keyed by id.",
           "type": "object"
         },
         "horizontalPodAutoscalers": {
@@ -159,6 +182,13 @@
             "$ref": "./resources/namespaces.json"
           },
           "description": "Namespace instances, keyed by id.",
+          "type": "object"
+        },
+        "ociRepositories": {
+          "additionalProperties": {
+            "$ref": "./resources/ociRepositories.json"
+          },
+          "description": "OCIRepository instances, keyed by id.",
           "type": "object"
         },
         "persistentVolumeClaims": {

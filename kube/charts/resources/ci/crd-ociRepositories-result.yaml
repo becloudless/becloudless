@@ -1,0 +1,12 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  interval: 5m
+  ref:
+    tag: latest
+  url: oci://ghcr.io/stefanprodan/manifests/podinfo

@@ -1,0 +1,12 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  interval: 5m
+  ref:
+    branch: main
+  url: https://github.com/fluxcd/flux2-kustomize-helm-example
