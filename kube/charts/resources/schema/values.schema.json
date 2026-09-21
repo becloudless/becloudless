@@ -9,6 +9,15 @@
         "horizontalPodAutoscalers": {
           "$ref": "./resources/horizontalPodAutoscalers.json"
         },
+        "namespaces": {
+          "$ref": "./resources/namespaces.json"
+        },
+        "persistentVolumeClaims": {
+          "$ref": "./resources/persistentVolumeClaims.json"
+        },
+        "persistentVolumes": {
+          "$ref": "./resources/persistentVolumes.json"
+        },
         "secrets": {
           "$ref": "./resources/secrets.json"
         },
@@ -32,6 +41,27 @@
             "$ref": "./resources/horizontalPodAutoscalers.json"
           },
           "description": "HorizontalPodAutoscaler instances, keyed by id.",
+          "type": "object"
+        },
+        "namespaces": {
+          "additionalProperties": {
+            "$ref": "./resources/namespaces.json"
+          },
+          "description": "Namespace instances, keyed by id.",
+          "type": "object"
+        },
+        "persistentVolumeClaims": {
+          "additionalProperties": {
+            "$ref": "./resources/persistentVolumeClaims.json"
+          },
+          "description": "PersistentVolumeClaim instances, keyed by id.",
+          "type": "object"
+        },
+        "persistentVolumes": {
+          "additionalProperties": {
+            "$ref": "./resources/persistentVolumes.json"
+          },
+          "description": "PersistentVolume instances, keyed by id.",
           "type": "object"
         },
         "secrets": {

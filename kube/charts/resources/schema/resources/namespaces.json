@@ -1,0 +1,46 @@
+{
+  "additionalProperties": false,
+  "description": "NamespaceSpec describes the attributes on a Namespace.",
+  "properties": {
+    "annotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "metadata.annotations for this resource.",
+      "type": "object"
+    },
+    "finalizers": {
+      "additionalProperties": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "description": "finalizers is an opaque list of values that must be empty to permanently remove object from storage. More info: https://kubernetes.io/docs/tasks/administer-cluster/namespaces/",
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "fullNameOverride": {
+      "description": "Replaces the entire computed resource name, ignoring the release name and id.",
+      "type": "string"
+    },
+    "labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "metadata.labels for this resource.",
+      "type": "object"
+    },
+    "nameOverride": {
+      "description": "Replaces just the id part of the computed resource name (\u003cRelease.Name\u003e-\u003cid\u003e).",
+      "type": "string"
+    },
+    "namespace": {
+      "description": "metadata.namespace for this resource. Defaults to the release namespace.",
+      "type": "string"
+    }
+  },
+  "type": "object"
+}

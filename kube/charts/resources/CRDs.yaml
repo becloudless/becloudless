@@ -1,9 +1,3 @@
-# contentIsSpec: false -> the resource's values are merged directly at the root
-#                         of the manifest (e.g. ConfigMap's data/binaryData).
-# contentIsSpec: true  -> the resource's values are wrapped under a `spec:` key
-#                         in the manifest (e.g. HorizontalPodAutoscaler, Service).
-#                         This is the default when contentIsSpec is omitted,
-#                         since most k8s resources use a spec: field.
 crds:
   configMaps:
     url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/configmap.json
@@ -23,3 +17,15 @@ crds:
     url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/service-v1.json
     apiVersion: v1
     kind: Service
+  persistentVolumes:
+    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/persistentvolume-v1.json
+    apiVersion: v1
+    kind: PersistentVolume
+  persistentVolumeClaims:
+    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/persistentvolumeclaim-v1.json
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+  namespaces:
+    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/namespace-v1.json
+    apiVersion: v1
+    kind: Namespace
