@@ -36,6 +36,9 @@
         "persistentVolumes": {
           "$ref": "./resources/persistentVolumes.json"
         },
+        "podDisruptionBudgets": {
+          "$ref": "./resources/podDisruptionBudgets.json"
+        },
         "roleBindings": {
           "$ref": "./resources/roleBindings.json"
         },
@@ -134,6 +137,13 @@
             "$ref": "./resources/persistentVolumes.json"
           },
           "description": "PersistentVolume instances, keyed by id.",
+          "type": "object"
+        },
+        "podDisruptionBudgets": {
+          "additionalProperties": {
+            "$ref": "./resources/podDisruptionBudgets.json"
+          },
+          "description": "PodDisruptionBudget instances, keyed by id.",
           "type": "object"
         },
         "roleBindings": {

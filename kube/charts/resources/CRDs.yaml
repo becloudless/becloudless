@@ -74,3 +74,7 @@ crds:
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRoleBinding
     contentIsSpec: false
+  podDisruptionBudgets:
+    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/poddisruptionbudget-policy-v1.json
+    apiVersion: policy/v1
+    kind: PodDisruptionBudget
