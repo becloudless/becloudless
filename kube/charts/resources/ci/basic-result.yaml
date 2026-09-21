@@ -4,9 +4,10 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: test-release-titi
-labels:
-  app: genre2
-  truc: bidule2
+  namespace: default
+  labels:
+    app: genre2
+    truc: bidule2
 stringData:
   something: interesting
 ---
@@ -15,6 +16,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: test-release
+  namespace: default
 data:
   main: cm
 ---
@@ -23,19 +25,21 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: test-release-toto
+  namespace: default
+  labels:
+    app: genre
+    truc: bidule
 binaryData:
   blob: aGVsbG8=
 data:
   something: interesting
-labels:
-  app: genre
-  truc: bidule
 ---
 # Source: resources-test/templates/loader.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: fulloverride
+  namespace: default
 spec:
   ports:
   - port: 80
@@ -48,6 +52,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: test-release-override
+  namespace: default
 spec:
   maxReplicas: 3
   minReplicas: 1

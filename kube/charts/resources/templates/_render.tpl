@@ -9,23 +9,26 @@ Params (passed as a dict):
                             root of the manifest (e.g. ConfigMap's data/binaryData)
                    true  -> the resource's values are wrapped under a `spec:`
                             key in the manifest (e.g. HorizontalPodAutoscaler, Service)
-  name         - the resource's final metadata.name (see resources.generic.computeName)
-  resource     - the resource's (already defaulted/merged) values
+  metadata     - the resource's pre-rendered `metadata:` YAML block (see
+                 resources.generic.computeMetadata)
+  resource     - the resource's (already defaulted/merged) values, with the
+                 well-known metadata fields (nameOverride, fullNameOverride,
+                 namespace, labels, annotations) already stripped out
 
-Renders exactly one manifest for the given name/resource, placing its values
-either at the root or under `spec:`, depending on `contentIsSpec`.
+Renders exactly one manifest for the given metadata/resource, placing the
+resource's values either at the root or under `spec:`, depending on
+`contentIsSpec`.
 */}}
 {{- define "resources.generic.render" }}
   {{- $apiVersion := .apiVersion }}
   {{- $kind := .kind }}
   {{- $contentIsSpec := .contentIsSpec }}
-  {{- $name := .name }}
+  {{- $metadata := .metadata }}
   {{- $resource := .resource | default dict }}
 ---
 apiVersion: {{ $apiVersion }}
 kind: {{ $kind }}
-metadata:
-  name: {{ $name }}
+{{ $metadata }}
   {{- if $contentIsSpec }}
 spec:
   {{- toYaml $resource | nindent 2 }}
