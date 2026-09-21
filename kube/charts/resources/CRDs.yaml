@@ -1,23 +1,25 @@
+# contentField: true  -> the resource's values are merged directly at the root
+#                        of the manifest (e.g. ConfigMap's data/binaryData).
+# contentField: false -> the resource's values are wrapped under a `spec:` key
+#                        in the manifest (e.g. HorizontalPodAutoscaler, Service).
 crds:
   configMaps:
     url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/configmap.json
     apiVersion: v1
     kind: ConfigMap
-    contentField:
-      - data
-      - binaryData
+    contentField: true
   secrets:
     url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/secret.json
     apiVersion: v1
     kind: Secret
-    contentField: stringData
+    contentField: true
   horizontalPodAutoscalers:
     url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/horizontalpodautoscaler-autoscaling-v2.json
     apiVersion: autoscaling/v2
     kind: HorizontalPodAutoscaler
-    contentField: spec
+    contentField: false
   services:
     url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/service-v1.json
     apiVersion: v1
     kind: Service
-    contentField: spec
+    contentField: false
