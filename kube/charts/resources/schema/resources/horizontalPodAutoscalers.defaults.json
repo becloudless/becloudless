@@ -857,9 +857,5 @@
       "type": "object"
     }
   },
-  "required": [
-    "scaleTargetRef",
-    "maxReplicas"
-  ],
   "type": "object"
 }

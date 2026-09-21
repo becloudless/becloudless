@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "properties": {
+    "defaultValues": {
+      "properties": {
+        "configMaps": {
+          "$ref": "./resources/configMaps.defaults.json"
+        },
+        "horizontalPodAutoscalers": {
+          "$ref": "./resources/horizontalPodAutoscalers.defaults.json"
+        },
+        "secrets": {
+          "$ref": "./resources/secrets.defaults.json"
+        },
+        "services": {
+          "$ref": "./resources/services.defaults.json"
+        }
+      },
+      "type": "object"
+    },
+    "resources": {
+      "properties": {
+        "configMaps": {
+          "additionalProperties": {
+            "$ref": "./resources/configMaps.json"
+          },
+          "description": "ConfigMap instances, keyed by id.",
+          "type": "object"
+        },
+        "horizontalPodAutoscalers": {
+          "additionalProperties": {
+            "$ref": "./resources/horizontalPodAutoscalers.json"
+          },
+          "description": "HorizontalPodAutoscaler instances, keyed by id.",
+          "type": "object"
+        },
+        "secrets": {
+          "additionalProperties": {
+            "$ref": "./resources/secrets.json"
+          },
+          "description": "Secret instances, keyed by id.",
+          "type": "object"
+        },
+        "services": {
+          "additionalProperties": {
+            "$ref": "./resources/services.json"
+          },
+          "description": "Service instances, keyed by id.",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "type": "object"
+}
