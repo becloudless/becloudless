@@ -1,0 +1,12 @@
+resources:
+  receivers:
+    main:
+      type: github
+      events:
+        - ping
+        - push
+      secretRef:
+        name: infra-webhook
+      resources:
+        - kind: GitRepository
+          name: infra
