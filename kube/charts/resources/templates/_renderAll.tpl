@@ -3,7 +3,10 @@
   {{- $name := .name }}
   {{- $apiVersion := .apiVersion }}
   {{- $kind := .kind }}
-  {{- $contentField := .contentField }}
+  {{- $contentIsSpec := true }}
+  {{- if hasKey . "contentIsSpec" }}
+    {{- $contentIsSpec = .contentIsSpec }}
+  {{- end }}
 
   {{- $defaultsAll := $rootContext.Values.defaultValues | default dict }}
   {{- $default := get $defaultsAll $name | default dict }}
@@ -15,6 +18,6 @@
     {{- $fullName := include "resources.generic.computeName" (dict "rootContext" $rootContext "id" $id "resource" $merged) }}
 
     {{- $cleaned := omit $merged "nameOverride" "fullNameOverride" }}
-    {{- include "resources.generic.render" (dict "apiVersion" $apiVersion "kind" $kind "contentField" $contentField "name" $fullName "resource" $cleaned) }}
+    {{- include "resources.generic.render" (dict "apiVersion" $apiVersion "kind" $kind "contentIsSpec" $contentIsSpec "name" $fullName "resource" $cleaned) }}
   {{- end }}
 {{- end }}

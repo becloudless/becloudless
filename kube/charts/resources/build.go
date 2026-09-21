@@ -16,14 +16,13 @@ import (
 //	  url: https://...configmap.json
 //	  apiVersion: v1
 //	  kind: ConfigMap
-//	  contentField: true
+//	  contentIsSpec: false
 type entry struct {
-	name            string
-	url             string
-	apiVersion      string
-	kind            string
-	contentField    bool
-	contentFieldSet bool
+	name          string
+	url           string
+	apiVersion    string
+	kind          string
+	contentIsSpec bool // defaults to true; set contentIsSpec: false in CRDs.yaml to override
 }
 
 func main() {
@@ -122,12 +121,17 @@ func generateTemplate(dir string, entries []entry) error {
   {{- $rootContext := .rootContext }}
 `)
 	for _, e := range entries {
-		if e.apiVersion == "" || e.kind == "" || !e.contentFieldSet {
-			return fmt.Errorf("entry %q is missing apiVersion/kind/contentField in CRDs.yaml", e.name)
+		if e.apiVersion == "" || e.kind == "" {
+			return fmt.Errorf("entry %q is missing apiVersion/kind in CRDs.yaml", e.name)
 		}
 
-		fmt.Fprintf(&sb, `  {{- include "resources.generic.renderAll" (dict "rootContext" $rootContext "name" %q "apiVersion" %q "kind" %q "contentField" %t) }}
-`, e.name, e.apiVersion, e.kind, e.contentField)
+		if e.contentIsSpec {
+			fmt.Fprintf(&sb, `  {{- include "resources.generic.renderAll" (dict "rootContext" $rootContext "name" %q "apiVersion" %q "kind" %q) }}
+`, e.name, e.apiVersion, e.kind)
+		} else {
+			fmt.Fprintf(&sb, `  {{- include "resources.generic.renderAll" (dict "rootContext" $rootContext "name" %q "apiVersion" %q "kind" %q "contentIsSpec" false) }}
+`, e.name, e.apiVersion, e.kind)
+		}
 	}
 	sb.WriteString("{{- end }}\n")
 
@@ -143,7 +147,7 @@ func generateTemplate(dir string, entries []entry) error {
 //	    url: <value>
 //	    apiVersion: <value>
 //	    kind: <value>
-//	    contentField: <true|false>
+//	    contentIsSpec: <true|false>   # optional, defaults to true
 //
 // It avoids pulling in a YAML dependency for this single-purpose script.
 func parseCRDs(path string) ([]entry, error) {
@@ -177,7 +181,7 @@ func parseCRDs(path string) ([]entry, error) {
 			continue
 		case indent == 2 && strings.HasSuffix(trimmed, ":"):
 			flush()
-			current = &entry{name: strings.TrimSuffix(trimmed, ":")}
+			current = &entry{name: strings.TrimSuffix(trimmed, ":"), contentIsSpec: true}
 		case indent == 4 && current != nil:
 			key, value, ok := strings.Cut(trimmed, ":")
 			if !ok {
@@ -191,9 +195,8 @@ func parseCRDs(path string) ([]entry, error) {
 				current.apiVersion = value
 			case "kind":
 				current.kind = value
-			case "contentField":
-				current.contentField = value == "true"
-				current.contentFieldSet = true
+			case "contentIsSpec":
+				current.contentIsSpec = value == "true"
 			}
 		}
 	}

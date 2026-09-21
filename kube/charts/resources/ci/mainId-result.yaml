@@ -1,0 +1,19 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-release
+data:
+  a: b
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-release
+spec:
+  ports:
+  - port: 80
+  selector:
+    app: x

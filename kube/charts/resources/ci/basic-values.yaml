@@ -29,7 +29,7 @@ resources:
       maxReplicas: 3
   services:
     myservice:
-      fullnameOverride: fulloverride
+      fullNameOverride: fulloverride
       selector:
         app: myapp
       ports:
