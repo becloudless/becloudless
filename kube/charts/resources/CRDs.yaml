@@ -127,3 +127,18 @@ crds:
     apiVersion: cert-manager.io/v1
     kind: ClusterIssuer
     crdVersion: v1
+  clusters:
+    url: https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/main/config/crd/bases/postgresql.cnpg.io_clusters.yaml
+    apiVersion: postgresql.cnpg.io/v1
+    kind: Cluster
+    crdVersion: v1
+  scheduledBackups:
+    url: https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/main/config/crd/bases/postgresql.cnpg.io_scheduledbackups.yaml
+    apiVersion: postgresql.cnpg.io/v1
+    kind: ScheduledBackup
+    crdVersion: v1
+  secretStores:
+    url: https://raw.githubusercontent.com/external-secrets/external-secrets/main/config/crds/bases/external-secrets.io_secretstores.yaml
+    apiVersion: external-secrets.io/v1
+    kind: SecretStore
+    crdVersion: v1

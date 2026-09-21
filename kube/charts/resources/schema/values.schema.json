@@ -17,6 +17,9 @@
             "clusterRoles": {
               "$ref": "./resources/clusterRoles.json"
             },
+            "clusters": {
+              "$ref": "./resources/clusters.json"
+            },
             "configMaps": {
               "$ref": "./resources/configMaps.json"
             },
@@ -74,8 +77,14 @@
             "routes": {
               "$ref": "./resources/routes.json"
             },
+            "scheduledBackups": {
+              "$ref": "./resources/scheduledBackups.json"
+            },
             "sealedSecrets": {
               "$ref": "./resources/sealedSecrets.json"
+            },
+            "secretStores": {
+              "$ref": "./resources/secretStores.json"
             },
             "secrets": {
               "$ref": "./resources/secrets.json"
@@ -123,6 +132,13 @@
             "$ref": "./resources/clusterRoles.json"
           },
           "description": "ClusterRole instances, keyed by id.",
+          "type": "object"
+        },
+        "clusters": {
+          "additionalProperties": {
+            "$ref": "./resources/clusters.json"
+          },
+          "description": "Cluster instances, keyed by id.",
           "type": "object"
         },
         "configMaps": {
@@ -258,11 +274,25 @@
           "description": "Route instances, keyed by id.",
           "type": "object"
         },
+        "scheduledBackups": {
+          "additionalProperties": {
+            "$ref": "./resources/scheduledBackups.json"
+          },
+          "description": "ScheduledBackup instances, keyed by id.",
+          "type": "object"
+        },
         "sealedSecrets": {
           "additionalProperties": {
             "$ref": "./resources/sealedSecrets.json"
           },
           "description": "SealedSecret instances, keyed by id.",
+          "type": "object"
+        },
+        "secretStores": {
+          "additionalProperties": {
+            "$ref": "./resources/secretStores.json"
+          },
+          "description": "SecretStore instances, keyed by id.",
           "type": "object"
         },
         "secrets": {
