@@ -5,6 +5,12 @@
       "properties": {
         "resources": {
           "properties": {
+            "alerts": {
+              "$ref": "./resources/alerts.json"
+            },
+            "certificateRequests": {
+              "$ref": "./resources/certificateRequests.json"
+            },
             "certificates": {
               "$ref": "./resources/certificates.json"
             },
@@ -35,6 +41,12 @@
             "deployments": {
               "$ref": "./resources/deployments.json"
             },
+            "gatewayClasses": {
+              "$ref": "./resources/gatewayClasses.json"
+            },
+            "gateways": {
+              "$ref": "./resources/gateways.json"
+            },
             "gitRepositories": {
               "$ref": "./resources/gitRepositories.json"
             },
@@ -46,6 +58,15 @@
             },
             "horizontalPodAutoscalers": {
               "$ref": "./resources/horizontalPodAutoscalers.json"
+            },
+            "httpRoutes": {
+              "$ref": "./resources/httpRoutes.json"
+            },
+            "imagePolicies": {
+              "$ref": "./resources/imagePolicies.json"
+            },
+            "imageRepositories": {
+              "$ref": "./resources/imageRepositories.json"
             },
             "ingressRouteTCPs": {
               "$ref": "./resources/ingressRouteTCPs.json"
@@ -142,6 +163,20 @@
     },
     "resources": {
       "properties": {
+        "alerts": {
+          "additionalProperties": {
+            "$ref": "./resources/alerts.json"
+          },
+          "description": "Alert instances, keyed by id.",
+          "type": "object"
+        },
+        "certificateRequests": {
+          "additionalProperties": {
+            "$ref": "./resources/certificateRequests.json"
+          },
+          "description": "CertificateRequest instances, keyed by id.",
+          "type": "object"
+        },
         "certificates": {
           "additionalProperties": {
             "$ref": "./resources/certificates.json"
@@ -212,6 +247,20 @@
           "description": "Deployment instances, keyed by id.",
           "type": "object"
         },
+        "gatewayClasses": {
+          "additionalProperties": {
+            "$ref": "./resources/gatewayClasses.json"
+          },
+          "description": "GatewayClass instances, keyed by id.",
+          "type": "object"
+        },
+        "gateways": {
+          "additionalProperties": {
+            "$ref": "./resources/gateways.json"
+          },
+          "description": "Gateway instances, keyed by id.",
+          "type": "object"
+        },
         "gitRepositories": {
           "additionalProperties": {
             "$ref": "./resources/gitRepositories.json"
@@ -238,6 +287,27 @@
             "$ref": "./resources/horizontalPodAutoscalers.json"
           },
           "description": "HorizontalPodAutoscaler instances, keyed by id.",
+          "type": "object"
+        },
+        "httpRoutes": {
+          "additionalProperties": {
+            "$ref": "./resources/httpRoutes.json"
+          },
+          "description": "HTTPRoute instances, keyed by id.",
+          "type": "object"
+        },
+        "imagePolicies": {
+          "additionalProperties": {
+            "$ref": "./resources/imagePolicies.json"
+          },
+          "description": "ImagePolicy instances, keyed by id.",
+          "type": "object"
+        },
+        "imageRepositories": {
+          "additionalProperties": {
+            "$ref": "./resources/imageRepositories.json"
+          },
+          "description": "ImageRepository instances, keyed by id.",
           "type": "object"
         },
         "ingressRouteTCPs": {

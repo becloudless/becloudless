@@ -1,0 +1,9 @@
+resources:
+  alerts:
+    main:
+      eventSeverity: info
+      eventSources:
+        - kind: GitRepository
+          name: '*'
+      providerRef:
+        name: slack

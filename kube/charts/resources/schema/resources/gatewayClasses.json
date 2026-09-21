@@ -1,0 +1,89 @@
+{
+  "additionalProperties": false,
+  "description": "Spec defines the desired state of GatewayClass.",
+  "properties": {
+    "annotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "metadata.annotations for this resource.",
+      "type": "object"
+    },
+    "controllerName": {
+      "description": "ControllerName is the name of the controller that is managing Gateways of\nthis class. The value of this field MUST be a domain prefixed path.\n\nExample: \"example.net/gateway-controller\".\n\nThis field is not mutable and cannot be empty.\n\nSupport: Core",
+      "maxLength": 253,
+      "minLength": 1,
+      "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\\/[A-Za-z0-9\\/\\-._~%!$\u0026'()*+,;=:]+$",
+      "type": "string",
+      "x-kubernetes-validations": [
+        {
+          "message": "field is immutable",
+          "rule": "self == oldSelf"
+        }
+      ]
+    },
+    "description": {
+      "description": "Description helps describe a GatewayClass with more details.",
+      "maxLength": 64,
+      "type": "string"
+    },
+    "fullNameOverride": {
+      "description": "Replaces the entire computed resource name, ignoring the release name and id.",
+      "type": "string"
+    },
+    "labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "metadata.labels for this resource.",
+      "type": "object"
+    },
+    "nameOverride": {
+      "description": "Replaces just the id part of the computed resource name (\u003cRelease.Name\u003e-\u003cid\u003e).",
+      "type": "string"
+    },
+    "namespace": {
+      "description": "metadata.namespace for this resource. Defaults to the release namespace.",
+      "type": "string"
+    },
+    "parametersRef": {
+      "additionalProperties": false,
+      "description": "ParametersRef is a reference to a resource that contains the configuration\nparameters corresponding to the GatewayClass. This is optional if the\ncontroller does not require any additional configuration.\n\nParametersRef can reference a standard Kubernetes resource, i.e. ConfigMap,\nor an implementation-specific custom resource. The resource can be\ncluster-scoped or namespace-scoped.\n\nIf the referent cannot be found, refers to an unsupported kind, or when\nthe data within that resource is malformed, the GatewayClass SHOULD be\nrejected with the \"Accepted\" status condition set to \"False\" and an\n\"InvalidParameters\" reason.\n\nA Gateway for this GatewayClass may provide its own `parametersRef`. When both are specified,\nthe merging behavior is implementation specific.\nIt is generally recommended that GatewayClass provides defaults that can be overridden by a Gateway.\n\nSupport: Implementation-specific",
+      "properties": {
+        "group": {
+          "description": "Group is the group of the referent.",
+          "maxLength": 253,
+          "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+          "type": "string"
+        },
+        "kind": {
+          "description": "Kind is kind of the referent.",
+          "maxLength": 63,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the name of the referent.",
+          "maxLength": 253,
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Namespace is the namespace of the referent.\nThis field is required when referring to a Namespace-scoped resource and\nMUST be unset when referring to a Cluster-scoped resource.",
+          "maxLength": 63,
+          "minLength": 1,
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "group",
+        "kind",
+        "name"
+      ],
+      "type": "object"
+    }
+  },
+  "type": "object"
+}

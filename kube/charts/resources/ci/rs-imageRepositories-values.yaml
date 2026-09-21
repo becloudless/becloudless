@@ -1,0 +1,5 @@
+resources:
+  imageRepositories:
+    main:
+      image: ghcr.io/example/app
+      interval: 5m

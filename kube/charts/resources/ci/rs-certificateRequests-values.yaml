@@ -1,0 +1,7 @@
+resources:
+  certificateRequests:
+    main:
+      issuerRef:
+        name: ca-issuer
+        kind: ClusterIssuer
+      request: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t

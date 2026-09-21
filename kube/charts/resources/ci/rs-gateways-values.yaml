@@ -1,0 +1,8 @@
+resources:
+  gateways:
+    main:
+      gatewayClassName: nginx
+      listeners:
+        - name: http
+          port: 80
+          protocol: HTTP

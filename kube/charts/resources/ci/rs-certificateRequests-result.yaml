@@ -1,0 +1,12 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: cert-manager.io/v1
+kind: CertificateRequest
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  issuerRef:
+    kind: ClusterIssuer
+    name: ca-issuer
+  request: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t

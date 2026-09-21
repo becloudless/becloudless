@@ -1,0 +1,15 @@
+resources:
+  httpRoutes:
+    main:
+      parentRefs:
+        - name: main-gateway
+      hostnames:
+        - example.com
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /
+          backendRefs:
+            - name: main-service
+              port: 80
