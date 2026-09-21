@@ -6,6 +6,8 @@ resources:
     toto:
       data:
         something: interesting
+      binaryData:
+        blob: aGVsbG8=
   secrets:
     labels:
       app: genre2
@@ -22,3 +24,11 @@ resources:
           name: myapp
         minReplicas: 1
         maxReplicas: 3
+  services:
+    myservice:
+      spec:
+        selector:
+          app: myapp
+        ports:
+          - port: 80
+            targetPort: 8080
