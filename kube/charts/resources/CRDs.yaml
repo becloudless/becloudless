@@ -29,3 +29,48 @@ crds:
     url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/namespace-v1.json
     apiVersion: v1
     kind: Namespace
+  deployments:
+    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/deployment-apps-v1.json
+    apiVersion: apps/v1
+    kind: Deployment
+  statefulSets:
+    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/statefulset-apps-v1.json
+    apiVersion: apps/v1
+    kind: StatefulSet
+  daemonSets:
+    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/daemonset-apps-v1.json
+    apiVersion: apps/v1
+    kind: DaemonSet
+  cronJobs:
+    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/cronjob-batch-v1.json
+    apiVersion: batch/v1
+    kind: CronJob
+  jobs:
+    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/job-batch-v1.json
+    apiVersion: batch/v1
+    kind: Job
+  serviceAccounts:
+    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/serviceaccount-v1.json
+    apiVersion: v1
+    kind: ServiceAccount
+    contentIsSpec: false
+  roles:
+    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/role-rbac-v1.json
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: Role
+    contentIsSpec: false
+  roleBindings:
+    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/rolebinding-rbac-v1.json
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    contentIsSpec: false
+  clusterRoles:
+    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/clusterrole-rbac-v1.json
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    contentIsSpec: false
+  clusterRoleBindings:
+    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/clusterrolebinding-rbac-v1.json
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    contentIsSpec: false
