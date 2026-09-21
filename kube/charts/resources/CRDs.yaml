@@ -102,3 +102,18 @@ crds:
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
     crdVersion: v1
+  gitRepositories:
+    url: https://raw.githubusercontent.com/fluxcd/source-controller/main/config/crd/bases/source.toolkit.fluxcd.io_gitrepositories.yaml
+    apiVersion: source.toolkit.fluxcd.io/v1
+    kind: GitRepository
+    crdVersion: v1
+  helmRepositories:
+    url: https://raw.githubusercontent.com/fluxcd/source-controller/main/config/crd/bases/source.toolkit.fluxcd.io_helmrepositories.yaml
+    apiVersion: source.toolkit.fluxcd.io/v1
+    kind: HelmRepository
+    crdVersion: v1
+  ociRepositories:
+    url: https://raw.githubusercontent.com/fluxcd/source-controller/main/config/crd/bases/source.toolkit.fluxcd.io_ocirepositories.yaml
+    apiVersion: source.toolkit.fluxcd.io/v1
+    kind: OCIRepository
+    crdVersion: v1

@@ -1,0 +1,4 @@
+resources:
+  helmRepositories:
+    main:
+      url: https://charts.bitnami.com/bitnami
