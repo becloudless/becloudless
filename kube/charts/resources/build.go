@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -55,6 +56,10 @@ func run() error {
 		return err
 	}
 
+	if err := generateValuesSchema(dir, entries); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -73,7 +78,7 @@ func fetchSchemas(dir string, entries []entry) error {
 		}
 		dest := filepath.Join(schemaDir, e.name+".json")
 		fmt.Printf("fetching %s -> %s\n", e.url, dest)
-		if err := fetchToFile(client, e.url, dest); err != nil {
+		if err := fetchAndTransformSchema(client, e, dest); err != nil {
 			fmt.Fprintf(os.Stderr, "  failed: %v\n", err)
 			failed = append(failed, e.name)
 			continue
@@ -86,8 +91,13 @@ func fetchSchemas(dir string, entries []entry) error {
 	return nil
 }
 
-func fetchToFile(client *http.Client, url, dest string) error {
-	resp, err := client.Get(url)
+// fetchAndTransformSchema fetches a kind's full k8s JSON schema from e.url,
+// transforms it into the instance schema used for
+// .Values.resources.<name>.<id> (see buildInstanceSchema), and writes that
+// transformed schema to dest. schema/resources/<name>.json therefore holds
+// the ready-to-use instance schema, not the raw upstream k8s schema.
+func fetchAndTransformSchema(client *http.Client, e entry, dest string) error {
+	resp, err := client.Get(e.url)
 	if err != nil {
 		return err
 	}
@@ -102,7 +112,23 @@ func fetchToFile(client *http.Client, url, dest string) error {
 		return err
 	}
 
-	return os.WriteFile(dest, body, 0o644)
+	var kindSchema map[string]interface{}
+	if err := json.Unmarshal(body, &kindSchema); err != nil {
+		return fmt.Errorf("parse fetched schema: %w", err)
+	}
+
+	instance, err := buildInstanceSchema(kindSchema, e)
+	if err != nil {
+		return err
+	}
+
+	out, err := json.MarshalIndent(instance, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal instance schema: %w", err)
+	}
+	out = append(out, '\n')
+
+	return os.WriteFile(dest, out, 0o644)
 }
 
 // generateTemplate writes templates/_generated.tpl: a "resources.render"
@@ -138,6 +164,180 @@ func generateTemplate(dir string, entries []entry) error {
 	dest := filepath.Join(templatesDir, "_generated.tpl")
 	fmt.Printf("generating %s\n", dest)
 	return os.WriteFile(dest, []byte(sb.String()), 0o644)
+}
+
+// metadataSchemaProperties are the well-known fields handled by
+// resources.generic.computeMetadata / resources.generic.computeName. They're
+// injected into every resource kind's instance schema, and take precedence
+// over any same-named property coming from the kind's own k8s JSON schema.
+func metadataSchemaProperties() map[string]interface{} {
+	return map[string]interface{}{
+		"nameOverride": map[string]interface{}{
+			"type":        "string",
+			"description": "Replaces just the id part of the computed resource name (<Release.Name>-<id>).",
+		},
+		"fullNameOverride": map[string]interface{}{
+			"type":        "string",
+			"description": "Replaces the entire computed resource name, ignoring the release name and id.",
+		},
+		"namespace": map[string]interface{}{
+			"type":        "string",
+			"description": "metadata.namespace for this resource. Defaults to the release namespace.",
+		},
+		"labels": map[string]interface{}{
+			"type":                 "object",
+			"description":          "metadata.labels for this resource.",
+			"additionalProperties": map[string]interface{}{"type": "string"},
+		},
+		"annotations": map[string]interface{}{
+			"type":                 "object",
+			"description":          "metadata.annotations for this resource.",
+			"additionalProperties": map[string]interface{}{"type": "string"},
+		},
+	}
+}
+
+// buildInstanceSchema builds the JSON schema for one entry under
+// .Values.resources.<name>.<id> (or .Values.defaultValues.<name>), by
+// extracting the relevant portion of the kind's full k8s JSON schema:
+//   - contentIsSpec: true  -> the schema's own top-level "spec" property
+//   - contentIsSpec: false -> the schema's top-level properties, minus
+//     apiVersion/kind/metadata/status
+//
+// and merging in the well-known metadata fields (labels, annotations,
+// namespace, nameOverride, fullNameOverride).
+func buildInstanceSchema(kindSchema map[string]interface{}, e entry) (map[string]interface{}, error) {
+	var instance map[string]interface{}
+	if e.contentIsSpec {
+		props, _ := kindSchema["properties"].(map[string]interface{})
+		spec, _ := props["spec"].(map[string]interface{})
+		if spec == nil {
+			return nil, fmt.Errorf("%s: expected top-level \"spec\" property in schema", e.name)
+		}
+		instance = spec
+	} else {
+		props, _ := kindSchema["properties"].(map[string]interface{})
+		contentProps := map[string]interface{}{}
+		for k, v := range props {
+			if k == "apiVersion" || k == "kind" || k == "metadata" || k == "status" {
+				continue
+			}
+			contentProps[k] = v
+		}
+		instance = map[string]interface{}{
+			"type":       "object",
+			"properties": contentProps,
+		}
+		if req, ok := kindSchema["required"].([]interface{}); ok {
+			var filtered []interface{}
+			for _, r := range req {
+				if s, _ := r.(string); s != "apiVersion" && s != "kind" && s != "metadata" && s != "status" {
+					filtered = append(filtered, r)
+				}
+			}
+			if len(filtered) > 0 {
+				instance["required"] = filtered
+			}
+		}
+	}
+
+	mergedProps := map[string]interface{}{}
+	if p, ok := instance["properties"].(map[string]interface{}); ok {
+		for k, v := range p {
+			mergedProps[k] = v
+		}
+	}
+	for k, v := range metadataSchemaProperties() {
+		mergedProps[k] = v
+	}
+	instance["properties"] = mergedProps
+	instance["type"] = "object"
+
+	return instance, nil
+}
+
+// generateValuesSchema writes schema/values.schema.json: a JSON Schema
+// describing .Values.resources.<kind>.<id> and .Values.defaultValues.<kind>.
+// Each kind's instance schema lives in schema/resources/<name>.json (written
+// by fetchAndTransformSchema), so .Values.resources.<kind> is wired to that
+// file via "$ref". .Values.defaultValues.<kind> is wired via "$ref" to a
+// sibling schema/resources/<name>.defaults.json, which is the same schema
+// with "required" stripped, since defaults are a partial overlay.
+//
+// NOTE: this is intentionally NOT written to the chart root as
+// values.schema.json yet (Helm only auto-validates that exact path), since
+// Helm's schema validator doesn't resolve cross-file "$ref" the way we need
+// here. Wiring it up as the chart's actual values.schema.json (inlining the
+// referenced schemas, or otherwise) is deferred to later.
+func generateValuesSchema(dir string, entries []entry) error {
+	resourcesDir := filepath.Join(dir, "schema", "resources")
+	resourcesProps := map[string]interface{}{}
+	defaultValuesProps := map[string]interface{}{}
+
+	for _, e := range entries {
+		schemaPath := filepath.Join(resourcesDir, e.name+".json")
+		data, err := os.ReadFile(schemaPath)
+		if err != nil {
+			return fmt.Errorf("read %s: %w", schemaPath, err)
+		}
+		var instance map[string]interface{}
+		if err := json.Unmarshal(data, &instance); err != nil {
+			return fmt.Errorf("parse %s: %w", schemaPath, err)
+		}
+
+		resourcesProps[e.name] = map[string]interface{}{
+			"type":                 "object",
+			"description":          fmt.Sprintf("%s instances, keyed by id.", e.kind),
+			"additionalProperties": map[string]interface{}{"$ref": "./resources/" + e.name + ".json"},
+		}
+
+		// Defaults are a partial overlay merged into every instance of this
+		// kind, so they shouldn't be constrained by "required". Write that
+		// variant to its own file and $ref it, rather than inlining it.
+		defaultInstance := map[string]interface{}{}
+		for k, v := range instance {
+			if k == "required" {
+				continue
+			}
+			defaultInstance[k] = v
+		}
+		defaultsOut, err := json.MarshalIndent(defaultInstance, "", "  ")
+		if err != nil {
+			return fmt.Errorf("marshal %s defaults schema: %w", e.name, err)
+		}
+		defaultsOut = append(defaultsOut, '\n')
+		defaultsDest := filepath.Join(resourcesDir, e.name+".defaults.json")
+		if err := os.WriteFile(defaultsDest, defaultsOut, 0o644); err != nil {
+			return fmt.Errorf("write %s: %w", defaultsDest, err)
+		}
+
+		defaultValuesProps[e.name] = map[string]interface{}{"$ref": "./resources/" + e.name + ".defaults.json"}
+	}
+
+	schema := map[string]interface{}{
+		"$schema": "https://json-schema.org/draft-07/schema#",
+		"type":    "object",
+		"properties": map[string]interface{}{
+			"resources": map[string]interface{}{
+				"type":       "object",
+				"properties": resourcesProps,
+			},
+			"defaultValues": map[string]interface{}{
+				"type":       "object",
+				"properties": defaultValuesProps,
+			},
+		},
+	}
+
+	out, err := json.MarshalIndent(schema, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal values.schema.json: %w", err)
+	}
+	out = append(out, '\n')
+
+	dest := filepath.Join(dir, "schema", "values.schema.json")
+	fmt.Printf("generating %s\n", dest)
+	return os.WriteFile(dest, out, 0o644)
 }
 
 // parseCRDs is a minimal parser for the restricted YAML shape used by CRDs.yaml:
