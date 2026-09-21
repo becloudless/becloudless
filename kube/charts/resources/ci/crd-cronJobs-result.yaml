@@ -1,0 +1,17 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - image: myimage:latest
+            name: myapp
+          restartPolicy: Never
+  schedule: '*/5 * * * *'

@@ -12,12 +12,19 @@ import (
 //	  apiVersion: v1
 //	  kind: ConfigMap
 //	  contentIsSpec: false
+//
+// For third-party CRDs whose schema isn't published as a plain JSON schema
+// file (e.g. bitnami's SealedSecret), url may instead point at the CRD's
+// own YAML manifest, with crdVersion set to the CRD version whose
+// spec.versions[].schema.openAPIV3Schema should be extracted and used as
+// the kind's schema (see fetchCRDManifestSchema).
 type entry struct {
 	name          string
 	url           string
 	apiVersion    string
 	kind          string
 	contentIsSpec bool     // defaults to true; set contentIsSpec: false in CRDs.yaml to override
+	crdVersion    string   // optional; set to fetch the schema from a CRD manifest (YAML) instead of a plain JSON schema file
 	required      []string // top-level required fields, extracted from the upstream k8s schema by stripRequiredTransform
 }
 
@@ -29,8 +36,10 @@ type entry struct {
 //	    apiVersion: <value>
 //	    kind: <value>
 //	    contentIsSpec: <true|false>   # optional, defaults to true
+//	    crdVersion: <value>           # optional, see entry.crdVersion
 //
-// It avoids pulling in a YAML dependency for this single-purpose script.
+// It avoids pulling in a YAML dependency for parsing this file itself
+// (gopkg.in/yaml.v3 is used elsewhere, to parse fetched CRD manifests).
 func parseCRDs(path string) ([]entry, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -78,6 +87,8 @@ func parseCRDs(path string) ([]entry, error) {
 				current.kind = value
 			case "contentIsSpec":
 				current.contentIsSpec = value == "true"
+			case "crdVersion":
+				current.crdVersion = value
 			}
 		}
 	}

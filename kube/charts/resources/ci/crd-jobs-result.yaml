@@ -1,0 +1,14 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+      - image: myimage:latest
+        name: myapp
+      restartPolicy: Never

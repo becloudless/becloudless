@@ -1,0 +1,19 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+      - image: myimage:latest
+        name: myapp

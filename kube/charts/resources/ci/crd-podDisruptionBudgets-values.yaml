@@ -1,0 +1,7 @@
+resources:
+  podDisruptionBudgets:
+    main:
+      minAvailable: 1
+      selector:
+        matchLabels:
+          app: myapp

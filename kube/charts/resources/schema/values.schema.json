@@ -21,11 +21,20 @@
         "deployments": {
           "$ref": "./resources/deployments.json"
         },
+        "helmReleases": {
+          "$ref": "./resources/helmReleases.json"
+        },
         "horizontalPodAutoscalers": {
           "$ref": "./resources/horizontalPodAutoscalers.json"
         },
+        "ingresses": {
+          "$ref": "./resources/ingresses.json"
+        },
         "jobs": {
           "$ref": "./resources/jobs.json"
+        },
+        "kustomizations": {
+          "$ref": "./resources/kustomizations.json"
         },
         "namespaces": {
           "$ref": "./resources/namespaces.json"
@@ -44,6 +53,12 @@
         },
         "roles": {
           "$ref": "./resources/roles.json"
+        },
+        "routes": {
+          "$ref": "./resources/routes.json"
+        },
+        "sealedSecrets": {
+          "$ref": "./resources/sealedSecrets.json"
         },
         "secrets": {
           "$ref": "./resources/secrets.json"
@@ -104,6 +119,13 @@
           "description": "Deployment instances, keyed by id.",
           "type": "object"
         },
+        "helmReleases": {
+          "additionalProperties": {
+            "$ref": "./resources/helmReleases.json"
+          },
+          "description": "HelmRelease instances, keyed by id.",
+          "type": "object"
+        },
         "horizontalPodAutoscalers": {
           "additionalProperties": {
             "$ref": "./resources/horizontalPodAutoscalers.json"
@@ -111,11 +133,25 @@
           "description": "HorizontalPodAutoscaler instances, keyed by id.",
           "type": "object"
         },
+        "ingresses": {
+          "additionalProperties": {
+            "$ref": "./resources/ingresses.json"
+          },
+          "description": "Ingress instances, keyed by id.",
+          "type": "object"
+        },
         "jobs": {
           "additionalProperties": {
             "$ref": "./resources/jobs.json"
           },
           "description": "Job instances, keyed by id.",
+          "type": "object"
+        },
+        "kustomizations": {
+          "additionalProperties": {
+            "$ref": "./resources/kustomizations.json"
+          },
+          "description": "Kustomization instances, keyed by id.",
           "type": "object"
         },
         "namespaces": {
@@ -158,6 +194,20 @@
             "$ref": "./resources/roles.json"
           },
           "description": "Role instances, keyed by id.",
+          "type": "object"
+        },
+        "routes": {
+          "additionalProperties": {
+            "$ref": "./resources/routes.json"
+          },
+          "description": "Route instances, keyed by id.",
+          "type": "object"
+        },
+        "sealedSecrets": {
+          "additionalProperties": {
+            "$ref": "./resources/sealedSecrets.json"
+          },
+          "description": "SealedSecret instances, keyed by id.",
           "type": "object"
         },
         "secrets": {

@@ -1,0 +1,12 @@
+resources:
+  cronJobs:
+    main:
+      schedule: "*/5 * * * *"
+      jobTemplate:
+        spec:
+          template:
+            spec:
+              restartPolicy: Never
+              containers:
+                - name: myapp
+                  image: myimage:latest

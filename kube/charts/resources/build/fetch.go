@@ -50,25 +50,37 @@ func fetchSchemas(dir string, entries []entry) error {
 // schema/resources/<name>.json therefore holds the ready-to-use instance
 // schema, not the raw upstream k8s schema. Transformers may also populate
 // e.required as a side effect (see stripRequiredTransform).
+//
+// If e.crdVersion is set, e.url is instead treated as a CRD manifest (YAML)
+// and the schema is extracted from it (see fetchCRDManifestSchema) rather
+// than parsed directly as JSON.
 func fetchAndTransformSchema(client *http.Client, e *entry, dest string) error {
-	resp, err := client.Get(e.url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status %s", resp.Status)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
 	var kindSchema map[string]interface{}
-	if err := json.Unmarshal(body, &kindSchema); err != nil {
-		return fmt.Errorf("parse fetched schema: %w", err)
+	if e.crdVersion != "" {
+		schema, err := fetchCRDManifestSchema(client, e.url, e.crdVersion)
+		if err != nil {
+			return err
+		}
+		kindSchema = schema
+	} else {
+		resp, err := client.Get(e.url)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("unexpected status %s", resp.Status)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		if err := json.Unmarshal(body, &kindSchema); err != nil {
+			return fmt.Errorf("parse fetched schema: %w", err)
+		}
 	}
 
 	instance, err := applyTransformers(defaultTransformers, kindSchema, e)

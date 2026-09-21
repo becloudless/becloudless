@@ -1,0 +1,14 @@
+resources:
+  daemonSets:
+    main:
+      selector:
+        matchLabels:
+          app: myapp
+      template:
+        metadata:
+          labels:
+            app: myapp
+        spec:
+          containers:
+            - name: myapp
+              image: myimage:latest

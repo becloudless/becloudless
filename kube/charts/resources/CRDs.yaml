@@ -78,3 +78,27 @@ crds:
     url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/poddisruptionbudget-policy-v1.json
     apiVersion: policy/v1
     kind: PodDisruptionBudget
+  ingresses:
+    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/ingress-networking-v1.json
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+  sealedSecrets:
+    url: https://raw.githubusercontent.com/bitnami-labs/sealed-secrets/main/helm/sealed-secrets/crds/bitnami.com_sealedsecrets.yaml
+    apiVersion: bitnami.com/v1alpha1
+    kind: SealedSecret
+    crdVersion: v1alpha1
+  routes:
+    url: https://raw.githubusercontent.com/openshift/api/master/route/v1/zz_generated.crd-manifests/routes.crd.yaml
+    apiVersion: route.openshift.io/v1
+    kind: Route
+    crdVersion: v1
+  helmReleases:
+    url: https://raw.githubusercontent.com/fluxcd/helm-controller/main/config/crd/bases/helm.toolkit.fluxcd.io_helmreleases.yaml
+    apiVersion: helm.toolkit.fluxcd.io/v2
+    kind: HelmRelease
+    crdVersion: v2
+  kustomizations:
+    url: https://raw.githubusercontent.com/fluxcd/kustomize-controller/main/config/crd/bases/kustomize.toolkit.fluxcd.io_kustomizations.yaml
+    apiVersion: kustomize.toolkit.fluxcd.io/v1
+    kind: Kustomization
+    crdVersion: v1

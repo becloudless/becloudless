@@ -1,0 +1,536 @@
+{
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "anyOf": [
+        {
+          "properties": {
+            "path": {
+              "maxLength": 0
+            }
+          }
+        },
+        {
+          "properties": {
+            "tls": {
+              "enum": [
+                null
+              ]
+            }
+          }
+        },
+        {
+          "not": {
+            "properties": {
+              "tls": {
+                "properties": {
+                  "termination": {
+                    "enum": [
+                      "passthrough"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "anyOf": [
+        {
+          "not": {
+            "properties": {
+              "host": {
+                "maxLength": 0
+              }
+            }
+          }
+        },
+        {
+          "not": {
+            "properties": {
+              "wildcardPolicy": {
+                "enum": [
+                  "Subdomain"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "description": "spec is the desired state of the route",
+  "properties": {
+    "alternateBackends": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "description": "RouteTargetReference specifies the target that resolve into endpoints. Only the 'Service'\nkind is allowed. Use 'weight' field to emphasize one over others.",
+        "properties": {
+          "kind": {
+            "default": "Service",
+            "description": "The kind of target that the route is referring to. Currently, only 'Service' is allowed",
+            "enum": [
+              "Service",
+              ""
+            ],
+            "type": "string"
+          },
+          "name": {
+            "description": "name of the service/target that is being referred to. e.g. name of the service",
+            "minLength": 1,
+            "type": "string"
+          },
+          "weight": {
+            "default": 100,
+            "description": "weight as an integer between 0 and 256, default 100, that specifies the target's relative weight\nagainst other target reference objects. 0 suppresses requests to this backend.",
+            "format": "int32",
+            "maximum": 256,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "name"
+        ],
+        "type": "object"
+      },
+      "description": "alternateBackends allows up to 3 additional backends to be assigned to the route.\nOnly the Service kind is allowed, and it will be defaulted to Service.\nUse the weight field in RouteTargetReference object to specify relative preference.",
+      "type": "object"
+    },
+    "annotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "metadata.annotations for this resource.",
+      "type": "object"
+    },
+    "fullNameOverride": {
+      "description": "Replaces the entire computed resource name, ignoring the release name and id.",
+      "type": "string"
+    },
+    "host": {
+      "description": "host is an alias/DNS that points to the service. Optional.\nIf not specified a route name will typically be automatically\nchosen.\nMust follow DNS952 subdomain conventions.",
+      "maxLength": 253,
+      "pattern": "^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])(\\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9]))*$",
+      "type": "string"
+    },
+    "httpHeaders": {
+      "additionalProperties": false,
+      "description": "httpHeaders defines policy for HTTP headers.",
+      "properties": {
+        "actions": {
+          "additionalProperties": false,
+          "description": "actions specifies options for modifying headers and their values.\nNote that this option only applies to cleartext HTTP connections\nand to secure HTTP connections for which the ingress controller\nterminates encryption (that is, edge-terminated or reencrypt\nconnections).  Headers cannot be modified for TLS passthrough\nconnections.\nSetting the HSTS (`Strict-Transport-Security`) header is not supported via actions.\n`Strict-Transport-Security` may only be configured using the \"haproxy.router.openshift.io/hsts_header\"\nroute annotation, and only in accordance with the policy specified in Ingress.Spec.RequiredHSTSPolicies.\nIn case of HTTP request headers, the actions specified in spec.httpHeaders.actions on the Route will be executed after\nthe actions specified in the IngressController's spec.httpHeaders.actions field.\nIn case of HTTP response headers, the actions specified in spec.httpHeaders.actions on the IngressController will be\nexecuted after the actions specified in the Route's spec.httpHeaders.actions field.\nThe headers set via this API will not appear in access logs.\nAny actions defined here are applied after any actions related to the following other fields:\ncache-control, spec.clientTLS,\nspec.httpHeaders.forwardedHeaderPolicy, spec.httpHeaders.uniqueId,\nand spec.httpHeaders.headerNameCaseAdjustments.\nThe following header names are reserved and may not be modified via this API:\nStrict-Transport-Security, Proxy, Cookie, Set-Cookie.\nNote that the total size of all net added headers *after* interpolating dynamic values\nmust not exceed the value of spec.tuningOptions.headerBufferMaxRewriteBytes on the\nIngressController. Please refer to the documentation\nfor that API field for more details.",
+          "properties": {
+            "request": {
+              "additionalProperties": {
+                "additionalProperties": false,
+                "description": "RouteHTTPHeader specifies configuration for setting or deleting an HTTP header.",
+                "properties": {
+                  "action": {
+                    "additionalProperties": false,
+                    "description": "action specifies actions to perform on headers, such as setting or deleting headers.",
+                    "properties": {
+                      "set": {
+                        "additionalProperties": false,
+                        "description": "set defines the HTTP header that should be set: added if it doesn't exist or replaced if it does.\nThis field is required when type is Set and forbidden otherwise.",
+                        "properties": {
+                          "value": {
+                            "description": "value specifies a header value.\nDynamic values can be added. The value will be interpreted as an HAProxy format string as defined in\nhttp://cbonte.github.io/haproxy-dconv/2.6/configuration.html#8.2.6 and may use HAProxy's %[] syntax and\notherwise must be a valid HTTP header value as defined in https://datatracker.ietf.org/doc/html/rfc7230#section-3.2.\nThe value of this field must be no more than 16384 characters in length.\nNote that the total size of all net added headers *after* interpolating dynamic values\nmust not exceed the value of spec.tuningOptions.headerBufferMaxRewriteBytes on the\nIngressController.",
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "value"
+                        ],
+                        "type": "object"
+                      },
+                      "type": {
+                        "description": "type defines the type of the action to be applied on the header.\nPossible values are Set or Delete.\nSet allows you to set HTTP request and response headers.\nDelete allows you to delete HTTP request and response headers.",
+                        "enum": [
+                          "Set",
+                          "Delete"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "type": "object",
+                    "x-kubernetes-validations": [
+                      {
+                        "message": "set is required when type is Set, and forbidden otherwise",
+                        "rule": "has(self.type) \u0026\u0026 self.type == 'Set' ?  has(self.set) : !has(self.set)"
+                      }
+                    ]
+                  },
+                  "name": {
+                    "description": "name specifies the name of a header on which to perform an action. Its value must be a valid HTTP header\nname as defined in RFC 2616 section 4.2.\nThe name must consist only of alphanumeric and the following special characters, \"-!#$%\u0026'*+.^_`\".\nThe following header names are reserved and may not be modified via this API:\nStrict-Transport-Security, Proxy, Cookie, Set-Cookie.\nIt must be no more than 255 characters in length.\nHeader name must be unique.",
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "pattern": "^[-!#$%\u0026'*+.0-9A-Z^_`a-z|~]+$",
+                    "type": "string",
+                    "x-kubernetes-validations": [
+                      {
+                        "message": "strict-transport-security header may not be modified via header actions",
+                        "rule": "self.lowerAscii() != 'strict-transport-security'"
+                      },
+                      {
+                        "message": "proxy header may not be modified via header actions",
+                        "rule": "self.lowerAscii() != 'proxy'"
+                      },
+                      {
+                        "message": "cookie header may not be modified via header actions",
+                        "rule": "self.lowerAscii() != 'cookie'"
+                      },
+                      {
+                        "message": "set-cookie header may not be modified via header actions",
+                        "rule": "self.lowerAscii() != 'set-cookie'"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "action",
+                  "name"
+                ],
+                "type": "object"
+              },
+              "description": "request is a list of HTTP request headers to modify.\nCurrently, actions may define to either `Set` or `Delete` headers values.\nActions defined here will modify the request headers of all requests made through a route.\nThese actions are applied to a specific Route defined within a cluster i.e. connections made through a route.\nCurrently, actions may define to either `Set` or `Delete` headers values.\nRoute actions will be executed after IngressController actions for request headers.\nActions are applied in sequence as defined in this list.\nA maximum of 20 request header actions may be configured.\nYou can use this field to specify HTTP request headers that should be set or deleted\nwhen forwarding connections from the client to your application.\nSample fetchers allowed are \"req.hdr\" and \"ssl_c_der\".\nConverters allowed are \"lower\" and \"base64\".\nExample header values: \"%[req.hdr(X-target),lower]\", \"%{+Q}[ssl_c_der,base64]\".\nAny request header configuration applied directly via a Route resource using this API\nwill override header configuration for a header of the same name applied via\nspec.httpHeaders.actions on the IngressController or route annotation.\nNote: This field cannot be used if your route uses TLS passthrough.",
+              "type": "object",
+              "x-kubernetes-validations": [
+                {
+                  "message": "Either the header value provided is not in correct format or the sample fetcher/converter specified is not allowed. The dynamic header value will be interpreted as an HAProxy format string as defined in http://cbonte.github.io/haproxy-dconv/2.6/configuration.html#8.2.6 and may use HAProxy's %[] syntax and otherwise must be a valid HTTP header value as defined in https://datatracker.ietf.org/doc/html/rfc7230#section-3.2. Sample fetchers allowed are req.hdr, ssl_c_der. Converters allowed are lower, base64.",
+                  "rule": "self.all(key, key.action.type == \"Delete\" || (has(key.action.set) \u0026\u0026 key.action.set.value.matches('^(?:%(?:%|(?:\\\\{[-+]?[QXE](?:,[-+]?[QXE])*\\\\})?\\\\[(?:req\\\\.hdr\\\\([0-9A-Za-z-]+\\\\)|ssl_c_der)(?:,(?:lower|base64))*\\\\])|[^%[:cntrl:]])+$')))"
+                }
+              ]
+            },
+            "response": {
+              "additionalProperties": {
+                "additionalProperties": false,
+                "description": "RouteHTTPHeader specifies configuration for setting or deleting an HTTP header.",
+                "properties": {
+                  "action": {
+                    "additionalProperties": false,
+                    "description": "action specifies actions to perform on headers, such as setting or deleting headers.",
+                    "properties": {
+                      "set": {
+                        "additionalProperties": false,
+                        "description": "set defines the HTTP header that should be set: added if it doesn't exist or replaced if it does.\nThis field is required when type is Set and forbidden otherwise.",
+                        "properties": {
+                          "value": {
+                            "description": "value specifies a header value.\nDynamic values can be added. The value will be interpreted as an HAProxy format string as defined in\nhttp://cbonte.github.io/haproxy-dconv/2.6/configuration.html#8.2.6 and may use HAProxy's %[] syntax and\notherwise must be a valid HTTP header value as defined in https://datatracker.ietf.org/doc/html/rfc7230#section-3.2.\nThe value of this field must be no more than 16384 characters in length.\nNote that the total size of all net added headers *after* interpolating dynamic values\nmust not exceed the value of spec.tuningOptions.headerBufferMaxRewriteBytes on the\nIngressController.",
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "value"
+                        ],
+                        "type": "object"
+                      },
+                      "type": {
+                        "description": "type defines the type of the action to be applied on the header.\nPossible values are Set or Delete.\nSet allows you to set HTTP request and response headers.\nDelete allows you to delete HTTP request and response headers.",
+                        "enum": [
+                          "Set",
+                          "Delete"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "type": "object",
+                    "x-kubernetes-validations": [
+                      {
+                        "message": "set is required when type is Set, and forbidden otherwise",
+                        "rule": "has(self.type) \u0026\u0026 self.type == 'Set' ?  has(self.set) : !has(self.set)"
+                      }
+                    ]
+                  },
+                  "name": {
+                    "description": "name specifies the name of a header on which to perform an action. Its value must be a valid HTTP header\nname as defined in RFC 2616 section 4.2.\nThe name must consist only of alphanumeric and the following special characters, \"-!#$%\u0026'*+.^_`\".\nThe following header names are reserved and may not be modified via this API:\nStrict-Transport-Security, Proxy, Cookie, Set-Cookie.\nIt must be no more than 255 characters in length.\nHeader name must be unique.",
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "pattern": "^[-!#$%\u0026'*+.0-9A-Z^_`a-z|~]+$",
+                    "type": "string",
+                    "x-kubernetes-validations": [
+                      {
+                        "message": "strict-transport-security header may not be modified via header actions",
+                        "rule": "self.lowerAscii() != 'strict-transport-security'"
+                      },
+                      {
+                        "message": "proxy header may not be modified via header actions",
+                        "rule": "self.lowerAscii() != 'proxy'"
+                      },
+                      {
+                        "message": "cookie header may not be modified via header actions",
+                        "rule": "self.lowerAscii() != 'cookie'"
+                      },
+                      {
+                        "message": "set-cookie header may not be modified via header actions",
+                        "rule": "self.lowerAscii() != 'set-cookie'"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "action",
+                  "name"
+                ],
+                "type": "object"
+              },
+              "description": "response is a list of HTTP response headers to modify.\nCurrently, actions may define to either `Set` or `Delete` headers values.\nActions defined here will modify the response headers of all requests made through a route.\nThese actions are applied to a specific Route defined within a cluster i.e. connections made through a route.\nRoute actions will be executed before IngressController actions for response headers.\nActions are applied in sequence as defined in this list.\nA maximum of 20 response header actions may be configured.\nYou can use this field to specify HTTP response headers that should be set or deleted\nwhen forwarding responses from your application to the client.\nSample fetchers allowed are \"res.hdr\" and \"ssl_c_der\".\nConverters allowed are \"lower\" and \"base64\".\nExample header values: \"%[res.hdr(X-target),lower]\", \"%{+Q}[ssl_c_der,base64]\".\nNote: This field cannot be used if your route uses TLS passthrough.",
+              "type": "object",
+              "x-kubernetes-validations": [
+                {
+                  "message": "Either the header value provided is not in correct format or the sample fetcher/converter specified is not allowed. The dynamic header value will be interpreted as an HAProxy format string as defined in http://cbonte.github.io/haproxy-dconv/2.6/configuration.html#8.2.6 and may use HAProxy's %[] syntax and otherwise must be a valid HTTP header value as defined in https://datatracker.ietf.org/doc/html/rfc7230#section-3.2. Sample fetchers allowed are res.hdr, ssl_c_der. Converters allowed are lower, base64.",
+                  "rule": "self.all(key, key.action.type == \"Delete\" || (has(key.action.set) \u0026\u0026 key.action.set.value.matches('^(?:%(?:%|(?:\\\\{[-+]?[QXE](?:,[-+]?[QXE])*\\\\})?\\\\[(?:res\\\\.hdr\\\\([0-9A-Za-z-]+\\\\)|ssl_c_der)(?:,(?:lower|base64))*\\\\])|[^%[:cntrl:]])+$')))"
+                }
+              ]
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "metadata.labels for this resource.",
+      "type": "object"
+    },
+    "nameOverride": {
+      "description": "Replaces just the id part of the computed resource name (\u003cRelease.Name\u003e-\u003cid\u003e).",
+      "type": "string"
+    },
+    "namespace": {
+      "description": "metadata.namespace for this resource. Defaults to the release namespace.",
+      "type": "string"
+    },
+    "path": {
+      "description": "path that the router watches for, to route traffic for to the service. Optional",
+      "pattern": "^/",
+      "type": "string"
+    },
+    "port": {
+      "additionalProperties": false,
+      "description": "If specified, the port to be used by the router. Most routers will use all\nendpoints exposed by the service by default - set this value to instruct routers\nwhich port to use.",
+      "properties": {
+        "targetPort": {
+          "allOf": [
+            {
+              "not": {
+                "enum": [
+                  0
+                ]
+              }
+            },
+            {
+              "not": {
+                "enum": [
+                  ""
+                ]
+              }
+            }
+          ],
+          "anyOf": null,
+          "description": "The target port on pods selected by the service this route points to. If this is a string, it will be looked up as a named port in the target endpoints port list. Required",
+          "x-kubernetes-int-or-string": true
+        }
+      },
+      "required": [
+        "targetPort"
+      ],
+      "type": "object"
+    },
+    "subdomain": {
+      "description": "subdomain is a DNS subdomain that is requested within the ingress controller's\ndomain (as a subdomain). If host is set this field is ignored. An ingress\ncontroller may choose to ignore this suggested name, in which case the controller\nwill report the assigned name in the status.ingress array or refuse to admit the\nroute. If this value is set and the server does not support this field host will\nbe populated automatically. Otherwise host is left empty. The field may have\nmultiple parts separated by a dot, but not all ingress controllers may honor\nthe request. This field may not be changed after creation except by a user with\nthe update routes/custom-host permission.\n\nExample: subdomain `frontend` automatically receives the router subdomain\n`apps.mycluster.com` to have a full hostname `frontend.apps.mycluster.com`.",
+      "maxLength": 253,
+      "pattern": "^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])(\\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9]))*$",
+      "type": "string"
+    },
+    "tls": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "properties": {
+                "caCertificate": {
+                  "maxLength": 0
+                },
+                "certificate": {
+                  "maxLength": 0
+                },
+                "destinationCACertificate": {
+                  "maxLength": 0
+                },
+                "key": {
+                  "maxLength": 0
+                }
+              }
+            },
+            {
+              "not": {
+                "properties": {
+                  "termination": {
+                    "enum": [
+                      "passthrough"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "anyOf": [
+            {
+              "properties": {
+                "destinationCACertificate": {
+                  "maxLength": 0
+                }
+              }
+            },
+            {
+              "not": {
+                "properties": {
+                  "termination": {
+                    "enum": [
+                      "edge"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "description": "The tls field provides the ability to configure certificates and termination for the route.",
+      "properties": {
+        "caCertificate": {
+          "description": "caCertificate provides the cert authority certificate contents",
+          "type": "string"
+        },
+        "certificate": {
+          "description": "certificate provides certificate contents. This should be a single serving certificate, not a certificate\nchain. Do not include a CA certificate.",
+          "type": "string"
+        },
+        "destinationCACertificate": {
+          "description": "destinationCACertificate provides the contents of the ca certificate of the final destination.  When using reencrypt\ntermination this file should be provided in order to have routers use it for health checks on the secure connection.\nIf this field is not specified, the router may provide its own destination CA and perform hostname validation using\nthe short service name (service.namespace.svc), which allows infrastructure generated certificates to automatically\nverify.",
+          "type": "string"
+        },
+        "externalCertificate": {
+          "additionalProperties": false,
+          "description": "externalCertificate provides certificate contents as a secret reference.\nThis should be a single serving certificate, not a certificate\nchain. Do not include a CA certificate. The secret referenced should\nbe present in the same namespace as that of the Route.\nForbidden when `certificate` is set.\nThe router service account needs to be granted with read-only access to this secret,\nplease refer to openshift docs for additional details.",
+          "properties": {
+            "name": {
+              "description": "name of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "x-kubernetes-map-type": "atomic"
+        },
+        "insecureEdgeTerminationPolicy": {
+          "description": "insecureEdgeTerminationPolicy indicates the desired behavior for insecure connections to a route. While\neach router may make its own decisions on which ports to expose, this is normally port 80.\n\nIf a route does not specify insecureEdgeTerminationPolicy, then the default behavior is \"None\".\n\n* Allow - traffic is sent to the server on the insecure port (edge/reencrypt terminations only).\n\n* None - no traffic is allowed on the insecure port (default).\n\n* Redirect - clients are redirected to the secure port.",
+          "enum": [
+            "Allow",
+            "None",
+            "Redirect",
+            ""
+          ],
+          "type": "string"
+        },
+        "key": {
+          "description": "key provides key file contents",
+          "type": "string"
+        },
+        "termination": {
+          "description": "termination indicates the TLS termination type.\n\n* edge - TLS termination is done by the router and http is used to communicate with the backend (default)\n\n* passthrough - Traffic is sent straight to the destination without the router providing TLS termination\n\n* reencrypt - TLS termination is done by the router and https is used to communicate with the backend\n\nNote: passthrough termination is incompatible with httpHeader actions",
+          "enum": [
+            "edge",
+            "reencrypt",
+            "passthrough"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "termination"
+      ],
+      "type": "object",
+      "x-kubernetes-validations": [
+        {
+          "message": "cannot have both spec.tls.termination: passthrough and spec.tls.insecureEdgeTerminationPolicy: Allow",
+          "rule": "has(self.termination) \u0026\u0026 has(self.insecureEdgeTerminationPolicy) ? !((self.termination=='passthrough') \u0026\u0026 (self.insecureEdgeTerminationPolicy=='Allow')) : true"
+        },
+        {
+          "message": "cannot have both spec.tls.certificate and spec.tls.externalCertificate",
+          "rule": "!(has(self.certificate) \u0026\u0026 has(self.externalCertificate))"
+        }
+      ]
+    },
+    "to": {
+      "additionalProperties": false,
+      "description": "to is an object the route should use as the primary backend. Only the Service kind\nis allowed, and it will be defaulted to Service. If the weight field (0-256 default 100)\nis set to zero, no traffic will be sent to this backend.",
+      "properties": {
+        "kind": {
+          "default": "Service",
+          "description": "The kind of target that the route is referring to. Currently, only 'Service' is allowed",
+          "enum": [
+            "Service",
+            ""
+          ],
+          "type": "string"
+        },
+        "name": {
+          "description": "name of the service/target that is being referred to. e.g. name of the service",
+          "minLength": 1,
+          "type": "string"
+        },
+        "weight": {
+          "default": 100,
+          "description": "weight as an integer between 0 and 256, default 100, that specifies the target's relative weight\nagainst other target reference objects. 0 suppresses requests to this backend.",
+          "format": "int32",
+          "maximum": 256,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "name"
+      ],
+      "type": "object"
+    },
+    "wildcardPolicy": {
+      "default": "None",
+      "description": "Wildcard policy if any for the route.\nCurrently only 'Subdomain' or 'None' is allowed.",
+      "enum": [
+        "None",
+        "Subdomain",
+        ""
+      ],
+      "type": "string"
+    }
+  },
+  "type": "object",
+  "x-kubernetes-validations": [
+    {
+      "message": "header actions are not permitted when tls termination is passthrough.",
+      "rule": "!has(self.tls) || self.tls.termination != 'passthrough' || !has(self.httpHeaders)"
+    }
+  ]
+}

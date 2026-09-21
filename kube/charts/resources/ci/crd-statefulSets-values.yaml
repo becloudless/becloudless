@@ -1,0 +1,15 @@
+resources:
+  statefulSets:
+    main:
+      serviceName: myapp
+      selector:
+        matchLabels:
+          app: myapp
+      template:
+        metadata:
+          labels:
+            app: myapp
+        spec:
+          containers:
+            - name: myapp
+              image: myimage:latest
