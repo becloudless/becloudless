@@ -1,0 +1,148 @@
+{
+  "additionalProperties": false,
+  "description": "ImagePolicySpec defines the parameters for calculating the\nImagePolicy.",
+  "properties": {
+    "annotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "metadata.annotations for this resource.",
+      "type": "object"
+    },
+    "digestReflectionPolicy": {
+      "default": "Never",
+      "description": "DigestReflectionPolicy governs the setting of the `.status.latestRef.digest` field.\n\nNever: The digest field will always be set to the empty string.\n\nIfNotPresent: The digest field will be set to the digest of the elected\nlatest image if the field is empty and the image did not change.\n\nAlways: The digest field will always be set to the digest of the elected\nlatest image.\n\nDefault: Never.",
+      "enum": [
+        "Always",
+        "IfNotPresent",
+        "Never"
+      ],
+      "type": "string"
+    },
+    "filterTags": {
+      "additionalProperties": false,
+      "description": "FilterTags enables filtering for only a subset of tags based on a set of\nrules. If no rules are provided, all the tags from the repository will be\nordered and compared.",
+      "properties": {
+        "extract": {
+          "description": "Extract allows a capture group to be extracted from the specified regular\nexpression pattern, useful before tag evaluation.",
+          "type": "string"
+        },
+        "pattern": {
+          "description": "Pattern specifies a regular expression pattern used to filter for image\ntags.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "fullNameOverride": {
+      "description": "Replaces the entire computed resource name, ignoring the release name and id.",
+      "type": "string"
+    },
+    "imageRepositoryRef": {
+      "additionalProperties": false,
+      "description": "ImageRepositoryRef points at the object specifying the image\nbeing scanned",
+      "properties": {
+        "name": {
+          "description": "Name of the referent.",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Namespace of the referent, when not specified it acts as LocalObjectReference.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "interval": {
+      "description": "Interval is the length of time to wait between\nrefreshing the digest of the latest tag when the\nreflection policy is set to \"Always\".\n\nDefaults to 10m.",
+      "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$",
+      "type": "string"
+    },
+    "labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "metadata.labels for this resource.",
+      "type": "object"
+    },
+    "nameOverride": {
+      "description": "Replaces just the id part of the computed resource name (\u003cRelease.Name\u003e-\u003cid\u003e).",
+      "type": "string"
+    },
+    "namespace": {
+      "description": "metadata.namespace for this resource. Defaults to the release namespace.",
+      "type": "string"
+    },
+    "policy": {
+      "additionalProperties": false,
+      "description": "Policy gives the particulars of the policy to be followed in\nselecting the most recent image",
+      "properties": {
+        "alphabetical": {
+          "additionalProperties": false,
+          "description": "Alphabetical set of rules to use for alphabetical ordering of the tags.",
+          "properties": {
+            "order": {
+              "default": "asc",
+              "description": "Order specifies the sorting order of the tags. Given the letters of the\nalphabet as tags, ascending order would select Z, and descending order\nwould select A.",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "numerical": {
+          "additionalProperties": false,
+          "description": "Numerical set of rules to use for numerical ordering of the tags.",
+          "properties": {
+            "order": {
+              "default": "asc",
+              "description": "Order specifies the sorting order of the tags. Given the integer values\nfrom 0 to 9 as tags, ascending order would select 9, and descending order\nwould select 0.",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "semver": {
+          "additionalProperties": false,
+          "description": "SemVer gives a semantic version range to check against the tags\navailable.",
+          "properties": {
+            "range": {
+              "description": "Range gives a semver range for the image tag; the highest\nversion within the range that's a tag yields the latest image.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "range"
+          ],
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "suspend": {
+      "description": "This flag tells the controller to suspend subsequent policy reconciliations.\nIt does not apply to already started reconciliations. Defaults to false.",
+      "type": "boolean"
+    }
+  },
+  "type": "object",
+  "x-kubernetes-validations": [
+    {
+      "message": "spec.interval is only accepted when spec.digestReflectionPolicy is set to 'Always'",
+      "rule": "!has(self.interval) || (has(self.digestReflectionPolicy) \u0026\u0026 self.digestReflectionPolicy == 'Always')"
+    },
+    {
+      "message": "spec.interval must be set when spec.digestReflectionPolicy is set to 'Always'",
+      "rule": "has(self.interval) || !has(self.digestReflectionPolicy) || self.digestReflectionPolicy != 'Always'"
+    }
+  ]
+}

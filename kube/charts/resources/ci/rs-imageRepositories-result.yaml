@@ -1,0 +1,10 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  image: ghcr.io/example/app
+  interval: 5m

@@ -106,6 +106,21 @@ resources:
     component: io.k8s.api.networking.v1.NetworkPolicy
     apiVersion: networking.k8s.io/v1
     kind: NetworkPolicy
+  gateways:
+    url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_gateways.yaml
+    apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    crdVersion: v1
+  gatewayClasses:
+    url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_gatewayclasses.yaml
+    apiVersion: gateway.networking.k8s.io/v1
+    kind: GatewayClass
+    crdVersion: v1
+  httpRoutes:
+    url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml
+    apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    crdVersion: v1
   storageClasses:
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__storage.k8s.io__v1_openapi.json
     component: io.k8s.api.storage.v1.StorageClass
@@ -169,10 +184,25 @@ resources:
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: OCIRepository
     crdVersion: v1
+  imageRepositories:
+    url: https://raw.githubusercontent.com/fluxcd/image-reflector-controller/main/config/crd/bases/image.toolkit.fluxcd.io_imagerepositories.yaml
+    apiVersion: image.toolkit.fluxcd.io/v1
+    kind: ImageRepository
+    crdVersion: v1
+  imagePolicies:
+    url: https://raw.githubusercontent.com/fluxcd/image-reflector-controller/main/config/crd/bases/image.toolkit.fluxcd.io_imagepolicies.yaml
+    apiVersion: image.toolkit.fluxcd.io/v1
+    kind: ImagePolicy
+    crdVersion: v1
   certificates:
     url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_certificates.yaml
     apiVersion: cert-manager.io/v1
     kind: Certificate
+    crdVersion: v1
+  certificateRequests:
+    url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_certificaterequests.yaml
+    apiVersion: cert-manager.io/v1
+    kind: CertificateRequest
     crdVersion: v1
   issuers:
     url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_issuers.yaml
@@ -199,6 +229,11 @@ resources:
     apiVersion: external-secrets.io/v1
     kind: SecretStore
     crdVersion: v1
+  alerts:
+    url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_alerts.yaml
+    apiVersion: notification.toolkit.fluxcd.io/v1beta3
+    kind: Alert
+    crdVersion: v1beta3
   receivers:
     url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_receivers.yaml
     apiVersion: notification.toolkit.fluxcd.io/v1

@@ -1,0 +1,8 @@
+resources:
+  imagePolicies:
+    main:
+      imageRepositoryRef:
+        name: main
+      policy:
+        semver:
+          range: ">=1.0.0"

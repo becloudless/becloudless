@@ -1,0 +1,4 @@
+resources:
+  gatewayClasses:
+    main:
+      controllerName: example.com/gateway-controller
