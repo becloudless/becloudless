@@ -19,7 +19,7 @@ import (
 //	      schema:
 //	        openAPIV3Schema: { ... }  # this is what's returned
 //
-// This lets CRDs.yaml reference third-party CRDs (e.g. bitnami's
+// This lets resources.yaml reference third-party CRDs (e.g. bitnami's
 // SealedSecret, or flux's HelmRelease/Kustomization) whose schema is only
 // published as part of their own CRD manifest, rather than as a standalone
 // JSON schema file like the built-in k8s kinds fetched from

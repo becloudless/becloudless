@@ -1,4 +1,4 @@
-crds:
+resources:
   configMaps:
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
     component: io.k8s.api.core.v1.ConfigMap
