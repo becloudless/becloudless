@@ -10,9 +10,9 @@ package main
 // Transformers may mutate e (e.g. to record required fields, see
 // stripRequiredTransform) since schema/resources/<name>.json itself never
 // declares a top-level "required": .Values.resources.<kind>.<id> and
-// .Values.defaultValues.<kind> intentionally share this exact schema, and
-// "required" is instead enforced at render time on the merged resource (see
-// templates/_requireFields.tpl and generateTemplate).
+// .Values.defaults.resources.<kind> intentionally share this exact schema,
+// and "required" is instead enforced at render time on the merged resource
+// (see templates/_requireFields.tpl and generateTemplate).
 type Transformer interface {
 	Transform(schema map[string]interface{}, e *entry) (map[string]interface{}, error)
 }

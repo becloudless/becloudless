@@ -1,18 +1,19 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
-suite: defaultValues merging per kind
+suite: defaults merging per kind
 templates:
   - loader.yaml
 release:
   name: test-release
   namespace: default
 tests:
-  - it: applies defaultValues.<kind> when the resource does not set the field itself
+  - it: applies defaults.resources.<kind> when the resource does not set the field itself
     set:
-      defaultValues:
-        configMaps:
-          labels:
-            app: shared-default
-            team: platform
+      defaults:
+        resources:
+          configMaps:
+            labels:
+              app: shared-default
+              team: platform
       resources:
         configMaps:
           usesDefaultOnly:
@@ -27,11 +28,12 @@ tests:
 
   - it: lets the resource's own field override the default for that same key
     set:
-      defaultValues:
-        configMaps:
-          labels:
-            app: shared-default
-            team: platform
+      defaults:
+        resources:
+          configMaps:
+            labels:
+              app: shared-default
+              team: platform
       resources:
         configMaps:
           overridesDefault:

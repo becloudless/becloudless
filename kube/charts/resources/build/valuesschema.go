@@ -8,11 +8,11 @@ import (
 )
 
 // generateValuesSchema writes schema/values.schema.json: a JSON Schema
-// describing .Values.resources.<kind>.<id> and .Values.defaultValues.<kind>.
+// describing .Values.resources.<kind>.<id> and .Values.defaults.resources.<kind>.
 // Each kind's instance schema lives in schema/resources/<name>.json (written
 // by fetchAndTransformSchema) and has no top-level "required" (see
 // stripRequiredTransform), so both .Values.resources.<kind> and
-// .Values.defaultValues.<kind> can safely $ref that same single file -
+// .Values.defaults.resources.<kind> can safely $ref that same single file -
 // required-field validation on the merged resource is instead generated
 // into templates/_generated.tpl (see resources.generic.requireFields).
 //
@@ -23,7 +23,7 @@ import (
 // referenced schemas, or otherwise) is deferred to later.
 func generateValuesSchema(dir string, entries []entry) error {
 	resourcesProps := map[string]interface{}{}
-	defaultValuesProps := map[string]interface{}{}
+	defaultsResourcesProps := map[string]interface{}{}
 
 	for _, e := range entries {
 		resourcesProps[e.name] = map[string]interface{}{
@@ -32,7 +32,7 @@ func generateValuesSchema(dir string, entries []entry) error {
 			"additionalProperties": map[string]interface{}{"$ref": "./resources/" + e.name + ".json"},
 		}
 
-		defaultValuesProps[e.name] = map[string]interface{}{"$ref": "./resources/" + e.name + ".json"}
+		defaultsResourcesProps[e.name] = map[string]interface{}{"$ref": "./resources/" + e.name + ".json"}
 	}
 
 	schema := map[string]interface{}{
@@ -43,9 +43,14 @@ func generateValuesSchema(dir string, entries []entry) error {
 				"type":       "object",
 				"properties": resourcesProps,
 			},
-			"defaultValues": map[string]interface{}{
-				"type":       "object",
-				"properties": defaultValuesProps,
+			"defaults": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"resources": map[string]interface{}{
+						"type":       "object",
+						"properties": defaultsResourcesProps,
+					},
+				},
 			},
 		},
 	}

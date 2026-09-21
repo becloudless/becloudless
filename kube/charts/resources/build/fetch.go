@@ -46,7 +46,7 @@ func fetchSchemas(dir string, entries []entry) error {
 // fetchAndTransformSchema fetches a kind's full k8s JSON schema from e.url
 // and runs it through the transformer pipeline (see transform.go) to produce
 // the instance schema used for .Values.resources.<name>.<id> (and shared,
-// as-is, by .Values.defaultValues.<name>), writing the result to dest.
+// as-is, by .Values.defaults.resources.<name>), writing the result to dest.
 // schema/resources/<name>.json therefore holds the ready-to-use instance
 // schema, not the raw upstream k8s schema. Transformers may also populate
 // e.required as a side effect (see stripRequiredTransform).

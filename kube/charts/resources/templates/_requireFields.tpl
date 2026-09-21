@@ -3,12 +3,12 @@ Validates that a resource's (already defaulted/merged) values contain every
 field listed as required by the kind's upstream k8s JSON schema.
 
 This exists because .Values.resources.<kind>.<id> and
-.Values.defaultValues.<kind> intentionally share the exact same JSON schema
-(see schema/resources/<kind>.json), which never declares a top-level
-"required": a defaultValues entry is only a partial overlay and shouldn't be
-forced to satisfy "required" on its own. Instead, "required" is enforced here,
-at render time, against the MERGED resource (resource merged with
-defaultValues.<kind>).
+.Values.defaults.resources.<kind> intentionally share the exact same JSON
+schema (see schema/resources/<kind>.json), which never declares a top-level
+"required": a defaults.resources entry is only a partial overlay and
+shouldn't be forced to satisfy "required" on its own. Instead, "required" is
+enforced here, at render time, against the MERGED resource (resource merged
+with defaults.resources.<kind>).
 
 Params (passed as a dict):
   name     - the resource kind's name (e.g. "horizontalPodAutoscalers"), used
