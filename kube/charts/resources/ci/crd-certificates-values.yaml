@@ -1,0 +1,9 @@
+resources:
+  certificates:
+    main:
+      secretName: myapp-tls
+      issuerRef:
+        name: letsencrypt-prod
+        kind: ClusterIssuer
+      dnsNames:
+        - myapp.example.com

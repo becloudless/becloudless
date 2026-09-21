@@ -72,4 +72,3 @@ func fetchCRDManifestSchema(client *http.Client, url, crdVersion string) (map[st
 
 	return nil, fmt.Errorf("CRD manifest %s: no version %q found in any document's spec.versions", url, crdVersion)
 }
-
