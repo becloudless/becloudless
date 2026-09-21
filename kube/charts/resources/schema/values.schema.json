@@ -5,6 +5,12 @@
       "properties": {
         "resources": {
           "properties": {
+            "certificates": {
+              "$ref": "./resources/certificates.json"
+            },
+            "clusterIssuers": {
+              "$ref": "./resources/clusterIssuers.json"
+            },
             "clusterRoleBindings": {
               "$ref": "./resources/clusterRoleBindings.json"
             },
@@ -91,6 +97,20 @@
     },
     "resources": {
       "properties": {
+        "certificates": {
+          "additionalProperties": {
+            "$ref": "./resources/certificates.json"
+          },
+          "description": "Certificate instances, keyed by id.",
+          "type": "object"
+        },
+        "clusterIssuers": {
+          "additionalProperties": {
+            "$ref": "./resources/clusterIssuers.json"
+          },
+          "description": "ClusterIssuer instances, keyed by id.",
+          "type": "object"
+        },
         "clusterRoleBindings": {
           "additionalProperties": {
             "$ref": "./resources/clusterRoleBindings.json"

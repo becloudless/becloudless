@@ -117,3 +117,13 @@ crds:
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: OCIRepository
     crdVersion: v1
+  certificates:
+    url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_certificates.yaml
+    apiVersion: cert-manager.io/v1
+    kind: Certificate
+    crdVersion: v1
+  clusterIssuers:
+    url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_clusterissuers.yaml
+    apiVersion: cert-manager.io/v1
+    kind: ClusterIssuer
+    crdVersion: v1
