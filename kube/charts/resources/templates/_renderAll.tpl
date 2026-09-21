@@ -15,9 +15,8 @@
   {{- range $id, $resource := (get $resourcesAll $name | default dict) }}
     {{- $merged := merge ($resource | default dict) $default }}
 
-    {{- $fullName := include "resources.generic.computeName" (dict "rootContext" $rootContext "id" $id "resource" $merged) }}
-
-    {{- $cleaned := omit $merged "nameOverride" "fullNameOverride" }}
-    {{- include "resources.generic.render" (dict "apiVersion" $apiVersion "kind" $kind "contentIsSpec" $contentIsSpec "name" $fullName "resource" $cleaned) }}
+    {{- $metadata := include "resources.generic.computeMetadata" (dict "rootContext" $rootContext "id" $id "resource" $merged) | trim }}
+    {{- $cleaned := omit $merged "nameOverride" "fullNameOverride" "namespace" "labels" "annotations" }}
+    {{- include "resources.generic.render" (dict "apiVersion" $apiVersion "kind" $kind "contentIsSpec" $contentIsSpec "metadata" $metadata "resource" $cleaned) }}
   {{- end }}
 {{- end }}
