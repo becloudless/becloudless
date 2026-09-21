@@ -31,17 +31,21 @@ func (f TransformerFunc) Transform(schema map[string]interface{}, e *entry) (map
 //     the upstream schema (either the "spec" property, or the top-level
 //     properties minus apiVersion/kind/metadata/status), depending on
 //     e.contentIsSpec.
-//  2. stripRequiredTransform              - moves the top-level "required"
+//  2. flattenAllOfTransform               - collapses "allOf" nodes (as
+//     produced by resolving $ref pointers from Kubernetes' OpenAPI v3 spec,
+//     see fetchOpenAPIV3Schema) into flat object schemas.
+//  3. stripRequiredTransform              - moves the top-level "required"
 //     list out of the schema and into e.required.
-//  3. mergeMetadataTransform              - merges in the well-known
+//  4. mergeMetadataTransform              - merges in the well-known
 //     metadata fields (nameOverride, fullNameOverride, namespace, labels,
 //     annotations).
-//  4. arraysToMapsTransform               - recursively converts array-type
+//  5. arraysToMapsTransform               - recursively converts array-type
 //     schema nodes into maps keyed by an arbitrary string id.
-//  5. additionalPropertiesFalseTransform  - recursively closes every
+//  6. additionalPropertiesFalseTransform  - recursively closes every
 //     structured object node against unknown properties.
 var defaultTransformers = []Transformer{
 	TransformerFunc(extractContentTransform),
+	TransformerFunc(flattenAllOfTransform),
 	TransformerFunc(stripRequiredTransform),
 	TransformerFunc(mergeMetadataTransform),
 	TransformerFunc(arraysToMapsTransform),

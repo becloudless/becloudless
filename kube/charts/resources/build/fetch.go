@@ -53,16 +53,26 @@ func fetchSchemas(dir string, entries []entry) error {
 //
 // If e.crdVersion is set, e.url is instead treated as a CRD manifest (YAML)
 // and the schema is extracted from it (see fetchCRDManifestSchema) rather
-// than parsed directly as JSON.
+// than parsed directly as JSON. Otherwise, if e.component is set, e.url is
+// treated as a Kubernetes OpenAPI v3 spec document and the schema is
+// extracted (with $ref pointers resolved) from it (see
+// fetchOpenAPIV3Schema).
 func fetchAndTransformSchema(client *http.Client, e *entry, dest string) error {
 	var kindSchema map[string]interface{}
-	if e.crdVersion != "" {
+	switch {
+	case e.crdVersion != "":
 		schema, err := fetchCRDManifestSchema(client, e.url, e.crdVersion)
 		if err != nil {
 			return err
 		}
 		kindSchema = schema
-	} else {
+	case e.component != "":
+		schema, err := fetchOpenAPIV3Schema(client, e.url, e.component)
+		if err != nil {
+			return err
+		}
+		kindSchema = schema
+	default:
 		resp, err := client.Get(e.url)
 		if err != nil {
 			return err

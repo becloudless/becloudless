@@ -8,23 +8,25 @@ import (
 // entry represents one resource kind declared in CRDs.yaml, e.g.:
 //
 //	configMaps:
-//	  url: https://...configmap.json
+//	  url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
+//	  component: io.k8s.api.core.v1.ConfigMap
 //	  apiVersion: v1
 //	  kind: ConfigMap
 //	  contentIsSpec: false
 //
-// For third-party CRDs whose schema isn't published as a plain JSON schema
-// file (e.g. bitnami's SealedSecret), url may instead point at the CRD's
-// own YAML manifest, with crdVersion set to the CRD version whose
-// spec.versions[].schema.openAPIV3Schema should be extracted and used as
-// the kind's schema (see fetchCRDManifestSchema).
+// For third-party CRDs whose schema isn't published as part of Kubernetes'
+// own OpenAPI v3 spec (e.g. bitnami's SealedSecret), url may instead point
+// at the CRD's own YAML manifest, with crdVersion set to the CRD version
+// whose spec.versions[].schema.openAPIV3Schema should be extracted and used
+// as the kind's schema (see fetchCRDManifestSchema).
 type entry struct {
 	name          string
 	url           string
 	apiVersion    string
 	kind          string
 	contentIsSpec bool     // defaults to true; set contentIsSpec: false in CRDs.yaml to override
-	crdVersion    string   // optional; set to fetch the schema from a CRD manifest (YAML) instead of a plain JSON schema file
+	crdVersion    string   // optional; set to fetch the schema from a CRD manifest (YAML) instead of Kubernetes' own OpenAPI v3 spec
+	component     string   // optional; set to the fully-qualified component name (e.g. io.k8s.api.core.v1.ConfigMap) to fetch from a Kubernetes OpenAPI v3 spec document at url (see fetchOpenAPIV3Schema)
 	required      []string // top-level required fields, extracted from the upstream k8s schema by stripRequiredTransform
 }
 
@@ -37,6 +39,7 @@ type entry struct {
 //	    kind: <value>
 //	    contentIsSpec: <true|false>   # optional, defaults to true
 //	    crdVersion: <value>           # optional, see entry.crdVersion
+//	    component: <value>            # optional, see entry.component
 //
 // It avoids pulling in a YAML dependency for parsing this file itself
 // (gopkg.in/yaml.v3 is used elsewhere, to parse fetched CRD manifests).
@@ -89,6 +92,8 @@ func parseCRDs(path string) ([]entry, error) {
 				current.contentIsSpec = value == "true"
 			case "crdVersion":
 				current.crdVersion = value
+			case "component":
+				current.component = value
 			}
 		}
 	}

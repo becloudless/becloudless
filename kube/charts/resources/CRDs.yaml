@@ -1,85 +1,104 @@
 crds:
   configMaps:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/configmap.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
+    component: io.k8s.api.core.v1.ConfigMap
     apiVersion: v1
     kind: ConfigMap
     contentIsSpec: false
   secrets:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/secret.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
+    component: io.k8s.api.core.v1.Secret
     apiVersion: v1
     kind: Secret
     contentIsSpec: false
   horizontalPodAutoscalers:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/horizontalpodautoscaler-autoscaling-v2.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__autoscaling__v2_openapi.json
+    component: io.k8s.api.autoscaling.v2.HorizontalPodAutoscaler
     apiVersion: autoscaling/v2
     kind: HorizontalPodAutoscaler
   services:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/service-v1.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
+    component: io.k8s.api.core.v1.Service
     apiVersion: v1
     kind: Service
   persistentVolumes:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/persistentvolume-v1.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
+    component: io.k8s.api.core.v1.PersistentVolume
     apiVersion: v1
     kind: PersistentVolume
   persistentVolumeClaims:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/persistentvolumeclaim-v1.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
+    component: io.k8s.api.core.v1.PersistentVolumeClaim
     apiVersion: v1
     kind: PersistentVolumeClaim
   namespaces:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/namespace-v1.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
+    component: io.k8s.api.core.v1.Namespace
     apiVersion: v1
     kind: Namespace
   deployments:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/deployment-apps-v1.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__apps__v1_openapi.json
+    component: io.k8s.api.apps.v1.Deployment
     apiVersion: apps/v1
     kind: Deployment
   statefulSets:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/statefulset-apps-v1.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__apps__v1_openapi.json
+    component: io.k8s.api.apps.v1.StatefulSet
     apiVersion: apps/v1
     kind: StatefulSet
   daemonSets:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/daemonset-apps-v1.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__apps__v1_openapi.json
+    component: io.k8s.api.apps.v1.DaemonSet
     apiVersion: apps/v1
     kind: DaemonSet
   cronJobs:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/cronjob-batch-v1.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__batch__v1_openapi.json
+    component: io.k8s.api.batch.v1.CronJob
     apiVersion: batch/v1
     kind: CronJob
   jobs:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/job-batch-v1.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__batch__v1_openapi.json
+    component: io.k8s.api.batch.v1.Job
     apiVersion: batch/v1
     kind: Job
   serviceAccounts:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/serviceaccount-v1.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
+    component: io.k8s.api.core.v1.ServiceAccount
     apiVersion: v1
     kind: ServiceAccount
     contentIsSpec: false
   roles:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/role-rbac-v1.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
+    component: io.k8s.api.rbac.v1.Role
     apiVersion: rbac.authorization.k8s.io/v1
     kind: Role
     contentIsSpec: false
   roleBindings:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/rolebinding-rbac-v1.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
+    component: io.k8s.api.rbac.v1.RoleBinding
     apiVersion: rbac.authorization.k8s.io/v1
     kind: RoleBinding
     contentIsSpec: false
   clusterRoles:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/clusterrole-rbac-v1.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
+    component: io.k8s.api.rbac.v1.ClusterRole
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRole
     contentIsSpec: false
   clusterRoleBindings:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/clusterrolebinding-rbac-v1.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
+    component: io.k8s.api.rbac.v1.ClusterRoleBinding
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRoleBinding
     contentIsSpec: false
   podDisruptionBudgets:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/poddisruptionbudget-policy-v1.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__policy__v1_openapi.json
+    component: io.k8s.api.policy.v1.PodDisruptionBudget
     apiVersion: policy/v1
     kind: PodDisruptionBudget
   ingresses:
-    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/ingress-networking-v1.json
+    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__networking.k8s.io__v1_openapi.json
+    component: io.k8s.api.networking.v1.Ingress
     apiVersion: networking.k8s.io/v1
     kind: Ingress
   sealedSecrets:

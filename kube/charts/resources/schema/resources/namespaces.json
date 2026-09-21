@@ -1,6 +1,7 @@
 {
   "additionalProperties": false,
-  "description": "NamespaceSpec describes the attributes on a Namespace.",
+  "default": {},
+  "description": "spec defines the behavior of the Namespace. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
   "properties": {
     "annotations": {
       "additionalProperties": {
@@ -11,16 +12,10 @@
     },
     "finalizers": {
       "additionalProperties": {
-        "type": [
-          "string",
-          "null"
-        ]
+        "type": "string"
       },
       "description": "finalizers is an opaque list of values that must be empty to permanently remove object from storage. More info: https://kubernetes.io/docs/tasks/administer-cluster/namespaces/",
-      "type": [
-        "object",
-        "null"
-      ]
+      "type": "object"
     },
     "fullNameOverride": {
       "description": "Replaces the entire computed resource name, ignoring the release name and id.",

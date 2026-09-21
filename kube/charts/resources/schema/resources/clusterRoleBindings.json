@@ -29,20 +29,21 @@
     },
     "roleRef": {
       "additionalProperties": false,
-      "description": "RoleRef contains information that points to the role being used",
+      "default": {},
+      "description": "roleRef can only reference a ClusterRole in the global namespace. If the RoleRef cannot be resolved, the Authorizer must return an error. This field is immutable.",
       "properties": {
         "apiGroup": {
+          "default": "",
           "description": "apiGroup is the group for the resource being referenced",
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         },
         "kind": {
+          "default": "",
           "description": "kind is the type of resource being referenced",
           "type": "string"
         },
         "name": {
+          "default": "",
           "description": "name is the name of resource being referenced",
           "type": "string"
         }
@@ -51,11 +52,7 @@
         "kind",
         "name"
       ],
-      "type": [
-        "object",
-        "null"
-      ],
-      "x-kubernetes-map-type": "atomic"
+      "type": "object"
     },
     "subjects": {
       "additionalProperties": {
@@ -64,42 +61,32 @@
         "properties": {
           "apiGroup": {
             "description": "apiGroup holds the API group of the referenced subject. Defaults to \"\" for ServiceAccount subjects. Defaults to \"rbac.authorization.k8s.io\" for User and Group subjects.",
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "kind": {
+            "default": "",
             "description": "kind of object being referenced. Values defined by this API group are \"User\", \"Group\", and \"ServiceAccount\". If the Authorizer does not recognized the kind value, the Authorizer should report an error.",
             "type": "string"
           },
           "name": {
+            "default": "",
             "description": "name of the object being referenced.",
             "type": "string"
           },
           "namespace": {
             "description": "namespace of the referenced object.  If the object kind is non-namespace, such as \"User\" or \"Group\", and this value is not empty the Authorizer should report an error.",
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           }
         },
         "required": [
           "kind",
           "name"
         ],
-        "type": [
-          "object",
-          "null"
-        ],
+        "type": "object",
         "x-kubernetes-map-type": "atomic"
       },
       "description": "subjects holds references to the objects the role applies to.",
-      "type": [
-        "object",
-        "null"
-      ]
+      "type": "object"
     }
   },
   "type": "object"
