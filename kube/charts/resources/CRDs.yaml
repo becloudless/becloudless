@@ -3,7 +3,9 @@ crds:
     url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/configmap.json
     apiVersion: v1
     kind: ConfigMap
-    contentField: data
+    contentField:
+      - data
+      - binaryData
   secrets:
     url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/secret.json
     apiVersion: v1
@@ -13,4 +15,9 @@ crds:
     url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/horizontalpodautoscaler-autoscaling-v2.json
     apiVersion: autoscaling/v2
     kind: HorizontalPodAutoscaler
+    contentField: spec
+  services:
+    url: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/master-standalone/service-v1.json
+    apiVersion: v1
+    kind: Service
     contentField: spec
