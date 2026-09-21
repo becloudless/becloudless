@@ -1,22 +1,26 @@
 resources:
   configMaps:
-    labels:
-      app: genre
-      truc: bidule
+    main:
+      data:
+        main: cm
     toto:
+      labels:
+        app: genre
+        truc: bidule
       data:
         something: interesting
       binaryData:
         blob: aGVsbG8=
   secrets:
-    labels:
-      app: genre2
-      truc: bidule2
     titi:
+      labels:
+        app: genre2
+        truc: bidule2
       stringData:
         something: interesting
   horizontalPodAutoscalers:
     myhpa:
+      nameOverride: override
       scaleTargetRef:
         apiVersion: apps/v1
         kind: Deployment
@@ -25,6 +29,7 @@ resources:
       maxReplicas: 3
   services:
     myservice:
+      fullnameOverride: fulloverride
       selector:
         app: myapp
       ports:
