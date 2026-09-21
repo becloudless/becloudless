@@ -1,0 +1,5 @@
+resources:
+  issuers:
+    main:
+      ca:
+        secretName: immich-postgresql-ca

@@ -1,0 +1,12 @@
+resources:
+  ingressRouteTCPs:
+    main:
+      entryPoints:
+        - websecure
+      routes:
+        - match: HostSNI(`ssh-gitea.example.com`)
+          services:
+            - name: gitea-ssh
+              port: 22
+      tls:
+        passthrough: false

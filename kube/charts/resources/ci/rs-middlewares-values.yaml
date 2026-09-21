@@ -1,0 +1,9 @@
+resources:
+  middlewares:
+    body-limit-10g:
+      buffering:
+        maxRequestBodyBytes: 10000000000
+    https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true

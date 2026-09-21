@@ -1,0 +1,14 @@
+resources:
+  storageClasses:
+    main:
+      annotations:
+        storageclass.kubernetes.io/is-default-class: "false"
+      provisioner: driver.longhorn.io
+      allowVolumeExpansion: true
+      volumeBindingMode: Immediate
+      reclaimPolicy: Delete
+      parameters:
+        numberOfReplicas: "1"
+        staleReplicaTimeout: "60"
+        fsType: "ext4"
+        dataLocality: "strict-local"

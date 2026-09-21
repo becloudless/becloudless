@@ -1,0 +1,9 @@
+resources:
+  recurringJobs:
+    main:
+      cron: 0 4 * * *
+      task: backup
+      groups:
+        - default
+      retain: 2
+      concurrency: 1

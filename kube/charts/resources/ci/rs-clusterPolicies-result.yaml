@@ -1,0 +1,21 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  rules:
+  - match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+    mutate:
+      patchStrategicMerge:
+        spec:
+          containers:
+          - (image): '*'
+            imagePullPolicy: IfNotPresent
+    name: set-image-pull-policy

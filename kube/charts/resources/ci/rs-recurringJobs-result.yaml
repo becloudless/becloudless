@@ -1,0 +1,14 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  concurrency: 1
+  cron: 0 4 * * *
+  groups:
+  - default
+  retain: 2
+  task: backup
