@@ -1,0 +1,22 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-release-overridesDefault
+data:
+  key: value2
+labels:
+  app: custom-app
+  team: platform
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-release-usesDefaultOnly
+data:
+  key: value1
+labels:
+  app: shared-default
+  team: platform

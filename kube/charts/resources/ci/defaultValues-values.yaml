@@ -1,0 +1,16 @@
+defaultValues:
+  configMaps:
+    labels:
+      app: shared-default
+      team: platform
+
+resources:
+  configMaps:
+    usesDefaultOnly:
+      data:
+        key: value1
+    overridesDefault:
+      labels:
+        app: custom-app
+      data:
+        key: value2

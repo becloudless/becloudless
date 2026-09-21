@@ -1,0 +1,9 @@
+resources:
+  configMaps:
+    normal:
+      data:
+        a: b
+    fullyOverridden:
+      fullNameOverride: totally-custom-name
+      data:
+        a: b

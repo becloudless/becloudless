@@ -1,0 +1,13 @@
+resources:
+  secrets:
+    plain:
+      stringData:
+        a: b
+    customId:
+      nameOverride: my-custom-id
+      stringData:
+        a: b
+    collapsedToRelease:
+      nameOverride: main
+      stringData:
+        a: b

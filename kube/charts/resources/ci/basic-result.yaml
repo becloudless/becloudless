@@ -35,9 +35,8 @@ labels:
 apiVersion: v1
 kind: Service
 metadata:
-  name: test-release-myservice
+  name: fulloverride
 spec:
-  fullnameOverride: fulloverride
   ports:
   - port: 80
     targetPort: 8080

@@ -1,0 +1,11 @@
+resources:
+  configMaps:
+    main:
+      data:
+        a: b
+  services:
+    main:
+      selector:
+        app: x
+      ports:
+        - port: 80

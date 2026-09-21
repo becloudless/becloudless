@@ -1,0 +1,16 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: totally-custom-name
+data:
+  a: b
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-release-normal
+data:
+  a: b
