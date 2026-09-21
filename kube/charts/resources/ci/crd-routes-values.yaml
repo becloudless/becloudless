@@ -1,0 +1,9 @@
+resources:
+  routes:
+    main:
+      host: myapp.example.com
+      to:
+        kind: Service
+        name: myapp
+      port:
+        targetPort: http

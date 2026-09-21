@@ -1,0 +1,20 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: myapp
+  serviceName: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+      - image: myimage:latest
+        name: myapp

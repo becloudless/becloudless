@@ -1,0 +1,14 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 5Gi
+  hostPath:
+    path: /mnt/data

@@ -1,0 +1,5 @@
+resources:
+  namespaces:
+    main:
+      labels:
+        team: platform

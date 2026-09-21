@@ -1,0 +1,14 @@
+resources:
+  ingresses:
+    main:
+      rules:
+        - host: myapp.example.com
+          http:
+            paths:
+              - path: /
+                pathType: Prefix
+                backend:
+                  service:
+                    name: myapp
+                    port:
+                      number: 80

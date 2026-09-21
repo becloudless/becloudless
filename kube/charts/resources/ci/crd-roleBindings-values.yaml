@@ -1,0 +1,11 @@
+resources:
+  roleBindings:
+    main:
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: Role
+        name: myapp-role
+      subjects:
+        - kind: ServiceAccount
+          name: myapp
+          namespace: default

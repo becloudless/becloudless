@@ -1,0 +1,10 @@
+resources:
+  kustomizations:
+    main:
+      interval: 10m
+      prune: true
+      sourceRef:
+        kind: GitRepository
+        name: myapp-repo
+      path: "./deploy/overlays/production"
+      targetNamespace: default

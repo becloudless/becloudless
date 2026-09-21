@@ -1,0 +1,9 @@
+resources:
+  jobs:
+    main:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: myapp
+              image: myimage:latest

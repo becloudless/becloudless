@@ -1,0 +1,7 @@
+resources:
+  roles:
+    main:
+      rules:
+        - apiGroups: [""]
+          resources: ["pods"]
+          verbs: ["get", "list", "watch"]

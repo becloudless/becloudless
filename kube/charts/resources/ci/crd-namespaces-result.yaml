@@ -1,0 +1,11 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-release
+  namespace: default
+  labels:
+    team: platform
+spec:
+  {}

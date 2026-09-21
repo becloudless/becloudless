@@ -1,0 +1,15 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: test-release
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: myapp-role
+subjects:
+- kind: ServiceAccount
+  name: myapp
+  namespace: default
