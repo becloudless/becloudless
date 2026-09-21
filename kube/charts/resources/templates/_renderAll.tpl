@@ -11,6 +11,10 @@
 
   {{- range $id, $resource := (get $resourcesAll $name | default dict) }}
     {{- $merged := merge ($resource | default dict) $default }}
-    {{- include "resources.generic.render" (dict "apiVersion" $apiVersion "kind" $kind "contentField" $contentField "id" $id "resource" $merged) }}
+
+    {{- $fullName := include "resources.generic.computeName" (dict "rootContext" $rootContext "id" $id "resource" $merged) }}
+
+    {{- $cleaned := omit $merged "nameOverride" "fullNameOverride" }}
+    {{- include "resources.generic.render" (dict "apiVersion" $apiVersion "kind" $kind "contentField" $contentField "name" $fullName "resource" $cleaned) }}
   {{- end }}
 {{- end }}

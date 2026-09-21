@@ -3,15 +3,10 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: labels
-stringData:
-  {}
----
-# Source: resources-test/templates/loader.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: titi
+  name: test-release-titi
+labels:
+  app: genre2
+  truc: bidule2
 stringData:
   something: interesting
 ---
@@ -19,14 +14,45 @@ stringData:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: labels
+  name: test-release
 data:
-  {}
+  main: cm
 ---
 # Source: resources-test/templates/loader.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: toto
+  name: test-release-toto
+binaryData:
+  blob: aGVsbG8=
 data:
   something: interesting
+labels:
+  app: genre
+  truc: bidule
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-release-myservice
+spec:
+  fullnameOverride: fulloverride
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    app: myapp
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: test-release-override
+spec:
+  maxReplicas: 3
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: myapp
