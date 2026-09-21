@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: required field validation (generated from the upstream k8s schema)
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: fails with a clear error when a required field is missing (scaleTargetRef)
+    set:
+      resources:
+        horizontalPodAutoscalers:
+          myhpa:
+            minReplicas: 1
+            maxReplicas: 3
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.horizontalPodAutoscalers.myhpa: "scaleTargetRef" is required'
+
+  - it: fails with a clear error when a required field is missing (maxReplicas)
+    set:
+      resources:
+        horizontalPodAutoscalers:
+          myhpa:
+            scaleTargetRef:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: myapp
+            minReplicas: 1
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.horizontalPodAutoscalers.myhpa: "maxReplicas" is required'
+
+  - it: passes when all required fields are present
+    set:
+      resources:
+        horizontalPodAutoscalers:
+          myhpa:
+            scaleTargetRef:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: myapp
+            minReplicas: 1
+            maxReplicas: 3
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: is satisfied by fields coming only from defaultValues (merged before validation)
+    set:
+      defaultValues:
+        horizontalPodAutoscalers:
+          scaleTargetRef:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: myapp
+      resources:
+        horizontalPodAutoscalers:
+          myhpa:
+            minReplicas: 1
+            maxReplicas: 3
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: kinds without required fields (e.g. configMaps) are unaffected
+    set:
+      resources:
+        configMaps:
+          plain:
+            data:
+              key: value
+    asserts:
+      - notFailedTemplate: {}
