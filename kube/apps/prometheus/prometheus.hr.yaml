@@ -278,6 +278,7 @@ spec:
             folder: dashboards
             foldersFromFilesStructure: true
     kubeEtcd:
+      enabled: false # TODO
       service:
         port: 2379
         targetPort: 2379
