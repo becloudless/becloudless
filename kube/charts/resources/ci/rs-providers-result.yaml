@@ -1,0 +1,11 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  address: https://hooks.slack.com/services/xxx
+  channel: general
+  type: slack

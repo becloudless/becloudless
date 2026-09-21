@@ -1,0 +1,6 @@
+resources:
+  providers:
+    main:
+      type: slack
+      address: https://hooks.slack.com/services/xxx
+      channel: general

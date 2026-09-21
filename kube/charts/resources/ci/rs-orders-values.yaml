@@ -1,0 +1,7 @@
+resources:
+  orders:
+    main:
+      issuerRef:
+        name: letsencrypt-prod
+        kind: ClusterIssuer
+      request: MIIBCjCB...

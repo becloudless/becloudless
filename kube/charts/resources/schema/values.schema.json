@@ -14,6 +14,9 @@
             "certificates": {
               "$ref": "./resources/certificates.json"
             },
+            "challenges": {
+              "$ref": "./resources/challenges.json"
+            },
             "clusterIssuers": {
               "$ref": "./resources/clusterIssuers.json"
             },
@@ -49,6 +52,9 @@
             },
             "gitRepositories": {
               "$ref": "./resources/gitRepositories.json"
+            },
+            "grpcRoutes": {
+              "$ref": "./resources/grpcRoutes.json"
             },
             "helmReleases": {
               "$ref": "./resources/helmReleases.json"
@@ -98,6 +104,9 @@
             "ociRepositories": {
               "$ref": "./resources/ociRepositories.json"
             },
+            "orders": {
+              "$ref": "./resources/orders.json"
+            },
             "persistentVolumeClaims": {
               "$ref": "./resources/persistentVolumeClaims.json"
             },
@@ -106,6 +115,9 @@
             },
             "podDisruptionBudgets": {
               "$ref": "./resources/podDisruptionBudgets.json"
+            },
+            "providers": {
+              "$ref": "./resources/providers.json"
             },
             "receivers": {
               "$ref": "./resources/receivers.json"
@@ -182,6 +194,13 @@
             "$ref": "./resources/certificates.json"
           },
           "description": "Certificate instances, keyed by id.",
+          "type": "object"
+        },
+        "challenges": {
+          "additionalProperties": {
+            "$ref": "./resources/challenges.json"
+          },
+          "description": "Challenge instances, keyed by id.",
           "type": "object"
         },
         "clusterIssuers": {
@@ -266,6 +285,13 @@
             "$ref": "./resources/gitRepositories.json"
           },
           "description": "GitRepository instances, keyed by id.",
+          "type": "object"
+        },
+        "grpcRoutes": {
+          "additionalProperties": {
+            "$ref": "./resources/grpcRoutes.json"
+          },
+          "description": "GRPCRoute instances, keyed by id.",
           "type": "object"
         },
         "helmReleases": {
@@ -380,6 +406,13 @@
           "description": "OCIRepository instances, keyed by id.",
           "type": "object"
         },
+        "orders": {
+          "additionalProperties": {
+            "$ref": "./resources/orders.json"
+          },
+          "description": "Order instances, keyed by id.",
+          "type": "object"
+        },
         "persistentVolumeClaims": {
           "additionalProperties": {
             "$ref": "./resources/persistentVolumeClaims.json"
@@ -399,6 +432,13 @@
             "$ref": "./resources/podDisruptionBudgets.json"
           },
           "description": "PodDisruptionBudget instances, keyed by id.",
+          "type": "object"
+        },
+        "providers": {
+          "additionalProperties": {
+            "$ref": "./resources/providers.json"
+          },
+          "description": "Provider instances, keyed by id.",
           "type": "object"
         },
         "receivers": {
