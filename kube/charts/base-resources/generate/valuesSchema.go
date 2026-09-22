@@ -84,20 +84,29 @@ func generateChartValuesSchema(dir string, entries []resource) error {
 	}
 
 	schema := map[string]interface{}{
-		"$schema": "https://json-schema.org/draft-07/schema#",
-		"type":    "object",
-		"$defs":   defs,
+		"$schema":              "https://json-schema.org/draft-07/schema#",
+		"type":                 "object",
+		"$defs":                defs,
+		"additionalProperties": false,
 		"properties": map[string]interface{}{
+			// Helm always injects a top-level "global" key (default {}) into
+			// every chart's .Values, even if the parent chart never sets one -
+			// it must stay allowed here or the root "additionalProperties":
+			// false above rejects every values file outright.
+			"global": map[string]interface{}{"type": "object"},
 			"resources": map[string]interface{}{
-				"type":       "object",
-				"properties": resourcesProps,
+				"type":                 "object",
+				"additionalProperties": false,
+				"properties":           resourcesProps,
 			},
 			"defaults": map[string]interface{}{
-				"type": "object",
+				"type":                 "object",
+				"additionalProperties": false,
 				"properties": map[string]interface{}{
 					"resources": map[string]interface{}{
-						"type":       "object",
-						"properties": defaultsResourcesProps,
+						"type":                 "object",
+						"additionalProperties": false,
+						"properties":           defaultsResourcesProps,
 					},
 				},
 			},
@@ -145,19 +154,28 @@ func buildValuesSchema(entries []resource, resolve func(name string) (interface{
 	}
 
 	return map[string]interface{}{
-		"$schema": "https://json-schema.org/draft-07/schema#",
-		"type":    "object",
+		"$schema":              "https://json-schema.org/draft-07/schema#",
+		"type":                 "object",
+		"additionalProperties": false,
 		"properties": map[string]interface{}{
+			// Helm always injects a top-level "global" key (default {}) into
+			// every chart's .Values, even if the parent chart never sets one -
+			// it must stay allowed here or the root "additionalProperties":
+			// false above rejects every values file outright.
+			"global": map[string]interface{}{"type": "object"},
 			"resources": map[string]interface{}{
-				"type":       "object",
-				"properties": resourcesProps,
+				"type":                 "object",
+				"additionalProperties": false,
+				"properties":           resourcesProps,
 			},
 			"defaults": map[string]interface{}{
-				"type": "object",
+				"type":                 "object",
+				"additionalProperties": false,
 				"properties": map[string]interface{}{
 					"resources": map[string]interface{}{
-						"type":       "object",
-						"properties": defaultsResourcesProps,
+						"type":                 "object",
+						"additionalProperties": false,
+						"properties":           defaultsResourcesProps,
 					},
 				},
 			},

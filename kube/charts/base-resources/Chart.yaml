@@ -1,4 +1,4 @@
 apiVersion: v2
-name: resources
+name: base-resources
 version: 0.0.0
 type: library
