@@ -22,17 +22,17 @@ apiVersion: v2
 name: resources-test
 version: 0.0.0
 dependencies:
-  - name: resources
+  - name: base-resources
     version: "0.0.0"
-    repository: "file://charts/resources"
+    repository: "file://charts/base-resources"
 EOF
 cat > "$tmp/templates/loader.yaml" <<'EOF'
 {{ include "resources.loader.all" . }}
 EOF
 : > "$tmp/values.yaml"
 
-cp -r "$chart_dir" "$tmp/charts/resources"
-rm -rf "$tmp/charts/resources/ci" "$tmp/charts/resources/generate"
+cp -r "$chart_dir" "$tmp/charts/base-resources"
+rm -rf "$tmp/charts/base-resources/ci" "$tmp/charts/base-resources/generate"
 
 (cd "$tmp" && helm dependency update . > /dev/null)
 
@@ -46,7 +46,7 @@ for values in "$ci_dir"/*-values.yaml; do
   case_name="$(basename "$values" -values.yaml)"
   result="$ci_dir/${case_name}-result.yaml"
 
-  actual="$(cd "$tmp" && helm template test-release . -f charts/resources/values.yaml -f "$values" --show-only templates/loader.yaml)"
+  actual="$(cd "$tmp" && helm template test-release . -f charts/base-resources/values.yaml -f "$values" --show-only templates/loader.yaml)"
 
   if $update; then
     printf '%s\n' "$actual" > "$result"

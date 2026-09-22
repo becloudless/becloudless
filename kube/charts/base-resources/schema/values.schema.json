@@ -1,9 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
   "properties": {
     "defaults": {
+      "additionalProperties": false,
       "properties": {
         "resources": {
+          "additionalProperties": false,
           "properties": {
             "alerts": {
               "$ref": "./resources/alerts.json"
@@ -194,7 +197,11 @@
       },
       "type": "object"
     },
+    "global": {
+      "type": "object"
+    },
     "resources": {
+      "additionalProperties": false,
       "properties": {
         "alerts": {
           "additionalProperties": {

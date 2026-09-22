@@ -26,17 +26,17 @@ apiVersion: v2
 name: resources-test
 version: 0.0.0
 dependencies:
-  - name: resources
+  - name: base-resources
     version: "0.0.0"
-    repository: "file://charts/resources"
+    repository: "file://charts/base-resources"
 EOF
 cat > "$tmp/templates/loader.yaml" <<'EOF'
 {{ include "resources.loader.all" . }}
 EOF
 : > "$tmp/values.yaml"
 
-cp -r "$chart_dir" "$tmp/charts/resources"
-rm -rf "$tmp/charts/resources/ci" "$tmp/charts/resources/generate" "$tmp/charts/resources/tests"
+cp -r "$chart_dir" "$tmp/charts/base-resources"
+rm -rf "$tmp/charts/base-resources/ci" "$tmp/charts/base-resources/generate" "$tmp/charts/base-resources/tests"
 cp "$tests_dir"/*_test.yaml "$tmp/tests/"
 
 (cd "$tmp" && helm dependency update . > /dev/null)
