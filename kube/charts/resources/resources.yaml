@@ -126,6 +126,26 @@ resources:
     apiVersion: gateway.networking.k8s.io/v1
     kind: GRPCRoute
     crdVersion: v1
+  referenceGrants:
+    url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_referencegrants.yaml
+    apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: ReferenceGrant
+    crdVersion: v1beta1
+  tcpRoutes:
+    url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_tcproutes.yaml
+    apiVersion: gateway.networking.k8s.io/v1
+    kind: TCPRoute
+    crdVersion: v1
+  tlsRoutes:
+    url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_tlsroutes.yaml
+    apiVersion: gateway.networking.k8s.io/v1
+    kind: TLSRoute
+    crdVersion: v1
+  udpRoutes:
+    url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_udproutes.yaml
+    apiVersion: gateway.networking.k8s.io/v1
+    kind: UDPRoute
+    crdVersion: v1
   storageClasses:
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__storage.k8s.io__v1_openapi.json
     component: io.k8s.api.storage.v1.StorageClass
@@ -278,4 +298,19 @@ resources:
     url: https://raw.githubusercontent.com/k8snetworkplumbingwg/network-attachment-definition-client/master/artifacts/networks-crd.yaml
     apiVersion: k8s.cni.cncf.io/v1
     kind: NetworkAttachmentDefinition
+    crdVersion: v1
+  serviceMonitors:
+    url: https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml
+    apiVersion: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    crdVersion: v1
+  validatingPolicies:
+    url: https://raw.githubusercontent.com/kyverno/kyverno/main/config/crds/policies.kyverno.io/policies.kyverno.io_validatingpolicies.yaml
+    apiVersion: policies.kyverno.io/v1
+    kind: ValidatingPolicy
+    crdVersion: v1
+  verticalPodAutoscalers:
+    url: https://raw.githubusercontent.com/kubernetes/autoscaler/master/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
+    apiVersion: autoscaling.k8s.io/v1
+    kind: VerticalPodAutoscaler
     crdVersion: v1

@@ -125,6 +125,9 @@
             "recurringJobs": {
               "$ref": "./resources/recurringJobs.json"
             },
+            "referenceGrants": {
+              "$ref": "./resources/referenceGrants.json"
+            },
             "roleBindings": {
               "$ref": "./resources/roleBindings.json"
             },
@@ -149,6 +152,9 @@
             "serviceAccounts": {
               "$ref": "./resources/serviceAccounts.json"
             },
+            "serviceMonitors": {
+              "$ref": "./resources/serviceMonitors.json"
+            },
             "services": {
               "$ref": "./resources/services.json"
             },
@@ -163,6 +169,21 @@
             },
             "stringSecrets": {
               "$ref": "./resources/stringSecrets.json"
+            },
+            "tcpRoutes": {
+              "$ref": "./resources/tcpRoutes.json"
+            },
+            "tlsRoutes": {
+              "$ref": "./resources/tlsRoutes.json"
+            },
+            "udpRoutes": {
+              "$ref": "./resources/udpRoutes.json"
+            },
+            "validatingPolicies": {
+              "$ref": "./resources/validatingPolicies.json"
+            },
+            "verticalPodAutoscalers": {
+              "$ref": "./resources/verticalPodAutoscalers.json"
             },
             "volumeSnapshotClasses": {
               "$ref": "./resources/volumeSnapshotClasses.json"
@@ -455,6 +476,13 @@
           "description": "RecurringJob instances, keyed by id.",
           "type": "object"
         },
+        "referenceGrants": {
+          "additionalProperties": {
+            "$ref": "./resources/referenceGrants.json"
+          },
+          "description": "ReferenceGrant instances, keyed by id.",
+          "type": "object"
+        },
         "roleBindings": {
           "additionalProperties": {
             "$ref": "./resources/roleBindings.json"
@@ -511,6 +539,13 @@
           "description": "ServiceAccount instances, keyed by id.",
           "type": "object"
         },
+        "serviceMonitors": {
+          "additionalProperties": {
+            "$ref": "./resources/serviceMonitors.json"
+          },
+          "description": "ServiceMonitor instances, keyed by id.",
+          "type": "object"
+        },
         "services": {
           "additionalProperties": {
             "$ref": "./resources/services.json"
@@ -544,6 +579,41 @@
             "$ref": "./resources/stringSecrets.json"
           },
           "description": "StringSecret instances, keyed by id.",
+          "type": "object"
+        },
+        "tcpRoutes": {
+          "additionalProperties": {
+            "$ref": "./resources/tcpRoutes.json"
+          },
+          "description": "TCPRoute instances, keyed by id.",
+          "type": "object"
+        },
+        "tlsRoutes": {
+          "additionalProperties": {
+            "$ref": "./resources/tlsRoutes.json"
+          },
+          "description": "TLSRoute instances, keyed by id.",
+          "type": "object"
+        },
+        "udpRoutes": {
+          "additionalProperties": {
+            "$ref": "./resources/udpRoutes.json"
+          },
+          "description": "UDPRoute instances, keyed by id.",
+          "type": "object"
+        },
+        "validatingPolicies": {
+          "additionalProperties": {
+            "$ref": "./resources/validatingPolicies.json"
+          },
+          "description": "ValidatingPolicy instances, keyed by id.",
+          "type": "object"
+        },
+        "verticalPodAutoscalers": {
+          "additionalProperties": {
+            "$ref": "./resources/verticalPodAutoscalers.json"
+          },
+          "description": "VerticalPodAutoscaler instances, keyed by id.",
           "type": "object"
         },
         "volumeSnapshotClasses": {

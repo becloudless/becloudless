@@ -1,0 +1,9 @@
+resources:
+  tcpRoutes:
+    main:
+      parentRefs:
+        - name: main-gateway
+      rules:
+        - backendRefs:
+            - name: main-service
+              port: 3306

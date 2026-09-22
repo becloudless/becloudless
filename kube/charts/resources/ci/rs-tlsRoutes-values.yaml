@@ -1,0 +1,11 @@
+resources:
+  tlsRoutes:
+    main:
+      parentRefs:
+        - name: main-gateway
+      hostnames:
+        - example.com
+      rules:
+        - backendRefs:
+            - name: main-service
+              port: 443

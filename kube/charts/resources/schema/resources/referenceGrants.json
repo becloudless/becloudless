@@ -1,0 +1,103 @@
+{
+  "additionalProperties": false,
+  "description": "Spec defines the desired state of ReferenceGrant.",
+  "properties": {
+    "annotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "metadata.annotations for this resource.",
+      "type": "object"
+    },
+    "from": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "description": "ReferenceGrantFrom describes trusted namespaces and kinds.",
+        "properties": {
+          "group": {
+            "description": "Group is the group of the referent.\nWhen empty, the Kubernetes core API group is inferred.\n\nSupport: Core",
+            "maxLength": 253,
+            "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Kind is the kind of the referent. Although implementations may support\nadditional resources, the following types are part of the \"Core\"\nsupport level for this field.\n\nWhen used to permit a SecretObjectReference:\n\n* Gateway\n\nWhen used to permit a BackendObjectReference:\n\n* GRPCRoute\n* HTTPRoute\n* TCPRoute\n* TLSRoute\n* UDPRoute",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$",
+            "type": "string"
+          },
+          "namespace": {
+            "description": "Namespace is the namespace of the referent.\n\nSupport: Core",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "group",
+          "kind",
+          "namespace"
+        ],
+        "type": "object"
+      },
+      "description": "From describes the trusted namespaces and kinds that can reference the\nresources described in \"To\". Each entry in this list MUST be considered\nto be an additional place that references can be valid from, or to put\nthis another way, entries MUST be combined using OR.\n\nSupport: Core",
+      "type": "object"
+    },
+    "fullNameOverride": {
+      "description": "Replaces the entire computed resource name, ignoring the release name and id.",
+      "type": "string"
+    },
+    "labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "metadata.labels for this resource.",
+      "type": "object"
+    },
+    "nameOverride": {
+      "description": "Replaces just the id part of the computed resource name (\u003cRelease.Name\u003e-\u003cid\u003e).",
+      "type": "string"
+    },
+    "namespace": {
+      "description": "metadata.namespace for this resource. Defaults to the release namespace.",
+      "type": "string"
+    },
+    "to": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "description": "ReferenceGrantTo describes what Kinds are allowed as targets of the\nreferences.",
+        "properties": {
+          "group": {
+            "description": "Group is the group of the referent.\nWhen empty, the Kubernetes core API group is inferred.\n\nSupport: Core",
+            "maxLength": 253,
+            "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Kind is the kind of the referent. Although implementations may support\nadditional resources, the following types are part of the \"Core\"\nsupport level for this field:\n\n* Secret when used to permit a SecretObjectReference\n* Service when used to permit a BackendObjectReference",
+            "maxLength": 63,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$",
+            "type": "string"
+          },
+          "name": {
+            "description": "Name is the name of the referent. When unspecified, this policy\nrefers to all resources of the specified Group and Kind in the local\nnamespace.",
+            "maxLength": 253,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "group",
+          "kind"
+        ],
+        "type": "object"
+      },
+      "description": "To describes the resources that may be referenced by the resources\ndescribed in \"From\". Each entry in this list MUST be considered to be an\nadditional place that references can be valid to, or to put this another\nway, entries MUST be combined using OR.\n\nSupport: Core",
+      "type": "object"
+    }
+  },
+  "type": "object"
+}

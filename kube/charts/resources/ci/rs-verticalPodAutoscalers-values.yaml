@@ -1,0 +1,9 @@
+resources:
+  verticalPodAutoscalers:
+    main:
+      targetRef:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: main
+      updatePolicy:
+        updateMode: Auto

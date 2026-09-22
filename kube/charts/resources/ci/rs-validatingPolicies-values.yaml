@@ -1,0 +1,14 @@
+resources:
+  validatingPolicies:
+    main:
+      validationActions:
+        - Deny
+      matchConstraints:
+        resourceRules:
+          - apiGroups: [""]
+            apiVersions: ["v1"]
+            operations: ["CREATE", "UPDATE"]
+            resources: ["pods"]
+      validations:
+        - expression: "object.spec.containers.size() > 0"
+          message: "at least one container is required"

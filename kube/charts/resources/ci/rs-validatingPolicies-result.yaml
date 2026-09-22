@@ -1,0 +1,24 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  matchConstraints:
+    resourceRules:
+    - apiGroups:
+      - ""
+      apiVersions:
+      - v1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - pods
+  validationActions:
+  - Deny
+  validations:
+  - expression: object.spec.containers.size() > 0
+    message: at least one container is required
