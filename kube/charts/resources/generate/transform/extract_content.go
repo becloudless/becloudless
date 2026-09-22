@@ -21,6 +21,8 @@ func ExtractContent(kindSchema map[string]interface{}, e *Entry) (map[string]int
 		return spec, nil
 	}
 
+	e.AddTemplateArg("contentIsSpec", "false")
+
 	props, _ := kindSchema["properties"].(map[string]interface{})
 	contentProps := map[string]interface{}{}
 	for k, v := range props {

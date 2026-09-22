@@ -3,6 +3,8 @@ package generate
 import (
 	"os"
 	"strings"
+
+	"resourceschart/generate/transform"
 )
 
 // resource represents one resource kind declared in resources.yaml, e.g.:
@@ -25,9 +27,18 @@ type resource struct {
 	url        string
 	apiVersion string
 	kind       string
-	crdVersion string   // optional; set to fetch the schema from a CRD manifest (YAML) instead of Kubernetes' own OpenAPI v3 spec
-	component  string   // optional; set to the fully-qualified component name (e.g. io.k8s.api.core.v1.ConfigMap) to fetch from a Kubernetes OpenAPI v3 spec document at url (see fetchOpenAPIV3Schema)
-	required   []string // top-level required fields, extracted from the upstream k8s schema by stripRequiredTransform
+	crdVersion string // optional; set to fetch the schema from a CRD manifest (YAML) instead of Kubernetes' own OpenAPI v3 spec
+	component  string // optional; set to the fully-qualified component name (e.g. io.k8s.api.core.v1.ConfigMap) to fetch from a Kubernetes OpenAPI v3 spec document at url (see fetchOpenAPIV3Schema)
+
+	// templateArgs holds the named, render-time template arguments the
+	// transformer pipeline contributed for this resource kind (see
+	// transform.Entry.TemplateArgs and transform.Entry.AddTemplateArg),
+	// e.g. "required", "contentIsSpec", "stringifyFields". Populated from
+	// transform.Entry.TemplateArgs after running the pipeline (see
+	// fetchAndTransformSchema) and consumed by generateTemplate to build
+	// each kind's "resources.generic.renderAll" call, without
+	// generateTemplate needing to know about specific transformer names.
+	templateArgs []transform.TemplateArg
 
 	// transformerConfig holds optional per-transformer configuration for
 	// this resource kind, declared in resources.yaml as a nested
@@ -65,7 +76,7 @@ type resource struct {
 	transformerConfig map[string]map[string][]string
 }
 
-// parseCRDs is a minimal parser for the restricted YAML shape used by resources.yaml:
+// parseResources is a minimal parser for the restricted YAML shape used by resources.yaml:
 //
 //	resources:
 //	  <name>:
@@ -81,7 +92,7 @@ type resource struct {
 //
 // It avoids pulling in a YAML dependency for parsing this file itself
 // (gopkg.in/yaml.v3 is used elsewhere, to parse fetched CRD manifests).
-func parseCRDs(path string) ([]resource, error) {
+func parseResources(path string) ([]resource, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err

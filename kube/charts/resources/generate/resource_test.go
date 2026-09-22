@@ -29,7 +29,7 @@ func TestParseCRDs_ParsesTransformerConfig(t *testing.T) {
           - template.spec.containers.args
 `)
 
-	entries, err := parseCRDs(path)
+	entries, err := parseResources(path)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -65,7 +65,7 @@ func TestParseCRDs_ParsesMultipleTransformersAndOptions(t *testing.T) {
           - bar
 `)
 
-	entries, err := parseCRDs(path)
+	entries, err := parseResources(path)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestParseCRDs_NoTransformerConfigLeavesFieldNil(t *testing.T) {
     kind: ConfigMap
 `)
 
-	entries, err := parseCRDs(path)
+	entries, err := parseResources(path)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestParseCRDs_EmptyTransformerBlockLeavesFieldNil(t *testing.T) {
     kind: Secret
 `)
 
-	entries, err := parseCRDs(path)
+	entries, err := parseResources(path)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -154,7 +154,7 @@ func TestParseCRDs_DoesNotLeakTransformerStateBetweenResources(t *testing.T) {
     kind: ConfigMap
 `)
 
-	entries, err := parseCRDs(path)
+	entries, err := parseResources(path)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
