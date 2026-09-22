@@ -1,11 +1,11 @@
-package main
+package generate
 
 import (
 	"os"
 	"strings"
 )
 
-// entry represents one resource kind declared in resources.yaml, e.g.:
+// resource represents one resource kind declared in resources.yaml, e.g.:
 //
 //	configMaps:
 //	  url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
@@ -19,7 +19,7 @@ import (
 // at the CRD's own YAML manifest, with crdVersion set to the CRD version
 // whose spec.versions[].schema.openAPIV3Schema should be extracted and used
 // as the kind's schema (see fetchCRDManifestSchema).
-type entry struct {
+type resource struct {
 	name          string
 	url           string
 	apiVersion    string
@@ -38,19 +38,19 @@ type entry struct {
 //	    apiVersion: <value>
 //	    kind: <value>
 //	    contentIsSpec: <true|false>   # optional, defaults to true
-//	    crdVersion: <value>           # optional, see entry.crdVersion
-//	    component: <value>            # optional, see entry.component
+//	    crdVersion: <value>           # optional, see resource.crdVersion
+//	    component: <value>            # optional, see resource.component
 //
 // It avoids pulling in a YAML dependency for parsing this file itself
 // (gopkg.in/yaml.v3 is used elsewhere, to parse fetched CRD manifests).
-func parseCRDs(path string) ([]entry, error) {
+func parseCRDs(path string) ([]resource, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var entries []entry
-	var current *entry
+	var entries []resource
+	var current *resource
 
 	flush := func() {
 		if current != nil {
@@ -74,7 +74,7 @@ func parseCRDs(path string) ([]entry, error) {
 			continue
 		case indent == 2 && strings.HasSuffix(trimmed, ":"):
 			flush()
-			current = &entry{name: strings.TrimSuffix(trimmed, ":"), contentIsSpec: true}
+			current = &resource{name: strings.TrimSuffix(trimmed, ":"), contentIsSpec: true}
 		case indent == 4 && current != nil:
 			key, value, ok := strings.Cut(trimmed, ":")
 			if !ok {

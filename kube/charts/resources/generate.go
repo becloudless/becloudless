@@ -3,16 +3,18 @@
 // templates/_generated.tpl) from resources.yaml. Run it from the chart's root
 // directory:
 //
-//	go run ./build
+//	go run .
 package main
 
 import (
 	"fmt"
 	"os"
+
+	"resourceschart/generate"
 )
 
 func main() {
-	if err := run(); err != nil {
+	if err := generate.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}

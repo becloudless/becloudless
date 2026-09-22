@@ -1,4 +1,4 @@
-package main
+package generate
 
 import (
 	"encoding/json"
@@ -21,7 +21,7 @@ import (
 // Helm's schema validator doesn't resolve cross-file "$ref" the way we need
 // here. Wiring it up as the chart's actual values.schema.json (inlining the
 // referenced schemas, or otherwise) is deferred to later.
-func generateValuesSchema(dir string, entries []entry) error {
+func generateValuesSchema(dir string, entries []resource) error {
 	resourcesProps := map[string]interface{}{}
 	defaultsResourcesProps := map[string]interface{}{}
 

@@ -1,4 +1,4 @@
-package main
+package generate
 
 import (
 	"encoding/json"
@@ -9,12 +9,14 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"resourceschart/generate/transform"
 )
 
 // fetchSchemas fetches and transforms the upstream k8s JSON schema for every
-// entry that declares a url, writing the result to
+// resource that declares a url, writing the result to
 // schema/resources/<name>.json. Entries without a url are skipped.
-func fetchSchemas(dir string, entries []entry) error {
+func fetchSchemas(dir string, entries []resource) error {
 	schemaDir := filepath.Join(dir, "schema", "resources")
 	if err := os.MkdirAll(schemaDir, 0o755); err != nil {
 		return fmt.Errorf("mkdir %s: %w", schemaDir, err)
@@ -44,12 +46,13 @@ func fetchSchemas(dir string, entries []entry) error {
 }
 
 // fetchAndTransformSchema fetches a kind's full k8s JSON schema from e.url
-// and runs it through the transformer pipeline (see transform.go) to produce
-// the instance schema used for .Values.resources.<name>.<id> (and shared,
-// as-is, by .Values.defaults.resources.<name>), writing the result to dest.
-// schema/resources/<name>.json therefore holds the ready-to-use instance
-// schema, not the raw upstream k8s schema. Transformers may also populate
-// e.required as a side effect (see stripRequiredTransform).
+// and runs it through the transformer pipeline (see the transform package)
+// to produce the instance schema used for .Values.resources.<name>.<id>
+// (and shared, as-is, by .Values.defaults.resources.<name>), writing the
+// result to dest. schema/resources/<name>.json therefore holds the
+// ready-to-use instance schema, not the raw upstream k8s schema.
+// Transformers may also populate e.required as a side effect (see
+// transform.StripRequired).
 //
 // If e.crdVersion is set, e.url is instead treated as a CRD manifest (YAML)
 // and the schema is extracted from it (see fetchCRDManifestSchema) rather
@@ -57,7 +60,7 @@ func fetchSchemas(dir string, entries []entry) error {
 // treated as a Kubernetes OpenAPI v3 spec document and the schema is
 // extracted (with $ref pointers resolved) from it (see
 // fetchOpenAPIV3Schema).
-func fetchAndTransformSchema(client *http.Client, e *entry, dest string) error {
+func fetchAndTransformSchema(client *http.Client, e *resource, dest string) error {
 	var kindSchema map[string]interface{}
 	switch {
 	case e.crdVersion != "":
@@ -93,10 +96,12 @@ func fetchAndTransformSchema(client *http.Client, e *entry, dest string) error {
 		}
 	}
 
-	instance, err := applyTransformers(defaultTransformers, kindSchema, e)
+	te := &transform.Entry{Name: e.name, ContentIsSpec: e.contentIsSpec}
+	instance, err := transform.Apply(transform.DefaultTransformers, kindSchema, te)
 	if err != nil {
 		return err
 	}
+	e.required = te.Required
 
 	out, err := json.MarshalIndent(instance, "", "  ")
 	if err != nil {

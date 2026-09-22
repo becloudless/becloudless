@@ -1,4 +1,4 @@
-package main
+package generate
 
 import (
 	"fmt"
@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 )
 
-// run drives the full build pipeline: parse resources.yaml, fetch and transform
+// Run drives the full build pipeline: parse resources.yaml, fetch and transform
 // each kind's upstream k8s JSON schema, then generate the chart's templates
 // and aggregate values schema from the result.
-func run() error {
+func Run() error {
 	dir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("getwd: %w", err)
