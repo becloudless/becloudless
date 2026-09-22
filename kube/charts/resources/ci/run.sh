@@ -32,7 +32,7 @@ EOF
 : > "$tmp/values.yaml"
 
 cp -r "$chart_dir" "$tmp/charts/resources"
-rm -rf "$tmp/charts/resources/ci" "$tmp/charts/resources/build"
+rm -rf "$tmp/charts/resources/ci" "$tmp/charts/resources/generate"
 
 (cd "$tmp" && helm dependency update . > /dev/null)
 

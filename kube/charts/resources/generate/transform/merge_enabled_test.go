@@ -1,15 +1,15 @@
-package main
+package transform
 
 import (
 	"reflect"
 	"testing"
 )
 
-func TestMergeEnabledTransform_AddsEnabledProperty(t *testing.T) {
+func TestMergeEnabled_AddsEnabledProperty(t *testing.T) {
 	schema := map[string]interface{}{}
-	e := &entry{name: "widgets"}
+	e := &Entry{Name: "widgets"}
 
-	got, err := mergeEnabledTransform(schema, e)
+	got, err := MergeEnabled(schema, e)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -35,16 +35,16 @@ func TestMergeEnabledTransform_AddsEnabledProperty(t *testing.T) {
 	}
 }
 
-func TestMergeEnabledTransform_PreservesExistingProperties(t *testing.T) {
+func TestMergeEnabled_PreservesExistingProperties(t *testing.T) {
 	schema := map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
 			"data": map[string]interface{}{"type": "object"},
 		},
 	}
-	e := &entry{name: "configMaps"}
+	e := &Entry{Name: "configMaps"}
 
-	got, err := mergeEnabledTransform(schema, e)
+	got, err := MergeEnabled(schema, e)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -58,18 +58,18 @@ func TestMergeEnabledTransform_PreservesExistingProperties(t *testing.T) {
 	}
 }
 
-func TestMergeEnabledTransform_OverridesUpstreamEnabledProperty(t *testing.T) {
+func TestMergeEnabled_OverridesUpstreamEnabledProperty(t *testing.T) {
 	// Guards against an upstream CRD ever shadowing the well-known "enabled"
-	// field with an incompatible schema, mirroring mergeMetadataTransform's
+	// field with an incompatible schema, mirroring MergeMetadata's
 	// precedence over same-named upstream fields.
 	schema := map[string]interface{}{
 		"properties": map[string]interface{}{
 			"enabled": map[string]interface{}{"type": "string"},
 		},
 	}
-	e := &entry{name: "widgets"}
+	e := &Entry{Name: "widgets"}
 
-	got, err := mergeEnabledTransform(schema, e)
+	got, err := MergeEnabled(schema, e)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -81,15 +81,15 @@ func TestMergeEnabledTransform_OverridesUpstreamEnabledProperty(t *testing.T) {
 	}
 }
 
-func TestMergeEnabledTransform_DoesNotMutateEntry(t *testing.T) {
+func TestMergeEnabled_DoesNotMutateEntry(t *testing.T) {
 	schema := map[string]interface{}{}
-	e := &entry{name: "widgets", required: []string{"foo"}}
+	e := &Entry{Name: "widgets", Required: []string{"foo"}}
 
-	if _, err := mergeEnabledTransform(schema, e); err != nil {
+	if _, err := MergeEnabled(schema, e); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if !reflect.DeepEqual(e.required, []string{"foo"}) {
-		t.Errorf("e.required = %v, want unchanged %v", e.required, []string{"foo"})
+	if !reflect.DeepEqual(e.Required, []string{"foo"}) {
+		t.Errorf("e.Required = %v, want unchanged %v", e.Required, []string{"foo"})
 	}
 }

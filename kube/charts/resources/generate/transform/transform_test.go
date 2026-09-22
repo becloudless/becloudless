@@ -1,10 +1,11 @@
-package main
+package transform
 
 import "testing"
 
 func TestDefaultTransformers_EnabledSurvivesFullPipeline(t *testing.T) {
-	// Mimics a CRD-style schema (contentIsSpec: true), similar to the
-	// upstream k8s JSON schema fed into applyTransformers by fetchSchemas.
+	// Mimics a CRD-style schema (ContentIsSpec: true), similar to the
+	// upstream k8s JSON schema fed into Apply by the generate package's
+	// fetchSchemas.
 	schema := map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
@@ -19,9 +20,9 @@ func TestDefaultTransformers_EnabledSurvivesFullPipeline(t *testing.T) {
 			},
 		},
 	}
-	e := &entry{name: "widgets", contentIsSpec: true}
+	e := &Entry{Name: "widgets", ContentIsSpec: true}
 
-	got, err := applyTransformers(defaultTransformers, schema, e)
+	got, err := Apply(DefaultTransformers, schema, e)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -39,9 +40,9 @@ func TestDefaultTransformers_EnabledSurvivesFullPipeline(t *testing.T) {
 		t.Errorf("enabled.type = %v, want %q", enabled["type"], "boolean")
 	}
 
-	// additionalPropertiesFalseTransform runs after mergeEnabledTransform, so
-	// the top-level object (which now includes "enabled" among its declared
-	// properties) must still end up closed against unknown properties.
+	// AdditionalPropertiesFalse runs after MergeEnabled, so the top-level
+	// object (which now includes "enabled" among its declared properties)
+	// must still end up closed against unknown properties.
 	if got["additionalProperties"] != false {
 		t.Errorf("top-level additionalProperties = %v, want false", got["additionalProperties"])
 	}
