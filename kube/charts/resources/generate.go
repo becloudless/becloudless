@@ -1,7 +1,7 @@
 // Command build regenerates this chart's derived artifacts
-// (schema/resources/*.json, schema/values.schema.json and
-// templates/_generated.tpl) from resources.yaml. Run it from the chart's root
-// directory:
+// (schema/resources/*.json, schema/values.schema.json,
+// values.schema.json and templates/_generated.tpl) from resources.yaml. Run
+// it from the chart's root directory:
 //
 //	go run .
 package main
