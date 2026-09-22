@@ -83,13 +83,14 @@ func TestMergeEnabled_OverridesUpstreamEnabledProperty(t *testing.T) {
 
 func TestMergeEnabled_DoesNotMutateEntry(t *testing.T) {
 	schema := map[string]interface{}{}
-	e := &Entry{Name: "widgets", Required: []string{"foo"}}
+	e := &Entry{Name: "widgets", TemplateArgs: []TemplateArg{{Name: "required", Value: `(list "foo")`}}}
 
 	if _, err := MergeEnabled(schema, e); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if !reflect.DeepEqual(e.Required, []string{"foo"}) {
-		t.Errorf("e.Required = %v, want unchanged %v", e.Required, []string{"foo"})
+	want := []TemplateArg{{Name: "required", Value: `(list "foo")`}}
+	if !reflect.DeepEqual(e.TemplateArgs, want) {
+		t.Errorf("e.TemplateArgs = %v, want unchanged %v", e.TemplateArgs, want)
 	}
 }

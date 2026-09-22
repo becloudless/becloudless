@@ -51,8 +51,8 @@ func fetchSchemas(dir string, entries []resource) error {
 // (and shared, as-is, by .Values.defaults.resources.<name>), writing the
 // result to dest. schema/resources/<name>.json therefore holds the
 // ready-to-use instance schema, not the raw upstream k8s schema.
-// Transformers may also populate e.required as a side effect (see
-// transform.StripRequired).
+// Transformers may also populate e.templateArgs as a side effect (see
+// transform.Entry.AddTemplateArg).
 //
 // If e.crdVersion is set, e.url is instead treated as a CRD manifest (YAML)
 // and the schema is extracted from it (see fetchCRDManifestSchema) rather
@@ -101,7 +101,7 @@ func fetchAndTransformSchema(client *http.Client, e *resource, dest string) erro
 	if err != nil {
 		return err
 	}
-	e.required = te.Required
+	e.templateArgs = te.TemplateArgs
 
 	out, err := json.MarshalIndent(instance, "", "  ")
 	if err != nil {

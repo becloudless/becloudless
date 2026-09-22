@@ -1,5 +1,10 @@
 package transform
 
+import (
+	"fmt"
+	"strings"
+)
+
 // StringifyFields relaxes the schema of the fields declared via the
 // "stringifyFields" transformer config's "fields" option in resources.yaml:
 //
@@ -27,9 +32,12 @@ func StringifyFields(schema map[string]interface{}, e *Entry) (map[string]interf
 		return schema, nil
 	}
 	fields := map[string]bool{}
-	for _, path := range fieldList {
+	quoted := make([]string, len(fieldList))
+	for i, path := range fieldList {
 		fields[path] = true
+		quoted[i] = fmt.Sprintf("%q", path)
 	}
+	e.AddTemplateArg("stringifyFields", fmt.Sprintf("(list %s)", strings.Join(quoted, " ")))
 
 	walkSchemaNodesWithPath(schema, "", func(node map[string]interface{}, path string) {
 		if !fields[path] {

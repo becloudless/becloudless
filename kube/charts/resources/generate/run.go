@@ -16,7 +16,7 @@ func Run() error {
 	}
 
 	yamlPath := filepath.Join(dir, "resources.yaml")
-	entries, err := parseCRDs(yamlPath)
+	entries, err := parseResources(yamlPath)
 	if err != nil {
 		return fmt.Errorf("parse %s: %w", yamlPath, err)
 	}

@@ -29,22 +29,8 @@ func generateTemplate(dir string, entries []resource) error {
 		}
 
 		args := []string{fmt.Sprintf(`"rootContext" $rootContext "name" %q "apiVersion" %q "kind" %q`, e.name, e.apiVersion, e.kind)}
-		if _, ok := e.transformerConfig["contentIsOutOfSpec"]; ok {
-			args = append(args, `"contentIsSpec" false`)
-		}
-		if len(e.required) > 0 {
-			quoted := make([]string, len(e.required))
-			for i, r := range e.required {
-				quoted[i] = fmt.Sprintf("%q", r)
-			}
-			args = append(args, fmt.Sprintf(`"required" (list %s)`, strings.Join(quoted, " ")))
-		}
-		if stringifyFields := e.transformerConfig["stringifyFields"]["fields"]; len(stringifyFields) > 0 {
-			quoted := make([]string, len(stringifyFields))
-			for i, f := range stringifyFields {
-				quoted[i] = fmt.Sprintf("%q", f)
-			}
-			args = append(args, fmt.Sprintf(`"stringifyFields" (list %s)`, strings.Join(quoted, " ")))
+		for _, arg := range e.templateArgs {
+			args = append(args, fmt.Sprintf(`%q %s`, arg.Name, arg.Value))
 		}
 		fmt.Fprintf(&sb, `  {{- include "resources.generic.renderAll" (dict %s) }}
 `, strings.Join(args, " "))
