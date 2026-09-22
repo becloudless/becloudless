@@ -1,0 +1,99 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: enabled option (per-resource and per-kind default toggling)
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: renders the resource when enabled is not set at all
+    set:
+      resources:
+        configMaps:
+          myconfig:
+            data:
+              key: value
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: test-release-myconfig
+
+  - it: renders the resource when enabled is explicitly true and strips the field from the output
+    set:
+      resources:
+        configMaps:
+          myconfig:
+            enabled: true
+            data:
+              key: value
+    asserts:
+      - hasDocuments:
+          count: 1
+      - notExists:
+          path: enabled
+
+  - it: does not render the resource when enabled is false
+    set:
+      resources:
+        configMaps:
+          myconfig:
+            enabled: false
+            data:
+              key: value
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: only renders the enabled resources when several of the same kind are defined
+    set:
+      resources:
+        configMaps:
+          enabledOne:
+            data:
+              key: value
+          disabledOne:
+            enabled: false
+            data:
+              key: value
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: test-release-enabledOne
+
+  - it: defaults.resources.<kind>.enabled false disables every resource of that kind
+    set:
+      defaults:
+        resources:
+          configMaps:
+            enabled: false
+      resources:
+        configMaps:
+          myconfig:
+            data:
+              key: value
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: a resource's own enabled true overrides a default enabled false
+    set:
+      defaults:
+        resources:
+          configMaps:
+            enabled: false
+      resources:
+        configMaps:
+          myconfig:
+            enabled: true
+            data:
+              key: value
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: test-release-myconfig
