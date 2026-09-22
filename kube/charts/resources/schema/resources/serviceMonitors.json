@@ -29,6 +29,10 @@
       "description": "convertClassicHistogramsToNHCB defines whether to convert all scraped classic histograms into a native histogram with custom buckets.\nIt requires Prometheus \u003e= v3.0.0.",
       "type": "boolean"
     },
+    "enabled": {
+      "description": "Whether to render this resource. Defaults to true.",
+      "type": "boolean"
+    },
     "endpoints": {
       "additionalProperties": {
         "additionalProperties": false,

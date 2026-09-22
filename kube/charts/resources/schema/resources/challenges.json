@@ -16,6 +16,10 @@
       "description": "dnsName is the identifier that this challenge is for, e.g., example.com.\nIf the requested DNSName is a 'wildcard', this field MUST be set to the\nnon-wildcard domain, e.g., for `*.example.com`, it must be `example.com`.",
       "type": "string"
     },
+    "enabled": {
+      "description": "Whether to render this resource. Defaults to true.",
+      "type": "boolean"
+    },
     "fullNameOverride": {
       "description": "Replaces the entire computed resource name, ignoring the release name and id.",
       "type": "string"

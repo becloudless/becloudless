@@ -235,6 +235,10 @@
       },
       "type": "object"
     },
+    "enabled": {
+      "description": "Whether to render this resource. Defaults to true.",
+      "type": "boolean"
+    },
     "encodedCharacters": {
       "additionalProperties": false,
       "description": "EncodedCharacters configures which encoded characters are allowed in the request path.",

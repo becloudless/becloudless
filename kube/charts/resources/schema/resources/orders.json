@@ -23,6 +23,10 @@
       "description": "Duration is the duration for the not after date for the requested certificate.\nThis is set on order creation as per the ACME spec.",
       "type": "string"
     },
+    "enabled": {
+      "description": "Whether to render this resource. Defaults to true.",
+      "type": "boolean"
+    },
     "fullNameOverride": {
       "description": "Replaces the entire computed resource name, ignoring the release name and id.",
       "type": "string"

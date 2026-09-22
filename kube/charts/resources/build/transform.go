@@ -39,15 +39,19 @@ func (f TransformerFunc) Transform(schema map[string]interface{}, e *entry) (map
 //  4. mergeMetadataTransform              - merges in the well-known
 //     metadata fields (nameOverride, fullNameOverride, namespace, labels,
 //     annotations).
-//  5. arraysToMapsTransform               - recursively converts array-type
+//  5. mergeEnabledTransform                - merges in the well-known
+//     "enabled" field, allowing a resource instance to be excluded from the
+//     rendered output entirely.
+//  6. arraysToMapsTransform               - recursively converts array-type
 //     schema nodes into maps keyed by an arbitrary string id.
-//  6. additionalPropertiesFalseTransform  - recursively closes every
+//  7. additionalPropertiesFalseTransform  - recursively closes every
 //     structured object node against unknown properties.
 var defaultTransformers = []Transformer{
 	TransformerFunc(extractContentTransform),
 	TransformerFunc(flattenAllOfTransform),
 	TransformerFunc(stripRequiredTransform),
 	TransformerFunc(mergeMetadataTransform),
+	TransformerFunc(mergeEnabledTransform),
 	TransformerFunc(arraysToMapsTransform),
 	TransformerFunc(additionalPropertiesFalseTransform),
 }

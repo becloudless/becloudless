@@ -13,6 +13,10 @@
       "description": "Requested 'duration' (i.e. lifetime) of the Certificate. Note that the\nissuer may choose to ignore the requested duration, just like any other\nrequested attribute.",
       "type": "string"
     },
+    "enabled": {
+      "description": "Whether to render this resource. Defaults to true.",
+      "type": "boolean"
+    },
     "extra": {
       "additionalProperties": {
         "additionalProperties": {

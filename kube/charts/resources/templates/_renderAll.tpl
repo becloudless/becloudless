@@ -16,10 +16,18 @@
 
   {{- range $id, $resource := (get $resourcesAll $name | default dict) }}
     {{- $merged := merge ($resource | default dict) $default }}
-    {{- include "resources.generic.requireFields" (dict "name" $name "id" $id "resource" $merged "required" $required) }}
 
-    {{- $metadata := include "resources.generic.computeMetadata" (dict "rootContext" $rootContext "id" $id "resource" $merged) | trim }}
-    {{- $cleaned := omit $merged "nameOverride" "fullNameOverride" "namespace" "labels" "annotations" }}
-    {{- include "resources.generic.render" (dict "apiVersion" $apiVersion "kind" $kind "contentIsSpec" $contentIsSpec "metadata" $metadata "resource" $cleaned) }}
+    {{- $enabled := true }}
+    {{- if hasKey $merged "enabled" }}
+      {{- $enabled = $merged.enabled }}
+    {{- end }}
+
+    {{- if $enabled }}
+      {{- include "resources.generic.requireFields" (dict "name" $name "id" $id "resource" $merged "required" $required) }}
+
+      {{- $metadata := include "resources.generic.computeMetadata" (dict "rootContext" $rootContext "id" $id "resource" $merged) | trim }}
+      {{- $cleaned := omit $merged "nameOverride" "fullNameOverride" "namespace" "labels" "annotations" "enabled" }}
+      {{- include "resources.generic.render" (dict "apiVersion" $apiVersion "kind" $kind "contentIsSpec" $contentIsSpec "metadata" $metadata "resource" $cleaned) }}
+    {{- end }}
   {{- end }}
 {{- end }}

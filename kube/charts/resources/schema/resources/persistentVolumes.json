@@ -363,6 +363,10 @@
       ],
       "type": "object"
     },
+    "enabled": {
+      "description": "Whether to render this resource. Defaults to true.",
+      "type": "boolean"
+    },
     "fc": {
       "additionalProperties": false,
       "description": "fc represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.",

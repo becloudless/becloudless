@@ -9,6 +9,10 @@
       "description": "metadata.annotations for this resource.",
       "type": "object"
     },
+    "enabled": {
+      "description": "Whether to render this resource. Defaults to true.",
+      "type": "boolean"
+    },
     "entryPoints": {
       "additionalProperties": {
         "type": "string"

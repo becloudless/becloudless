@@ -32,6 +32,10 @@
       "description": "EmitWarning enables API response warnings for mutate policy rules or validate policy rules with validationFailureAction set to Audit.\nEnabling this option will extend admission request processing times. The default value is \"false\".",
       "type": "boolean"
     },
+    "enabled": {
+      "description": "Whether to render this resource. Defaults to true.",
+      "type": "boolean"
+    },
     "failurePolicy": {
       "description": "Deprecated, use failurePolicy under the webhookConfiguration instead.",
       "enum": [
