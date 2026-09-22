@@ -19,10 +19,10 @@ let
   # nix store prefetch-file --hash-type sha256 --json "https://github.com/becloudless/becloudless/releases/download/v$VERSION/bcl-darwin-amd64.tar.gz" | jq -r .hash
   # nix store prefetch-file --hash-type sha256 --json "https://github.com/becloudless/becloudless/releases/download/v$VERSION/bcl-darwin-arm64.tar.gz" | jq -r .hash
   hashes = {
-    "linux-amd64" = "sha256-RkAJA2hi6rIpgSumVg67QLhe0jzlQo2frTtwU1X4nfc=";
-    "linux-arm64" = "sha256-TuceSgSPx3yf+U9COsOtEm6CR4iWiPm8TD+FGm3x3UE=";
-    "darwin-amd64" = "sha256-uEQBBSV/kX3FaCjGKlwz0Zx6B3kkOwZV3Oyi02FR9xE=";
-    "darwin-arm64" = "sha256-AXthv5g3YuctTMkZHX7xmsjugWC+EumECcsmHp9j6Ns=";
+    "linux-amd64" = "sha256-RxJyGzhwNidI4z7rGQlzn3g01uSMXc47zIQa+g5IWnU=";
+    "linux-arm64" = "sha256-WQ7PGwm9PsIvBYTqVF3PU65ojQcjyfJuLGvBid3uxcE=";
+    "darwin-amd64" = "sha256-yFjHx9wxCLsFP1lgGYLNVWLEXKA/j1mU6FPcP9Dj+oY=";
+    "darwin-arm64" = "sha256-w/GZtNFXBRr32JMBF6W+kLm8lhJymRaRqbgjhZPBKMI=";
   };
 in
 
