@@ -5,11 +5,14 @@ import "fmt"
 // ExtractContent selects the relevant portion of a kind's full k8s JSON
 // schema for use as the instance schema under
 // .Values.resources.<name>.<id>:
-//   - e.ContentIsSpec: true  -> the schema's own top-level "spec" property
-//   - e.ContentIsSpec: false -> the schema's top-level properties, minus
-//     apiVersion/kind/metadata/status (and "required" filtered the same way)
+//   - by default -> the schema's own top-level "spec" property
+//   - if the "contentIsOutOfSpec" transformer is declared for this kind
+//     (see Entry.HasTransformer) -> the schema's top-level properties,
+//     minus apiVersion/kind/metadata/status (and "required" filtered the
+//     same way), for kinds whose content isn't wrapped in a "spec" of its
+//     own (e.g. ConfigMap, Secret, ServiceAccount)
 func ExtractContent(kindSchema map[string]interface{}, e *Entry) (map[string]interface{}, error) {
-	if e.ContentIsSpec {
+	if !e.HasTransformer("contentIsOutOfSpec") {
 		props, _ := kindSchema["properties"].(map[string]interface{})
 		spec, _ := props["spec"].(map[string]interface{})
 		if spec == nil {
