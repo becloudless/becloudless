@@ -5,14 +5,35 @@
 package transform
 
 // Entry carries the subset of a resource kind's build-time metadata (see
-// the generate package's own entry type in crds.go) that transformers need:
-// the kind's name (for error messages) and whether its schema content lives
-// under a "spec" property. Transformers may also populate Required as a
-// side effect (see the StripRequired transformer).
+// the generate package's own resource type in resource.go) that
+// transformers need: the kind's name (for error messages), whether its
+// schema content lives under a "spec" property, and any per-transformer
+// configuration declared for it. Transformers may also populate Required as
+// a side effect (see the StripRequired transformer).
 type Entry struct {
 	Name          string
 	ContentIsSpec bool
 	Required      []string
+
+	// TransformerConfig holds optional per-transformer configuration for
+	// this resource kind, as declared in resources.yaml via a nested
+	// "transformer" block (see the generate package's
+	// resource.transformerConfig). Keyed by transformer name (e.g.
+	// "arraysToMaps"), then option name (e.g. "ignore"), value is the list
+	// of items declared under that option. Transformers that support
+	// configuration look it up here via ConfigList; see e.g.
+	// ArraysToMaps's "ignore" option.
+	TransformerConfig map[string]map[string][]string
+}
+
+// ConfigList returns the configured list of values for option under
+// transformerName (see Entry.TransformerConfig), or nil if e is nil or no
+// such configuration was declared.
+func (e *Entry) ConfigList(transformerName, option string) []string {
+	if e == nil {
+		return nil
+	}
+	return e.TransformerConfig[transformerName][option]
 }
 
 // Transformer manipulates a resource kind's JSON schema as part of the
