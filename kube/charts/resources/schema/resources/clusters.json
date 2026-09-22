@@ -1271,7 +1271,7 @@
               "type": "string"
             },
             "dataChecksums": {
-              "description": "Whether the `-k` option should be passed to initdb,\nenabling checksums on data pages (default: `false`)",
+              "description": "Whether data checksums are enabled on data pages, to help detect\ncorruption by the I/O system that would otherwise be silent\n(default: `false` before PostgreSQL 18, `true` from PostgreSQL 18 on,\nmatching the initdb default in each case).",
               "type": "boolean"
             },
             "database": {
