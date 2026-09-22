@@ -1,0 +1,24 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-release-plain
+  namespace: default
+  annotations:
+    computed: ns-default
+stringData:
+  own: plain-value
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-release
+  namespace: default
+  labels:
+    release: test-release
+data:
+  fromValue: hello-world
+  literalBraces: '{{ not templated }}'
+  namespace: default

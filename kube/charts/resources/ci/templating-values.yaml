@@ -1,0 +1,21 @@
+mySetting: hello-world
+
+resources:
+  configMaps:
+    main:
+      labels:
+        release: "{{ .Release.Name }}"
+      data:
+        namespace: "{{ .Release.Namespace }}"
+        fromValue: "{{ .Values.mySetting }}"
+        literalBraces: "{{ \"{{ not templated }}\" }}"
+  secrets:
+    plain:
+      stringData:
+        own: plain-value
+
+defaults:
+  resources:
+    secrets:
+      annotations:
+        computed: "ns-{{ .Release.Namespace }}"

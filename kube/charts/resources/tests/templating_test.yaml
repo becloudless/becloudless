@@ -1,0 +1,85 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: templating support in resource and defaults values
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: resolves Helm template expressions referencing .Release in a resource's own field
+    set:
+      resources:
+        configMaps:
+          main:
+            labels:
+              release: "{{ .Release.Name }}"
+            data:
+              namespace: "{{ .Release.Namespace }}"
+    asserts:
+      - equal:
+          path: metadata.labels.release
+          value: test-release
+      - equal:
+          path: data.namespace
+          value: default
+
+  - it: resolves Helm template expressions referencing top-level .Values
+    set:
+      mySetting: hello-world
+      resources:
+        configMaps:
+          main:
+            data:
+              fromValue: "{{ .Values.mySetting }}"
+    asserts:
+      - equal:
+          path: data.fromValue
+          value: hello-world
+
+  - it: resolves Helm template expressions in defaults.resources.<kind> fields
+    set:
+      defaults:
+        resources:
+          secrets:
+            annotations:
+              computed: "ns-{{ .Release.Namespace }}"
+      resources:
+        secrets:
+          plain:
+            stringData:
+              own: plain-value
+    asserts:
+      - equal:
+          path: metadata.annotations.computed
+          value: ns-default
+
+  - it: a resource's own templated field takes precedence over a templated default for the same key
+    set:
+      defaults:
+        resources:
+          configMaps:
+            annotations:
+              team: "{{ .Release.Name }}-default-team"
+      resources:
+        configMaps:
+          main:
+            annotations:
+              team: "{{ .Release.Name }}-own-team"
+            data:
+              key: value
+    asserts:
+      - equal:
+          path: metadata.annotations.team
+          value: test-release-own-team
+
+  - it: allows escaping literal double curly braces so they are not interpreted as template syntax
+    set:
+      resources:
+        configMaps:
+          main:
+            data:
+              literalBraces: "{{ \"{{ not templated }}\" }}"
+    asserts:
+      - equal:
+          path: data.literalBraces
+          value: "{{ not templated }}"
