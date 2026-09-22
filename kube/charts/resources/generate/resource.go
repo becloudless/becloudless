@@ -29,18 +29,6 @@ type resource struct {
 	component     string   // optional; set to the fully-qualified component name (e.g. io.k8s.api.core.v1.ConfigMap) to fetch from a Kubernetes OpenAPI v3 spec document at url (see fetchOpenAPIV3Schema)
 	required      []string // top-level required fields, extracted from the upstream k8s schema by stripRequiredTransform
 
-	// stringifyFields lists top-level field names (e.g. "data") whose
-	// values may be given as either a plain string or an arbitrary
-	// YAML/JSON node (object, array, number, bool) in .Values. Any
-	// non-string value is serialized to a YAML string at render time (see
-	// templates/_renderAll.tpl). This also relaxes the field's generated
-	// JSON schema accordingly (see transform.StringifyFields). Declared in
-	// resources.yaml as a plain top-level list:
-	//
-	//	stringifyFields:
-	//	  - data
-	stringifyFields []string
-
 	// transformerConfig holds optional per-transformer configuration for
 	// this resource kind, declared in resources.yaml as a nested
 	// "transformer" block:
@@ -69,8 +57,6 @@ type resource struct {
 //	    contentIsSpec: <true|false>   # optional, defaults to true
 //	    crdVersion: <value>           # optional, see resource.crdVersion
 //	    component: <value>            # optional, see resource.component
-//	    stringifyFields:              # optional, see resource.stringifyFields
-//	      - <value>
 //	    transformer:                  # optional, see resource.transformerConfig
 //	      <name>:
 //	        <option>:
@@ -88,7 +74,6 @@ func parseCRDs(path string) ([]resource, error) {
 	var current *resource
 	var currentTransformer string
 	var currentOption string
-	var currentListField string
 
 	flush := func() {
 		if current != nil {
@@ -97,7 +82,6 @@ func parseCRDs(path string) ([]resource, error) {
 		}
 		currentTransformer = ""
 		currentOption = ""
-		currentListField = ""
 	}
 
 	for _, rawLine := range strings.Split(string(data), "\n") {
@@ -119,12 +103,7 @@ func parseCRDs(path string) ([]resource, error) {
 		case indent == 4 && current != nil:
 			currentTransformer = ""
 			currentOption = ""
-			currentListField = ""
 			if trimmed == "transformer:" {
-				continue
-			}
-			if trimmed == "stringifyFields:" {
-				currentListField = "stringifyFields"
 				continue
 			}
 			key, value, ok := strings.Cut(trimmed, ":")
@@ -145,11 +124,6 @@ func parseCRDs(path string) ([]resource, error) {
 				current.crdVersion = value
 			case "component":
 				current.component = value
-			}
-		case indent == 6 && current != nil && currentListField == "stringifyFields" && strings.HasPrefix(trimmed, "- "):
-			value := strings.TrimSpace(strings.TrimPrefix(trimmed, "- "))
-			if value != "" {
-				current.stringifyFields = append(current.stringifyFields, value)
 			}
 		case indent == 6 && current != nil && strings.HasSuffix(trimmed, ":"):
 			// transformer name, e.g. "arraysToMaps:" under "transformer:".

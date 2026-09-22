@@ -15,13 +15,6 @@ type Entry struct {
 	ContentIsSpec bool
 	Required      []string
 
-	// StringifyFields lists top-level field names (e.g. "data") whose
-	// values may be either a plain string or an arbitrary YAML/JSON node,
-	// as declared in resources.yaml (see the generate package's
-	// resource.stringifyFields). Used by the StringifyFields transformer to
-	// relax that field's generated schema accordingly.
-	StringifyFields []string
-
 	// TransformerConfig holds optional per-transformer configuration for
 	// this resource kind, as declared in resources.yaml via a nested
 	// "transformer" block (see the generate package's
@@ -87,9 +80,10 @@ func (f TransformerFunc) Transform(schema map[string]interface{}, e *Entry) (map
 //     entirely.
 //  6. ArraysToMaps               - recursively converts array-type schema
 //     nodes into maps keyed by an arbitrary string id.
-//  7. StringifyFields            - relaxes the schema of fields declared in
-//     e.StringifyFields so their values may be either a plain string or an
-//     arbitrary YAML/JSON node.
+//  7. StringifyFields            - relaxes the schema of fields declared via
+//     the "stringifyFields" transformer config (its "fields" option) so
+//     their values may be either a plain string or an arbitrary YAML/JSON
+//     node.
 //  8. AdditionalPropertiesFalse  - recursively closes every structured
 //     object node against unknown properties.
 var DefaultTransformers = []Transformer{
