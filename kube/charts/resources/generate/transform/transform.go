@@ -6,14 +6,12 @@ package transform
 
 // Entry carries the subset of a resource kind's build-time metadata (see
 // the generate package's own resource type in resource.go) that
-// transformers need: the kind's name (for error messages), whether its
-// schema content lives under a "spec" property, and any per-transformer
-// configuration declared for it. Transformers may also populate Required as
-// a side effect (see the StripRequired transformer).
+// transformers need: the kind's name (for error messages) and any
+// per-transformer configuration declared for it. Transformers may also
+// populate Required as a side effect (see the StripRequired transformer).
 type Entry struct {
-	Name          string
-	ContentIsSpec bool
-	Required      []string
+	Name     string
+	Required []string
 
 	// TransformerConfig holds optional per-transformer configuration for
 	// this resource kind, as declared in resources.yaml via a nested
@@ -22,7 +20,11 @@ type Entry struct {
 	// "arraysToMaps"), then option name (e.g. "ignore"), value is the list
 	// of items declared under that option. Transformers that support
 	// configuration look it up here via ConfigList; see e.g.
-	// ArraysToMaps's "ignore" option.
+	// ArraysToMaps's "ignore" option. A transformer name may also be
+	// declared with an explicit boolean flag (e.g.
+	// "contentIsOutOfSpec: true"), with no options at all, purely to mark
+	// its presence (see HasTransformer); a "false" value leaves it absent.
+	// See e.g. ExtractContent's "contentIsOutOfSpec" flag.
 	TransformerConfig map[string]map[string][]string
 }
 
@@ -34,6 +36,20 @@ func (e *Entry) ConfigList(transformerName, option string) []string {
 		return nil
 	}
 	return e.TransformerConfig[transformerName][option]
+}
+
+// HasTransformer reports whether transformerName was declared (and not
+// explicitly set to "false") for this entry - i.e. appears as a key under a
+// "transformer:" block in resources.yaml, whether as a "true" boolean flag
+// or an options block - or false if e is nil. Used by transformers
+// configured by mere presence/boolean flag rather than a list of values;
+// see e.g. ExtractContent's "contentIsOutOfSpec" flag.
+func (e *Entry) HasTransformer(transformerName string) bool {
+	if e == nil {
+		return false
+	}
+	_, ok := e.TransformerConfig[transformerName]
+	return ok
 }
 
 // Transformer manipulates a resource kind's JSON schema as part of the
@@ -65,9 +81,11 @@ func (f TransformerFunc) Transform(schema map[string]interface{}, e *Entry) (map
 // upstream k8s JSON schema to produce the final schema/resources/<name>.json:
 //
 //  1. ExtractContent            - selects the relevant subset of the
-//     upstream schema (either the "spec" property, or the top-level
-//     properties minus apiVersion/kind/metadata/status), depending on
-//     e.ContentIsSpec.
+//     upstream schema: the schema's own top-level "spec" property by
+//     default, or the top-level properties minus
+//     apiVersion/kind/metadata/status, if the "contentIsOutOfSpec"
+//     transformer is declared for this kind (e.g. core kinds like
+//     ConfigMap/Secret/ServiceAccount that have no "spec" of their own).
 //  2. FlattenAllOf               - collapses "allOf" nodes (as produced by
 //     resolving $ref pointers from Kubernetes' OpenAPI v3 spec) into flat
 //     object schemas.

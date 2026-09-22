@@ -3,9 +3,9 @@ package transform
 import "testing"
 
 func TestDefaultTransformers_EnabledSurvivesFullPipeline(t *testing.T) {
-	// Mimics a CRD-style schema (ContentIsSpec: true), similar to the
-	// upstream k8s JSON schema fed into Apply by the generate package's
-	// fetchSchemas.
+	// Mimics a CRD-style schema (content wrapped in "spec", the default),
+	// similar to the upstream k8s JSON schema fed into Apply by the
+	// generate package's fetchSchemas.
 	schema := map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
@@ -20,7 +20,7 @@ func TestDefaultTransformers_EnabledSurvivesFullPipeline(t *testing.T) {
 			},
 		},
 	}
-	e := &Entry{Name: "widgets", ContentIsSpec: true}
+	e := &Entry{Name: "widgets"}
 
 	got, err := Apply(DefaultTransformers, schema, e)
 	if err != nil {

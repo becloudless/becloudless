@@ -12,7 +12,8 @@ import (
 //	  component: io.k8s.api.core.v1.ConfigMap
 //	  apiVersion: v1
 //	  kind: ConfigMap
-//	  contentIsSpec: false
+//	  transformer:
+//	    contentIsOutOfSpec: true
 //
 // For third-party CRDs whose schema isn't published as part of Kubernetes'
 // own OpenAPI v3 spec (e.g. bitnami's SealedSecret), url may instead point
@@ -20,30 +21,47 @@ import (
 // whose spec.versions[].schema.openAPIV3Schema should be extracted and used
 // as the kind's schema (see fetchCRDManifestSchema).
 type resource struct {
-	name          string
-	url           string
-	apiVersion    string
-	kind          string
-	contentIsSpec bool     // defaults to true; set contentIsSpec: false in resources.yaml to override
-	crdVersion    string   // optional; set to fetch the schema from a CRD manifest (YAML) instead of Kubernetes' own OpenAPI v3 spec
-	component     string   // optional; set to the fully-qualified component name (e.g. io.k8s.api.core.v1.ConfigMap) to fetch from a Kubernetes OpenAPI v3 spec document at url (see fetchOpenAPIV3Schema)
-	required      []string // top-level required fields, extracted from the upstream k8s schema by stripRequiredTransform
+	name       string
+	url        string
+	apiVersion string
+	kind       string
+	crdVersion string   // optional; set to fetch the schema from a CRD manifest (YAML) instead of Kubernetes' own OpenAPI v3 spec
+	component  string   // optional; set to the fully-qualified component name (e.g. io.k8s.api.core.v1.ConfigMap) to fetch from a Kubernetes OpenAPI v3 spec document at url (see fetchOpenAPIV3Schema)
+	required   []string // top-level required fields, extracted from the upstream k8s schema by stripRequiredTransform
 
 	// transformerConfig holds optional per-transformer configuration for
 	// this resource kind, declared in resources.yaml as a nested
 	// "transformer" block:
 	//
 	//	transformer:
+	//	  <transformerName>: <true|false> # boolean flag
 	//	  <transformerName>:
 	//	    <option>:
 	//	      - value1
 	//	      - value2
 	//
 	// Keyed by transformer name, then option name; the value is the list of
-	// declared items. Passed through as-is to
-	// transform.Entry.TransformerConfig (see fetchAndTransformSchema); each
-	// transformer looks up its own options, so unrecognized transformer
+	// declared items. A transformer name may also be declared with an
+	// explicit boolean value (e.g. "contentIsOutOfSpec: true"), instead of a
+	// nested options block, purely to mark its presence for the given kind;
+	// its map entry is created (just empty) when the value is exactly
+	// "true", and left absent/removed when exactly "false" (a bare
+	// "<transformerName>:" with no value registers nothing on its own -
+	// only nested option lines that follow do, lazily). Passed through
+	// as-is to transform.Entry.TransformerConfig (see
+	// fetchAndTransformSchema); each transformer looks up its own options
+	// (via transform.Entry.ConfigList) or presence (via
+	// transform.Entry.HasTransformer), so unrecognized transformer
 	// names/options are simply ignored.
+	//
+	// "contentIsOutOfSpec" is one such boolean-flag transformer name,
+	// consumed by transform.ExtractContent: when true, the kind's
+	// content is taken from the schema's top-level properties (minus
+	// apiVersion/kind/metadata/status) instead of its "spec" property, for
+	// core kinds that have no "spec" of their own (e.g. ConfigMap, Secret,
+	// ServiceAccount). It also controls whether the resulting manifest
+	// wraps the resource's values in `spec:` at render time (see
+	// generateTemplate).
 	transformerConfig map[string]map[string][]string
 }
 
@@ -54,7 +72,6 @@ type resource struct {
 //	    url: <value>
 //	    apiVersion: <value>
 //	    kind: <value>
-//	    contentIsSpec: <true|false>   # optional, defaults to true
 //	    crdVersion: <value>           # optional, see resource.crdVersion
 //	    component: <value>            # optional, see resource.component
 //	    transformer:                  # optional, see resource.transformerConfig
@@ -99,7 +116,7 @@ func parseCRDs(path string) ([]resource, error) {
 			continue
 		case indent == 2 && strings.HasSuffix(trimmed, ":"):
 			flush()
-			current = &resource{name: strings.TrimSuffix(trimmed, ":"), contentIsSpec: true}
+			current = &resource{name: strings.TrimSuffix(trimmed, ":")}
 		case indent == 4 && current != nil:
 			currentTransformer = ""
 			currentOption = ""
@@ -118,17 +135,40 @@ func parseCRDs(path string) ([]resource, error) {
 				current.apiVersion = value
 			case "kind":
 				current.kind = value
-			case "contentIsSpec":
-				current.contentIsSpec = value == "true"
 			case "crdVersion":
 				current.crdVersion = value
 			case "component":
 				current.component = value
 			}
-		case indent == 6 && current != nil && strings.HasSuffix(trimmed, ":"):
-			// transformer name, e.g. "arraysToMaps:" under "transformer:".
-			currentTransformer = strings.TrimSuffix(trimmed, ":")
+		case indent == 6 && current != nil:
+			// transformer name, e.g. "arraysToMaps:" (a section header with
+			// nested options below), or a boolean flag like
+			// "contentIsOutOfSpec: true" / "contentIsOutOfSpec: false",
+			// under "transformer:". An explicit "true" registers the
+			// transformer immediately (visible to
+			// transform.Entry.HasTransformer even with no options); an
+			// explicit "false" ensures it's absent. A bare "<name>:" with
+			// no value isn't enough to register it on its own - only
+			// nested option lines that follow (see the indent == 8/10
+			// cases below) do that lazily.
+			key, value, ok := strings.Cut(trimmed, ":")
+			if !ok {
+				continue
+			}
+			currentTransformer = strings.TrimSpace(key)
 			currentOption = ""
+			value = strings.TrimSpace(value)
+			switch value {
+			case "true":
+				if current.transformerConfig == nil {
+					current.transformerConfig = map[string]map[string][]string{}
+				}
+				if current.transformerConfig[currentTransformer] == nil {
+					current.transformerConfig[currentTransformer] = map[string][]string{}
+				}
+			case "false":
+				delete(current.transformerConfig, currentTransformer)
+			}
 		case indent == 8 && current != nil && currentTransformer != "" && strings.HasSuffix(trimmed, ":"):
 			// option name, e.g. "ignore:" under a transformer name.
 			currentOption = strings.TrimSuffix(trimmed, ":")
