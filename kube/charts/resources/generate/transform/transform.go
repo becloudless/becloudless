@@ -119,25 +119,30 @@ func (f TransformerFunc) Transform(schema map[string]interface{}, e *Entry) (map
 //  2. FlattenAllOf               - collapses "allOf" nodes (as produced by
 //     resolving $ref pointers from Kubernetes' OpenAPI v3 spec) into flat
 //     object schemas.
-//  3. StripRequired              - moves the top-level "required" list out
+//  3. NormalizeIntOrString       - fixes up "x-kubernetes-int-or-string"
+//     nodes whose "anyOf" is a literal JSON null (some upstream CRD
+//     manifests leave this as a placeholder) into a proper
+//     integer-or-string "anyOf" pair.
+//  4. StripRequired              - moves the top-level "required" list out
 //     of the schema and into a "required" template arg (see
 //     Entry.AddTemplateArg).
-//  4. MergeMetadata              - merges in the well-known metadata fields
+//  5. MergeMetadata              - merges in the well-known metadata fields
 //     (nameOverride, fullNameOverride, namespace, labels, annotations).
-//  5. MergeEnabled               - merges in the well-known "enabled" field,
+//  6. MergeEnabled               - merges in the well-known "enabled" field,
 //     allowing a resource instance to be excluded from the rendered output
 //     entirely.
-//  6. ArraysToMaps               - recursively converts array-type schema
+//  7. ArraysToMaps               - recursively converts array-type schema
 //     nodes into maps keyed by an arbitrary string id.
-//  7. StringifyFields            - relaxes the schema of fields declared via
+//  8. StringifyFields            - relaxes the schema of fields declared via
 //     the "stringifyFields" transformer config (its "fields" option) so
 //     their values may be either a plain string or an arbitrary YAML/JSON
 //     node.
-//  8. AdditionalPropertiesFalse  - recursively closes every structured
+//  9. AdditionalPropertiesFalse  - recursively closes every structured
 //     object node against unknown properties.
 var DefaultTransformers = []Transformer{
 	TransformerFunc(ExtractContent),
 	TransformerFunc(FlattenAllOf),
+	TransformerFunc(NormalizeIntOrString),
 	TransformerFunc(StripRequired),
 	TransformerFunc(MergeMetadata),
 	TransformerFunc(MergeEnabled),

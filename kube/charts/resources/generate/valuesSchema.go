@@ -1,0 +1,166 @@
+package generate
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
+// generateValuesSchema writes schema/values.schema.json: a JSON Schema
+// describing .Values.resources.<kind>.<id> and .Values.defaults.resources.<kind>.
+// Each kind's instance schema lives in schema/resources/<name>.json (written
+// by fetchAndTransformSchema) and has no top-level "required" (see
+// stripRequiredTransform), so both .Values.resources.<kind> and
+// .Values.defaults.resources.<kind> can safely $ref that same single file -
+// required-field validation on the merged resource is instead generated
+// into templates/_generated.tpl (see resources.generic.requireFields).
+//
+// This file is kept around (alongside the chart-root values.schema.json
+// written by generateChartValuesSchema) purely for editor/IDE tooling (see
+// the "$schema" comment at the top of ci/*-values.yaml files), since editors
+// resolving "$ref" against a sibling file is simpler to read/diff than the
+// fully inlined chart-root schema.
+func generateValuesSchema(dir string, entries []resource) error {
+	schema, err := buildValuesSchema(entries, func(name string) (interface{}, error) {
+		return map[string]interface{}{"$ref": "./resources/" + name + ".json"}, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	out, err := json.MarshalIndent(schema, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal values.schema.json: %w", err)
+	}
+	out = append(out, '\n')
+
+	dest := filepath.Join(dir, "schema", "values.schema.json")
+	fmt.Printf("generating %s\n", dest)
+	return os.WriteFile(dest, out, 0o644)
+}
+
+// generateChartValuesSchema writes values.schema.json at the chart root:
+// the same JSON Schema as generateValuesSchema, except each kind's instance
+// schema is inlined (under a top-level "$defs" section, referenced via a
+// same-document "$ref": "#/$defs/<kind>") rather than referenced via a
+// cross-file "$ref". This is the file Helm auto-loads and validates
+// .Values against for this chart (Helm only auto-validates that exact
+// path, and doesn't resolve "$ref" against sibling files the way
+// schema/values.schema.json relies on for editor tooling), so it must be
+// fully self-contained.
+//
+// Each kind's schema is stored once under "$defs" and referenced from both
+// .Values.resources.<kind>.<id> and .Values.defaults.resources.<kind>,
+// rather than inlined twice, and the result is marshaled compactly
+// (without indentation): Helm rejects any single chart file over 5MiB, and
+// this chart's combined kind schemas (dominated by a handful of large CRDs)
+// are large enough that both of these are needed to stay under that limit.
+func generateChartValuesSchema(dir string, entries []resource) error {
+	schemaDir := filepath.Join(dir, "schema", "resources")
+
+	defs := map[string]interface{}{}
+	resourcesProps := map[string]interface{}{}
+	defaultsResourcesProps := map[string]interface{}{}
+
+	for _, e := range entries {
+		data, err := os.ReadFile(filepath.Join(schemaDir, e.name+".json"))
+		if err != nil {
+			return fmt.Errorf("read %s.json: %w", e.name, err)
+		}
+		var inlined map[string]interface{}
+		if err := json.Unmarshal(data, &inlined); err != nil {
+			return fmt.Errorf("parse %s.json: %w", e.name, err)
+		}
+		defs[e.name] = inlined
+
+		ref := map[string]interface{}{"$ref": "#/$defs/" + e.name}
+		resourcesProps[e.name] = map[string]interface{}{
+			"type":                 "object",
+			"description":          fmt.Sprintf("%s instances, keyed by id.", e.kind),
+			"additionalProperties": ref,
+		}
+		defaultsResourcesProps[e.name] = map[string]interface{}{"$ref": "#/$defs/" + e.name}
+	}
+
+	schema := map[string]interface{}{
+		"$schema": "https://json-schema.org/draft-07/schema#",
+		"type":    "object",
+		"$defs":   defs,
+		"properties": map[string]interface{}{
+			"resources": map[string]interface{}{
+				"type":       "object",
+				"properties": resourcesProps,
+			},
+			"defaults": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"resources": map[string]interface{}{
+						"type":       "object",
+						"properties": defaultsResourcesProps,
+					},
+				},
+			},
+		},
+	}
+
+	out, err := json.Marshal(schema)
+	if err != nil {
+		return fmt.Errorf("marshal values.schema.json: %w", err)
+	}
+	out = append(out, '\n')
+
+	dest := filepath.Join(dir, "values.schema.json")
+	fmt.Printf("generating %s\n", dest)
+	return os.WriteFile(dest, out, 0o644)
+}
+
+// buildValuesSchema builds the JSON Schema used by generateValuesSchema,
+// describing .Values.resources.<kind>.<id> and
+// .Values.defaults.resources.<kind>. resolve returns the "$ref" to use for
+// a given kind's instance schema, and is called twice per kind (once for
+// .Values.resources.<kind>'s additionalProperties, once for
+// .Values.defaults.resources.<kind>) so each call site gets its own,
+// independent value.
+func buildValuesSchema(entries []resource, resolve func(name string) (interface{}, error)) (map[string]interface{}, error) {
+	resourcesProps := map[string]interface{}{}
+	defaultsResourcesProps := map[string]interface{}{}
+
+	for _, e := range entries {
+		instanceSchema, err := resolve(e.name)
+		if err != nil {
+			return nil, err
+		}
+		resourcesProps[e.name] = map[string]interface{}{
+			"type":                 "object",
+			"description":          fmt.Sprintf("%s instances, keyed by id.", e.kind),
+			"additionalProperties": instanceSchema,
+		}
+
+		defaultsSchema, err := resolve(e.name)
+		if err != nil {
+			return nil, err
+		}
+		defaultsResourcesProps[e.name] = defaultsSchema
+	}
+
+	return map[string]interface{}{
+		"$schema": "https://json-schema.org/draft-07/schema#",
+		"type":    "object",
+		"properties": map[string]interface{}{
+			"resources": map[string]interface{}{
+				"type":       "object",
+				"properties": resourcesProps,
+			},
+			"defaults": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"resources": map[string]interface{}{
+						"type":       "object",
+						"properties": defaultsResourcesProps,
+					},
+				},
+			},
+		},
+	}, nil
+}
