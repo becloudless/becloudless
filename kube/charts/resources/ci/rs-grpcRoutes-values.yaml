@@ -1,0 +1,15 @@
+resources:
+  grpcRoutes:
+    main:
+      parentRefs:
+        - name: main-gateway
+      hostnames:
+        - example.com
+      rules:
+        - matches:
+            - method:
+                service: myapp.v1.MyService
+                method: MyMethod
+          backendRefs:
+            - name: main-service
+              port: 50051
