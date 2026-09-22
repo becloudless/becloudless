@@ -1,0 +1,63 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: configMaps data values as plain strings or nested YAML nodes
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: keeps a plain string data value untouched
+    set:
+      resources:
+        configMaps:
+          main:
+            data:
+              plain: hello
+    asserts:
+      - equal:
+          path: data.plain
+          value: hello
+
+  - it: serializes a nested map data value to a YAML string
+    set:
+      resources:
+        configMaps:
+          main:
+            data:
+              structured:
+                foo: bar
+                nb: 1
+    asserts:
+      - equal:
+          path: data.structured
+          value: |-
+            foo: bar
+            nb: 1
+
+  - it: serializes a nested list data value to a YAML string
+    set:
+      resources:
+        configMaps:
+          main:
+            data:
+              items:
+                - a
+                - b
+    asserts:
+      - equal:
+          path: data.items
+          value: |-
+            - a
+            - b
+
+  - it: leaves other kinds' string-only map fields (e.g. Secret.stringData) untouched, since stringifyFields is opt-in per kind
+    set:
+      resources:
+        secrets:
+          main:
+            stringData:
+              key: value
+    asserts:
+      - equal:
+          path: stringData.key
+          value: value

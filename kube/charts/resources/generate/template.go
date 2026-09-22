@@ -39,6 +39,13 @@ func generateTemplate(dir string, entries []resource) error {
 			}
 			args = append(args, fmt.Sprintf(`"required" (list %s)`, strings.Join(quoted, " ")))
 		}
+		if len(e.stringifyFields) > 0 {
+			quoted := make([]string, len(e.stringifyFields))
+			for i, f := range e.stringifyFields {
+				quoted[i] = fmt.Sprintf("%q", f)
+			}
+			args = append(args, fmt.Sprintf(`"stringifyFields" (list %s)`, strings.Join(quoted, " ")))
+		}
 		fmt.Fprintf(&sb, `  {{- include "resources.generic.renderAll" (dict %s) }}
 `, strings.Join(args, " "))
 	}

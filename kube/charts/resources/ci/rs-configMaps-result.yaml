@@ -7,3 +7,8 @@ metadata:
   namespace: default
 data:
   key: value
+  structured: |-
+    foo: bar
+    nested:
+    - a
+    - b
