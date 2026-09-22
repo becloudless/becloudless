@@ -96,7 +96,7 @@ func fetchAndTransformSchema(client *http.Client, e *resource, dest string) erro
 		}
 	}
 
-	te := &transform.Entry{Name: e.name, ContentIsSpec: e.contentIsSpec, StringifyFields: e.stringifyFields, TransformerConfig: e.transformerConfig}
+	te := &transform.Entry{Name: e.name, ContentIsSpec: e.contentIsSpec, TransformerConfig: e.transformerConfig}
 	instance, err := transform.Apply(transform.DefaultTransformers, kindSchema, te)
 	if err != nil {
 		return err

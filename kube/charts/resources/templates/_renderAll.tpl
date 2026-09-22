@@ -14,10 +14,8 @@ must be escaped (e.g. `{{"{{"}}`) or it will be interpreted as Helm syntax.
 
 Params may also include `stringifyFields`, a list of top-level field names
 (e.g. "data" for configMaps) whose values may be given as either a plain
-string or an arbitrary YAML node (object, array, number, bool); any
-non-string value is serialized to a YAML string before rendering, matching
-what Kubernetes actually expects (e.g. ConfigMap.data is a
-map[string]string). See resources.yaml's per-kind `stringifyFields` option.
+string or an arbitrary YAML node (object, array, number, bool); handled by
+resources.generic.stringifyFields, see templates/_stringifyFields.tpl.
 */}}
 {{- define "resources.generic.renderAll" }}
   {{- $rootContext := .rootContext }}
@@ -39,20 +37,7 @@ map[string]string). See resources.yaml's per-kind `stringifyFields` option.
   {{- range $id, $resource := (get $resourcesAll $name | default dict) }}
     {{- $merged := merge ($resource | default dict) $default }}
     {{- $merged = tpl (toYaml $merged) $rootContext | fromYaml }}
-
-    {{- range $field := $stringifyFields }}
-      {{- if hasKey $merged $field }}
-        {{- $stringified := dict }}
-        {{- range $k, $v := (get $merged $field) }}
-          {{- if kindIs "string" $v }}
-            {{- $stringified = set $stringified $k $v }}
-          {{- else }}
-            {{- $stringified = set $stringified $k (toYaml $v | trimSuffix "\n") }}
-          {{- end }}
-        {{- end }}
-        {{- $merged = set $merged $field $stringified }}
-      {{- end }}
-    {{- end }}
+    {{- $merged = include "resources.generic.stringifyFields" (dict "resource" $merged "stringifyFields" $stringifyFields) | fromYaml }}
 
     {{- $enabled := true }}
     {{- if hasKey $merged "enabled" }}
