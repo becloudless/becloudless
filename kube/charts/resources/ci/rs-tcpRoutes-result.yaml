@@ -1,0 +1,14 @@
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: TCPRoute
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  parentRefs:
+  - name: main-gateway
+  rules:
+  - backendRefs:
+    - name: main-service
+      port: 3306

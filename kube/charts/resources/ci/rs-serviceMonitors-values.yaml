@@ -1,0 +1,9 @@
+resources:
+  serviceMonitors:
+    main:
+      selector:
+        matchLabels:
+          app: main
+      endpoints:
+        - port: metrics
+          interval: 30s

@@ -1,0 +1,10 @@
+resources:
+  referenceGrants:
+    main:
+      from:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          namespace: default
+      to:
+        - group: ""
+          kind: Secret
