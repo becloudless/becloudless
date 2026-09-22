@@ -1,0 +1,8 @@
+resources:
+  services:
+    main:
+      selector:
+        app: myapp
+      ports:
+        - port: 80
+          targetPort: 8080
