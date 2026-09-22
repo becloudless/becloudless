@@ -41,26 +41,61 @@ resources:
     component: io.k8s.api.apps.v1.Deployment
     apiVersion: apps/v1
     kind: Deployment
+    transformer:
+      arraysToMaps:
+        ignore:
+          - template.spec.containers.command
+          - template.spec.containers.args
+          - template.spec.initContainers.command
+          - template.spec.initContainers.args
   statefulSets:
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__apps__v1_openapi.json
     component: io.k8s.api.apps.v1.StatefulSet
     apiVersion: apps/v1
     kind: StatefulSet
+    transformer:
+      arraysToMaps:
+        ignore:
+          - template.spec.containers.command
+          - template.spec.containers.args
+          - template.spec.initContainers.command
+          - template.spec.initContainers.args
   daemonSets:
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__apps__v1_openapi.json
     component: io.k8s.api.apps.v1.DaemonSet
     apiVersion: apps/v1
     kind: DaemonSet
+    transformer:
+      arraysToMaps:
+        ignore:
+          - template.spec.containers.command
+          - template.spec.containers.args
+          - template.spec.initContainers.command
+          - template.spec.initContainers.args
   cronJobs:
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__batch__v1_openapi.json
     component: io.k8s.api.batch.v1.CronJob
     apiVersion: batch/v1
     kind: CronJob
+    transformer:
+      arraysToMaps:
+        ignore:
+          - jobTemplate.spec.template.spec.containers.command
+          - jobTemplate.spec.template.spec.containers.args
+          - jobTemplate.spec.template.spec.initContainers.command
+          - jobTemplate.spec.template.spec.initContainers.args
   jobs:
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__batch__v1_openapi.json
     component: io.k8s.api.batch.v1.Job
     apiVersion: batch/v1
     kind: Job
+    transformer:
+      arraysToMaps:
+        ignore:
+          - template.spec.containers.command
+          - template.spec.containers.args
+          - template.spec.initContainers.command
+          - template.spec.initContainers.args
   serviceAccounts:
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
     component: io.k8s.api.core.v1.ServiceAccount

@@ -33,6 +33,47 @@ func walkSchemaNodes(node interface{}, visit func(map[string]interface{})) {
 	visit(m)
 }
 
+// walkSchemaNodesWithPath behaves like walkSchemaNodes, but also passes each
+// visited node's schema path to visit: a dot-joined sequence of property
+// names leading to it from root (path "" for root itself). Array "items"
+// and map "additionalProperties" indirections don't contribute a path
+// segment of their own, so e.g. a "command" property nested under an
+// array-of-objects "containers" property gets the path
+// "containers.command", regardless of how many container instances exist
+// or whether "containers" itself has been converted to a map (see
+// ArraysToMaps) by the time this runs.
+func walkSchemaNodesWithPath(node interface{}, path string, visit func(node map[string]interface{}, path string)) {
+	m, ok := node.(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	if props, ok := m["properties"].(map[string]interface{}); ok {
+		for name, v := range props {
+			childPath := name
+			if path != "" {
+				childPath = path + "." + name
+			}
+			walkSchemaNodesWithPath(v, childPath, visit)
+		}
+	}
+	if additionalProps, ok := m["additionalProperties"].(map[string]interface{}); ok {
+		walkSchemaNodesWithPath(additionalProps, path, visit)
+	}
+	if items, ok := m["items"].(map[string]interface{}); ok {
+		walkSchemaNodesWithPath(items, path, visit)
+	}
+	for _, key := range []string{"oneOf", "anyOf", "allOf"} {
+		if list, ok := m[key].([]interface{}); ok {
+			for _, v := range list {
+				walkSchemaNodesWithPath(v, path, visit)
+			}
+		}
+	}
+
+	visit(m, path)
+}
+
 // schemaTypeIncludes reports whether a JSON schema "type" value - either a
 // single string or an array of strings (e.g. ["object", "null"]) - includes
 // want.
