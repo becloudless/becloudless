@@ -3,3 +3,8 @@ resources:
     main:
       data:
         key: value
+        structured:
+          foo: bar
+          nested:
+            - a
+            - b
