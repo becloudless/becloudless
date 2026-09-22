@@ -1,10 +1,12 @@
 package generate
 
 import (
+	"fmt"
 	"os"
-	"strings"
 
 	"resourceschart/generate/transform"
+
+	"gopkg.in/yaml.v3"
 )
 
 // resource represents one resource kind declared in resources.yaml, e.g.:
@@ -76,7 +78,9 @@ type resource struct {
 	transformerConfig map[string]map[string][]string
 }
 
-// parseResources is a minimal parser for the restricted YAML shape used by resources.yaml:
+// parseResources parses the restricted YAML shape used by resources.yaml,
+// using gopkg.in/yaml.v3 (the same YAML dependency used elsewhere, to parse
+// fetched CRD manifests):
 //
 //	resources:
 //	  <name>:
@@ -86,118 +90,148 @@ type resource struct {
 //	    crdVersion: <value>           # optional, see resource.crdVersion
 //	    component: <value>            # optional, see resource.component
 //	    transformer:                  # optional, see resource.transformerConfig
+//	      <name>: <true|false>
 //	      <name>:
 //	        <option>:
 //	          - <value>
 //
-// It avoids pulling in a YAML dependency for parsing this file itself
-// (gopkg.in/yaml.v3 is used elsewhere, to parse fetched CRD manifests).
+// Parsing is done via yaml.Node (rather than unmarshaling straight into a
+// Go map) so that the order resource kinds appear in resources.yaml is
+// preserved in the returned slice - Go maps have no defined iteration
+// order, and the order kinds appear in is significant: it's the order
+// generateTemplate emits each kind's "resources.generic.renderAll" call in
+// templates/_generated.tpl.
 func parseResources(path string) ([]resource, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var entries []resource
-	var current *resource
-	var currentTransformer string
-	var currentOption string
-
-	flush := func() {
-		if current != nil {
-			entries = append(entries, *current)
-			current = nil
-		}
-		currentTransformer = ""
-		currentOption = ""
+	var doc yaml.Node
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return nil, fmt.Errorf("parse %s: %w", path, err)
+	}
+	if len(doc.Content) == 0 {
+		return nil, nil
 	}
 
-	for _, rawLine := range strings.Split(string(data), "\n") {
-		line := strings.TrimRight(rawLine, " \t\r")
-		if strings.TrimSpace(line) == "" || strings.HasPrefix(strings.TrimSpace(line), "#") {
-			continue
-		}
-
-		indent := len(line) - len(strings.TrimLeft(line, " "))
-		trimmed := strings.TrimSpace(line)
-
-		switch {
-		case indent == 0:
-			// top-level key, e.g. "resources:" — nothing to do.
-			continue
-		case indent == 2 && strings.HasSuffix(trimmed, ":"):
-			flush()
-			current = &resource{name: strings.TrimSuffix(trimmed, ":")}
-		case indent == 4 && current != nil:
-			currentTransformer = ""
-			currentOption = ""
-			if trimmed == "transformer:" {
-				continue
-			}
-			key, value, ok := strings.Cut(trimmed, ":")
-			if !ok {
-				continue
-			}
-			value = strings.TrimSpace(value)
-			switch strings.TrimSpace(key) {
-			case "url":
-				current.url = value
-			case "apiVersion":
-				current.apiVersion = value
-			case "kind":
-				current.kind = value
-			case "crdVersion":
-				current.crdVersion = value
-			case "component":
-				current.component = value
-			}
-		case indent == 6 && current != nil:
-			// transformer name, e.g. "arraysToMaps:" (a section header with
-			// nested options below), or a boolean flag like
-			// "contentIsOutOfSpec: true" / "contentIsOutOfSpec: false",
-			// under "transformer:". An explicit "true" registers the
-			// transformer immediately (visible to
-			// transform.Entry.HasTransformer even with no options); an
-			// explicit "false" ensures it's absent. A bare "<name>:" with
-			// no value isn't enough to register it on its own - only
-			// nested option lines that follow (see the indent == 8/10
-			// cases below) do that lazily.
-			key, value, ok := strings.Cut(trimmed, ":")
-			if !ok {
-				continue
-			}
-			currentTransformer = strings.TrimSpace(key)
-			currentOption = ""
-			value = strings.TrimSpace(value)
-			switch value {
-			case "true":
-				if current.transformerConfig == nil {
-					current.transformerConfig = map[string]map[string][]string{}
-				}
-				if current.transformerConfig[currentTransformer] == nil {
-					current.transformerConfig[currentTransformer] = map[string][]string{}
-				}
-			case "false":
-				delete(current.transformerConfig, currentTransformer)
-			}
-		case indent == 8 && current != nil && currentTransformer != "" && strings.HasSuffix(trimmed, ":"):
-			// option name, e.g. "ignore:" under a transformer name.
-			currentOption = strings.TrimSuffix(trimmed, ":")
-		case indent == 10 && current != nil && currentTransformer != "" && currentOption != "" && strings.HasPrefix(trimmed, "- "):
-			value := strings.TrimSpace(strings.TrimPrefix(trimmed, "- "))
-			if value == "" {
-				continue
-			}
-			if current.transformerConfig == nil {
-				current.transformerConfig = map[string]map[string][]string{}
-			}
-			if current.transformerConfig[currentTransformer] == nil {
-				current.transformerConfig[currentTransformer] = map[string][]string{}
-			}
-			current.transformerConfig[currentTransformer][currentOption] = append(current.transformerConfig[currentTransformer][currentOption], value)
-		}
+	root := doc.Content[0]
+	if root.Kind != yaml.MappingNode {
+		return nil, fmt.Errorf("%s: expected a top-level mapping", path)
 	}
-	flush()
 
+	resourcesNode := mappingValue(root, "resources")
+	if resourcesNode == nil || resourcesNode.Kind != yaml.MappingNode {
+		return nil, fmt.Errorf(`%s: expected a top-level "resources" mapping`, path)
+	}
+
+	entries := make([]resource, 0, len(resourcesNode.Content)/2)
+	for i := 0; i < len(resourcesNode.Content); i += 2 {
+		name := resourcesNode.Content[i].Value
+		e, err := parseResourceNode(name, resourcesNode.Content[i+1])
+		if err != nil {
+			return nil, fmt.Errorf("%s: resource %q: %w", path, name, err)
+		}
+		entries = append(entries, e)
+	}
 	return entries, nil
+}
+
+// parseResourceNode parses one <name>: { ... } entry under resources.yaml's
+// top-level "resources" mapping into a resource.
+func parseResourceNode(name string, node *yaml.Node) (resource, error) {
+	if node.Kind != yaml.MappingNode {
+		return resource{}, fmt.Errorf("expected a mapping")
+	}
+
+	e := resource{name: name}
+	for i := 0; i < len(node.Content); i += 2 {
+		key, valueNode := node.Content[i].Value, node.Content[i+1]
+		switch key {
+		case "url":
+			e.url = valueNode.Value
+		case "apiVersion":
+			e.apiVersion = valueNode.Value
+		case "kind":
+			e.kind = valueNode.Value
+		case "crdVersion":
+			e.crdVersion = valueNode.Value
+		case "component":
+			e.component = valueNode.Value
+		case "transformer":
+			config, err := parseTransformerConfig(valueNode)
+			if err != nil {
+				return resource{}, fmt.Errorf("transformer: %w", err)
+			}
+			e.transformerConfig = config
+		}
+	}
+	return e, nil
+}
+
+// parseTransformerConfig parses a resource kind's "transformer:" mapping
+// (see resource.transformerConfig) into the map[transformerName]map[option][]values
+// shape transform.Entry.TransformerConfig expects. Returns nil if node has
+// no value at all (a bare "transformer:" with nothing under it).
+func parseTransformerConfig(node *yaml.Node) (map[string]map[string][]string, error) {
+	if node.Tag == "!!null" {
+		return nil, nil
+	}
+	if node.Kind != yaml.MappingNode {
+		return nil, fmt.Errorf("expected a mapping")
+	}
+
+	config := map[string]map[string][]string{}
+	for i := 0; i < len(node.Content); i += 2 {
+		name, valueNode := node.Content[i].Value, node.Content[i+1]
+		switch valueNode.Kind {
+		case yaml.ScalarNode:
+			if valueNode.Tag == "!!null" {
+				// A bare "<name>:" with no value registers nothing on its
+				// own; only an explicit boolean value, or a nested options
+				// block (see below), does.
+				continue
+			}
+			var enabled bool
+			if err := valueNode.Decode(&enabled); err != nil {
+				return nil, fmt.Errorf("%s: expected a boolean, got %q", name, valueNode.Value)
+			}
+			if enabled {
+				config[name] = map[string][]string{}
+			} else {
+				delete(config, name)
+			}
+		case yaml.MappingNode:
+			options := map[string][]string{}
+			for j := 0; j < len(valueNode.Content); j += 2 {
+				option, listNode := valueNode.Content[j].Value, valueNode.Content[j+1]
+				var values []string
+				if err := listNode.Decode(&values); err != nil {
+					return nil, fmt.Errorf("%s.%s: %w", name, option, err)
+				}
+				options[option] = values
+			}
+			config[name] = options
+		default:
+			return nil, fmt.Errorf("%s: unsupported value", name)
+		}
+	}
+	if len(config) == 0 {
+		return nil, nil
+	}
+	return config, nil
+}
+
+// mappingValue returns the value node associated with key in a YAML mapping
+// node, or nil if node isn't a mapping or has no such key.
+func mappingValue(node *yaml.Node, key string) *yaml.Node {
+	if node.Kind != yaml.MappingNode {
+		return nil
+	}
+	for i := 0; i < len(node.Content); i += 2 {
+		if node.Content[i].Value == key {
+			return node.Content[i+1]
+		}
+	}
+	return nil
 }
