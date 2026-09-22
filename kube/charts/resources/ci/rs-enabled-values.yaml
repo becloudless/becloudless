@@ -1,0 +1,13 @@
+resources:
+  configMaps:
+    defaultEnabled:
+      data:
+        main: cm
+    explicitlyEnabled:
+      enabled: true
+      data:
+        main: cm
+    disabled:
+      enabled: false
+      data:
+        main: cm

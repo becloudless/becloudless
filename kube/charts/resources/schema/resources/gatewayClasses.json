@@ -27,6 +27,10 @@
       "maxLength": 64,
       "type": "string"
     },
+    "enabled": {
+      "description": "Whether to render this resource. Defaults to true.",
+      "type": "boolean"
+    },
     "fullNameOverride": {
       "description": "Replaces the entire computed resource name, ignoring the release name and id.",
       "type": "string"

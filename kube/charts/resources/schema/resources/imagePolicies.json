@@ -19,6 +19,10 @@
       ],
       "type": "string"
     },
+    "enabled": {
+      "description": "Whether to render this resource. Defaults to true.",
+      "type": "boolean"
+    },
     "filterTags": {
       "additionalProperties": false,
       "description": "FilterTags enables filtering for only a subset of tags based on a set of\nrules. If no rules are provided, all the tags from the repository will be\nordered and compared.",

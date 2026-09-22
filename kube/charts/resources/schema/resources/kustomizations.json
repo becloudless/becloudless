@@ -120,6 +120,10 @@
       "description": "DependsOn may contain a DependencyReference slice\nwith references to Kustomization resources that must be ready before this\nKustomization can be reconciled.",
       "type": "object"
     },
+    "enabled": {
+      "description": "Whether to render this resource. Defaults to true.",
+      "type": "boolean"
+    },
     "force": {
       "default": false,
       "description": "Force instructs the controller to recreate resources\nwhen patching fails due to an immutable field change.",
