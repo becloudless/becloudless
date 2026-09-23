@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
-suite: defaults merging per kind
+suite: defaults merging per kind and defaults.metadata across kinds
 templates:
   - loader.yaml
 release:
@@ -47,3 +47,76 @@ tests:
           value:
             app: custom-app
             team: platform
+
+  - it: applies defaults.metadata across every kind, below defaults.resources.<kind> in precedence
+    set:
+      defaults:
+        metadata:
+          labels:
+            org: acme
+          annotations:
+            managed-by: base-resources
+        resources:
+          configMaps:
+            labels:
+              app: shared-default
+      resources:
+        configMaps:
+          usesKindAndGlobalDefaults:
+            data:
+              key: value1
+        secrets:
+          usesGlobalDefaultOnly:
+            stringData:
+              key: value2
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: metadata.labels
+          value:
+            app: shared-default
+            org: acme
+        documentSelector:
+          path: metadata.name
+          value: test-release-usesKindAndGlobalDefaults
+      - equal:
+          path: metadata.annotations
+          value:
+            managed-by: base-resources
+        documentSelector:
+          path: metadata.name
+          value: test-release-usesKindAndGlobalDefaults
+      - equal:
+          path: metadata.labels
+          value:
+            org: acme
+        documentSelector:
+          path: metadata.name
+          value: test-release-usesGlobalDefaultOnly
+      - equal:
+          path: metadata.annotations
+          value:
+            managed-by: base-resources
+        documentSelector:
+          path: metadata.name
+          value: test-release-usesGlobalDefaultOnly
+
+  - it: lets the resource's own field override defaults.metadata for the same key
+    set:
+      defaults:
+        metadata:
+          labels:
+            app: global-default
+      resources:
+        configMaps:
+          overridesGlobalDefault:
+            labels:
+              app: custom-app
+            data:
+              key: value1
+    asserts:
+      - equal:
+          path: metadata.labels
+          value:
+            app: custom-app

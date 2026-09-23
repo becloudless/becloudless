@@ -2,6 +2,11 @@
 Generic renderer for ALL resource instances of a given kind, driven by
 .Values.resources.<name> (and .Values.defaults.resources.<name>).
 
+Label/annotation defaults are additionally layered from
+.Values.defaults.metadata (applied across every kind), below
+.Values.defaults.resources.<name> (applied per-kind), below the resource's
+own values - see the merge precedence below.
+
 Every value under .Values.resources.<name>.<id> and
 .Values.defaults.resources.<name> is rendered through Helm's `tpl` function
 (against the root context) before use, so any string field may contain Helm
@@ -32,10 +37,12 @@ base-resources.generic.stringifyFields, see templates/_stringifyFields.tpl.
   {{- $defaultsAll := $rootContext.Values.defaults | default dict }}
   {{- $defaultsResourcesAll := $defaultsAll.resources | default dict }}
   {{- $default := get $defaultsResourcesAll $name | default dict }}
+  {{- $globalMetadataAll := $defaultsAll.metadata | default dict }}
+  {{- $globalMetadataDefault := dict "labels" ($globalMetadataAll.labels | default dict) "annotations" ($globalMetadataAll.annotations | default dict) }}
   {{- $resourcesAll := $rootContext.Values.resources | default dict }}
 
   {{- range $id, $resource := (get $resourcesAll $name | default dict) }}
-    {{- $merged := merge ($resource | default dict) $default }}
+    {{- $merged := merge ($resource | default dict) $default $globalMetadataDefault }}
     {{- $merged = tpl (toYaml $merged) $rootContext | fromYaml }}
     {{- $merged = include "base-resources.generic.stringifyFields" (dict "resource" $merged "stringifyFields" $stringifyFields) | fromYaml }}
 

@@ -6,7 +6,7 @@ metadata:
   name: test-release-br0-dhcp
   namespace: default
 spec:
-  config: |-
+  config: |
     {
       "cniVersion": "0.3.0",
       "name": "mymacvlan",
