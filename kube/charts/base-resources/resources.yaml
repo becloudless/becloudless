@@ -5,7 +5,8 @@ resources:
     apiVersion: v1
     kind: ConfigMap
     mutations:
-      contentIsOutOfSpec: true
+      extractContent:
+        contentIsOutOfSpec: true
       stringifyFields:
         fields:
           - data
@@ -15,7 +16,8 @@ resources:
     apiVersion: v1
     kind: Secret
     mutations:
-      contentIsOutOfSpec: true
+      extractContent:
+        contentIsOutOfSpec: true
   - name: horizontalPodAutoscalers
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__autoscaling__v2_openapi.json
     component: io.k8s.api.autoscaling.v2.HorizontalPodAutoscaler
@@ -107,35 +109,40 @@ resources:
     apiVersion: v1
     kind: ServiceAccount
     mutations:
-      contentIsOutOfSpec: true
+      extractContent:
+        contentIsOutOfSpec: true
   - name: roles
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
     component: io.k8s.api.rbac.v1.Role
     apiVersion: rbac.authorization.k8s.io/v1
     kind: Role
     mutations:
-      contentIsOutOfSpec: true
+      extractContent:
+        contentIsOutOfSpec: true
   - name: roleBindings
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
     component: io.k8s.api.rbac.v1.RoleBinding
     apiVersion: rbac.authorization.k8s.io/v1
     kind: RoleBinding
     mutations:
-      contentIsOutOfSpec: true
+      extractContent:
+        contentIsOutOfSpec: true
   - name: clusterRoles
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
     component: io.k8s.api.rbac.v1.ClusterRole
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRole
     mutations:
-      contentIsOutOfSpec: true
+      extractContent:
+        contentIsOutOfSpec: true
   - name: clusterRoleBindings
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
     component: io.k8s.api.rbac.v1.ClusterRoleBinding
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRoleBinding
     mutations:
-      contentIsOutOfSpec: true
+      extractContent:
+        contentIsOutOfSpec: true
   - name: podDisruptionBudgets
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__policy__v1_openapi.json
     component: io.k8s.api.policy.v1.PodDisruptionBudget
@@ -197,14 +204,16 @@ resources:
     apiVersion: storage.k8s.io/v1
     kind: StorageClass
     mutations:
-      contentIsOutOfSpec: true
+      extractContent:
+        contentIsOutOfSpec: true
   - name: volumeSnapshotClasses
     url: https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
     apiVersion: snapshot.storage.k8s.io/v1
     kind: VolumeSnapshotClass
     crdVersion: v1
     mutations:
-      contentIsOutOfSpec: true
+      extractContent:
+        contentIsOutOfSpec: true
   - name: sealedSecrets
     url: https://raw.githubusercontent.com/bitnami-labs/sealed-secrets/main/helm/sealed-secrets/crds/bitnami.com_sealedsecrets.yaml
     apiVersion: bitnami.com/v1alpha1
@@ -226,7 +235,8 @@ resources:
     kind: Setting
     crdVersion: v1beta2
     mutations:
-      contentIsOutOfSpec: true
+      extractContent:
+        contentIsOutOfSpec: true
   - name: routes
     url: https://raw.githubusercontent.com/openshift/api/master/route/v1/zz_generated.crd-manifests/routes.crd.yaml
     apiVersion: route.openshift.io/v1

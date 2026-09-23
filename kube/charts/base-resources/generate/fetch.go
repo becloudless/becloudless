@@ -78,8 +78,14 @@ func fetchAndMutateSchema(client *http.Client, e *resource, dest string) error {
 		}
 	}
 
+	extractContent := mutation.ExtractContent{}
+	if e.Mutations.ExtractContent != nil {
+		extractContent = *e.Mutations.ExtractContent
+	}
+	extractContent.KindName = e.Name
+
 	pipeline := mutation.Pipeline(
-		mutation.ExtractContent{ContentIsOutOfSpec: e.Mutations.ContentIsOutOfSpec, KindName: e.Name},
+		extractContent,
 		e.Mutations.ArraysToMaps,
 		e.Mutations.StringifyFields,
 	)
@@ -87,7 +93,7 @@ func fetchAndMutateSchema(client *http.Client, e *resource, dest string) error {
 	if err != nil {
 		return err
 	}
-	e.templateArgs = result.TemplateArgs
+	e.helmTemplateRenderArgs = result.TemplateArgs
 
 	out, err := json.MarshalIndent(result.Schema, "", "  ")
 	if err != nil {

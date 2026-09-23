@@ -30,13 +30,13 @@ func generateTemplate(dir string, entries []resource) error {
 		}
 
 		args := []string{fmt.Sprintf(`"rootContext" $rootContext "name" %q "apiVersion" %q "kind" %q`, e.Name, e.APIVersion, e.Kind)}
-		names := make([]string, 0, len(e.templateArgs))
-		for name := range e.templateArgs {
+		names := make([]string, 0, len(e.helmTemplateRenderArgs))
+		for name := range e.helmTemplateRenderArgs {
 			names = append(names, name)
 		}
 		sort.Strings(names)
 		for _, name := range names {
-			args = append(args, fmt.Sprintf(`%q %s`, name, e.templateArgs[name]))
+			args = append(args, fmt.Sprintf(`%q %s`, name, e.helmTemplateRenderArgs[name]))
 		}
 		fmt.Fprintf(&sb, `  {{- include "base-resources.renderResourceKind" (dict %s) }}
 `, strings.Join(args, " "))

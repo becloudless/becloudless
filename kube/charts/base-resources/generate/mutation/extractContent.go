@@ -2,14 +2,7 @@ package mutation
 
 import "fmt"
 
-// ExtractContent selects the relevant portion of a kind's full k8s JSON
-// schema for use as the instance schema under
-// .Values.resources.<name>.<id>:
-//   - by default -> the schema's own top-level "spec" property
-//   - if ContentIsOutOfSpec is set -> the schema's top-level properties,
-//     minus apiVersion/kind/metadata/status (and "required" filtered the
-//     same way), for kinds whose content isn't wrapped in a "spec" of its
-//     own (e.g. ConfigMap, Secret, ServiceAccount)
+// ExtractContent selects the relevant portion of a kind's full k8s JSON schema for use as the instance schema
 type ExtractContent struct {
 	ContentIsOutOfSpec bool `yaml:"contentIsOutOfSpec"`
 
