@@ -1,4 +1,4 @@
-package transform
+package mutation
 
 import "fmt"
 
@@ -6,13 +6,13 @@ import "fmt"
 // schema for use as the instance schema under
 // .Values.resources.<name>.<id>:
 //   - by default -> the schema's own top-level "spec" property
-//   - if the "contentIsOutOfSpec" transformer is declared for this kind
-//     (see Entry.HasTransformer) -> the schema's top-level properties,
+//   - if the "contentIsOutOfSpec" mutation is declared for this kind
+//     (see Entry.HasMutation) -> the schema's top-level properties,
 //     minus apiVersion/kind/metadata/status (and "required" filtered the
 //     same way), for kinds whose content isn't wrapped in a "spec" of its
 //     own (e.g. ConfigMap, Secret, ServiceAccount)
 func ExtractContent(kindSchema map[string]interface{}, e *Entry) (map[string]interface{}, error) {
-	if !e.HasTransformer("contentIsOutOfSpec") {
+	if !e.HasMutation("contentIsOutOfSpec") {
 		props, _ := kindSchema["properties"].(map[string]interface{})
 		spec, _ := props["spec"].(map[string]interface{})
 		if spec == nil {

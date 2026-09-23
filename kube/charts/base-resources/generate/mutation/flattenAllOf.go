@@ -1,4 +1,4 @@
-package transform
+package mutation
 
 // FlattenAllOf recursively collapses "allOf" schema nodes (the pattern
 // OpenAPI-v3-derived schemas commonly use to combine a $ref with sibling
@@ -6,7 +6,7 @@ package transform
 // single flat object schema, merging each branch's "properties" (node's own
 // properties win on conflicts) and "required" (union, deduped) and copying
 // over any other branch keyword not already set on the node. This keeps
-// downstream transformers - which only look at a node's own
+// downstream mutations - which only look at a node's own
 // "type"/"properties"/"items"/"additionalProperties" - working the same way
 // for schemas fetched from Kubernetes' OpenAPI v3 spec as they do for the
 // already-flattened schemas used elsewhere (plain JSON schema mirrors, CRD

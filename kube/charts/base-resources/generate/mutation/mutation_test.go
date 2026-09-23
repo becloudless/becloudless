@@ -1,8 +1,8 @@
-package transform
+package mutation
 
 import "testing"
 
-func TestDefaultTransformers_EnabledSurvivesFullPipeline(t *testing.T) {
+func TestDefaultMutations_EnabledSurvivesFullPipeline(t *testing.T) {
 	// Mimics a CRD-style schema (content wrapped in "spec", the default),
 	// similar to the upstream k8s JSON schema fed into Apply by the
 	// generate package's fetchSchemas.
@@ -22,7 +22,7 @@ func TestDefaultTransformers_EnabledSurvivesFullPipeline(t *testing.T) {
 	}
 	e := &Entry{Name: "widgets"}
 
-	got, err := Apply(DefaultTransformers, schema, e)
+	got, err := Apply(DefaultMutations, schema, e)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

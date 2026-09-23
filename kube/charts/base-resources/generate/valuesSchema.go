@@ -130,23 +130,23 @@ func generateChartValuesSchema(dir string, entries []resource) error {
 	defaultsResourcesProps := map[string]interface{}{}
 
 	for _, e := range entries {
-		data, err := os.ReadFile(filepath.Join(schemaDir, e.name+".json"))
+		data, err := os.ReadFile(filepath.Join(schemaDir, e.Name+".json"))
 		if err != nil {
-			return fmt.Errorf("read %s.json: %w", e.name, err)
+			return fmt.Errorf("read %s.json: %w", e.Name, err)
 		}
 		var inlined map[string]interface{}
 		if err := json.Unmarshal(data, &inlined); err != nil {
-			return fmt.Errorf("parse %s.json: %w", e.name, err)
+			return fmt.Errorf("parse %s.json: %w", e.Name, err)
 		}
-		defs[e.name] = inlined
+		defs[e.Name] = inlined
 
-		ref := map[string]interface{}{"$ref": "#/$defs/" + e.name}
-		resourcesProps[e.name] = map[string]interface{}{
+		ref := map[string]interface{}{"$ref": "#/$defs/" + e.Name}
+		resourcesProps[e.Name] = map[string]interface{}{
 			"type":                 "object",
-			"description":          fmt.Sprintf("%s instances, keyed by id.", e.kind),
+			"description":          fmt.Sprintf("%s instances, keyed by id.", e.Kind),
 			"additionalProperties": ref,
 		}
-		defaultsResourcesProps[e.name] = map[string]interface{}{"$ref": "#/$defs/" + e.name}
+		defaultsResourcesProps[e.Name] = map[string]interface{}{"$ref": "#/$defs/" + e.Name}
 	}
 
 	schema, err := loadValuesSchemaBase()
@@ -181,21 +181,21 @@ func buildValuesSchema(entries []resource, resolve func(name string) (interface{
 	defaultsResourcesProps := map[string]interface{}{}
 
 	for _, e := range entries {
-		instanceSchema, err := resolve(e.name)
+		instanceSchema, err := resolve(e.Name)
 		if err != nil {
 			return nil, err
 		}
-		resourcesProps[e.name] = map[string]interface{}{
+		resourcesProps[e.Name] = map[string]interface{}{
 			"type":                 "object",
-			"description":          fmt.Sprintf("%s instances, keyed by id.", e.kind),
+			"description":          fmt.Sprintf("%s instances, keyed by id.", e.Kind),
 			"additionalProperties": instanceSchema,
 		}
 
-		defaultsSchema, err := resolve(e.name)
+		defaultsSchema, err := resolve(e.Name)
 		if err != nil {
 			return nil, err
 		}
-		defaultsResourcesProps[e.name] = defaultsSchema
+		defaultsResourcesProps[e.Name] = defaultsSchema
 	}
 
 	schema, err := loadValuesSchemaBase()

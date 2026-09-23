@@ -1,4 +1,4 @@
-package transform
+package mutation
 
 // MergeMetadata merges the well-known metadata fields (handled by
 // resources.computeMetadata / resources.computeName) into

@@ -4,7 +4,7 @@ resources:
     component: io.k8s.api.core.v1.ConfigMap
     apiVersion: v1
     kind: ConfigMap
-    transformer:
+    mutations:
       contentIsOutOfSpec: true
       stringifyFields:
         fields:
@@ -14,7 +14,7 @@ resources:
     component: io.k8s.api.core.v1.Secret
     apiVersion: v1
     kind: Secret
-    transformer:
+    mutations:
       contentIsOutOfSpec: true
   - name: horizontalPodAutoscalers
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__autoscaling__v2_openapi.json
@@ -46,7 +46,7 @@ resources:
     component: io.k8s.api.apps.v1.Deployment
     apiVersion: apps/v1
     kind: Deployment
-    transformer:
+    mutations:
       arraysToMaps:
         ignore:
           - template.spec.containers.command
@@ -58,7 +58,7 @@ resources:
     component: io.k8s.api.apps.v1.StatefulSet
     apiVersion: apps/v1
     kind: StatefulSet
-    transformer:
+    mutations:
       arraysToMaps:
         ignore:
           - template.spec.containers.command
@@ -70,7 +70,7 @@ resources:
     component: io.k8s.api.apps.v1.DaemonSet
     apiVersion: apps/v1
     kind: DaemonSet
-    transformer:
+    mutations:
       arraysToMaps:
         ignore:
           - template.spec.containers.command
@@ -82,7 +82,7 @@ resources:
     component: io.k8s.api.batch.v1.CronJob
     apiVersion: batch/v1
     kind: CronJob
-    transformer:
+    mutations:
       arraysToMaps:
         ignore:
           - jobTemplate.spec.template.spec.containers.command
@@ -94,7 +94,7 @@ resources:
     component: io.k8s.api.batch.v1.Job
     apiVersion: batch/v1
     kind: Job
-    transformer:
+    mutations:
       arraysToMaps:
         ignore:
           - template.spec.containers.command
@@ -106,35 +106,35 @@ resources:
     component: io.k8s.api.core.v1.ServiceAccount
     apiVersion: v1
     kind: ServiceAccount
-    transformer:
+    mutations:
       contentIsOutOfSpec: true
   - name: roles
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
     component: io.k8s.api.rbac.v1.Role
     apiVersion: rbac.authorization.k8s.io/v1
     kind: Role
-    transformer:
+    mutations:
       contentIsOutOfSpec: true
   - name: roleBindings
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
     component: io.k8s.api.rbac.v1.RoleBinding
     apiVersion: rbac.authorization.k8s.io/v1
     kind: RoleBinding
-    transformer:
+    mutations:
       contentIsOutOfSpec: true
   - name: clusterRoles
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
     component: io.k8s.api.rbac.v1.ClusterRole
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRole
-    transformer:
+    mutations:
       contentIsOutOfSpec: true
   - name: clusterRoleBindings
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
     component: io.k8s.api.rbac.v1.ClusterRoleBinding
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRoleBinding
-    transformer:
+    mutations:
       contentIsOutOfSpec: true
   - name: podDisruptionBudgets
     url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__policy__v1_openapi.json
@@ -196,14 +196,14 @@ resources:
     component: io.k8s.api.storage.v1.StorageClass
     apiVersion: storage.k8s.io/v1
     kind: StorageClass
-    transformer:
+    mutations:
       contentIsOutOfSpec: true
   - name: volumeSnapshotClasses
     url: https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
     apiVersion: snapshot.storage.k8s.io/v1
     kind: VolumeSnapshotClass
     crdVersion: v1
-    transformer:
+    mutations:
       contentIsOutOfSpec: true
   - name: sealedSecrets
     url: https://raw.githubusercontent.com/bitnami-labs/sealed-secrets/main/helm/sealed-secrets/crds/bitnami.com_sealedsecrets.yaml
@@ -225,7 +225,7 @@ resources:
     apiVersion: longhorn.io/v1beta2
     kind: Setting
     crdVersion: v1beta2
-    transformer:
+    mutations:
       contentIsOutOfSpec: true
   - name: routes
     url: https://raw.githubusercontent.com/openshift/api/master/route/v1/zz_generated.crd-manifests/routes.crd.yaml
