@@ -120,3 +120,34 @@ tests:
           path: metadata.labels
           value:
             app: custom-app
+
+  - it: applies defaults.metadata.namespace when the resource does not set its own namespace
+    set:
+      defaults:
+        metadata:
+          namespace: shared-ns
+      resources:
+        configMaps:
+          usesGlobalNamespace:
+            data:
+              key: value1
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: shared-ns
+
+  - it: lets the resource's own namespace override defaults.metadata.namespace
+    set:
+      defaults:
+        metadata:
+          namespace: shared-ns
+      resources:
+        configMaps:
+          overridesGlobalNamespace:
+            namespace: custom-ns
+            data:
+              key: value1
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: custom-ns

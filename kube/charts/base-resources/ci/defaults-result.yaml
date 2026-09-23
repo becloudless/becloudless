@@ -4,7 +4,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: test-release-usesGlobalMetadataOnly
-  namespace: default
+  namespace: shared-ns
   labels:
     org: acme
   annotations:
@@ -17,7 +17,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: test-release-overridesDefault
-  namespace: default
+  namespace: shared-ns
   labels:
     app: custom-app
     org: acme
@@ -31,8 +31,23 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: test-release-overridesGlobalNamespace
+  namespace: custom-ns
+  labels:
+    app: shared-default
+    org: acme
+    team: platform
+  annotations:
+    managed-by: base-resources
+data:
+  key: value4
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: test-release-usesDefaultOnly
-  namespace: default
+  namespace: shared-ns
   labels:
     app: shared-default
     org: acme

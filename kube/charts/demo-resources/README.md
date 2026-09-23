@@ -22,6 +22,11 @@ purely from `values.yaml`, without writing any templates yourself.
   across every resource of every kind, below `defaults.resources.<kind>` and
   the resource's own `labels`/`annotations` in precedence - handy for
   labels/annotations shared across the whole chart (e.g. `app.kubernetes.io/part-of`).
+- `defaults.metadata.namespace` is a fallback `namespace` used by every
+  resource of every kind that doesn't set its own `namespace`, above the
+  release namespace and below the resource's own `namespace` in precedence -
+  handy for putting an entire chart's resources in a fixed namespace
+  regardless of the release namespace.
 - Every resource supports `nameOverride`, `fullNameOverride`, `namespace`,
   `labels`, `annotations` and `enabled` (defaults to `true`), on top of that
   kind's normal spec fields.
