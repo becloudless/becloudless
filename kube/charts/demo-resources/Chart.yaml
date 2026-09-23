@@ -1,0 +1,9 @@
+apiVersion: v2
+name: demo-resources
+description: Example chart demonstrating how to consume the base-resources library chart
+version: 0.1.0
+
+dependencies:
+  - name: base-resources
+    version: "0.0.0"
+    repository: "file://../base-resources"

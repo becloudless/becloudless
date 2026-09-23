@@ -13,7 +13,7 @@ the id part) or `fullNameOverride` (replaces the whole name). If the
 (possibly overridden) id part is "main", the name is just "<Release.Name>"
 with no suffix.
 */}}
-{{- define "resources.generic.computeName" }}
+{{- define "base-resources.generic.computeName" }}
   {{- $rootContext := .rootContext }}
   {{- $id := .id }}
   {{- $resource := .resource | default dict }}

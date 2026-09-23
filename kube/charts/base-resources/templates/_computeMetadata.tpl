@@ -20,12 +20,12 @@ Returns a `metadata:` YAML block. The caller is responsible for stripping
 from the resource's values before rendering the rest of the manifest, so
 they aren't duplicated into `spec:` (or the root, when contentIsSpec: false).
 */}}
-{{- define "resources.generic.computeMetadata" }}
+{{- define "base-resources.generic.computeMetadata" }}
   {{- $rootContext := .rootContext }}
   {{- $id := .id }}
   {{- $resource := .resource | default dict }}
 
-  {{- $name := include "resources.generic.computeName" (dict "rootContext" $rootContext "id" $id "resource" $resource) }}
+  {{- $name := include "base-resources.generic.computeName" (dict "rootContext" $rootContext "id" $id "resource" $resource) }}
   {{- $namespace := $resource.namespace | default $rootContext.Release.Namespace }}
 metadata:
   name: {{ $name }}

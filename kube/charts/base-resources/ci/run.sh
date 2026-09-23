@@ -27,7 +27,7 @@ dependencies:
     repository: "file://charts/base-resources"
 EOF
 cat > "$tmp/templates/loader.yaml" <<'EOF'
-{{ include "resources.loader.all" . }}
+{{ include "base-resources.loader.all" . }}
 EOF
 : > "$tmp/values.yaml"
 
