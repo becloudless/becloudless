@@ -12,14 +12,14 @@ Params (passed as a dict):
   resource        - the resource's (already defaulted/merged/templated) values
   stringifyFields - list of top-level field names to process
 
-Returns the resource's values (as YAML, like resources.generic.render's
+Returns the resource's values (as YAML, like base-resources.generic.render's
 "resource" input) with every declared field's non-string entries replaced by
 their YAML string representation. Callers should pipe the result through
 `fromYaml` to get back a dict, e.g.:
 
-  {{- $resource = include "resources.generic.stringifyFields" (dict "resource" $resource "stringifyFields" $stringifyFields) | fromYaml }}
+  {{- $resource = include "base-resources.generic.stringifyFields" (dict "resource" $resource "stringifyFields" $stringifyFields) | fromYaml }}
 */}}
-{{- define "resources.generic.stringifyFields" }}
+{{- define "base-resources.generic.stringifyFields" }}
   {{- $resource := .resource | default dict }}
   {{- $fields := .stringifyFields | default list }}
   {{- range $field := $fields }}
