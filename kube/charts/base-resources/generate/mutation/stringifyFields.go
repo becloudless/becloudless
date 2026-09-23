@@ -1,4 +1,4 @@
-package transform
+package mutation
 
 import (
 	"fmt"
@@ -6,9 +6,9 @@ import (
 )
 
 // StringifyFields relaxes the schema of the fields declared via the
-// "stringifyFields" transformer config's "fields" option in resources.yaml:
+// "stringifyFields" mutation config's "fields" option in resources.yaml:
 //
-//	transformer:
+//	mutations:
 //	  stringifyFields:
 //	    fields:
 //	      - data

@@ -1,4 +1,4 @@
-package transform
+package mutation
 
 import "testing"
 
@@ -62,7 +62,7 @@ func TestArraysToMaps_IgnoresConfiguredPaths(t *testing.T) {
 	}
 	e := &Entry{
 		Name: "deployments",
-		TransformerConfig: map[string]map[string][]string{
+		MutationConfig: map[string]map[string][]string{
 			"arraysToMaps": {
 				"ignore": {"containers.command"},
 			},

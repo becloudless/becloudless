@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"resourceschart/generate/transform"
+	"resourceschart/generate/mutation"
 )
 
 // fetchSchemas fetches and transforms the upstream k8s JSON schema for every
@@ -27,14 +27,14 @@ func fetchSchemas(dir string, entries []resource) error {
 	var failed []string
 	for i := range entries {
 		e := &entries[i]
-		if e.url == "" {
+		if e.URL == "" {
 			continue
 		}
-		dest := filepath.Join(schemaDir, e.name+".json")
-		fmt.Printf("fetching %s -> %s\n", e.url, dest)
-		if err := fetchAndTransformSchema(client, e, dest); err != nil {
+		dest := filepath.Join(schemaDir, e.Name+".json")
+		fmt.Printf("fetching %s -> %s\n", e.URL, dest)
+		if err := fetchAndMutateSchema(client, e, dest); err != nil {
 			fmt.Fprintf(os.Stderr, "  failed: %v\n", err)
-			failed = append(failed, e.name)
+			failed = append(failed, e.Name)
 			continue
 		}
 	}
@@ -45,38 +45,38 @@ func fetchSchemas(dir string, entries []resource) error {
 	return nil
 }
 
-// fetchAndTransformSchema fetches a kind's full k8s JSON schema from e.url
-// and runs it through the transformer pipeline (see the transform package)
+// fetchAndMutateSchema fetches a kind's full k8s JSON schema from e.URL
+// and runs it through the mutation pipeline (see the mutation package)
 // to produce the instance schema used for .Values.resources.<name>.<id>
 // (and shared, as-is, by .Values.defaults.resources.<name>), writing the
 // result to dest. schema/resources/<name>.json therefore holds the
 // ready-to-use instance schema, not the raw upstream k8s schema.
-// Transformers may also populate e.templateArgs as a side effect (see
-// transform.Entry.AddTemplateArg).
+// Mutations may also populate e.templateArgs as a side effect (see
+// mutation.Entry.AddTemplateArg).
 //
-// If e.crdVersion is set, e.url is instead treated as a CRD manifest (YAML)
+// If e.CRDVersion is set, e.URL is instead treated as a CRD manifest (YAML)
 // and the schema is extracted from it (see fetchCRDManifestSchema) rather
-// than parsed directly as JSON. Otherwise, if e.component is set, e.url is
+// than parsed directly as JSON. Otherwise, if e.Component is set, e.URL is
 // treated as a Kubernetes OpenAPI v3 spec document and the schema is
 // extracted (with $ref pointers resolved) from it (see
 // fetchOpenAPIV3Schema).
-func fetchAndTransformSchema(client *http.Client, e *resource, dest string) error {
+func fetchAndMutateSchema(client *http.Client, e *resource, dest string) error {
 	var kindSchema map[string]interface{}
 	switch {
-	case e.crdVersion != "":
-		schema, err := fetchCRDManifestSchema(client, e.url, e.crdVersion, e.kind)
+	case e.CRDVersion != "":
+		schema, err := fetchCRDManifestSchema(client, e.URL, e.CRDVersion, e.Kind)
 		if err != nil {
 			return err
 		}
 		kindSchema = schema
-	case e.component != "":
-		schema, err := fetchOpenAPIV3Schema(client, e.url, e.component)
+	case e.Component != "":
+		schema, err := fetchOpenAPIV3Schema(client, e.URL, e.Component)
 		if err != nil {
 			return err
 		}
 		kindSchema = schema
 	default:
-		resp, err := client.Get(e.url)
+		resp, err := client.Get(e.URL)
 		if err != nil {
 			return err
 		}
@@ -96,8 +96,8 @@ func fetchAndTransformSchema(client *http.Client, e *resource, dest string) erro
 		}
 	}
 
-	te := &transform.Entry{Name: e.name, TransformerConfig: e.transformerConfig}
-	instance, err := transform.Apply(transform.DefaultTransformers, kindSchema, te)
+	te := &mutation.Entry{Name: e.Name, MutationConfig: e.mutationConfig}
+	instance, err := mutation.Apply(mutation.DefaultMutations, kindSchema, te)
 	if err != nil {
 		return err
 	}

@@ -24,11 +24,11 @@ func generateTemplate(dir string, entries []resource) error {
   {{- $rootContext := .rootContext }}
 `)
 	for _, e := range entries {
-		if e.apiVersion == "" || e.kind == "" {
-			return fmt.Errorf("resource %q is missing apiVersion/kind in resources.yaml", e.name)
+		if e.APIVersion == "" || e.Kind == "" {
+			return fmt.Errorf("resource %q is missing apiVersion/kind in resources.yaml", e.Name)
 		}
 
-		args := []string{fmt.Sprintf(`"rootContext" $rootContext "name" %q "apiVersion" %q "kind" %q`, e.name, e.apiVersion, e.kind)}
+		args := []string{fmt.Sprintf(`"rootContext" $rootContext "name" %q "apiVersion" %q "kind" %q`, e.Name, e.APIVersion, e.Kind)}
 		for _, arg := range e.templateArgs {
 			args = append(args, fmt.Sprintf(`%q %s`, arg.Name, arg.Value))
 		}

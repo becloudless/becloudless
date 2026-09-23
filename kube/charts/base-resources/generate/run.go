@@ -18,23 +18,24 @@ func Run() error {
 	}
 
 	yamlPath := filepath.Join(dir, "resources.yaml")
-	entries, err := parseResources(yamlPath)
+	file, err := newResourcesFile(yamlPath)
 	if err != nil {
 		return fmt.Errorf("parse %s: %w", yamlPath, err)
 	}
-	if len(entries) == 0 {
+	resources := file.Resources
+	if len(resources) == 0 {
 		return fmt.Errorf("no entries found in %s", yamlPath)
 	}
 
-	if err := fetchSchemas(dir, entries); err != nil {
+	if err := fetchSchemas(dir, resources); err != nil {
 		return err
 	}
 
-	if err := generateTemplate(dir, entries); err != nil {
+	if err := generateTemplate(dir, resources); err != nil {
 		return err
 	}
 
-	if err := generateValuesSchema(dir, entries); err != nil {
+	if err := generateValuesSchema(dir, resources); err != nil {
 		return err
 	}
 

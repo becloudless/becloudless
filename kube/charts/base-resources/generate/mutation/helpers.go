@@ -1,4 +1,4 @@
-package transform
+package mutation
 
 // walkSchemaNodes recursively visits every nested JSON-schema object found
 // under node - via "properties", "additionalProperties", "items" and

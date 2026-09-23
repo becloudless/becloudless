@@ -1,4 +1,4 @@
-package transform
+package mutation
 
 // MergeEnabled merges the well-known "enabled" field (handled by
 // resources.renderResourceKind) into the schema's properties, taking
