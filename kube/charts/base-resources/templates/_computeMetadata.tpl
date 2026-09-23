@@ -2,20 +2,23 @@
 Computes the full `metadata:` block for a resource instance: name, namespace,
 labels and annotations, from a fixed set of well-known fields on the
 resource's (already defaulted/merged) values, additionally layering in
-global label/annotation defaults from .Values.defaults.metadata (applied
-across every resource of every kind), below the resource's own
-(already per-kind-defaulted) labels/annotations in precedence.
+global metadata defaults from .Values.defaults.metadata (applied across
+every resource of every kind): labels/annotations are merged in below the
+resource's own (already per-kind-defaulted) labels/annotations in
+precedence, and namespace falls back to defaults.metadata.namespace (below
+the resource's own namespace, above the release namespace) in precedence.
 
 Params (passed as a dict):
   rootContext - the root Helm context (usually `$`); also used to read
-                .Values.defaults.metadata.{labels,annotations}
+                .Values.defaults.metadata.{labels,annotations,namespace}
   id          - the resource's key under .Values.resources.<kind>
   resource    - the resource's (already defaulted/merged) values, which may
                 contain:
                   nameOverride     - replaces just the id part of the name
                   fullNameOverride - replaces the entire computed name
-                  namespace        - metadata.namespace (defaults to the
-                                     release namespace)
+                  namespace        - metadata.namespace (defaults to
+                                     .Values.defaults.metadata.namespace,
+                                     then the release namespace)
                   labels           - metadata.labels
                   annotations      - metadata.annotations
 
@@ -30,11 +33,11 @@ they aren't duplicated into `spec:` (or the root, when contentIsSpec: false).
   {{- $resource := .resource | default dict }}
 
   {{- $name := include "base-resources.generic.computeName" (dict "rootContext" $rootContext "id" $id "resource" $resource) }}
-  {{- $namespace := $resource.namespace | default $rootContext.Release.Namespace }}
 
   {{- $defaultsAll := $rootContext.Values.defaults | default dict }}
   {{- $globalMetadataAll := $defaultsAll.metadata | default dict }}
   {{- $globalMetadataAll = tpl (toYaml $globalMetadataAll) $rootContext | fromYaml }}
+  {{- $namespace := $resource.namespace | default $globalMetadataAll.namespace | default $rootContext.Release.Namespace }}
   {{- $labels := merge ($resource.labels | default dict) ($globalMetadataAll.labels | default dict) }}
   {{- $annotations := merge ($resource.annotations | default dict) ($globalMetadataAll.annotations | default dict) }}
 metadata:
