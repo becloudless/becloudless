@@ -56,7 +56,8 @@ func TestParseCRDs_ParsesContentIsOutOfSpecAndStringifyFields(t *testing.T) {
     apiVersion: v1
     kind: ConfigMap
     mutations:
-      contentIsOutOfSpec: true
+      extractContent:
+        contentIsOutOfSpec: true
       stringifyFields:
         fields:
           - data
@@ -71,8 +72,8 @@ func TestParseCRDs_ParsesContentIsOutOfSpecAndStringifyFields(t *testing.T) {
 		t.Fatalf("len(entries) = %d, want 1", len(entries))
 	}
 
-	if !entries[0].Mutations.ContentIsOutOfSpec {
-		t.Errorf("Mutations.ContentIsOutOfSpec = false, want true")
+	if entries[0].Mutations.ExtractContent == nil || !entries[0].Mutations.ExtractContent.ContentIsOutOfSpec {
+		t.Errorf("Mutations.ExtractContent.ContentIsOutOfSpec = false, want true")
 	}
 	wantFields := &mutation.StringifyFields{Fields: []string{"data"}}
 	if !reflect.DeepEqual(entries[0].Mutations.StringifyFields, wantFields) {
@@ -107,8 +108,8 @@ func TestParseCRDs_NoMutationsLeavesFieldsZero(t *testing.T) {
 	if entries[0].Mutations.ArraysToMaps != nil {
 		t.Errorf("configMaps.Mutations.ArraysToMaps = %#v, want nil", entries[0].Mutations.ArraysToMaps)
 	}
-	if entries[0].Mutations.ContentIsOutOfSpec {
-		t.Errorf("configMaps.Mutations.ContentIsOutOfSpec = true, want false")
+	if entries[0].Mutations.ExtractContent != nil {
+		t.Errorf("configMaps.Mutations.ExtractContent = %#v, want nil", entries[0].Mutations.ExtractContent)
 	}
 	// Guards against the second resource's mutations config leaking into
 	// the first, and vice versa.
