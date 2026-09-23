@@ -14,7 +14,7 @@ package mutation
 // exhibit the same placeholder.
 type NormalizeIntOrString struct{}
 
-func (NormalizeIntOrString) Mutate(schema map[string]any, e *Entry) (map[string]any, error) {
+func (NormalizeIntOrString) Mutate(schema map[string]any) (MutationResult, error) {
 	walkSchemaNodes(schema, func(node map[string]any) {
 		if node["x-kubernetes-int-or-string"] != true {
 			return
@@ -27,5 +27,5 @@ func (NormalizeIntOrString) Mutate(schema map[string]any, e *Entry) (map[string]
 			map[string]any{"type": "string"},
 		}
 	})
-	return schema, nil
+	return MutationResult{Schema: schema}, nil
 }

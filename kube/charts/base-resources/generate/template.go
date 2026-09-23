@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -29,8 +30,13 @@ func generateTemplate(dir string, entries []resource) error {
 		}
 
 		args := []string{fmt.Sprintf(`"rootContext" $rootContext "name" %q "apiVersion" %q "kind" %q`, e.Name, e.APIVersion, e.Kind)}
-		for _, arg := range e.templateArgs {
-			args = append(args, fmt.Sprintf(`%q %s`, arg.Name, arg.Value))
+		names := make([]string, 0, len(e.templateArgs))
+		for name := range e.templateArgs {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			args = append(args, fmt.Sprintf(`%q %s`, name, e.templateArgs[name]))
 		}
 		fmt.Fprintf(&sb, `  {{- include "base-resources.renderResourceKind" (dict %s) }}
 `, strings.Join(args, " "))

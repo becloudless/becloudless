@@ -30,9 +30,9 @@ type StringifyFields struct {
 	Fields []string `yaml:"fields"`
 }
 
-func (m StringifyFields) Mutate(schema map[string]any, e *Entry) (map[string]any, error) {
+func (m StringifyFields) Mutate(schema map[string]any) (MutationResult, error) {
 	if len(m.Fields) == 0 {
-		return schema, nil
+		return MutationResult{Schema: schema}, nil
 	}
 	fields := map[string]bool{}
 	quoted := make([]string, len(m.Fields))
@@ -40,7 +40,6 @@ func (m StringifyFields) Mutate(schema map[string]any, e *Entry) (map[string]any
 		fields[path] = true
 		quoted[i] = fmt.Sprintf("%q", path)
 	}
-	e.AddTemplateArg("stringifyFields", fmt.Sprintf("(list %s)", strings.Join(quoted, " ")))
 
 	walkSchemaNodesWithPath(schema, "", func(node map[string]any, path string) {
 		if !fields[path] {
@@ -51,5 +50,8 @@ func (m StringifyFields) Mutate(schema map[string]any, e *Entry) (map[string]any
 		}
 		node["additionalProperties"] = map[string]any{}
 	})
-	return schema, nil
+	return MutationResult{
+		Schema:       schema,
+		TemplateArgs: map[string]string{"stringifyFields": fmt.Sprintf("(list %s)", strings.Join(quoted, " "))},
+	}, nil
 }

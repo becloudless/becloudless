@@ -15,9 +15,9 @@ import "maps"
 // manifests).
 type FlattenAllOf struct{}
 
-func (FlattenAllOf) Mutate(schema map[string]any, _ *Entry) (map[string]any, error) {
+func (FlattenAllOf) Mutate(schema map[string]any) (MutationResult, error) {
 	walkSchemaNodes(schema, flattenAllOfNode)
-	return schema, nil
+	return MutationResult{Schema: schema}, nil
 }
 
 func flattenAllOfNode(node map[string]any) {

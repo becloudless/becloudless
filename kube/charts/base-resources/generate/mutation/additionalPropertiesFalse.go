@@ -9,7 +9,7 @@ package mutation
 // untouched.
 type AdditionalPropertiesFalse struct{}
 
-func (AdditionalPropertiesFalse) Mutate(schema map[string]any, _ *Entry) (map[string]any, error) {
+func (AdditionalPropertiesFalse) Mutate(schema map[string]any) (MutationResult, error) {
 	walkSchemaNodes(schema, func(node map[string]any) {
 		if !schemaTypeIncludes(node["type"], "object") {
 			return
@@ -25,5 +25,5 @@ func (AdditionalPropertiesFalse) Mutate(schema map[string]any, _ *Entry) (map[st
 		}
 		node["additionalProperties"] = false
 	})
-	return schema, nil
+	return MutationResult{Schema: schema}, nil
 }

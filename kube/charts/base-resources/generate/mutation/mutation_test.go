@@ -20,16 +20,14 @@ func TestPipeline_EnabledSurvivesFullPipeline(t *testing.T) {
 			},
 		},
 	}
-	e := &Entry{Name: "widgets"}
-
-	got, err := Apply(Pipeline(ExtractContent{}, nil, nil), schema, e)
+	got, err := MutateSchema(Pipeline(ExtractContent{}, nil, nil), schema)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	props, ok := got["properties"].(map[string]any)
+	props, ok := got.Schema["properties"].(map[string]any)
 	if !ok {
-		t.Fatalf("properties is not a map: %#v", got["properties"])
+		t.Fatalf("properties is not a map: %#v", got.Schema["properties"])
 	}
 
 	enabled, ok := props["enabled"].(map[string]any)
@@ -43,7 +41,7 @@ func TestPipeline_EnabledSurvivesFullPipeline(t *testing.T) {
 	// AdditionalPropertiesFalse runs after MergeEnabled, so the top-level
 	// object (which now includes "enabled" among its declared properties)
 	// must still end up closed against unknown properties.
-	if got["additionalProperties"] != false {
-		t.Errorf("top-level additionalProperties = %v, want false", got["additionalProperties"])
+	if got.Schema["additionalProperties"] != false {
+		t.Errorf("top-level additionalProperties = %v, want false", got.Schema["additionalProperties"])
 	}
 }

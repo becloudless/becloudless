@@ -9,7 +9,7 @@ import "maps"
 // output entirely; it defaults to true when unset.
 type MergeEnabled struct{}
 
-func (MergeEnabled) Mutate(schema map[string]any, _ *Entry) (map[string]any, error) {
+func (MergeEnabled) Mutate(schema map[string]any) (MutationResult, error) {
 	mergedProps := map[string]any{}
 	if p, ok := schema["properties"].(map[string]any); ok {
 		maps.Copy(mergedProps, p)
@@ -20,5 +20,5 @@ func (MergeEnabled) Mutate(schema map[string]any, _ *Entry) (map[string]any, err
 	}
 	schema["properties"] = mergedProps
 	schema["type"] = "object"
-	return schema, nil
+	return MutationResult{Schema: schema}, nil
 }

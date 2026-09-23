@@ -11,7 +11,7 @@ type ArraysToMaps struct {
 	Ignore []string `yaml:"ignore"`
 }
 
-func (m ArraysToMaps) Mutate(schema map[string]any, e *Entry) (map[string]any, error) {
+func (m ArraysToMaps) Mutate(schema map[string]any) (MutationResult, error) {
 	ignore := map[string]bool{}
 	for _, path := range m.Ignore {
 		ignore[path] = true
@@ -23,7 +23,7 @@ func (m ArraysToMaps) Mutate(schema map[string]any, e *Entry) (map[string]any, e
 		}
 		convertArrayNodeToMap(node)
 	})
-	return schema, nil
+	return MutationResult{Schema: schema}, nil
 }
 
 func convertArrayNodeToMap(node map[string]any) {

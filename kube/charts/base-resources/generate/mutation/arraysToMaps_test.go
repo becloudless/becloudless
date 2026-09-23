@@ -17,14 +17,12 @@ func TestArraysToMaps_ConvertsPlainArrayField(t *testing.T) {
 			},
 		},
 	}
-	e := &Entry{Name: "deployments"}
-
-	got, err := (ArraysToMaps{}).Mutate(schema, e)
+	got, err := (ArraysToMaps{}).Mutate(schema)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	containers := got["properties"].(map[string]any)["containers"].(map[string]any)
+	containers := got.Schema["properties"].(map[string]any)["containers"].(map[string]any)
 	if containers["type"] != "object" {
 		t.Errorf("containers.type = %v, want %q", containers["type"], "object")
 	}
@@ -60,15 +58,14 @@ func TestArraysToMaps_IgnoresConfiguredPaths(t *testing.T) {
 			},
 		},
 	}
-	e := &Entry{Name: "deployments"}
 	m := ArraysToMaps{Ignore: []string{"containers.command"}}
 
-	got, err := m.Mutate(schema, e)
+	got, err := m.Mutate(schema)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	containerItems := got["properties"].(map[string]any)["containers"].(map[string]any)["additionalProperties"].(map[string]any)
+	containerItems := got.Schema["properties"].(map[string]any)["containers"].(map[string]any)["additionalProperties"].(map[string]any)
 	props := containerItems["properties"].(map[string]any)
 
 	command := props["command"].(map[string]any)
@@ -87,7 +84,7 @@ func TestArraysToMaps_IgnoresConfiguredPaths(t *testing.T) {
 	}
 }
 
-func TestArraysToMaps_NilEntryDoesNotPanic(t *testing.T) {
+func TestArraysToMaps_EmptySchemaDoesNotPanic(t *testing.T) {
 	schema := map[string]any{
 		"type": "array",
 		"items": map[string]any{
@@ -95,11 +92,11 @@ func TestArraysToMaps_NilEntryDoesNotPanic(t *testing.T) {
 		},
 	}
 
-	got, err := (ArraysToMaps{}).Mutate(schema, nil)
+	got, err := (ArraysToMaps{}).Mutate(schema)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if got["type"] != "object" {
-		t.Errorf("type = %v, want %q", got["type"], "object")
+	if got.Schema["type"] != "object" {
+		t.Errorf("type = %v, want %q", got.Schema["type"], "object")
 	}
 }
