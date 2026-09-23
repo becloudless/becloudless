@@ -1,7 +1,7 @@
 package transform
 
 // MergeEnabled merges the well-known "enabled" field (handled by
-// resources.generic.renderAll) into the schema's properties, taking
+// resources.renderResourceKind) into the schema's properties, taking
 // precedence over any same-named property already present. Setting
 // `enabled: false` on a resource instance excludes it from the rendered
 // output entirely; it defaults to true when unset.

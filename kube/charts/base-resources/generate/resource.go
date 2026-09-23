@@ -38,7 +38,7 @@ type resource struct {
 	// e.g. "required", "contentIsSpec", "stringifyFields". Populated from
 	// transform.Entry.TemplateArgs after running the pipeline (see
 	// fetchAndTransformSchema) and consumed by generateTemplate to build
-	// each kind's "base-resources.generic.renderAll" call, without
+	// each kind's "base-resources.renderResourceKind" call, without
 	// generateTemplate needing to know about specific transformer names.
 	templateArgs []transform.TemplateArg
 
@@ -99,7 +99,7 @@ type resource struct {
 // Go map) so that the order resource kinds appear in resources.yaml is
 // preserved in the returned slice - Go maps have no defined iteration
 // order, and the order kinds appear in is significant: it's the order
-// generateTemplate emits each kind's "base-resources.generic.renderAll" call in
+// generateTemplate emits each kind's "base-resources.renderResourceKind" call in
 // templates/_generated.tpl.
 func parseResources(path string) ([]resource, error) {
 	data, err := os.ReadFile(path)

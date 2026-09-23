@@ -1,7 +1,7 @@
 package transform
 
 // MergeMetadata merges the well-known metadata fields (handled by
-// resources.generic.computeMetadata / resources.generic.computeName) into
+// resources.computeMetadata / resources.computeName) into
 // the schema's properties, taking precedence over any same-named property
 // already present.
 func MergeMetadata(schema map[string]interface{}, _ *Entry) (map[string]interface{}, error) {
@@ -20,7 +20,7 @@ func MergeMetadata(schema map[string]interface{}, _ *Entry) (map[string]interfac
 }
 
 // metadataSchemaProperties are the well-known fields handled by
-// resources.generic.computeMetadata / resources.generic.computeName. They're
+// resources.computeMetadata / resources.computeName. They're
 // injected into every resource kind's instance schema, and take precedence
 // over any same-named property coming from the kind's own k8s JSON schema.
 func metadataSchemaProperties() map[string]interface{} {

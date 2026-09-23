@@ -3,7 +3,7 @@ Generic renderer for ALL resource instances of a given kind, driven by
 .Values.resources.<name> (and .Values.defaults.resources.<name>).
 
 Global label/annotation defaults (.Values.defaults.metadata) are layered in
-by base-resources.generic.computeMetadata itself, below this kind's own
+by base-resources.computeMetadata itself, below this kind's own
 defaults.resources.<name> in precedence.
 
 Every value under .Values.resources.<name>.<id> and
@@ -19,9 +19,9 @@ must be escaped (e.g. `{{"{{"}}`) or it will be interpreted as Helm syntax.
 Params may also include `stringifyFields`, a list of top-level field names
 (e.g. "data" for configMaps) whose values may be given as either a plain
 string or an arbitrary YAML node (object, array, number, bool); handled by
-base-resources.generic.stringifyFields, see templates/_stringifyFields.tpl.
+base-resources.stringifyFields, see templates/_stringifyFields.tpl.
 */}}
-{{- define "base-resources.generic.renderAll" }}
+{{- define "base-resources.renderResourceKind" }}
   {{- $rootContext := .rootContext }}
   {{- $name := .name }}
   {{- $apiVersion := .apiVersion }}
@@ -41,7 +41,7 @@ base-resources.generic.stringifyFields, see templates/_stringifyFields.tpl.
   {{- range $id, $resource := (get $resourcesAll $name | default dict) }}
     {{- $merged := merge ($resource | default dict) $default }}
     {{- $merged = tpl (toYaml $merged) $rootContext | fromYaml }}
-    {{- $merged = include "base-resources.generic.stringifyFields" (dict "resource" $merged "stringifyFields" $stringifyFields) | fromYaml }}
+    {{- $merged = include "base-resources.stringifyFields" (dict "resource" $merged "stringifyFields" $stringifyFields) | fromYaml }}
 
     {{- $enabled := true }}
     {{- if hasKey $merged "enabled" }}
@@ -49,11 +49,11 @@ base-resources.generic.stringifyFields, see templates/_stringifyFields.tpl.
     {{- end }}
 
     {{- if $enabled }}
-      {{- include "base-resources.generic.requireFields" (dict "name" $name "id" $id "resource" $merged "required" $required) }}
+      {{- include "base-resources.requireFields" (dict "name" $name "id" $id "resource" $merged "required" $required) }}
 
-      {{- $metadata := include "base-resources.generic.computeMetadata" (dict "rootContext" $rootContext "id" $id "resource" $merged) | trim }}
+      {{- $metadata := include "base-resources.computeMetadata" (dict "rootContext" $rootContext "id" $id "resource" $merged) | trim }}
       {{- $cleaned := omit $merged "nameOverride" "fullNameOverride" "namespace" "labels" "annotations" "enabled" }}
-      {{- include "base-resources.generic.render" (dict "apiVersion" $apiVersion "kind" $kind "contentIsSpec" $contentIsSpec "metadata" $metadata "resource" $cleaned) }}
+      {{- include "base-resources.renderResource" (dict "apiVersion" $apiVersion "kind" $kind "contentIsSpec" $contentIsSpec "metadata" $metadata "resource" $cleaned) }}
     {{- end }}
   {{- end }}
 {{- end }}

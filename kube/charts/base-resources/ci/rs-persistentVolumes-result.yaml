@@ -1,5 +1,5 @@
 ---
-# Source: resources-test/templates/loader.yaml
+# Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
 kind: PersistentVolume
 metadata:

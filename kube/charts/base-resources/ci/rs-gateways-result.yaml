@@ -1,5 +1,5 @@
 ---
-# Source: resources-test/templates/loader.yaml
+# Source: base-resources-test/templates/loader.yaml
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:

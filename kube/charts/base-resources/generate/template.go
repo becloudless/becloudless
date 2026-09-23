@@ -9,7 +9,7 @@ import (
 
 // generateTemplate writes templates/_generated.tpl: a "base-resources.render"
 // aggregate that, for every resource kind in resources.yaml, includes the generic
-// "base-resources.generic.renderAll" template defined in
+// "base-resources.renderResourceKind" template defined in
 // templates/_renderAll.tpl.
 func generateTemplate(dir string, entries []resource) error {
 	templatesDir := filepath.Join(dir, "templates")
@@ -32,7 +32,7 @@ func generateTemplate(dir string, entries []resource) error {
 		for _, arg := range e.templateArgs {
 			args = append(args, fmt.Sprintf(`%q %s`, arg.Name, arg.Value))
 		}
-		fmt.Fprintf(&sb, `  {{- include "base-resources.generic.renderAll" (dict %s) }}
+		fmt.Fprintf(&sb, `  {{- include "base-resources.renderResourceKind" (dict %s) }}
 `, strings.Join(args, " "))
 	}
 	sb.WriteString("{{- end }}\n")
