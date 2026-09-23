@@ -10,7 +10,7 @@ Params (passed as a dict):
                    true  -> the resource's values are wrapped under a `spec:`
                             key in the manifest (e.g. HorizontalPodAutoscaler, Service)
   metadata     - the resource's pre-rendered `metadata:` YAML block (see
-                 base-resources.generic.computeMetadata)
+                 base-resources.computeMetadata)
   resource     - the resource's (already defaulted/merged) values, with the
                  well-known metadata fields (nameOverride, fullNameOverride,
                  namespace, labels, annotations) already stripped out
@@ -19,7 +19,7 @@ Renders exactly one manifest for the given metadata/resource, placing the
 resource's values either at the root or under `spec:`, depending on
 `contentIsSpec`.
 */}}
-{{- define "base-resources.generic.render" }}
+{{- define "base-resources.renderResource" }}
   {{- $apiVersion := .apiVersion }}
   {{- $kind := .kind }}
   {{- $contentIsSpec := .contentIsSpec }}

@@ -14,7 +14,7 @@ import (
 // stripRequiredTransform), so both .Values.resources.<kind> and
 // .Values.defaults.resources.<kind> can safely $ref that same single file -
 // required-field validation on the merged resource is instead generated
-// into templates/_generated.tpl (see resources.generic.requireFields).
+// into templates/_generated.tpl (see resources.requireFields).
 //
 // This file is kept around (alongside the chart-root values.schema.json
 // written by generateChartValuesSchema) purely for editor/IDE tooling (see
@@ -106,7 +106,7 @@ func generateChartValuesSchema(dir string, entries []resource) error {
 					// Global metadata defaults, applied across every resource kind
 					// (below defaults.resources.<kind> and the resource's own
 					// values in merge precedence - see
-					// base-resources.generic.computeMetadata).
+					// base-resources.computeMetadata).
 					"metadata": map[string]interface{}{
 						"type":                 "object",
 						"additionalProperties": false,
@@ -199,7 +199,7 @@ func buildValuesSchema(entries []resource, resolve func(name string) (interface{
 					// Global metadata defaults, applied across every resource kind
 					// (below defaults.resources.<kind> and the resource's own
 					// values in merge precedence - see
-					// base-resources.generic.computeMetadata).
+					// base-resources.computeMetadata).
 					"metadata": map[string]interface{}{
 						"type":                 "object",
 						"additionalProperties": false,

@@ -27,12 +27,12 @@ Returns a `metadata:` YAML block. The caller is responsible for stripping
 from the resource's values before rendering the rest of the manifest, so
 they aren't duplicated into `spec:` (or the root, when contentIsSpec: false).
 */}}
-{{- define "base-resources.generic.computeMetadata" }}
+{{- define "base-resources.computeMetadata" }}
   {{- $rootContext := .rootContext }}
   {{- $id := .id }}
   {{- $resource := .resource | default dict }}
 
-  {{- $name := include "base-resources.generic.computeName" (dict "rootContext" $rootContext "id" $id "resource" $resource) }}
+  {{- $name := include "base-resources.computeName" (dict "rootContext" $rootContext "id" $id "resource" $resource) }}
 
   {{- $defaultsAll := $rootContext.Values.defaults | default dict }}
   {{- $globalMetadataAll := $defaultsAll.metadata | default dict }}

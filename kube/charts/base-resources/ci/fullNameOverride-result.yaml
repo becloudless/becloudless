@@ -1,5 +1,5 @@
 ---
-# Source: resources-test/templates/loader.yaml
+# Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -8,7 +8,7 @@ metadata:
 data:
   a: b
 ---
-# Source: resources-test/templates/loader.yaml
+# Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:

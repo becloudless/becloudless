@@ -1,5 +1,5 @@
 ---
-# Source: resources-test/templates/loader.yaml
+# Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -10,7 +10,7 @@ metadata:
 stringData:
   own: plain-value
 ---
-# Source: resources-test/templates/loader.yaml
+# Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:

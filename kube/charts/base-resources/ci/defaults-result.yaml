@@ -1,5 +1,5 @@
 ---
-# Source: resources-test/templates/loader.yaml
+# Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -12,7 +12,7 @@ metadata:
 stringData:
   key: value3
 ---
-# Source: resources-test/templates/loader.yaml
+# Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -27,7 +27,7 @@ metadata:
 data:
   key: value2
 ---
-# Source: resources-test/templates/loader.yaml
+# Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -42,7 +42,7 @@ metadata:
 data:
   key: value4
 ---
-# Source: resources-test/templates/loader.yaml
+# Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:

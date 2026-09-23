@@ -1,5 +1,5 @@
 ---
-# Source: resources-test/templates/loader.yaml
+# Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -11,7 +11,7 @@ metadata:
 stringData:
   something: interesting
 ---
-# Source: resources-test/templates/loader.yaml
+# Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -20,7 +20,7 @@ metadata:
 data:
   main: cm
 ---
-# Source: resources-test/templates/loader.yaml
+# Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -34,7 +34,7 @@ binaryData:
 data:
   something: interesting
 ---
-# Source: resources-test/templates/loader.yaml
+# Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -47,7 +47,7 @@ spec:
   selector:
     app: myapp
 ---
-# Source: resources-test/templates/loader.yaml
+# Source: base-resources-test/templates/loader.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -67,7 +67,7 @@ spec:
       - image: myimage:latest
         name: myapp
 ---
-# Source: resources-test/templates/loader.yaml
+# Source: base-resources-test/templates/loader.yaml
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:

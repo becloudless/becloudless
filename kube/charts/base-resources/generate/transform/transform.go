@@ -29,7 +29,7 @@ type Entry struct {
 
 	// TemplateArgs holds the named arguments transformers have contributed
 	// (via AddTemplateArg) to the dict passed to
-	// templates/_renderAll.tpl's "resources.generic.renderAll" template at
+	// templates/_renderAll.tpl's "resources.renderResourceKind" template at
 	// render time (see the generate package's generateTemplate). Order
 	// matches the order transformers ran in (see DefaultTransformers), and
 	// therefore the order args are called in.
@@ -37,7 +37,7 @@ type Entry struct {
 }
 
 // TemplateArg is one named argument a transformer contributes to the dict
-// passed to "resources.generic.renderAll" for a resource kind (see
+// passed to "resources.renderResourceKind" for a resource kind (see
 // Entry.TemplateArgs). Value is a raw Helm template expression (e.g.
 // `false`, `(list "a" "b")`) spliced as-is into the generated
 // templates/_generated.tpl, not a Go value.
@@ -47,7 +47,7 @@ type TemplateArg struct {
 }
 
 // AddTemplateArg registers a named, render-time template argument (see
-// Entry.TemplateArgs) for the generated "resources.generic.renderAll" call
+// Entry.TemplateArgs) for the generated "resources.renderResourceKind" call
 // for this resource kind. Transformers use this to self-contribute
 // additional render-time behavior alongside whatever build-time schema
 // changes they make, instead of the generate package's generateTemplate

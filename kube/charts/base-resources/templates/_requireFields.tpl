@@ -18,7 +18,7 @@ Params (passed as a dict):
   resource - the resource's (already defaulted/merged) values
   required - list of field names that must be present on resource
 */}}
-{{- define "base-resources.generic.requireFields" }}
+{{- define "base-resources.requireFields" }}
   {{- $name := .name }}
   {{- $id := .id }}
   {{- $resource := .resource | default dict }}
