@@ -1,9 +1,3 @@
-resources: {}
-
 defaults:
   metadata:
-    labels: {}
-    annotations: {}
     namespace: "{{ .Release.Namespace }}"
-
-  resources: {}
