@@ -24,13 +24,12 @@ type resource struct {
 
 	// templateArgs holds the named, render-time template arguments the
 	// mutation pipeline contributed for this resource kind (see
-	// mutation.Entry.TemplateArgs and mutation.Entry.AddTemplateArg),
-	// e.g. "required", "contentIsSpec", "stringifyFields". Populated from
-	// mutation.Entry.TemplateArgs after running the pipeline (see
-	// fetchAndTransformSchema) and consumed by generateTemplate to build
+	// mutation.Result.TemplateArgs), e.g. "required", "contentIsSpec",
+	// "stringifyFields". Populated after running the pipeline (see
+	// fetchAndMutateSchema) and consumed by generateTemplate to build
 	// each kind's "base-resources.renderResourceKind" call, without
 	// generateTemplate needing to know about specific mutation names.
-	templateArgs []mutation.TemplateArg
+	templateArgs map[string]string
 }
 
 // mutations declares per-resource-kind configuration for the mutation

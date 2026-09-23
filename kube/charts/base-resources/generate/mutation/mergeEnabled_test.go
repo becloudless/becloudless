@@ -1,26 +1,22 @@
 package mutation
 
-import (
-	"reflect"
-	"testing"
-)
+import "testing"
 
 func TestMergeEnabled_AddsEnabledProperty(t *testing.T) {
 	schema := map[string]any{}
-	e := &Entry{Name: "widgets"}
 
-	got, err := (MergeEnabled{}).Mutate(schema, e)
+	got, err := (MergeEnabled{}).Mutate(schema)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if got["type"] != "object" {
-		t.Errorf("type = %v, want %q", got["type"], "object")
+	if got.Schema["type"] != "object" {
+		t.Errorf("type = %v, want %q", got.Schema["type"], "object")
 	}
 
-	props, ok := got["properties"].(map[string]any)
+	props, ok := got.Schema["properties"].(map[string]any)
 	if !ok {
-		t.Fatalf("properties is not a map: %#v", got["properties"])
+		t.Fatalf("properties is not a map: %#v", got.Schema["properties"])
 	}
 
 	enabled, ok := props["enabled"].(map[string]any)
@@ -42,14 +38,13 @@ func TestMergeEnabled_PreservesExistingProperties(t *testing.T) {
 			"data": map[string]any{"type": "object"},
 		},
 	}
-	e := &Entry{Name: "configMaps"}
 
-	got, err := (MergeEnabled{}).Mutate(schema, e)
+	got, err := (MergeEnabled{}).Mutate(schema)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	props := got["properties"].(map[string]any)
+	props := got.Schema["properties"].(map[string]any)
 	if _, ok := props["data"]; !ok {
 		t.Errorf("expected existing property %q to be preserved, got %#v", "data", props)
 	}
@@ -67,30 +62,28 @@ func TestMergeEnabled_OverridesUpstreamEnabledProperty(t *testing.T) {
 			"enabled": map[string]any{"type": "string"},
 		},
 	}
-	e := &Entry{Name: "widgets"}
 
-	got, err := (MergeEnabled{}).Mutate(schema, e)
+	got, err := (MergeEnabled{}).Mutate(schema)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	props := got["properties"].(map[string]any)
+	props := got.Schema["properties"].(map[string]any)
 	enabled := props["enabled"].(map[string]any)
 	if enabled["type"] != "boolean" {
 		t.Errorf("properties.enabled.type = %v, want %q (should override upstream field)", enabled["type"], "boolean")
 	}
 }
 
-func TestMergeEnabled_DoesNotMutateEntry(t *testing.T) {
+func TestMergeEnabled_ReturnsNoTemplateArgs(t *testing.T) {
 	schema := map[string]any{}
-	e := &Entry{Name: "widgets", TemplateArgs: []TemplateArg{{Name: "required", Value: `(list "foo")`}}}
 
-	if _, err := (MergeEnabled{}).Mutate(schema, e); err != nil {
+	got, err := (MergeEnabled{}).Mutate(schema)
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	want := []TemplateArg{{Name: "required", Value: `(list "foo")`}}
-	if !reflect.DeepEqual(e.TemplateArgs, want) {
-		t.Errorf("e.TemplateArgs = %v, want unchanged %v", e.TemplateArgs, want)
+	if len(got.TemplateArgs) != 0 {
+		t.Errorf("TemplateArgs = %#v, want none", got.TemplateArgs)
 	}
 }

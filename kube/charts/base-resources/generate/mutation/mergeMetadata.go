@@ -8,7 +8,7 @@ import "maps"
 // already present.
 type MergeMetadata struct{}
 
-func (MergeMetadata) Mutate(schema map[string]any, _ *Entry) (map[string]any, error) {
+func (MergeMetadata) Mutate(schema map[string]any) (MutationResult, error) {
 	mergedProps := map[string]any{}
 	if p, ok := schema["properties"].(map[string]any); ok {
 		maps.Copy(mergedProps, p)
@@ -16,7 +16,7 @@ func (MergeMetadata) Mutate(schema map[string]any, _ *Entry) (map[string]any, er
 	maps.Copy(mergedProps, metadataSchemaProperties())
 	schema["properties"] = mergedProps
 	schema["type"] = "object"
-	return schema, nil
+	return MutationResult{Schema: schema}, nil
 }
 
 // metadataSchemaProperties are the well-known fields handled by

@@ -6,8 +6,8 @@ import (
 )
 
 // StripRequired moves the schema's top-level "required" list (if any) out
-// of the schema and into a "required" template arg (see
-// Entry.AddTemplateArg), since .Values.resources.<name>.<id> and
+// of the schema and into a "required" template arg (see Result.TemplateArgs),
+// since .Values.resources.<name>.<id> and
 // .Values.defaults.resources.<name> share this exact schema and a
 // defaults.resources entry - a partial overlay - shouldn't be forced to
 // satisfy "required" on its own. The extracted fields are instead enforced
@@ -15,7 +15,7 @@ import (
 // generateTemplate and templates/_requireFields.tpl).
 type StripRequired struct{}
 
-func (StripRequired) Mutate(schema map[string]any, e *Entry) (map[string]any, error) {
+func (StripRequired) Mutate(schema map[string]any) (MutationResult, error) {
 	var required []string
 	if req, ok := schema["required"].([]any); ok {
 		for _, r := range req {
@@ -25,12 +25,13 @@ func (StripRequired) Mutate(schema map[string]any, e *Entry) (map[string]any, er
 		}
 	}
 	delete(schema, "required")
+	result := MutationResult{Schema: schema}
 	if len(required) > 0 {
 		quoted := make([]string, len(required))
 		for i, r := range required {
 			quoted[i] = fmt.Sprintf("%q", r)
 		}
-		e.AddTemplateArg("required", fmt.Sprintf("(list %s)", strings.Join(quoted, " ")))
+		result.TemplateArgs = map[string]string{"required": fmt.Sprintf("(list %s)", strings.Join(quoted, " "))}
 	}
-	return schema, nil
+	return result, nil
 }

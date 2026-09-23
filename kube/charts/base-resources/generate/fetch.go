@@ -13,9 +13,6 @@ import (
 	"resourceschart/generate/mutation"
 )
 
-// fetchSchemas fetches and transforms the upstream k8s JSON schema for every
-// resource that declares a url, writing the result to
-// schema/resources/<name>.json. Entries without a url are skipped.
 func fetchSchemas(dir string, entries []resource) error {
 	schemaDir := filepath.Join(dir, "schema", "resources")
 	if err := os.MkdirAll(schemaDir, 0o755); err != nil {
@@ -45,21 +42,6 @@ func fetchSchemas(dir string, entries []resource) error {
 	return nil
 }
 
-// fetchAndMutateSchema fetches a kind's full k8s JSON schema from e.URL
-// and runs it through the mutation pipeline (see the mutation package)
-// to produce the instance schema used for .Values.resources.<name>.<id>
-// (and shared, as-is, by .Values.defaults.resources.<name>), writing the
-// result to dest. schema/resources/<name>.json therefore holds the
-// ready-to-use instance schema, not the raw upstream k8s schema.
-// Mutations may also populate e.templateArgs as a side effect (see
-// mutation.Entry.AddTemplateArg).
-//
-// If e.CRDVersion is set, e.URL is instead treated as a CRD manifest (YAML)
-// and the schema is extracted from it (see fetchCRDManifestSchema) rather
-// than parsed directly as JSON. Otherwise, if e.Component is set, e.URL is
-// treated as a Kubernetes OpenAPI v3 spec document and the schema is
-// extracted (with $ref pointers resolved) from it (see
-// fetchOpenAPIV3Schema).
 func fetchAndMutateSchema(client *http.Client, e *resource, dest string) error {
 	var kindSchema map[string]any
 	switch {
@@ -96,19 +78,18 @@ func fetchAndMutateSchema(client *http.Client, e *resource, dest string) error {
 		}
 	}
 
-	te := &mutation.Entry{Name: e.Name}
 	pipeline := mutation.Pipeline(
-		mutation.ExtractContent{ContentIsOutOfSpec: e.Mutations.ContentIsOutOfSpec},
+		mutation.ExtractContent{ContentIsOutOfSpec: e.Mutations.ContentIsOutOfSpec, KindName: e.Name},
 		e.Mutations.ArraysToMaps,
 		e.Mutations.StringifyFields,
 	)
-	instance, err := mutation.Apply(pipeline, kindSchema, te)
+	result, err := mutation.MutateSchema(pipeline, kindSchema)
 	if err != nil {
 		return err
 	}
-	e.templateArgs = te.TemplateArgs
+	e.templateArgs = result.TemplateArgs
 
-	out, err := json.MarshalIndent(instance, "", "  ")
+	out, err := json.MarshalIndent(result.Schema, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal instance schema: %w", err)
 	}

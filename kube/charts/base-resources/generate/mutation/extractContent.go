@@ -12,19 +12,22 @@ import "fmt"
 //     own (e.g. ConfigMap, Secret, ServiceAccount)
 type ExtractContent struct {
 	ContentIsOutOfSpec bool `yaml:"contentIsOutOfSpec"`
+
+	// KindName is the resource kind's name (e.g. "deployments"), used only
+	// for the error returned when ContentIsOutOfSpec is false and the
+	// schema unexpectedly has no top-level "spec" property.
+	KindName string `yaml:"-"`
 }
 
-func (m ExtractContent) Mutate(kindSchema map[string]any, e *Entry) (map[string]any, error) {
+func (m ExtractContent) Mutate(kindSchema map[string]any) (MutationResult, error) {
 	if !m.ContentIsOutOfSpec {
 		props, _ := kindSchema["properties"].(map[string]any)
 		spec, _ := props["spec"].(map[string]any)
 		if spec == nil {
-			return nil, fmt.Errorf("%s: expected top-level \"spec\" property in schema", e.Name)
+			return MutationResult{}, fmt.Errorf("%s: expected top-level \"spec\" property in schema", m.KindName)
 		}
-		return spec, nil
+		return MutationResult{Schema: spec}, nil
 	}
-
-	e.AddTemplateArg("contentIsSpec", "false")
 
 	props, _ := kindSchema["properties"].(map[string]any)
 	contentProps := map[string]any{}
@@ -49,5 +52,8 @@ func (m ExtractContent) Mutate(kindSchema map[string]any, e *Entry) (map[string]
 			instance["required"] = filtered
 		}
 	}
-	return instance, nil
+	return MutationResult{
+		Schema:       instance,
+		TemplateArgs: map[string]string{"contentIsSpec": "false"},
+	}, nil
 }
