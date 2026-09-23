@@ -1,11 +1,77 @@
 package generate
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 )
+
+//go:embed valuesSchemaBase.json
+var valuesSchemaBaseFS embed.FS
+
+// loadValuesSchemaBase decodes the static skeleton shared by
+// buildValuesSchema and generateChartValuesSchema: the "global" passthrough,
+// and the "resources"/"defaults" structure (including the
+// defaults.metadata.* fields), everything except the per-kind schemas built
+// from resources.yaml, which callers fill in via setResourcesProps. A fresh
+// copy is decoded on every call so callers can freely mutate the returned
+// map without affecting each other.
+//
+// properties.global is a plain "type": "object" with no further
+// constraints: Helm always injects a top-level "global" key (default {})
+// into every chart's .Values, even if the parent chart never sets one - it
+// must stay allowed here or the root "additionalProperties": false rejects
+// every values file outright.
+//
+// properties.defaults.properties.metadata holds global metadata defaults,
+// applied across every resource kind (below defaults.resources.<kind> and
+// the resource's own values in merge precedence - see
+// base-resources.computeMetadata).
+func loadValuesSchemaBase() (map[string]interface{}, error) {
+	data, err := valuesSchemaBaseFS.ReadFile("valuesSchemaBase.json")
+	if err != nil {
+		return nil, fmt.Errorf("read valuesSchemaBase.json: %w", err)
+	}
+	var schema map[string]interface{}
+	if err := json.Unmarshal(data, &schema); err != nil {
+		return nil, fmt.Errorf("parse valuesSchemaBase.json: %w", err)
+	}
+	return schema, nil
+}
+
+// setResourcesProps fills in the "resources" and "defaults.resources"
+// properties left empty in valuesSchemaBase.json with the per-kind schemas
+// built from resources.yaml.
+func setResourcesProps(schema map[string]interface{}, resourcesProps, defaultsResourcesProps map[string]interface{}) error {
+	properties, ok := schema["properties"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("valuesSchemaBase.json: missing top-level \"properties\"")
+	}
+
+	resources, ok := properties["resources"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("valuesSchemaBase.json: missing \"properties.resources\"")
+	}
+	resources["properties"] = resourcesProps
+
+	defaults, ok := properties["defaults"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("valuesSchemaBase.json: missing \"properties.defaults\"")
+	}
+	defaultsProperties, ok := defaults["properties"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("valuesSchemaBase.json: missing \"properties.defaults.properties\"")
+	}
+	defaultsResources, ok := defaultsProperties["resources"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("valuesSchemaBase.json: missing \"properties.defaults.properties.resources\"")
+	}
+	defaultsResources["properties"] = defaultsResourcesProps
+
+	return nil
+}
 
 // generateValuesSchema writes schema/values.schema.json: a JSON Schema
 // describing .Values.resources.<kind>.<id> and .Values.defaults.resources.<kind>.
@@ -83,58 +149,13 @@ func generateChartValuesSchema(dir string, entries []resource) error {
 		defaultsResourcesProps[e.name] = map[string]interface{}{"$ref": "#/$defs/" + e.name}
 	}
 
-	schema := map[string]interface{}{
-		"$schema":              "https://json-schema.org/draft-07/schema#",
-		"type":                 "object",
-		"$defs":                defs,
-		"additionalProperties": false,
-		"properties": map[string]interface{}{
-			// Helm always injects a top-level "global" key (default {}) into
-			// every chart's .Values, even if the parent chart never sets one -
-			// it must stay allowed here or the root "additionalProperties":
-			// false above rejects every values file outright.
-			"global": map[string]interface{}{"type": "object"},
-			"resources": map[string]interface{}{
-				"type":                 "object",
-				"additionalProperties": false,
-				"properties":           resourcesProps,
-			},
-			"defaults": map[string]interface{}{
-				"type":                 "object",
-				"additionalProperties": false,
-				"properties": map[string]interface{}{
-					// Global metadata defaults, applied across every resource kind
-					// (below defaults.resources.<kind> and the resource's own
-					// values in merge precedence - see
-					// base-resources.computeMetadata).
-					"metadata": map[string]interface{}{
-						"type":                 "object",
-						"additionalProperties": false,
-						"properties": map[string]interface{}{
-							"labels": map[string]interface{}{
-								"type":                 "object",
-								"description":          "metadata.labels applied to every resource of every kind.",
-								"additionalProperties": map[string]interface{}{"type": "string"},
-							},
-							"annotations": map[string]interface{}{
-								"type":                 "object",
-								"description":          "metadata.annotations applied to every resource of every kind.",
-								"additionalProperties": map[string]interface{}{"type": "string"},
-							},
-							"namespace": map[string]interface{}{
-								"type":        "string",
-								"description": "metadata.namespace fallback for every resource of every kind, used when the resource doesn't set its own namespace. Defaults to the release namespace.",
-							},
-						},
-					},
-					"resources": map[string]interface{}{
-						"type":                 "object",
-						"additionalProperties": false,
-						"properties":           defaultsResourcesProps,
-					},
-				},
-			},
-		},
+	schema, err := loadValuesSchemaBase()
+	if err != nil {
+		return err
+	}
+	schema["$defs"] = defs
+	if err := setResourcesProps(schema, resourcesProps, defaultsResourcesProps); err != nil {
+		return err
 	}
 
 	out, err := json.Marshal(schema)
@@ -177,56 +198,13 @@ func buildValuesSchema(entries []resource, resolve func(name string) (interface{
 		defaultsResourcesProps[e.name] = defaultsSchema
 	}
 
-	return map[string]interface{}{
-		"$schema":              "https://json-schema.org/draft-07/schema#",
-		"type":                 "object",
-		"additionalProperties": false,
-		"properties": map[string]interface{}{
-			// Helm always injects a top-level "global" key (default {}) into
-			// every chart's .Values, even if the parent chart never sets one -
-			// it must stay allowed here or the root "additionalProperties":
-			// false above rejects every values file outright.
-			"global": map[string]interface{}{"type": "object"},
-			"resources": map[string]interface{}{
-				"type":                 "object",
-				"additionalProperties": false,
-				"properties":           resourcesProps,
-			},
-			"defaults": map[string]interface{}{
-				"type":                 "object",
-				"additionalProperties": false,
-				"properties": map[string]interface{}{
-					// Global metadata defaults, applied across every resource kind
-					// (below defaults.resources.<kind> and the resource's own
-					// values in merge precedence - see
-					// base-resources.computeMetadata).
-					"metadata": map[string]interface{}{
-						"type":                 "object",
-						"additionalProperties": false,
-						"properties": map[string]interface{}{
-							"labels": map[string]interface{}{
-								"type":                 "object",
-								"description":          "metadata.labels applied to every resource of every kind.",
-								"additionalProperties": map[string]interface{}{"type": "string"},
-							},
-							"annotations": map[string]interface{}{
-								"type":                 "object",
-								"description":          "metadata.annotations applied to every resource of every kind.",
-								"additionalProperties": map[string]interface{}{"type": "string"},
-							},
-							"namespace": map[string]interface{}{
-								"type":        "string",
-								"description": "metadata.namespace fallback for every resource of every kind, used when the resource doesn't set its own namespace. Defaults to the release namespace.",
-							},
-						},
-					},
-					"resources": map[string]interface{}{
-						"type":                 "object",
-						"additionalProperties": false,
-						"properties":           defaultsResourcesProps,
-					},
-				},
-			},
-		},
-	}, nil
+	schema, err := loadValuesSchemaBase()
+	if err != nil {
+		return nil, err
+	}
+	if err := setResourcesProps(schema, resourcesProps, defaultsResourcesProps); err != nil {
+		return nil, err
+	}
+
+	return schema, nil
 }
