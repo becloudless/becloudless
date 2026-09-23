@@ -106,16 +106,6 @@ func generateValuesSchema(dir string, entries []resource) error {
 	return os.WriteFile(dest, out, 0o644)
 }
 
-// generateChartValuesSchema writes values.schema.json at the chart root:
-// the same JSON Schema as generateValuesSchema, except each kind's instance
-// schema is inlined (under a top-level "$defs" section, referenced via a
-// same-document "$ref": "#/$defs/<kind>") rather than referenced via a
-// cross-file "$ref". This is the file Helm auto-loads and validates
-// .Values against for this chart (Helm only auto-validates that exact
-// path, and doesn't resolve "$ref" against sibling files the way
-// schema/values.schema.json relies on for editor tooling), so it must be
-// fully self-contained.
-//
 // Each kind's schema is stored once under "$defs" and referenced from both
 // .Values.resources.<kind>.<id> and .Values.defaults.resources.<kind>,
 // rather than inlined twice, and the result is marshaled compactly
@@ -169,13 +159,6 @@ func generateChartValuesSchema(dir string, entries []resource) error {
 	return os.WriteFile(dest, out, 0o644)
 }
 
-// buildValuesSchema builds the JSON Schema used by generateValuesSchema,
-// describing .Values.resources.<kind>.<id> and
-// .Values.defaults.resources.<kind>. resolve returns the "$ref" to use for
-// a given kind's instance schema, and is called twice per kind (once for
-// .Values.resources.<kind>'s additionalProperties, once for
-// .Values.defaults.resources.<kind>) so each call site gets its own,
-// independent value.
 func buildValuesSchema(entries []resource, resolve func(name string) (any, error)) (map[string]any, error) {
 	resourcesProps := map[string]any{}
 	defaultsResourcesProps := map[string]any{}
