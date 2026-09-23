@@ -1,32 +1,3 @@
-{{/*
-Computes the full `metadata:` block for a resource instance: name, namespace,
-labels and annotations, from a fixed set of well-known fields on the
-resource's (already defaulted/merged) values, additionally layering in
-global metadata defaults from .Values.defaults.metadata (applied across
-every resource of every kind): labels/annotations are merged in below the
-resource's own (already per-kind-defaulted) labels/annotations in
-precedence, and namespace falls back to defaults.metadata.namespace (below
-the resource's own namespace, above the release namespace) in precedence.
-
-Params (passed as a dict):
-  rootContext - the root Helm context (usually `$`); also used to read
-                .Values.defaults.metadata.{labels,annotations,namespace}
-  id          - the resource's key under .Values.resources.<kind>
-  resource    - the resource's (already defaulted/merged) values, which may
-                contain:
-                  nameOverride     - replaces just the id part of the name
-                  fullNameOverride - replaces the entire computed name
-                  namespace        - metadata.namespace (defaults to
-                                     .Values.defaults.metadata.namespace,
-                                     then the release namespace)
-                  labels           - metadata.labels
-                  annotations      - metadata.annotations
-
-Returns a `metadata:` YAML block. The caller is responsible for stripping
-`nameOverride`, `fullNameOverride`, `namespace`, `labels` and `annotations`
-from the resource's values before rendering the rest of the manifest, so
-they aren't duplicated into `spec:` (or the root, when contentIsSpec: false).
-*/}}
 {{- define "base-resources.computeMetadata" }}
   {{- $rootContext := .rootContext }}
   {{- $id := .id }}
