@@ -26,27 +26,30 @@ import (
 // exactly matches one of the declared fields and it already declares a
 // map-like "additionalProperties" schema (e.g. ConfigMap's "data":
 // {"type": "object", "additionalProperties": {"type": "string"}}).
-func StringifyFields(schema map[string]interface{}, e *Entry) (map[string]interface{}, error) {
-	fieldList := e.ConfigList("stringifyFields", "fields")
-	if len(fieldList) == 0 {
+type StringifyFields struct {
+	Fields []string `yaml:"fields"`
+}
+
+func (m StringifyFields) Mutate(schema map[string]any, e *Entry) (map[string]any, error) {
+	if len(m.Fields) == 0 {
 		return schema, nil
 	}
 	fields := map[string]bool{}
-	quoted := make([]string, len(fieldList))
-	for i, path := range fieldList {
+	quoted := make([]string, len(m.Fields))
+	for i, path := range m.Fields {
 		fields[path] = true
 		quoted[i] = fmt.Sprintf("%q", path)
 	}
 	e.AddTemplateArg("stringifyFields", fmt.Sprintf("(list %s)", strings.Join(quoted, " ")))
 
-	walkSchemaNodesWithPath(schema, "", func(node map[string]interface{}, path string) {
+	walkSchemaNodesWithPath(schema, "", func(node map[string]any, path string) {
 		if !fields[path] {
 			return
 		}
 		if _, ok := node["additionalProperties"]; !ok {
 			return
 		}
-		node["additionalProperties"] = map[string]interface{}{}
+		node["additionalProperties"] = map[string]any{}
 	})
 	return schema, nil
 }

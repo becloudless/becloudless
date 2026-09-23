@@ -1,12 +1,23 @@
 package mutation
 
-func ArraysToMaps(schema map[string]interface{}, e *Entry) (map[string]interface{}, error) {
+// ArraysToMaps recursively converts array-type schema nodes into maps keyed
+// by an arbitrary string id, working around Helm's inability to
+// deep-merge arrays of objects the way .Values.resources.<kind>.<id> and
+// .Values.defaults.resources.<kind> require. Ignore lists schema paths
+// (see walkSchemaNodesWithPath) to leave as plain arrays instead (e.g. a
+// container's string-typed command/args), declared per-resource-kind in
+// resources.yaml as mutations.arraysToMaps.ignore.
+type ArraysToMaps struct {
+	Ignore []string `yaml:"ignore"`
+}
+
+func (m ArraysToMaps) Mutate(schema map[string]any, e *Entry) (map[string]any, error) {
 	ignore := map[string]bool{}
-	for _, path := range e.ConfigList("arraysToMaps", "ignore") {
+	for _, path := range m.Ignore {
 		ignore[path] = true
 	}
 
-	walkSchemaNodesWithPath(schema, "", func(node map[string]interface{}, path string) {
+	walkSchemaNodesWithPath(schema, "", func(node map[string]any, path string) {
 		if ignore[path] {
 			return
 		}
@@ -15,11 +26,11 @@ func ArraysToMaps(schema map[string]interface{}, e *Entry) (map[string]interface
 	return schema, nil
 }
 
-func convertArrayNodeToMap(node map[string]interface{}) {
+func convertArrayNodeToMap(node map[string]any) {
 	if !schemaTypeIncludes(node["type"], "array") {
 		return
 	}
-	items, ok := node["items"].(map[string]interface{})
+	items, ok := node["items"].(map[string]any)
 	if !ok {
 		return
 	}

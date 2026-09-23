@@ -11,11 +11,11 @@ import (
 // url for the lifetime of a single build run, since several kinds are
 // often declared in the same per-group-version document (e.g.
 // Deployment/StatefulSet/DaemonSet all live in apis__apps__v1_openapi.json).
-var openapiDocCache = map[string]map[string]interface{}{}
+var openapiDocCache = map[string]map[string]any{}
 
 // fetchOpenAPIDocument fetches and parses (or returns from cache) the
 // Kubernetes OpenAPI v3 spec document at url.
-func fetchOpenAPIDocument(client *http.Client, url string) (map[string]interface{}, error) {
+func fetchOpenAPIDocument(client *http.Client, url string) (map[string]any, error) {
 	if doc, ok := openapiDocCache[url]; ok {
 		return doc, nil
 	}
@@ -35,7 +35,7 @@ func fetchOpenAPIDocument(client *http.Client, url string) (map[string]interface
 		return nil, err
 	}
 
-	var doc map[string]interface{}
+	var doc map[string]any
 	if err := json.Unmarshal(body, &doc); err != nil {
 		return nil, fmt.Errorf("parse OpenAPI document: %w", err)
 	}
@@ -56,25 +56,25 @@ func fetchOpenAPIDocument(client *http.Client, url string) (map[string]interface
 // This lets resources.yaml treat Kubernetes' own upstream OpenAPI v3 spec as the
 // source of truth for built-in kinds, instead of a third-party pre-flattened
 // JSON schema mirror (e.g. yannh/kubernetes-json-schema).
-func fetchOpenAPIV3Schema(client *http.Client, url, component string) (map[string]interface{}, error) {
+func fetchOpenAPIV3Schema(client *http.Client, url, component string) (map[string]any, error) {
 	doc, err := fetchOpenAPIDocument(client, url)
 	if err != nil {
 		return nil, err
 	}
 
-	components, _ := doc["components"].(map[string]interface{})
-	schemas, _ := components["schemas"].(map[string]interface{})
+	components, _ := doc["components"].(map[string]any)
+	schemas, _ := components["schemas"].(map[string]any)
 	if schemas == nil {
 		return nil, fmt.Errorf("%s: no components.schemas found", url)
 	}
 
-	root, ok := schemas[component].(map[string]interface{})
+	root, ok := schemas[component].(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("%s: component %q not found", url, component)
 	}
 
-	resolved := map[string]map[string]interface{}{}
-	out, _ := resolveOpenAPIRefs(root, schemas, resolved, map[string]bool{}).(map[string]interface{})
+	resolved := map[string]map[string]any{}
+	out, _ := resolveOpenAPIRefs(root, schemas, resolved, map[string]bool{}).(map[string]any)
 	return out, nil
 }
 
@@ -89,9 +89,9 @@ const openAPISchemaRefPrefix = "#/components/schemas/"
 // site to avoid aliasing the same map across unrelated positions in the
 // resulting schema tree. inProgress guards against reference cycles by
 // substituting a permissive placeholder schema instead of recursing forever.
-func resolveOpenAPIRefs(node interface{}, schemas map[string]interface{}, resolved map[string]map[string]interface{}, inProgress map[string]bool) interface{} {
+func resolveOpenAPIRefs(node any, schemas map[string]any, resolved map[string]map[string]any, inProgress map[string]bool) any {
 	switch v := node.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		if ref, ok := v["$ref"].(string); ok && len(v) == 1 {
 			name := ref
 			if len(ref) > len(openAPISchemaRefPrefix) && ref[:len(openAPISchemaRefPrefix)] == openAPISchemaRefPrefix {
@@ -103,26 +103,26 @@ func resolveOpenAPIRefs(node interface{}, schemas map[string]interface{}, resolv
 			if inProgress[name] {
 				// Reference cycle: break it with a permissive placeholder
 				// rather than recursing forever.
-				return map[string]interface{}{}
+				return map[string]any{}
 			}
-			target, ok := schemas[name].(map[string]interface{})
+			target, ok := schemas[name].(map[string]any)
 			if !ok {
-				return map[string]interface{}{}
+				return map[string]any{}
 			}
 			inProgress[name] = true
-			out, _ := resolveOpenAPIRefs(target, schemas, resolved, inProgress).(map[string]interface{})
+			out, _ := resolveOpenAPIRefs(target, schemas, resolved, inProgress).(map[string]any)
 			delete(inProgress, name)
 			resolved[name] = out
 			return deepCopyJSON(out)
 		}
 
-		out := make(map[string]interface{}, len(v))
+		out := make(map[string]any, len(v))
 		for k, val := range v {
 			out[k] = resolveOpenAPIRefs(val, schemas, resolved, inProgress)
 		}
 		return out
-	case []interface{}:
-		out := make([]interface{}, len(v))
+	case []any:
+		out := make([]any, len(v))
 		for i, val := range v {
 			out[i] = resolveOpenAPIRefs(val, schemas, resolved, inProgress)
 		}
@@ -134,16 +134,16 @@ func resolveOpenAPIRefs(node interface{}, schemas map[string]interface{}, resolv
 
 // deepCopyJSON returns an independent deep copy of a JSON-decoded value
 // (as produced by encoding/json into map[string]interface{}/[]interface{}).
-func deepCopyJSON(v interface{}) interface{} {
+func deepCopyJSON(v any) any {
 	switch t := v.(type) {
-	case map[string]interface{}:
-		out := make(map[string]interface{}, len(t))
+	case map[string]any:
+		out := make(map[string]any, len(t))
 		for k, val := range t {
 			out[k] = deepCopyJSON(val)
 		}
 		return out
-	case []interface{}:
-		out := make([]interface{}, len(t))
+	case []any:
+		out := make([]any, len(t))
 		for i, val := range t {
 			out[i] = deepCopyJSON(val)
 		}

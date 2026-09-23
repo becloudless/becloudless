@@ -7,8 +7,10 @@ package mutation
 // fields. Nodes that already declare "additionalProperties" (e.g. free-form
 // maps like ConfigMap's "data", or maps produced by ArraysToMaps) are left
 // untouched.
-func AdditionalPropertiesFalse(schema map[string]interface{}, _ *Entry) (map[string]interface{}, error) {
-	walkSchemaNodes(schema, func(node map[string]interface{}) {
+type AdditionalPropertiesFalse struct{}
+
+func (AdditionalPropertiesFalse) Mutate(schema map[string]any, _ *Entry) (map[string]any, error) {
+	walkSchemaNodes(schema, func(node map[string]any) {
 		if !schemaTypeIncludes(node["type"], "object") {
 			return
 		}

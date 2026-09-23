@@ -12,17 +12,19 @@ package mutation
 // validated) chart-root values.schema.json outright. Fixed here, generically,
 // rather than special-cased per resource kind, since any future CRD could
 // exhibit the same placeholder.
-func NormalizeIntOrString(schema map[string]interface{}, e *Entry) (map[string]interface{}, error) {
-	walkSchemaNodes(schema, func(node map[string]interface{}) {
+type NormalizeIntOrString struct{}
+
+func (NormalizeIntOrString) Mutate(schema map[string]any, e *Entry) (map[string]any, error) {
+	walkSchemaNodes(schema, func(node map[string]any) {
 		if node["x-kubernetes-int-or-string"] != true {
 			return
 		}
 		if anyOf, ok := node["anyOf"]; ok && anyOf != nil {
 			return
 		}
-		node["anyOf"] = []interface{}{
-			map[string]interface{}{"type": "integer"},
-			map[string]interface{}{"type": "string"},
+		node["anyOf"] = []any{
+			map[string]any{"type": "integer"},
+			map[string]any{"type": "string"},
 		}
 	})
 	return schema, nil

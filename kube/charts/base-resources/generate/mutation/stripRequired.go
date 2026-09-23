@@ -13,9 +13,11 @@ import (
 // satisfy "required" on its own. The extracted fields are instead enforced
 // at render time on the merged resource (see the generate package's
 // generateTemplate and templates/_requireFields.tpl).
-func StripRequired(schema map[string]interface{}, e *Entry) (map[string]interface{}, error) {
+type StripRequired struct{}
+
+func (StripRequired) Mutate(schema map[string]any, e *Entry) (map[string]any, error) {
 	var required []string
-	if req, ok := schema["required"].([]interface{}); ok {
+	if req, ok := schema["required"].([]any); ok {
 		for _, r := range req {
 			if s, _ := r.(string); s != "" {
 				required = append(required, s)

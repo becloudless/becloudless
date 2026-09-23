@@ -33,7 +33,7 @@ import (
 // published as part of their own CRD manifest, rather than as a standalone
 // JSON schema file like the built-in k8s kinds fetched from
 // kubernetes-json-schema.
-func fetchCRDManifestSchema(client *http.Client, url, crdVersion, kind string) (map[string]interface{}, error) {
+func fetchCRDManifestSchema(client *http.Client, url, crdVersion, kind string) (map[string]any, error) {
 	resp, err := client.Get(url)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func fetchCRDManifestSchema(client *http.Client, url, crdVersion, kind string) (
 
 	decoder := yaml.NewDecoder(bytes.NewReader(body))
 	for {
-		var manifest map[string]interface{}
+		var manifest map[string]any
 		if err := decoder.Decode(&manifest); err != nil {
 			if err == io.EOF {
 				break
@@ -59,17 +59,17 @@ func fetchCRDManifestSchema(client *http.Client, url, crdVersion, kind string) (
 			return nil, fmt.Errorf("parse CRD manifest: %w", err)
 		}
 
-		spec, _ := manifest["spec"].(map[string]interface{})
+		spec, _ := manifest["spec"].(map[string]any)
 		if kind != "" {
-			names, _ := spec["names"].(map[string]interface{})
+			names, _ := spec["names"].(map[string]any)
 			manifestKind, _ := names["kind"].(string)
 			if manifestKind != kind {
 				continue
 			}
 		}
-		versions, _ := spec["versions"].([]interface{})
+		versions, _ := spec["versions"].([]any)
 		for _, v := range versions {
-			version, ok := v.(map[string]interface{})
+			version, ok := v.(map[string]any)
 			if !ok {
 				continue
 			}
@@ -77,8 +77,8 @@ func fetchCRDManifestSchema(client *http.Client, url, crdVersion, kind string) (
 			if name != crdVersion {
 				continue
 			}
-			schema, _ := version["schema"].(map[string]interface{})
-			openAPISchema, _ := schema["openAPIV3Schema"].(map[string]interface{})
+			schema, _ := version["schema"].(map[string]any)
+			openAPISchema, _ := schema["openAPIV3Schema"].(map[string]any)
 			if openAPISchema == nil {
 				return nil, fmt.Errorf("CRD manifest %s: version %q has no spec.schema.openAPIV3Schema", url, crdVersion)
 			}
