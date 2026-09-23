@@ -1,10 +1,14 @@
 {{/*
 Computes the full `metadata:` block for a resource instance: name, namespace,
 labels and annotations, from a fixed set of well-known fields on the
-resource's (already defaulted/merged) values.
+resource's (already defaulted/merged) values, additionally layering in
+global label/annotation defaults from .Values.defaults.metadata (applied
+across every resource of every kind), below the resource's own
+(already per-kind-defaulted) labels/annotations in precedence.
 
 Params (passed as a dict):
-  rootContext - the root Helm context (usually `$`)
+  rootContext - the root Helm context (usually `$`); also used to read
+                .Values.defaults.metadata.{labels,annotations}
   id          - the resource's key under .Values.resources.<kind>
   resource    - the resource's (already defaulted/merged) values, which may
                 contain:
@@ -27,15 +31,21 @@ they aren't duplicated into `spec:` (or the root, when contentIsSpec: false).
 
   {{- $name := include "base-resources.generic.computeName" (dict "rootContext" $rootContext "id" $id "resource" $resource) }}
   {{- $namespace := $resource.namespace | default $rootContext.Release.Namespace }}
+
+  {{- $defaultsAll := $rootContext.Values.defaults | default dict }}
+  {{- $globalMetadataAll := $defaultsAll.metadata | default dict }}
+  {{- $globalMetadataAll = tpl (toYaml $globalMetadataAll) $rootContext | fromYaml }}
+  {{- $labels := merge ($resource.labels | default dict) ($globalMetadataAll.labels | default dict) }}
+  {{- $annotations := merge ($resource.annotations | default dict) ($globalMetadataAll.annotations | default dict) }}
 metadata:
   name: {{ $name }}
   namespace: {{ $namespace }}
-  {{- if $resource.labels }}
+  {{- if $labels }}
   labels:
-    {{- toYaml $resource.labels | nindent 4 }}
+    {{- toYaml $labels | nindent 4 }}
   {{- end }}
-  {{- if $resource.annotations }}
+  {{- if $annotations }}
   annotations:
-    {{- toYaml $resource.annotations | nindent 4 }}
+    {{- toYaml $annotations | nindent 4 }}
   {{- end }}
 {{- end }}
