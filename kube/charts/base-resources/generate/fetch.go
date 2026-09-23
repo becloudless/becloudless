@@ -61,7 +61,7 @@ func fetchSchemas(dir string, entries []resource) error {
 // extracted (with $ref pointers resolved) from it (see
 // fetchOpenAPIV3Schema).
 func fetchAndMutateSchema(client *http.Client, e *resource, dest string) error {
-	var kindSchema map[string]interface{}
+	var kindSchema map[string]any
 	switch {
 	case e.CRDVersion != "":
 		schema, err := fetchCRDManifestSchema(client, e.URL, e.CRDVersion, e.Kind)
@@ -96,8 +96,13 @@ func fetchAndMutateSchema(client *http.Client, e *resource, dest string) error {
 		}
 	}
 
-	te := &mutation.Entry{Name: e.Name, MutationConfig: e.mutationConfig}
-	instance, err := mutation.Apply(mutation.DefaultMutations, kindSchema, te)
+	te := &mutation.Entry{Name: e.Name}
+	pipeline := mutation.Pipeline(
+		mutation.ExtractContent{ContentIsOutOfSpec: e.Mutations.ContentIsOutOfSpec},
+		e.Mutations.ArraysToMaps,
+		e.Mutations.StringifyFields,
+	)
+	instance, err := mutation.Apply(pipeline, kindSchema, te)
 	if err != nil {
 		return err
 	}

@@ -29,12 +29,12 @@ var valuesSchemaBaseFS embed.FS
 // applied across every resource kind (below defaults.resources.<kind> and
 // the resource's own values in merge precedence - see
 // base-resources.computeMetadata).
-func loadValuesSchemaBase() (map[string]interface{}, error) {
+func loadValuesSchemaBase() (map[string]any, error) {
 	data, err := valuesSchemaBaseFS.ReadFile("valuesSchemaBase.json")
 	if err != nil {
 		return nil, fmt.Errorf("read valuesSchemaBase.json: %w", err)
 	}
-	var schema map[string]interface{}
+	var schema map[string]any
 	if err := json.Unmarshal(data, &schema); err != nil {
 		return nil, fmt.Errorf("parse valuesSchemaBase.json: %w", err)
 	}
@@ -44,27 +44,27 @@ func loadValuesSchemaBase() (map[string]interface{}, error) {
 // setResourcesProps fills in the "resources" and "defaults.resources"
 // properties left empty in valuesSchemaBase.json with the per-kind schemas
 // built from resources.yaml.
-func setResourcesProps(schema map[string]interface{}, resourcesProps, defaultsResourcesProps map[string]interface{}) error {
-	properties, ok := schema["properties"].(map[string]interface{})
+func setResourcesProps(schema map[string]any, resourcesProps, defaultsResourcesProps map[string]any) error {
+	properties, ok := schema["properties"].(map[string]any)
 	if !ok {
 		return fmt.Errorf("valuesSchemaBase.json: missing top-level \"properties\"")
 	}
 
-	resources, ok := properties["resources"].(map[string]interface{})
+	resources, ok := properties["resources"].(map[string]any)
 	if !ok {
 		return fmt.Errorf("valuesSchemaBase.json: missing \"properties.resources\"")
 	}
 	resources["properties"] = resourcesProps
 
-	defaults, ok := properties["defaults"].(map[string]interface{})
+	defaults, ok := properties["defaults"].(map[string]any)
 	if !ok {
 		return fmt.Errorf("valuesSchemaBase.json: missing \"properties.defaults\"")
 	}
-	defaultsProperties, ok := defaults["properties"].(map[string]interface{})
+	defaultsProperties, ok := defaults["properties"].(map[string]any)
 	if !ok {
 		return fmt.Errorf("valuesSchemaBase.json: missing \"properties.defaults.properties\"")
 	}
-	defaultsResources, ok := defaultsProperties["resources"].(map[string]interface{})
+	defaultsResources, ok := defaultsProperties["resources"].(map[string]any)
 	if !ok {
 		return fmt.Errorf("valuesSchemaBase.json: missing \"properties.defaults.properties.resources\"")
 	}
@@ -88,8 +88,8 @@ func setResourcesProps(schema map[string]interface{}, resourcesProps, defaultsRe
 // resolving "$ref" against a sibling file is simpler to read/diff than the
 // fully inlined chart-root schema.
 func generateValuesSchema(dir string, entries []resource) error {
-	schema, err := buildValuesSchema(entries, func(name string) (interface{}, error) {
-		return map[string]interface{}{"$ref": "./resources/" + name + ".json"}, nil
+	schema, err := buildValuesSchema(entries, func(name string) (any, error) {
+		return map[string]any{"$ref": "./resources/" + name + ".json"}, nil
 	})
 	if err != nil {
 		return err
@@ -125,28 +125,28 @@ func generateValuesSchema(dir string, entries []resource) error {
 func generateChartValuesSchema(dir string, entries []resource) error {
 	schemaDir := filepath.Join(dir, "schema", "resources")
 
-	defs := map[string]interface{}{}
-	resourcesProps := map[string]interface{}{}
-	defaultsResourcesProps := map[string]interface{}{}
+	defs := map[string]any{}
+	resourcesProps := map[string]any{}
+	defaultsResourcesProps := map[string]any{}
 
 	for _, e := range entries {
 		data, err := os.ReadFile(filepath.Join(schemaDir, e.Name+".json"))
 		if err != nil {
 			return fmt.Errorf("read %s.json: %w", e.Name, err)
 		}
-		var inlined map[string]interface{}
+		var inlined map[string]any
 		if err := json.Unmarshal(data, &inlined); err != nil {
 			return fmt.Errorf("parse %s.json: %w", e.Name, err)
 		}
 		defs[e.Name] = inlined
 
-		ref := map[string]interface{}{"$ref": "#/$defs/" + e.Name}
-		resourcesProps[e.Name] = map[string]interface{}{
+		ref := map[string]any{"$ref": "#/$defs/" + e.Name}
+		resourcesProps[e.Name] = map[string]any{
 			"type":                 "object",
 			"description":          fmt.Sprintf("%s instances, keyed by id.", e.Kind),
 			"additionalProperties": ref,
 		}
-		defaultsResourcesProps[e.Name] = map[string]interface{}{"$ref": "#/$defs/" + e.Name}
+		defaultsResourcesProps[e.Name] = map[string]any{"$ref": "#/$defs/" + e.Name}
 	}
 
 	schema, err := loadValuesSchemaBase()
@@ -176,16 +176,16 @@ func generateChartValuesSchema(dir string, entries []resource) error {
 // .Values.resources.<kind>'s additionalProperties, once for
 // .Values.defaults.resources.<kind>) so each call site gets its own,
 // independent value.
-func buildValuesSchema(entries []resource, resolve func(name string) (interface{}, error)) (map[string]interface{}, error) {
-	resourcesProps := map[string]interface{}{}
-	defaultsResourcesProps := map[string]interface{}{}
+func buildValuesSchema(entries []resource, resolve func(name string) (any, error)) (map[string]any, error) {
+	resourcesProps := map[string]any{}
+	defaultsResourcesProps := map[string]any{}
 
 	for _, e := range entries {
 		instanceSchema, err := resolve(e.Name)
 		if err != nil {
 			return nil, err
 		}
-		resourcesProps[e.Name] = map[string]interface{}{
+		resourcesProps[e.Name] = map[string]any{
 			"type":                 "object",
 			"description":          fmt.Sprintf("%s instances, keyed by id.", e.Kind),
 			"additionalProperties": instanceSchema,

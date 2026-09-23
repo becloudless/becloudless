@@ -5,25 +5,25 @@ package mutation
 // "oneOf"/"anyOf"/"allOf" - post-order (children before their parent), then
 // finally visits node itself. Visit implementations are expected to mutate
 // schema maps in place.
-func walkSchemaNodes(node interface{}, visit func(map[string]interface{})) {
-	m, ok := node.(map[string]interface{})
+func walkSchemaNodes(node any, visit func(map[string]any)) {
+	m, ok := node.(map[string]any)
 	if !ok {
 		return
 	}
 
-	if props, ok := m["properties"].(map[string]interface{}); ok {
+	if props, ok := m["properties"].(map[string]any); ok {
 		for _, v := range props {
 			walkSchemaNodes(v, visit)
 		}
 	}
-	if additionalProps, ok := m["additionalProperties"].(map[string]interface{}); ok {
+	if additionalProps, ok := m["additionalProperties"].(map[string]any); ok {
 		walkSchemaNodes(additionalProps, visit)
 	}
-	if items, ok := m["items"].(map[string]interface{}); ok {
+	if items, ok := m["items"].(map[string]any); ok {
 		walkSchemaNodes(items, visit)
 	}
 	for _, key := range []string{"oneOf", "anyOf", "allOf"} {
-		if list, ok := m[key].([]interface{}); ok {
+		if list, ok := m[key].([]any); ok {
 			for _, v := range list {
 				walkSchemaNodes(v, visit)
 			}
@@ -42,13 +42,13 @@ func walkSchemaNodes(node interface{}, visit func(map[string]interface{})) {
 // "containers.command", regardless of how many container instances exist
 // or whether "containers" itself has been converted to a map (see
 // ArraysToMaps) by the time this runs.
-func walkSchemaNodesWithPath(node interface{}, path string, visit func(node map[string]interface{}, path string)) {
-	m, ok := node.(map[string]interface{})
+func walkSchemaNodesWithPath(node any, path string, visit func(node map[string]any, path string)) {
+	m, ok := node.(map[string]any)
 	if !ok {
 		return
 	}
 
-	if props, ok := m["properties"].(map[string]interface{}); ok {
+	if props, ok := m["properties"].(map[string]any); ok {
 		for name, v := range props {
 			childPath := name
 			if path != "" {
@@ -57,14 +57,14 @@ func walkSchemaNodesWithPath(node interface{}, path string, visit func(node map[
 			walkSchemaNodesWithPath(v, childPath, visit)
 		}
 	}
-	if additionalProps, ok := m["additionalProperties"].(map[string]interface{}); ok {
+	if additionalProps, ok := m["additionalProperties"].(map[string]any); ok {
 		walkSchemaNodesWithPath(additionalProps, path, visit)
 	}
-	if items, ok := m["items"].(map[string]interface{}); ok {
+	if items, ok := m["items"].(map[string]any); ok {
 		walkSchemaNodesWithPath(items, path, visit)
 	}
 	for _, key := range []string{"oneOf", "anyOf", "allOf"} {
-		if list, ok := m[key].([]interface{}); ok {
+		if list, ok := m[key].([]any); ok {
 			for _, v := range list {
 				walkSchemaNodesWithPath(v, path, visit)
 			}
@@ -77,11 +77,11 @@ func walkSchemaNodesWithPath(node interface{}, path string, visit func(node map[
 // schemaTypeIncludes reports whether a JSON schema "type" value - either a
 // single string or an array of strings (e.g. ["object", "null"]) - includes
 // want.
-func schemaTypeIncludes(t interface{}, want string) bool {
+func schemaTypeIncludes(t any, want string) bool {
 	switch v := t.(type) {
 	case string:
 		return v == want
-	case []interface{}:
+	case []any:
 		for _, item := range v {
 			if s, _ := item.(string); s == want {
 				return true
@@ -94,15 +94,15 @@ func schemaTypeIncludes(t interface{}, want string) bool {
 // replaceSchemaType replaces occurrences of "from" with "to" in a JSON
 // schema "type" value, preserving whether it was a single string or an
 // array of strings.
-func replaceSchemaType(t interface{}, from, to string) interface{} {
+func replaceSchemaType(t any, from, to string) any {
 	switch v := t.(type) {
 	case string:
 		if v == from {
 			return to
 		}
 		return v
-	case []interface{}:
-		out := make([]interface{}, len(v))
+	case []any:
+		out := make([]any, len(v))
 		for i, item := range v {
 			if s, _ := item.(string); s == from {
 				out[i] = to

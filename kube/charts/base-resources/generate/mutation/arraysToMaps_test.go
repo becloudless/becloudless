@@ -3,15 +3,15 @@ package mutation
 import "testing"
 
 func TestArraysToMaps_ConvertsPlainArrayField(t *testing.T) {
-	schema := map[string]interface{}{
+	schema := map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"containers": map[string]interface{}{
+		"properties": map[string]any{
+			"containers": map[string]any{
 				"type": "array",
-				"items": map[string]interface{}{
+				"items": map[string]any{
 					"type": "object",
-					"properties": map[string]interface{}{
-						"name": map[string]interface{}{"type": "string"},
+					"properties": map[string]any{
+						"name": map[string]any{"type": "string"},
 					},
 				},
 			},
@@ -19,16 +19,16 @@ func TestArraysToMaps_ConvertsPlainArrayField(t *testing.T) {
 	}
 	e := &Entry{Name: "deployments"}
 
-	got, err := ArraysToMaps(schema, e)
+	got, err := (ArraysToMaps{}).Mutate(schema, e)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	containers := got["properties"].(map[string]interface{})["containers"].(map[string]interface{})
+	containers := got["properties"].(map[string]any)["containers"].(map[string]any)
 	if containers["type"] != "object" {
 		t.Errorf("containers.type = %v, want %q", containers["type"], "object")
 	}
-	if _, ok := containers["additionalProperties"].(map[string]interface{}); !ok {
+	if _, ok := containers["additionalProperties"].(map[string]any); !ok {
 		t.Errorf("containers.additionalProperties is not a map: %#v", containers["additionalProperties"])
 	}
 	if _, ok := containers["items"]; ok {
@@ -39,45 +39,39 @@ func TestArraysToMaps_ConvertsPlainArrayField(t *testing.T) {
 func TestArraysToMaps_IgnoresConfiguredPaths(t *testing.T) {
 	// Mimics spec.containers[].command: an array of strings, which without
 	// an ignore entry would (incorrectly) also be turned into a map.
-	schema := map[string]interface{}{
+	schema := map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"containers": map[string]interface{}{
+		"properties": map[string]any{
+			"containers": map[string]any{
 				"type": "array",
-				"items": map[string]interface{}{
+				"items": map[string]any{
 					"type": "object",
-					"properties": map[string]interface{}{
-						"command": map[string]interface{}{
+					"properties": map[string]any{
+						"command": map[string]any{
 							"type":  "array",
-							"items": map[string]interface{}{"type": "string"},
+							"items": map[string]any{"type": "string"},
 						},
-						"args": map[string]interface{}{
+						"args": map[string]any{
 							"type":  "array",
-							"items": map[string]interface{}{"type": "string"},
+							"items": map[string]any{"type": "string"},
 						},
 					},
 				},
 			},
 		},
 	}
-	e := &Entry{
-		Name: "deployments",
-		MutationConfig: map[string]map[string][]string{
-			"arraysToMaps": {
-				"ignore": {"containers.command"},
-			},
-		},
-	}
+	e := &Entry{Name: "deployments"}
+	m := ArraysToMaps{Ignore: []string{"containers.command"}}
 
-	got, err := ArraysToMaps(schema, e)
+	got, err := m.Mutate(schema, e)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	containerItems := got["properties"].(map[string]interface{})["containers"].(map[string]interface{})["additionalProperties"].(map[string]interface{})
-	props := containerItems["properties"].(map[string]interface{})
+	containerItems := got["properties"].(map[string]any)["containers"].(map[string]any)["additionalProperties"].(map[string]any)
+	props := containerItems["properties"].(map[string]any)
 
-	command := props["command"].(map[string]interface{})
+	command := props["command"].(map[string]any)
 	if command["type"] != "array" {
 		t.Errorf("command.type = %v, want unchanged %q (ignored path)", command["type"], "array")
 	}
@@ -87,21 +81,21 @@ func TestArraysToMaps_IgnoresConfiguredPaths(t *testing.T) {
 
 	// "args" wasn't listed in the ignore config, so it should still be
 	// converted like any other array field.
-	args := props["args"].(map[string]interface{})
+	args := props["args"].(map[string]any)
 	if args["type"] != "object" {
 		t.Errorf("args.type = %v, want %q (not ignored, should still convert)", args["type"], "object")
 	}
 }
 
 func TestArraysToMaps_NilEntryDoesNotPanic(t *testing.T) {
-	schema := map[string]interface{}{
+	schema := map[string]any{
 		"type": "array",
-		"items": map[string]interface{}{
+		"items": map[string]any{
 			"type": "string",
 		},
 	}
 
-	got, err := ArraysToMaps(schema, nil)
+	got, err := (ArraysToMaps{}).Mutate(schema, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

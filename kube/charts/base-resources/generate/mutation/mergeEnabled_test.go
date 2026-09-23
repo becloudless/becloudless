@@ -6,10 +6,10 @@ import (
 )
 
 func TestMergeEnabled_AddsEnabledProperty(t *testing.T) {
-	schema := map[string]interface{}{}
+	schema := map[string]any{}
 	e := &Entry{Name: "widgets"}
 
-	got, err := MergeEnabled(schema, e)
+	got, err := (MergeEnabled{}).Mutate(schema, e)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -18,12 +18,12 @@ func TestMergeEnabled_AddsEnabledProperty(t *testing.T) {
 		t.Errorf("type = %v, want %q", got["type"], "object")
 	}
 
-	props, ok := got["properties"].(map[string]interface{})
+	props, ok := got["properties"].(map[string]any)
 	if !ok {
 		t.Fatalf("properties is not a map: %#v", got["properties"])
 	}
 
-	enabled, ok := props["enabled"].(map[string]interface{})
+	enabled, ok := props["enabled"].(map[string]any)
 	if !ok {
 		t.Fatalf("properties.enabled is not a map: %#v", props["enabled"])
 	}
@@ -36,20 +36,20 @@ func TestMergeEnabled_AddsEnabledProperty(t *testing.T) {
 }
 
 func TestMergeEnabled_PreservesExistingProperties(t *testing.T) {
-	schema := map[string]interface{}{
+	schema := map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"data": map[string]interface{}{"type": "object"},
+		"properties": map[string]any{
+			"data": map[string]any{"type": "object"},
 		},
 	}
 	e := &Entry{Name: "configMaps"}
 
-	got, err := MergeEnabled(schema, e)
+	got, err := (MergeEnabled{}).Mutate(schema, e)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	props := got["properties"].(map[string]interface{})
+	props := got["properties"].(map[string]any)
 	if _, ok := props["data"]; !ok {
 		t.Errorf("expected existing property %q to be preserved, got %#v", "data", props)
 	}
@@ -62,30 +62,30 @@ func TestMergeEnabled_OverridesUpstreamEnabledProperty(t *testing.T) {
 	// Guards against an upstream CRD ever shadowing the well-known "enabled"
 	// field with an incompatible schema, mirroring MergeMetadata's
 	// precedence over same-named upstream fields.
-	schema := map[string]interface{}{
-		"properties": map[string]interface{}{
-			"enabled": map[string]interface{}{"type": "string"},
+	schema := map[string]any{
+		"properties": map[string]any{
+			"enabled": map[string]any{"type": "string"},
 		},
 	}
 	e := &Entry{Name: "widgets"}
 
-	got, err := MergeEnabled(schema, e)
+	got, err := (MergeEnabled{}).Mutate(schema, e)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	props := got["properties"].(map[string]interface{})
-	enabled := props["enabled"].(map[string]interface{})
+	props := got["properties"].(map[string]any)
+	enabled := props["enabled"].(map[string]any)
 	if enabled["type"] != "boolean" {
 		t.Errorf("properties.enabled.type = %v, want %q (should override upstream field)", enabled["type"], "boolean")
 	}
 }
 
 func TestMergeEnabled_DoesNotMutateEntry(t *testing.T) {
-	schema := map[string]interface{}{}
+	schema := map[string]any{}
 	e := &Entry{Name: "widgets", TemplateArgs: []TemplateArg{{Name: "required", Value: `(list "foo")`}}}
 
-	if _, err := MergeEnabled(schema, e); err != nil {
+	if _, err := (MergeEnabled{}).Mutate(schema, e); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
