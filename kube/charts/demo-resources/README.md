@@ -9,7 +9,7 @@ purely from `values.yaml`, without writing any templates yourself.
 - `Chart.yaml` declares `base-resources` as a local file dependency.
 - `templates/loader.yaml` is the only template needed; it just does:
   ```yaml
-  {{- include "resources.loader.all" . }}
+  {{- include "base-resources.loader.all" . }}
   ```
 - `values.yaml` declares resources under `resources.<kind>.<id>`, where
   `<kind>` is the plural camelCase Kubernetes kind (`deployments`,
@@ -18,6 +18,10 @@ purely from `values.yaml`, without writing any templates yourself.
   when `<id>` is `main`.
 - `defaults.resources.<kind>` is deep-merged under every instance of that
   kind, handy for labels/annotations shared across all resources of a kind.
+- `defaults.metadata.labels`/`defaults.metadata.annotations` are deep-merged
+  across every resource of every kind, below `defaults.resources.<kind>` and
+  the resource's own `labels`/`annotations` in precedence - handy for
+  labels/annotations shared across the whole chart (e.g. `app.kubernetes.io/part-of`).
 - Every resource supports `nameOverride`, `fullNameOverride`, `namespace`,
   `labels`, `annotations` and `enabled` (defaults to `true`), on top of that
   kind's normal spec fields.

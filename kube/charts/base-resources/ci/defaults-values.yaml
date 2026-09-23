@@ -1,6 +1,11 @@
 # yaml-language-server: $schema=../values.schema.json
 
 defaults:
+  metadata:
+    labels:
+      org: acme
+    annotations:
+      managed-by: base-resources
   resources:
     configMaps:
       labels:
@@ -17,3 +22,7 @@ resources:
         app: custom-app
       data:
         key: value2
+  secrets:
+    usesGlobalMetadataOnly:
+      stringData:
+        key: value3

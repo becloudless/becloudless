@@ -5,6 +5,26 @@
     "defaults": {
       "additionalProperties": false,
       "properties": {
+        "metadata": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "metadata.annotations applied to every resource of every kind.",
+              "type": "object"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "metadata.labels applied to every resource of every kind.",
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
         "resources": {
           "additionalProperties": false,
           "properties": {

@@ -103,6 +103,26 @@ func generateChartValuesSchema(dir string, entries []resource) error {
 				"type":                 "object",
 				"additionalProperties": false,
 				"properties": map[string]interface{}{
+					// Global label/annotation defaults, applied across every
+					// resource kind (below defaults.resources.<kind> and the
+					// resource's own values in merge precedence - see
+					// base-resources.generic.renderAll).
+					"metadata": map[string]interface{}{
+						"type":                 "object",
+						"additionalProperties": false,
+						"properties": map[string]interface{}{
+							"labels": map[string]interface{}{
+								"type":                 "object",
+								"description":          "metadata.labels applied to every resource of every kind.",
+								"additionalProperties": map[string]interface{}{"type": "string"},
+							},
+							"annotations": map[string]interface{}{
+								"type":                 "object",
+								"description":          "metadata.annotations applied to every resource of every kind.",
+								"additionalProperties": map[string]interface{}{"type": "string"},
+							},
+						},
+					},
 					"resources": map[string]interface{}{
 						"type":                 "object",
 						"additionalProperties": false,
@@ -172,6 +192,26 @@ func buildValuesSchema(entries []resource, resolve func(name string) (interface{
 				"type":                 "object",
 				"additionalProperties": false,
 				"properties": map[string]interface{}{
+					// Global label/annotation defaults, applied across every
+					// resource kind (below defaults.resources.<kind> and the
+					// resource's own values in merge precedence - see
+					// base-resources.generic.renderAll).
+					"metadata": map[string]interface{}{
+						"type":                 "object",
+						"additionalProperties": false,
+						"properties": map[string]interface{}{
+							"labels": map[string]interface{}{
+								"type":                 "object",
+								"description":          "metadata.labels applied to every resource of every kind.",
+								"additionalProperties": map[string]interface{}{"type": "string"},
+							},
+							"annotations": map[string]interface{}{
+								"type":                 "object",
+								"description":          "metadata.annotations applied to every resource of every kind.",
+								"additionalProperties": map[string]interface{}{"type": "string"},
+							},
+						},
+					},
 					"resources": map[string]interface{}{
 						"type":                 "object",
 						"additionalProperties": false,

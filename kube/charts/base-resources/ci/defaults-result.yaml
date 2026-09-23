@@ -1,13 +1,29 @@
 ---
 # Source: resources-test/templates/loader.yaml
 apiVersion: v1
+kind: Secret
+metadata:
+  name: test-release-usesGlobalMetadataOnly
+  namespace: default
+  labels:
+    org: acme
+  annotations:
+    managed-by: base-resources
+stringData:
+  key: value3
+---
+# Source: resources-test/templates/loader.yaml
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: test-release-overridesDefault
   namespace: default
   labels:
     app: custom-app
+    org: acme
     team: platform
+  annotations:
+    managed-by: base-resources
 data:
   key: value2
 ---
@@ -19,6 +35,9 @@ metadata:
   namespace: default
   labels:
     app: shared-default
+    org: acme
     team: platform
+  annotations:
+    managed-by: base-resources
 data:
   key: value1
