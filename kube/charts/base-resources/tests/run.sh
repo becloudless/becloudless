@@ -23,7 +23,7 @@ trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/charts" "$tmp/templates" "$tmp/tests"
 cat > "$tmp/Chart.yaml" <<EOF
 apiVersion: v2
-name: resources-test
+name: base-resources-test
 version: 0.0.0
 dependencies:
   - name: base-resources

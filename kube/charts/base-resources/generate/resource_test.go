@@ -18,7 +18,7 @@ func writeResourcesYAML(t *testing.T, content string) string {
 
 func TestParseCRDs_ParsesTransformerConfig(t *testing.T) {
 	path := writeResourcesYAML(t, `resources:
-  deployments:
+  - name: deployments
     url: https://example.invalid/deployment.json
     apiVersion: apps/v1
     kind: Deployment
@@ -50,7 +50,7 @@ func TestParseCRDs_ParsesTransformerConfig(t *testing.T) {
 
 func TestParseCRDs_ParsesMultipleTransformersAndOptions(t *testing.T) {
 	path := writeResourcesYAML(t, `resources:
-  deployments:
+  - name: deployments
     url: https://example.invalid/deployment.json
     apiVersion: apps/v1
     kind: Deployment
@@ -90,7 +90,7 @@ func TestParseCRDs_ParsesMultipleTransformersAndOptions(t *testing.T) {
 
 func TestParseCRDs_NoTransformerConfigLeavesFieldNil(t *testing.T) {
 	path := writeResourcesYAML(t, `resources:
-  configMaps:
+  - name: configMaps
     url: https://example.invalid/configmap.json
     apiVersion: v1
     kind: ConfigMap
@@ -110,12 +110,12 @@ func TestParseCRDs_NoTransformerConfigLeavesFieldNil(t *testing.T) {
 
 func TestParseCRDs_EmptyTransformerBlockLeavesFieldNil(t *testing.T) {
 	path := writeResourcesYAML(t, `resources:
-  configMaps:
+  - name: configMaps
     url: https://example.invalid/configmap.json
     apiVersion: v1
     kind: ConfigMap
     transformer:
-  secrets:
+  - name: secrets
     url: https://example.invalid/secret.json
     apiVersion: v1
     kind: Secret
@@ -140,7 +140,7 @@ func TestParseCRDs_EmptyTransformerBlockLeavesFieldNil(t *testing.T) {
 
 func TestParseCRDs_DoesNotLeakTransformerStateBetweenResources(t *testing.T) {
 	path := writeResourcesYAML(t, `resources:
-  deployments:
+  - name: deployments
     url: https://example.invalid/deployment.json
     apiVersion: apps/v1
     kind: Deployment
@@ -148,7 +148,7 @@ func TestParseCRDs_DoesNotLeakTransformerStateBetweenResources(t *testing.T) {
       arraysToMaps:
         ignore:
           - template.spec.containers.command
-  configMaps:
+  - name: configMaps
     url: https://example.invalid/configmap.json
     apiVersion: v1
     kind: ConfigMap
