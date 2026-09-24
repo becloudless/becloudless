@@ -3,7 +3,6 @@ package generate
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -24,11 +23,12 @@ func fetchSchemas(dir string, entries []resource) error {
 	var failed []string
 	for i := range entries {
 		e := &entries[i]
-		if e.URL == "" {
+		url := e.sourceURL()
+		if url == "" {
 			continue
 		}
 		dest := filepath.Join(schemaDir, e.Name+".json")
-		fmt.Printf("fetching %s -> %s\n", e.URL, dest)
+		fmt.Printf("fetching %s -> %s\n", url, dest)
 		if err := fetchAndMutateSchema(client, e, dest); err != nil {
 			fmt.Fprintf(os.Stderr, "  failed: %v\n", err)
 			failed = append(failed, e.Name)
@@ -42,40 +42,36 @@ func fetchSchemas(dir string, entries []resource) error {
 	return nil
 }
 
+// sourceURL returns the URL to fetch the schema from, or "" if the
+// resource has no source configured.
+func (e *resource) sourceURL() string {
+	switch {
+	case e.SourceCRD != nil:
+		return e.SourceCRD.URL
+	case e.SourceOpenAPI != nil:
+		return e.SourceOpenAPI.URL
+	default:
+		return ""
+	}
+}
+
 func fetchAndMutateSchema(client *http.Client, e *resource, dest string) error {
 	var kindSchema map[string]any
 	switch {
-	case e.CRDVersion != "":
-		schema, err := fetchCRDManifestSchema(client, e.URL, e.CRDVersion, e.Kind)
+	case e.SourceCRD != nil:
+		schema, err := fetchCRDManifestSchema(client, e.SourceCRD.URL, e.SourceCRD.CRDVersion, e.Kind)
 		if err != nil {
 			return err
 		}
 		kindSchema = schema
-	case e.Component != "":
-		schema, err := fetchOpenAPIV3Schema(client, e.URL, e.Component)
+	case e.SourceOpenAPI != nil:
+		schema, err := fetchOpenAPIV3Schema(client, e.SourceOpenAPI.URL, e.SourceOpenAPI.Component)
 		if err != nil {
 			return err
 		}
 		kindSchema = schema
 	default:
-		resp, err := client.Get(e.URL)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("unexpected status %s", resp.Status)
-		}
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
-		if err := json.Unmarshal(body, &kindSchema); err != nil {
-			return fmt.Errorf("parse fetched schema: %w", err)
-		}
+		return fmt.Errorf("%s: must set either sourceOpenAPI or sourceCRD", e.Name)
 	}
 
 	extractContent := mutation.ExtractContent{}

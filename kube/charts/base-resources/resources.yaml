@@ -1,7 +1,8 @@
 resources:
   - name: configMaps
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
-    component: io.k8s.api.core.v1.ConfigMap
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
+      component: io.k8s.api.core.v1.ConfigMap
     apiVersion: v1
     kind: ConfigMap
     mutations:
@@ -11,41 +12,48 @@ resources:
         fields:
           - data
   - name: secrets
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
-    component: io.k8s.api.core.v1.Secret
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
+      component: io.k8s.api.core.v1.Secret
     apiVersion: v1
     kind: Secret
     mutations:
       extractContent:
         contentIsOutOfSpec: true
   - name: horizontalPodAutoscalers
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__autoscaling__v2_openapi.json
-    component: io.k8s.api.autoscaling.v2.HorizontalPodAutoscaler
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__autoscaling__v2_openapi.json
+      component: io.k8s.api.autoscaling.v2.HorizontalPodAutoscaler
     apiVersion: autoscaling/v2
     kind: HorizontalPodAutoscaler
   - name: services
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
-    component: io.k8s.api.core.v1.Service
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
+      component: io.k8s.api.core.v1.Service
     apiVersion: v1
     kind: Service
   - name: persistentVolumes
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
-    component: io.k8s.api.core.v1.PersistentVolume
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
+      component: io.k8s.api.core.v1.PersistentVolume
     apiVersion: v1
     kind: PersistentVolume
   - name: persistentVolumeClaims
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
-    component: io.k8s.api.core.v1.PersistentVolumeClaim
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
+      component: io.k8s.api.core.v1.PersistentVolumeClaim
     apiVersion: v1
     kind: PersistentVolumeClaim
   - name: namespaces
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
-    component: io.k8s.api.core.v1.Namespace
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
+      component: io.k8s.api.core.v1.Namespace
     apiVersion: v1
     kind: Namespace
   - name: deployments
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__apps__v1_openapi.json
-    component: io.k8s.api.apps.v1.Deployment
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__apps__v1_openapi.json
+      component: io.k8s.api.apps.v1.Deployment
     apiVersion: apps/v1
     kind: Deployment
     mutations:
@@ -56,8 +64,9 @@ resources:
           - template.spec.initContainers.command
           - template.spec.initContainers.args
   - name: statefulSets
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__apps__v1_openapi.json
-    component: io.k8s.api.apps.v1.StatefulSet
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__apps__v1_openapi.json
+      component: io.k8s.api.apps.v1.StatefulSet
     apiVersion: apps/v1
     kind: StatefulSet
     mutations:
@@ -68,8 +77,9 @@ resources:
           - template.spec.initContainers.command
           - template.spec.initContainers.args
   - name: daemonSets
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__apps__v1_openapi.json
-    component: io.k8s.api.apps.v1.DaemonSet
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__apps__v1_openapi.json
+      component: io.k8s.api.apps.v1.DaemonSet
     apiVersion: apps/v1
     kind: DaemonSet
     mutations:
@@ -80,8 +90,9 @@ resources:
           - template.spec.initContainers.command
           - template.spec.initContainers.args
   - name: cronJobs
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__batch__v1_openapi.json
-    component: io.k8s.api.batch.v1.CronJob
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__batch__v1_openapi.json
+      component: io.k8s.api.batch.v1.CronJob
     apiVersion: batch/v1
     kind: CronJob
     mutations:
@@ -92,8 +103,9 @@ resources:
           - jobTemplate.spec.template.spec.initContainers.command
           - jobTemplate.spec.template.spec.initContainers.args
   - name: jobs
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__batch__v1_openapi.json
-    component: io.k8s.api.batch.v1.Job
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__batch__v1_openapi.json
+      component: io.k8s.api.batch.v1.Job
     apiVersion: batch/v1
     kind: Job
     mutations:
@@ -104,271 +116,320 @@ resources:
           - template.spec.initContainers.command
           - template.spec.initContainers.args
   - name: serviceAccounts
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
-    component: io.k8s.api.core.v1.ServiceAccount
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
+      component: io.k8s.api.core.v1.ServiceAccount
     apiVersion: v1
     kind: ServiceAccount
     mutations:
       extractContent:
         contentIsOutOfSpec: true
   - name: roles
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
-    component: io.k8s.api.rbac.v1.Role
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
+      component: io.k8s.api.rbac.v1.Role
     apiVersion: rbac.authorization.k8s.io/v1
     kind: Role
     mutations:
       extractContent:
         contentIsOutOfSpec: true
   - name: roleBindings
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
-    component: io.k8s.api.rbac.v1.RoleBinding
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
+      component: io.k8s.api.rbac.v1.RoleBinding
     apiVersion: rbac.authorization.k8s.io/v1
     kind: RoleBinding
     mutations:
       extractContent:
         contentIsOutOfSpec: true
   - name: clusterRoles
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
-    component: io.k8s.api.rbac.v1.ClusterRole
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
+      component: io.k8s.api.rbac.v1.ClusterRole
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRole
     mutations:
       extractContent:
         contentIsOutOfSpec: true
   - name: clusterRoleBindings
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
-    component: io.k8s.api.rbac.v1.ClusterRoleBinding
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
+      component: io.k8s.api.rbac.v1.ClusterRoleBinding
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRoleBinding
     mutations:
       extractContent:
         contentIsOutOfSpec: true
   - name: podDisruptionBudgets
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__policy__v1_openapi.json
-    component: io.k8s.api.policy.v1.PodDisruptionBudget
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__policy__v1_openapi.json
+      component: io.k8s.api.policy.v1.PodDisruptionBudget
     apiVersion: policy/v1
     kind: PodDisruptionBudget
   - name: ingresses
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__networking.k8s.io__v1_openapi.json
-    component: io.k8s.api.networking.v1.Ingress
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__networking.k8s.io__v1_openapi.json
+      component: io.k8s.api.networking.v1.Ingress
     apiVersion: networking.k8s.io/v1
     kind: Ingress
   - name: networkPolicies
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__networking.k8s.io__v1_openapi.json
-    component: io.k8s.api.networking.v1.NetworkPolicy
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__networking.k8s.io__v1_openapi.json
+      component: io.k8s.api.networking.v1.NetworkPolicy
     apiVersion: networking.k8s.io/v1
     kind: NetworkPolicy
   - name: gateways
-    url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_gateways.yaml
     apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_gateways.yaml
+      crdVersion: v1
   - name: gatewayClasses
-    url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_gatewayclasses.yaml
     apiVersion: gateway.networking.k8s.io/v1
     kind: GatewayClass
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_gatewayclasses.yaml
+      crdVersion: v1
   - name: httpRoutes
-    url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml
     apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml
+      crdVersion: v1
   - name: grpcRoutes
-    url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_grpcroutes.yaml
     apiVersion: gateway.networking.k8s.io/v1
     kind: GRPCRoute
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_grpcroutes.yaml
+      crdVersion: v1
   - name: referenceGrants
-    url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_referencegrants.yaml
     apiVersion: gateway.networking.k8s.io/v1beta1
     kind: ReferenceGrant
-    crdVersion: v1beta1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_referencegrants.yaml
+      crdVersion: v1beta1
   - name: tcpRoutes
-    url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_tcproutes.yaml
     apiVersion: gateway.networking.k8s.io/v1
     kind: TCPRoute
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_tcproutes.yaml
+      crdVersion: v1
   - name: tlsRoutes
-    url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_tlsroutes.yaml
     apiVersion: gateway.networking.k8s.io/v1
     kind: TLSRoute
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_tlsroutes.yaml
+      crdVersion: v1
   - name: udpRoutes
-    url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_udproutes.yaml
     apiVersion: gateway.networking.k8s.io/v1
     kind: UDPRoute
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_udproutes.yaml
+      crdVersion: v1
   - name: storageClasses
-    url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__storage.k8s.io__v1_openapi.json
-    component: io.k8s.api.storage.v1.StorageClass
+    sourceOpenAPI:
+      url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__storage.k8s.io__v1_openapi.json
+      component: io.k8s.api.storage.v1.StorageClass
     apiVersion: storage.k8s.io/v1
     kind: StorageClass
     mutations:
       extractContent:
         contentIsOutOfSpec: true
   - name: volumeSnapshotClasses
-    url: https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
     apiVersion: snapshot.storage.k8s.io/v1
     kind: VolumeSnapshotClass
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+      crdVersion: v1
     mutations:
       extractContent:
         contentIsOutOfSpec: true
   - name: sealedSecrets
-    url: https://raw.githubusercontent.com/bitnami-labs/sealed-secrets/main/helm/sealed-secrets/crds/bitnami.com_sealedsecrets.yaml
     apiVersion: bitnami.com/v1alpha1
     kind: SealedSecret
-    crdVersion: v1alpha1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/bitnami-labs/sealed-secrets/main/helm/sealed-secrets/crds/bitnami.com_sealedsecrets.yaml
+      crdVersion: v1alpha1
   - name: clusterPolicies
-    url: https://raw.githubusercontent.com/kyverno/kyverno/main/config/crds/kyverno/kyverno.io_clusterpolicies.yaml
     apiVersion: kyverno.io/v1
     kind: ClusterPolicy
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/kyverno/kyverno/main/config/crds/kyverno/kyverno.io_clusterpolicies.yaml
+      crdVersion: v1
   - name: recurringJobs
-    url: https://raw.githubusercontent.com/longhorn/longhorn/master/deploy/longhorn.yaml
     apiVersion: longhorn.io/v1beta2
     kind: RecurringJob
-    crdVersion: v1beta2
+    sourceCRD:
+      url: https://raw.githubusercontent.com/longhorn/longhorn/master/deploy/longhorn.yaml
+      crdVersion: v1beta2
   - name: settings
-    url: https://raw.githubusercontent.com/longhorn/longhorn/master/deploy/longhorn.yaml
     apiVersion: longhorn.io/v1beta2
     kind: Setting
-    crdVersion: v1beta2
+    sourceCRD:
+      url: https://raw.githubusercontent.com/longhorn/longhorn/master/deploy/longhorn.yaml
+      crdVersion: v1beta2
     mutations:
       extractContent:
         contentIsOutOfSpec: true
   - name: routes
-    url: https://raw.githubusercontent.com/openshift/api/master/route/v1/zz_generated.crd-manifests/routes.crd.yaml
     apiVersion: route.openshift.io/v1
     kind: Route
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/openshift/api/master/route/v1/zz_generated.crd-manifests/routes.crd.yaml
+      crdVersion: v1
   - name: helmReleases
-    url: https://raw.githubusercontent.com/fluxcd/helm-controller/main/config/crd/bases/helm.toolkit.fluxcd.io_helmreleases.yaml
     apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
-    crdVersion: v2
+    sourceCRD:
+      url: https://raw.githubusercontent.com/fluxcd/helm-controller/main/config/crd/bases/helm.toolkit.fluxcd.io_helmreleases.yaml
+      crdVersion: v2
   - name: kustomizations
-    url: https://raw.githubusercontent.com/fluxcd/kustomize-controller/main/config/crd/bases/kustomize.toolkit.fluxcd.io_kustomizations.yaml
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/fluxcd/kustomize-controller/main/config/crd/bases/kustomize.toolkit.fluxcd.io_kustomizations.yaml
+      crdVersion: v1
   - name: gitRepositories
-    url: https://raw.githubusercontent.com/fluxcd/source-controller/main/config/crd/bases/source.toolkit.fluxcd.io_gitrepositories.yaml
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: GitRepository
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/fluxcd/source-controller/main/config/crd/bases/source.toolkit.fluxcd.io_gitrepositories.yaml
+      crdVersion: v1
   - name: helmRepositories
-    url: https://raw.githubusercontent.com/fluxcd/source-controller/main/config/crd/bases/source.toolkit.fluxcd.io_helmrepositories.yaml
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: HelmRepository
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/fluxcd/source-controller/main/config/crd/bases/source.toolkit.fluxcd.io_helmrepositories.yaml
+      crdVersion: v1
   - name: ociRepositories
-    url: https://raw.githubusercontent.com/fluxcd/source-controller/main/config/crd/bases/source.toolkit.fluxcd.io_ocirepositories.yaml
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: OCIRepository
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/fluxcd/source-controller/main/config/crd/bases/source.toolkit.fluxcd.io_ocirepositories.yaml
+      crdVersion: v1
   - name: imageRepositories
-    url: https://raw.githubusercontent.com/fluxcd/image-reflector-controller/main/config/crd/bases/image.toolkit.fluxcd.io_imagerepositories.yaml
     apiVersion: image.toolkit.fluxcd.io/v1
     kind: ImageRepository
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/fluxcd/image-reflector-controller/main/config/crd/bases/image.toolkit.fluxcd.io_imagerepositories.yaml
+      crdVersion: v1
   - name: imagePolicies
-    url: https://raw.githubusercontent.com/fluxcd/image-reflector-controller/main/config/crd/bases/image.toolkit.fluxcd.io_imagepolicies.yaml
     apiVersion: image.toolkit.fluxcd.io/v1
     kind: ImagePolicy
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/fluxcd/image-reflector-controller/main/config/crd/bases/image.toolkit.fluxcd.io_imagepolicies.yaml
+      crdVersion: v1
   - name: certificates
-    url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_certificates.yaml
     apiVersion: cert-manager.io/v1
     kind: Certificate
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_certificates.yaml
+      crdVersion: v1
   - name: certificateRequests
-    url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_certificaterequests.yaml
     apiVersion: cert-manager.io/v1
     kind: CertificateRequest
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_certificaterequests.yaml
+      crdVersion: v1
   - name: issuers
-    url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_issuers.yaml
     apiVersion: cert-manager.io/v1
     kind: Issuer
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_issuers.yaml
+      crdVersion: v1
   - name: clusterIssuers
-    url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_clusterissuers.yaml
     apiVersion: cert-manager.io/v1
     kind: ClusterIssuer
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_clusterissuers.yaml
+      crdVersion: v1
   - name: orders
-    url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/acme.cert-manager.io_orders.yaml
     apiVersion: acme.cert-manager.io/v1
     kind: Order
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/acme.cert-manager.io_orders.yaml
+      crdVersion: v1
   - name: challenges
-    url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/acme.cert-manager.io_challenges.yaml
     apiVersion: acme.cert-manager.io/v1
     kind: Challenge
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/acme.cert-manager.io_challenges.yaml
+      crdVersion: v1
   - name: clusters
-    url: https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/main/config/crd/bases/postgresql.cnpg.io_clusters.yaml
     apiVersion: postgresql.cnpg.io/v1
     kind: Cluster
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/main/config/crd/bases/postgresql.cnpg.io_clusters.yaml
+      crdVersion: v1
   - name: scheduledBackups
-    url: https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/main/config/crd/bases/postgresql.cnpg.io_scheduledbackups.yaml
     apiVersion: postgresql.cnpg.io/v1
     kind: ScheduledBackup
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/main/config/crd/bases/postgresql.cnpg.io_scheduledbackups.yaml
+      crdVersion: v1
   - name: secretStores
-    url: https://raw.githubusercontent.com/external-secrets/external-secrets/main/config/crds/bases/external-secrets.io_secretstores.yaml
     apiVersion: external-secrets.io/v1
     kind: SecretStore
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/external-secrets/external-secrets/main/config/crds/bases/external-secrets.io_secretstores.yaml
+      crdVersion: v1
   - name: alerts
-    url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_alerts.yaml
     apiVersion: notification.toolkit.fluxcd.io/v1beta3
     kind: Alert
-    crdVersion: v1beta3
+    sourceCRD:
+      url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_alerts.yaml
+      crdVersion: v1beta3
   - name: receivers
-    url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_receivers.yaml
     apiVersion: notification.toolkit.fluxcd.io/v1
     kind: Receiver
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_receivers.yaml
+      crdVersion: v1
   - name: providers
-    url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_providers.yaml
     apiVersion: notification.toolkit.fluxcd.io/v1beta3
     kind: Provider
-    crdVersion: v1beta3
+    sourceCRD:
+      url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_providers.yaml
+      crdVersion: v1beta3
   - name: stringSecrets
-    url: https://raw.githubusercontent.com/mittwald/kubernetes-secret-generator/master/deploy/crds/secretgenerator.mittwald.de_stringsecrets_crd.yaml
     apiVersion: secretgenerator.mittwald.de/v1alpha1
     kind: StringSecret
-    crdVersion: v1alpha1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/mittwald/kubernetes-secret-generator/master/deploy/crds/secretgenerator.mittwald.de_stringsecrets_crd.yaml
+      crdVersion: v1alpha1
   - name: ingressRouteTCPs
-    url: https://raw.githubusercontent.com/traefik/traefik/master/docs/content/reference/dynamic-configuration/traefik.io_ingressroutetcps.yaml
     apiVersion: traefik.io/v1alpha1
     kind: IngressRouteTCP
-    crdVersion: v1alpha1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/traefik/traefik/master/docs/content/reference/dynamic-configuration/traefik.io_ingressroutetcps.yaml
+      crdVersion: v1alpha1
   - name: middlewares
-    url: https://raw.githubusercontent.com/traefik/traefik/master/docs/content/reference/dynamic-configuration/traefik.io_middlewares.yaml
     apiVersion: traefik.io/v1alpha1
     kind: Middleware
-    crdVersion: v1alpha1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/traefik/traefik/master/docs/content/reference/dynamic-configuration/traefik.io_middlewares.yaml
+      crdVersion: v1alpha1
   - name: networkAttachmentDefinitions
-    url: https://raw.githubusercontent.com/k8snetworkplumbingwg/network-attachment-definition-client/master/artifacts/networks-crd.yaml
     apiVersion: k8s.cni.cncf.io/v1
     kind: NetworkAttachmentDefinition
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/k8snetworkplumbingwg/network-attachment-definition-client/master/artifacts/networks-crd.yaml
+      crdVersion: v1
   - name: serviceMonitors
-    url: https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml
     apiVersion: monitoring.coreos.com/v1
     kind: ServiceMonitor
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml
+      crdVersion: v1
   - name: validatingPolicies
-    url: https://raw.githubusercontent.com/kyverno/kyverno/main/config/crds/policies.kyverno.io/policies.kyverno.io_validatingpolicies.yaml
     apiVersion: policies.kyverno.io/v1
     kind: ValidatingPolicy
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/kyverno/kyverno/main/config/crds/policies.kyverno.io/policies.kyverno.io_validatingpolicies.yaml
+      crdVersion: v1
   - name: verticalPodAutoscalers
-    url: https://raw.githubusercontent.com/kubernetes/autoscaler/master/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
     apiVersion: autoscaling.k8s.io/v1
     kind: VerticalPodAutoscaler
-    crdVersion: v1
+    sourceCRD:
+      url: https://raw.githubusercontent.com/kubernetes/autoscaler/master/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
+      crdVersion: v1
