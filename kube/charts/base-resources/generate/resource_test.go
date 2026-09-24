@@ -21,7 +21,9 @@ func writeResourcesYAML(t *testing.T, content string) string {
 func TestParseCRDs_ParsesArraysToMapsIgnore(t *testing.T) {
 	path := writeResourcesYAML(t, `resources:
   - name: deployments
-    url: https://example.invalid/deployment.json
+    sourceOpenAPI:
+      url: https://example.invalid/deployment.json
+      component: io.k8s.api.apps.v1.Deployment
     apiVersion: apps/v1
     kind: Deployment
     mutations:
@@ -52,7 +54,9 @@ func TestParseCRDs_ParsesArraysToMapsIgnore(t *testing.T) {
 func TestParseCRDs_ParsesContentIsOutOfSpecAndStringifyFields(t *testing.T) {
 	path := writeResourcesYAML(t, `resources:
   - name: configMaps
-    url: https://example.invalid/configmap.json
+    sourceOpenAPI:
+      url: https://example.invalid/configmap.json
+      component: io.k8s.api.core.v1.ConfigMap
     apiVersion: v1
     kind: ConfigMap
     mutations:
@@ -84,11 +88,15 @@ func TestParseCRDs_ParsesContentIsOutOfSpecAndStringifyFields(t *testing.T) {
 func TestParseCRDs_NoMutationsLeavesFieldsZero(t *testing.T) {
 	path := writeResourcesYAML(t, `resources:
   - name: configMaps
-    url: https://example.invalid/configmap.json
+    sourceOpenAPI:
+      url: https://example.invalid/configmap.json
+      component: io.k8s.api.core.v1.ConfigMap
     apiVersion: v1
     kind: ConfigMap
   - name: secrets
-    url: https://example.invalid/secret.json
+    sourceOpenAPI:
+      url: https://example.invalid/secret.json
+      component: io.k8s.api.core.v1.Secret
     apiVersion: v1
     kind: Secret
     mutations:

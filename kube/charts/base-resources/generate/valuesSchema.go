@@ -11,24 +11,7 @@ import (
 //go:embed valuesSchemaBase.json
 var valuesSchemaBaseFS embed.FS
 
-// loadValuesSchemaBase decodes the static skeleton shared by
-// buildValuesSchema and generateChartValuesSchema: the "global" passthrough,
-// and the "resources"/"defaults" structure (including the
-// defaults.metadata.* fields), everything except the per-kind schemas built
-// from resources.yaml, which callers fill in via setResourcesProps. A fresh
-// copy is decoded on every call so callers can freely mutate the returned
-// map without affecting each other.
-//
-// properties.global is a plain "type": "object" with no further
-// constraints: Helm always injects a top-level "global" key (default {})
-// into every chart's .Values, even if the parent chart never sets one - it
-// must stay allowed here or the root "additionalProperties": false rejects
-// every values file outright.
-//
-// properties.defaults.properties.metadata holds global metadata defaults,
-// applied across every resource kind (below defaults.resources.<kind> and
-// the resource's own values in merge precedence - see
-// base-resources.computeMetadata).
+
 func loadValuesSchemaBase() (map[string]any, error) {
 	data, err := valuesSchemaBaseFS.ReadFile("valuesSchemaBase.json")
 	if err != nil {
@@ -41,9 +24,6 @@ func loadValuesSchemaBase() (map[string]any, error) {
 	return schema, nil
 }
 
-// setResourcesProps fills in the "resources" and "defaults.resources"
-// properties left empty in valuesSchemaBase.json with the per-kind schemas
-// built from resources.yaml.
 func setResourcesProps(schema map[string]any, resourcesProps, defaultsResourcesProps map[string]any) error {
 	properties, ok := schema["properties"].(map[string]any)
 	if !ok {
@@ -73,20 +53,6 @@ func setResourcesProps(schema map[string]any, resourcesProps, defaultsResourcesP
 	return nil
 }
 
-// generateValuesSchema writes schema/values.schema.json: a JSON Schema
-// describing .Values.resources.<kind>.<id> and .Values.defaults.resources.<kind>.
-// Each kind's instance schema lives in schema/resources/<name>.json (written
-// by fetchAndTransformSchema) and has no top-level "required" (see
-// stripRequiredTransform), so both .Values.resources.<kind> and
-// .Values.defaults.resources.<kind> can safely $ref that same single file -
-// required-field validation on the merged resource is instead generated
-// into templates/_generated.tpl (see resources.requireFields).
-//
-// This file is kept around (alongside the chart-root values.schema.json
-// written by generateChartValuesSchema) purely for editor/IDE tooling (see
-// the "$schema" comment at the top of ci/*-values.yaml files), since editors
-// resolving "$ref" against a sibling file is simpler to read/diff than the
-// fully inlined chart-root schema.
 func generateValuesSchema(dir string, entries []resource) error {
 	schema, err := buildValuesSchema(entries, func(name string) (any, error) {
 		return map[string]any{"$ref": "./resources/" + name + ".json"}, nil
@@ -106,12 +72,6 @@ func generateValuesSchema(dir string, entries []resource) error {
 	return os.WriteFile(dest, out, 0o644)
 }
 
-// Each kind's schema is stored once under "$defs" and referenced from both
-// .Values.resources.<kind>.<id> and .Values.defaults.resources.<kind>,
-// rather than inlined twice, and the result is marshaled compactly
-// (without indentation): Helm rejects any single chart file over 5MiB, and
-// this chart's combined kind schemas (dominated by a handful of large CRDs)
-// are large enough that both of these are needed to stay under that limit.
 func generateChartValuesSchema(dir string, entries []resource) error {
 	schemaDir := filepath.Join(dir, "schema", "resources")
 

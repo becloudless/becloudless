@@ -14,15 +14,24 @@ type resourcesFile struct {
 }
 
 type resource struct {
-	Name       string    `yaml:"name"`
-	URL        string    `yaml:"url"`
-	APIVersion string    `yaml:"apiVersion"`
-	Kind       string    `yaml:"kind"`
-	CRDVersion string    `yaml:"crdVersion"` // optional; set to fetch the schema from a CRD manifest (YAML) instead of Kubernetes' own OpenAPI v3 spec
-	Component  string    `yaml:"component"`  // optional; set to the fully-qualified component name (e.g. io.k8s.api.core.v1.ConfigMap) to fetch from a Kubernetes OpenAPI v3 spec document at URL (see fetchOpenAPIV3Schema)
-	Mutations  mutations `yaml:"mutations"`
+	Name          string         `yaml:"name"`
+	APIVersion    string         `yaml:"apiVersion"`
+	Kind          string         `yaml:"kind"`
+	SourceOpenAPI *SourceOpenAPI `yaml:"sourceOpenAPI"` // set to fetch the schema from a Kubernetes OpenAPI v3 spec document
+	SourceCRD     *SourceCRD     `yaml:"sourceCRD"`     // set to fetch the schema from a CRD manifest (YAML)
+	Mutations     mutations      `yaml:"mutations"`
 
 	helmTemplateRenderArgs map[string]string
+}
+
+type SourceOpenAPI struct {
+	URL       string `yaml:"url"`
+	Component string `yaml:"component"` // fully-qualified component name, e.g. io.k8s.api.core.v1.ConfigMap (see fetchOpenAPIV3Schema)
+}
+
+type SourceCRD struct {
+	URL        string `yaml:"url"`
+	CRDVersion string `yaml:"crdVersion"`
 }
 
 type mutations struct {

@@ -299,7 +299,7 @@
       "description": "The tls field provides the ability to configure certificates and termination for the route.",
       "properties": {
         "caCertificate": {
-          "description": "caCertificate provides the cert authority certificate contents",
+          "description": "caCertificate provides the cert authority certificate contents. Any needed\nintermediate certificates should be provided here.",
           "type": "string"
         },
         "certificate": {
@@ -312,7 +312,7 @@
         },
         "externalCertificate": {
           "additionalProperties": false,
-          "description": "externalCertificate provides certificate contents as a secret reference.\nThis should be a single serving certificate, not a certificate\nchain. Do not include a CA certificate. The secret referenced should\nbe present in the same namespace as that of the Route.\nForbidden when `certificate` is set.\nThe router service account needs to be granted with read-only access to this secret,\nplease refer to openshift docs for additional details.",
+          "description": "externalCertificate provides certificate contents as a secret reference.\nThis should be the serving certificate, and may optionally include the\nfull certificate chain, including any needed intermediate certificates.\nThere is no separate field to provide a CA certificate when using\nexternalCertificate, so any CA certificate needed must be included as\npart of this chain. The secret referenced should be present in the same\nnamespace as that of the Route.\nForbidden when `certificate` is set.\nThe router service account needs to be granted with read-only access to this secret,\nplease refer to openshift docs for additional details.",
           "properties": {
             "name": {
               "description": "name of the referent.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
