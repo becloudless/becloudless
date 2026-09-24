@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../values.schema.json
+# yaml-language-server: $schema=../schema/values.schema.json
 
 resources:
   serviceMonitors:

@@ -1,4 +1,4 @@
-package mutation
+package mutations
 
 import "fmt"
 

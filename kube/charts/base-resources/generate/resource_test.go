@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"resourceschart/generate/mutation"
+	"resourceschart/generate/mutations"
 )
 
 func writeResourcesYAML(t *testing.T, content string) string {
@@ -43,7 +43,7 @@ func TestParseCRDs_ParsesArraysToMapsIgnore(t *testing.T) {
 	}
 
 	got := entries[0].Mutations.ArraysToMaps
-	want := &mutation.ArraysToMaps{
+	want := &mutations.ArraysToMaps{
 		Ignore: []string{"template.spec.containers.command", "template.spec.containers.args"},
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -79,7 +79,7 @@ func TestParseCRDs_ParsesContentIsOutOfSpecAndStringifyFields(t *testing.T) {
 	if entries[0].Mutations.ExtractContent == nil || !entries[0].Mutations.ExtractContent.ContentIsOutOfSpec {
 		t.Errorf("Mutations.ExtractContent.ContentIsOutOfSpec = false, want true")
 	}
-	wantFields := &mutation.StringifyFields{Fields: []string{"data"}}
+	wantFields := &mutations.StringifyFields{Fields: []string{"data"}}
 	if !reflect.DeepEqual(entries[0].Mutations.StringifyFields, wantFields) {
 		t.Errorf("Mutations.StringifyFields = %#v, want %#v", entries[0].Mutations.StringifyFields, wantFields)
 	}

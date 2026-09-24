@@ -1,4 +1,4 @@
-package mutation
+package mutations
 
 // ArraysToMaps recursively converts array-type schema nodes into maps keyed
 // by an arbitrary string id, working around Helm's inability to
