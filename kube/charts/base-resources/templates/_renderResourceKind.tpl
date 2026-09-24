@@ -20,13 +20,11 @@
     {{- $merged = tpl (toYaml $merged) $rootContext | fromYaml }}
     {{- $merged = include "base-resources.stringifyFields" (dict "resource" $merged "stringifyFields" $stringifyFields) | fromYaml }}
 
-    {{- $enabled := true }}
-    {{- if hasKey $merged "enabled" }}
-      {{- $enabled = $merged.enabled }}
-    {{- end }}
+    {{- $enabled := eq (include "base-resources.mutations.enabled" (dict "resource" $merged) | trim) "true" }}
 
-    {{- if $enabled }}
-      {{- include "base-resources.requireFields" (dict "name" $name "id" $id "resource" $merged "required" $required) }}
+    {{- if include "base-resources.mutations.enabled" (dict "resource" $merged) -}}
+      {{- $merged = omit $merged "enabled" }}
+      {{- include "base-resources.mutations.required" (dict "name" $name "id" $id "resource" $merged "required" $required) }}
 
       {{- $metadata := include "base-resources.computeMetadata" (dict "rootContext" $rootContext "id" $id "resource" $merged) | trim }}
       {{- $cleaned := omit $merged "nameOverride" "fullNameOverride" "namespace" "labels" "annotations" "enabled" }}

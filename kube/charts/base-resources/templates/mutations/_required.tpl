@@ -1,4 +1,4 @@
-{{- define "base-resources.requireFields" }}
+{{- define "base-resources.mutations.required" }}
   {{- $name := .name }}
   {{- $id := .id }}
   {{- $resource := .resource | default dict }}

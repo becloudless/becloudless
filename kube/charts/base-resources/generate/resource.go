@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"resourceschart/generate/mutation"
+	"resourceschart/generate/mutations"
 
 	"gopkg.in/yaml.v3"
 )
@@ -14,12 +14,12 @@ type resourcesFile struct {
 }
 
 type resource struct {
-	Name          string         `yaml:"name"`
-	APIVersion    string         `yaml:"apiVersion"`
-	Kind          string         `yaml:"kind"`
-	SourceOpenAPI *SourceOpenAPI `yaml:"sourceOpenAPI"` // set to fetch the schema from a Kubernetes OpenAPI v3 spec document
-	SourceCRD     *SourceCRD     `yaml:"sourceCRD"`     // set to fetch the schema from a CRD manifest (YAML)
-	Mutations     mutations      `yaml:"mutations"`
+	Name          string            `yaml:"name"`
+	APIVersion    string            `yaml:"apiVersion"`
+	Kind          string            `yaml:"kind"`
+	SourceOpenAPI *SourceOpenAPI    `yaml:"sourceOpenAPI"` // set to fetch the schema from a Kubernetes OpenAPI v3 spec document
+	SourceCRD     *SourceCRD        `yaml:"sourceCRD"`     // set to fetch the schema from a CRD manifest (YAML)
+	Mutations     resourceMutations `yaml:"mutations"`
 
 	helmTemplateRenderArgs map[string]string
 }
@@ -34,10 +34,10 @@ type SourceCRD struct {
 	CRDVersion string `yaml:"crdVersion"`
 }
 
-type mutations struct {
-	ExtractContent  *mutation.ExtractContent  `yaml:"extractContent"`
-	ArraysToMaps    *mutation.ArraysToMaps    `yaml:"arraysToMaps"`
-	StringifyFields *mutation.StringifyFields `yaml:"stringifyFields"`
+type resourceMutations struct {
+	ExtractContent  *mutations.ExtractContent  `yaml:"extractContent"`
+	ArraysToMaps    *mutations.ArraysToMaps    `yaml:"arraysToMaps"`
+	StringifyFields *mutations.StringifyFields `yaml:"stringifyFields"`
 }
 
 func newResourcesFile(path string) (resourcesFile, error) {
