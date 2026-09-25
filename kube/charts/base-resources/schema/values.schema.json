@@ -161,9 +161,6 @@
             "roles": {
               "$ref": "./resources/roles.json"
             },
-            "routes": {
-              "$ref": "./resources/routes.json"
-            },
             "scheduledBackups": {
               "$ref": "./resources/scheduledBackups.json"
             },
@@ -526,13 +523,6 @@
             "$ref": "./resources/roles.json"
           },
           "description": "Role instances, keyed by id.",
-          "type": "object"
-        },
-        "routes": {
-          "additionalProperties": {
-            "$ref": "./resources/routes.json"
-          },
-          "description": "Route instances, keyed by id.",
           "type": "object"
         },
         "scheduledBackups": {

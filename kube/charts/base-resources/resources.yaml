@@ -271,12 +271,6 @@ resources:
     mutations:
       extractContent:
         contentIsOutOfSpec: true
-  - name: routes
-    apiVersion: route.openshift.io/v1
-    kind: Route
-    sourceCRD:
-      url: https://raw.githubusercontent.com/openshift/api/master/route/v1/zz_generated.crd-manifests/routes.crd.yaml
-      crdVersion: v1
   - name: helmReleases
     apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
