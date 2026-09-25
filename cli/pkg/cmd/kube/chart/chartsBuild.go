@@ -27,6 +27,9 @@ func buildCmd() *cobra.Command {
 			}
 
 			// running unit tests
+			if err := chart.RunUnitTests(); err != nil {
+				return errs.WithE(err, "Failed to run chart unit tests")
+			}
 
 			// running integration tests
 			if err := chart.RunCITests(); err != nil {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -111,12 +112,74 @@ func (c *Chart) RunCITests() error {
 	return c.runCiTest()
 }
 
+// RunUnitTests runs helm-unittest test suites found in the chart's tests/
+// directory (*_test.yaml files). Since library charts cannot be
+// rendered/tested directly, tests run against the same synthetic wrapper
+// chart used for CI tests (see PrepareTestChart): an in-memory/temp-dir
+// chart that depends on the chart under test and exposes a single
+// "templates/loader.yaml" calling "<chart>.loader.all". Test suite files
+// only need to reference that "loader.yaml" template; no chart needs to be
+// committed under tests/.
+func (c *Chart) RunUnitTests() error {
+	logs.WithField("chart", c.chart.Metadata.Name).Info("Running chart unit tests")
+
+	utFolder := c.utFolder
+	if utFolder == "" {
+		utFolder = filepath.Join(c.path, "tests")
+	}
+
+	testFiles, err := filepath.Glob(filepath.Join(utFolder, "*_test.yaml"))
+	if err != nil {
+		return errs.WithEF(err, data.WithField("path", utFolder), "Failed to glob for unit test files")
+	}
+	if len(testFiles) == 0 {
+		logs.WithField("chart", c.chart.Metadata.Name).Info("No tests/*_test.yaml files found, skipping unit tests")
+		return nil
+	}
+
+	if c.testChart == nil {
+		if err := c.PrepareTestChart(); err != nil {
+			return errs.WithE(err, "Failed to prepare test chart")
+		}
+	}
+
+	return c.testChart.runUnitTest(testFiles)
+}
+
 /////////
+
+// runUnitTest invokes the "helm unittest" plugin against this chart, using
+// the given absolute suite file paths (typically resolved from the original
+// chart's tests/ directory on disk, since the chart itself may live in a
+// generated temp directory). Each file is passed via its own "-f" flag
+// since helm-unittest does not glob-expand absolute path patterns.
+func (c *Chart) runUnitTest(testFiles []string) error {
+	logs.WithField("chart", c.path).Info("Running helm unittest")
+
+	args := []string{"unittest", "--with-subchart=false"}
+	for _, testFile := range testFiles {
+		args = append(args, "-f", testFile)
+	}
+	args = append(args, c.path)
+
+	cmd := exec.Command("helm", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return errs.WithEF(err, data.WithField("path", c.path), "Helm unit tests failed")
+	}
+
+	return nil
+}
 
 const ciTestFileSuffix = "-values.yaml"
 const ciResultFileSuffix = "-result.yaml"
 
 func (c *Chart) runCiTest() error {
+	if c.ciFolder == "" {
+		c.ciFolder = filepath.Join(c.path, "ci")
+	}
 	// read ci/ folder for file with -values.yaml
 	files, err := os.ReadDir(c.ciFolder)
 	if err != nil {
@@ -236,6 +299,7 @@ func (c *Chart) render(values map[string]interface{}, kubeVersion string, output
 	install := action.NewInstall(c.actionConfig)
 	install.DryRun = true
 	install.ReleaseName = "test-release"
+	install.Namespace = c.settings.Namespace()
 	install.Replace = true
 	install.ClientOnly = true
 	install.APIVersions = []string{}
