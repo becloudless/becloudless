@@ -1,6 +1,9 @@
 package kube
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/becloudless/becloudless/pkg/cmd/kube/chart"
+	"github.com/spf13/cobra"
+)
 
 func KubeCmd() *cobra.Command {
 	cmd := cobra.Command{
@@ -8,6 +11,7 @@ func KubeCmd() *cobra.Command {
 		Aliases: []string{"k"},
 	}
 	cmd.AddCommand(
+		chart.ChartsCmd(),
 		kubeBootstrapCmd(),
 		kubeContextCmd(),
 		kubeSecretCmd(),

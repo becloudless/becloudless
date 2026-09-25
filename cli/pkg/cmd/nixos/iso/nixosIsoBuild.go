@@ -109,7 +109,6 @@ func nixosIsoBuildCmd() *cobra.Command {
 				}
 			}
 
-
 			if device == "" {
 				logs.WithField("path", isoPath).Info("Your iso is available")
 				return nil
