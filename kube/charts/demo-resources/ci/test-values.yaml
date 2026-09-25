@@ -1,0 +1,101 @@
+
+resources:
+  serviceAccounts:
+    main:
+      automountServiceAccountToken: true
+
+  configMaps:
+    main:
+      data:
+        APP_LOG_LEVEL: info
+
+  secrets:
+    main:
+      stringData:
+        APP_API_KEY: change-me
+
+  deployments:
+    main:
+      replicas: 2
+      selector:
+        matchLabels:
+          app: demo-resources
+      template:
+        metadata:
+          labels:
+            app: demo-resources
+        spec:
+          serviceAccountName: "{{ .Release.Name }}"
+          containers:
+            - name: app
+              image: nginx:1.27
+              ports:
+                - containerPort: 80
+              envFrom:
+                - configMapRef:
+                    name: "{{ .Release.Name }}"
+                - secretRef:
+                    name: "{{ .Release.Name }}"
+
+  services:
+    main:
+      selector:
+        app: demo-resources
+      ports:
+        - port: 80
+          targetPort: 80
+
+  ingresses:
+    main:
+      annotations:
+        kubernetes.io/ingress.class: nginx
+      rules:
+        - host: demo-resources.example.com
+          http:
+            paths:
+              - path: /
+                pathType: Prefix
+                backend:
+                  service:
+                    name: "{{ .Release.Name }}"
+                    port:
+                      number: 80
+
+  horizontalPodAutoscalers:
+    main:
+      scaleTargetRef:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: "{{ .Release.Name }}"
+      minReplicas: 2
+      maxReplicas: 5
+      metrics:
+        - type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: 80
+
+  podDisruptionBudgets:
+    main:
+      minAvailable: 1
+      selector:
+        matchLabels:
+          app: demo-resources
+
+  # A second, disabled instance to show that any resource can be toggled
+  # off without removing it from values.yaml (e.g. per-environment overlays).
+  cronJobs:
+    cleanup:
+      enabled: false
+      schedule: "0 3 * * *"
+      jobTemplate:
+        spec:
+          template:
+            spec:
+              restartPolicy: OnFailure
+              containers:
+                - name: cleanup
+                  image: alpine:3.20
+                  command: ["/bin/sh", "-c", "echo cleanup"]
