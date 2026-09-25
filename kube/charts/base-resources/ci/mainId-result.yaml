@@ -1,12 +1,12 @@
 ---
 # Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
+data:
+  a: b
 kind: ConfigMap
 metadata:
   name: test-release
   namespace: default
-data:
-  a: b
 ---
 # Source: base-resources-test/templates/loader.yaml
 apiVersion: v1

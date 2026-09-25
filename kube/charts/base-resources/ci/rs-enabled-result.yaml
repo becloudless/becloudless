@@ -1,18 +1,18 @@
 ---
 # Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
+data:
+  main: cm
 kind: ConfigMap
 metadata:
   name: test-release-defaultEnabled
   namespace: default
-data:
-  main: cm
 ---
 # Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
+data:
+  main: cm
 kind: ConfigMap
 metadata:
   name: test-release-explicitlyEnabled
   namespace: default
-data:
-  main: cm

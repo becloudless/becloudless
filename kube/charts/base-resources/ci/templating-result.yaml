@@ -3,22 +3,22 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: test-release-plain
-  namespace: default
   annotations:
     computed: ns-default
+  name: test-release-plain
+  namespace: default
 stringData:
   own: plain-value
 ---
 # Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: test-release
-  namespace: default
-  labels:
-    release: test-release
 data:
   fromValue: hello-world
   literalBraces: '{{ not templated }}'
+  namespace: default
+kind: ConfigMap
+metadata:
+  labels:
+    release: test-release
+  name: test-release
   namespace: default

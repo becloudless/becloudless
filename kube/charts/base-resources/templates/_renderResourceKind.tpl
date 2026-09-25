@@ -24,9 +24,7 @@
       {{- $merged = omit $merged "enabled" }}
       {{- include "base-resources.mutations.required" (dict "name" $name "id" $id "resource" $merged "required" $required) }}
 
-      {{- $metadata := include "base-resources.computeMetadata" (dict "rootContext" $rootContext "id" $id "resource" $merged) | trim }}
-      {{- $cleaned := omit $merged "nameOverride" "fullNameOverride" "namespace" "labels" "annotations" "enabled" }}
-      {{- include "base-resources.renderResource" (dict "apiVersion" $apiVersion "kind" $kind "contentIsSpec" $contentIsSpec "metadata" $metadata "resource" $cleaned) }}
+      {{- include "base-resources.renderResource" (dict "rootContext" $rootContext "id" $id "apiVersion" $apiVersion "kind" $kind "contentIsSpec" $contentIsSpec "resource" $merged) }}
     {{- end }}
   {{- end }}
 {{- end }}
