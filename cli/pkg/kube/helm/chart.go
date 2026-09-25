@@ -98,7 +98,7 @@ func (c *Chart) UpdateDependencies() error {
 	return nil
 }
 
-func (c *Chart) RunCITests() error {
+func (c *Chart) RunCITests(kubeVersion string, validate bool) error {
 	logs.WithField("chart", c.chart.Metadata.Name).Info("Running chart CI tests")
 
 	if c.IsLibraryChart() {
@@ -107,10 +107,10 @@ func (c *Chart) RunCITests() error {
 				return errs.WithE(err, "Failed to prepare test chart")
 			}
 		}
-		return c.testChart.runCiTest()
+		return c.testChart.runCiTest(kubeVersion, validate)
 	}
 
-	return c.runCiTest()
+	return c.runCiTest(kubeVersion, validate)
 }
 
 // RunUnitTests runs helm-unittest test suites found in the chart's tests/
@@ -174,7 +174,7 @@ func (c *Chart) runUnitTest(testFiles []string) error {
 const ciTestFileSuffix = "-values.yaml"
 const ciResultFileSuffix = "-result.yaml"
 
-func (c *Chart) runCiTest() error {
+func (c *Chart) runCiTest(kubeVersion string, validate bool) error {
 	if c.ciFolder == "" {
 		c.ciFolder = filepath.Join(c.path, "ci")
 	}
@@ -208,7 +208,7 @@ func (c *Chart) runCiTest() error {
 			}
 			defer resultFile.Close()
 
-			if err := c.render(values.AsMap(), "1.31.0", resultFile); err != nil {
+			if err := c.render(values.AsMap(), kubeVersion, resultFile, validate); err != nil {
 				return errs.WithEF(err, data.WithField("file", valuesPath), "Failed to render chart with CI values")
 			}
 		}
@@ -292,14 +292,18 @@ func (c *Chart) PrepareTestChart() error {
 	return nil
 }
 
-func (c *Chart) render(values map[string]interface{}, kubeVersion string, output io.Writer) error {
+func (c *Chart) render(values map[string]interface{}, kubeVersion string, output io.Writer, validate bool) error {
 	// Create install action (used for templating)
 	install := action.NewInstall(c.actionConfig)
 	install.DryRun = true
 	install.ReleaseName = "test-release"
 	install.Namespace = c.settings.Namespace()
 	install.Replace = true
-	install.ClientOnly = true
+	// ClientOnly=false (i.e. validate=true) makes Helm contact the live
+	// Kubernetes API server to validate the rendered manifests (schema,
+	// CRDs, discovery) without persisting anything, mirroring `helm
+	// template --validate`. Requires a reachable cluster via kubeconfig.
+	install.ClientOnly = !validate
 	install.APIVersions = []string{}
 	install.IncludeCRDs = true
 
