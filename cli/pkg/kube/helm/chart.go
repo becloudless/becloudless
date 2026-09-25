@@ -1,6 +1,7 @@
 package helm
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -20,6 +21,7 @@ import (
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/downloader"
 	"helm.sh/helm/v3/pkg/getter"
+	"k8s.io/apimachinery/pkg/api/meta"
 )
 
 type Chart struct {
@@ -98,7 +100,7 @@ func (c *Chart) UpdateDependencies() error {
 	return nil
 }
 
-func (c *Chart) RunCITests(kubeVersion string, validate bool) error {
+func (c *Chart) RunCITests(kubeVersion string, validate bool, ignoreMissingCRDs bool) error {
 	logs.WithField("chart", c.chart.Metadata.Name).Info("Running chart CI tests")
 
 	if c.IsLibraryChart() {
@@ -107,10 +109,10 @@ func (c *Chart) RunCITests(kubeVersion string, validate bool) error {
 				return errs.WithE(err, "Failed to prepare test chart")
 			}
 		}
-		return c.testChart.runCiTest(kubeVersion, validate)
+		return c.testChart.runCiTest(kubeVersion, validate, ignoreMissingCRDs)
 	}
 
-	return c.runCiTest(kubeVersion, validate)
+	return c.runCiTest(kubeVersion, validate, ignoreMissingCRDs)
 }
 
 // RunUnitTests runs helm-unittest test suites found in the chart's tests/
@@ -174,7 +176,7 @@ func (c *Chart) runUnitTest(testFiles []string) error {
 const ciTestFileSuffix = "-values.yaml"
 const ciResultFileSuffix = "-result.yaml"
 
-func (c *Chart) runCiTest(kubeVersion string, validate bool) error {
+func (c *Chart) runCiTest(kubeVersion string, validate bool, ignoreMissingCRDs bool) error {
 	if c.ciFolder == "" {
 		c.ciFolder = filepath.Join(c.path, "ci")
 	}
@@ -188,6 +190,7 @@ func (c *Chart) runCiTest(kubeVersion string, validate bool) error {
 		return errs.WithE(err, "Failed to read ci/ directory")
 	}
 
+	var testErrors []error
 	for _, file := range files {
 		if file.IsDir() {
 			continue
@@ -198,22 +201,25 @@ func (c *Chart) runCiTest(kubeVersion string, validate bool) error {
 
 			values, err := chartutil.ReadValuesFile(valuesPath)
 			if err != nil {
-				return errs.WithEF(err, data.WithField("file", valuesPath), "Failed to read values file")
+				testErrors = append(testErrors, errs.WithEF(err, data.WithField("file", valuesPath), "Failed to read values file"))
+				continue
 			}
 
 			resultPath := filepath.Join(c.ciFolder, strings.TrimSuffix(file.Name(), ciTestFileSuffix)+ciResultFileSuffix)
 			resultFile, err := os.Create(resultPath)
 			if err != nil {
-				return errs.WithEF(err, data.WithField("file", resultPath), "Failed to create result file")
+				testErrors = append(testErrors, errs.WithEF(err, data.WithField("file", resultPath), "Failed to create result file"))
+				continue
 			}
-			defer resultFile.Close()
 
-			if err := c.render(values.AsMap(), kubeVersion, resultFile, validate); err != nil {
-				return errs.WithEF(err, data.WithField("file", valuesPath), "Failed to render chart with CI values")
+			if err := c.render(values.AsMap(), kubeVersion, resultFile, validate, ignoreMissingCRDs); err != nil {
+				testErrors = append(testErrors, errs.WithEF(err, data.WithField("file", valuesPath), "Failed to render chart with CI values"))
 			}
+			resultFile.Close()
 		}
 	}
-	return nil
+
+	return errors.Join(testErrors...)
 }
 
 func (c *Chart) PrepareTestChart() error {
@@ -292,7 +298,7 @@ func (c *Chart) PrepareTestChart() error {
 	return nil
 }
 
-func (c *Chart) render(values map[string]interface{}, kubeVersion string, output io.Writer, validate bool) error {
+func (c *Chart) render(values map[string]interface{}, kubeVersion string, output io.Writer, validate bool, ignoreMissingCRDs bool) error {
 	// Create install action (used for templating)
 	install := action.NewInstall(c.actionConfig)
 	install.DryRun = true
@@ -318,6 +324,10 @@ func (c *Chart) render(values map[string]interface{}, kubeVersion string, output
 
 	release, err := install.Run(c.chart, values)
 	if err != nil {
+		if ignoreMissingCRDs && meta.IsNoMatchError(err) {
+			logs.WithField("reason", err.Error()).Warn("Skipping validation: CRD/kind not registered on the cluster")
+			return nil
+		}
 		return errs.WithE(err, "Failed to run the templating")
 	}
 

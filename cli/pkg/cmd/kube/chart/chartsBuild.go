@@ -12,6 +12,7 @@ func buildCmd() *cobra.Command {
 	var path string
 	var kubeVersion string
 	var validate bool
+	var ignoreMissingCRDs bool
 
 	cmd := &cobra.Command{
 		Use:   "build",
@@ -33,7 +34,7 @@ func buildCmd() *cobra.Command {
 			}
 
 			// running integration tests
-			if err := chart.RunCITests(kubeVersion, validate); err != nil {
+			if err := chart.RunCITests(kubeVersion, validate, ignoreMissingCRDs); err != nil {
 				return errs.WithE(err, "Failed to run chart CI tests")
 			}
 
@@ -45,6 +46,7 @@ func buildCmd() *cobra.Command {
 	cmd.Flags().StringVar(&path, "path", ".", "Chart directory path")
 	cmd.Flags().StringVar(&kubeVersion, "kube-version", "1.31.0", "Kubernetes version used for Capabilities.KubeVersion")
 	cmd.Flags().BoolVar(&validate, "validate", false, "Validate CI-rendered manifests against the Kubernetes cluster you are currently pointing at via server-side dry-run (requires a reachable cluster); same validation performed on an install")
+	cmd.Flags().BoolVar(&ignoreMissingCRDs, "ignore-missing-crds", false, "When used with --validate, skip (instead of failing) resources whose CRD/kind is not registered on the cluster")
 
 	return cmd
 }
