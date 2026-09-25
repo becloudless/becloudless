@@ -1,5 +1,15 @@
 # Instructions for AI coding agents
 
+## Code quality
+
+- While implementing a change, always look for opportunities to refactor
+  surrounding code to simplify it and improve quality (remove duplication,
+  reduce indirection, clarify naming). Prefer small, safe refactors that keep
+  behavior identical and are verified by existing tests.
+- Do not expand refactors beyond what is safe to verify in the current
+  change; if a larger refactor is warranted but risky, mention it instead of
+  applying it silently.
+
 ## Comments
 
 - Prefer renaming variables, functions, and types to make the code
