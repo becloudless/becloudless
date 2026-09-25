@@ -1,10 +1,6 @@
 ---
 # Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: test-release
-  namespace: default
 data:
   key: value
   structured: |-
@@ -12,3 +8,7 @@ data:
     nested:
     - a
     - b
+kind: ConfigMap
+metadata:
+  name: test-release
+  namespace: default

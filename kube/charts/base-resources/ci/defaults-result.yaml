@@ -3,56 +3,56 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: test-release-usesGlobalMetadataOnly
-  namespace: shared-ns
-  labels:
-    org: acme
   annotations:
     managed-by: base-resources
+  labels:
+    org: acme
+  name: test-release-usesGlobalMetadataOnly
+  namespace: shared-ns
 stringData:
   key: value3
 ---
 # Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
+data:
+  key: value2
 kind: ConfigMap
 metadata:
-  name: test-release-overridesDefault
-  namespace: shared-ns
+  annotations:
+    managed-by: base-resources
   labels:
     app: custom-app
     org: acme
     team: platform
-  annotations:
-    managed-by: base-resources
-data:
-  key: value2
+  name: test-release-overridesDefault
+  namespace: shared-ns
 ---
 # Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: test-release-overridesGlobalNamespace
-  namespace: custom-ns
-  labels:
-    app: shared-default
-    org: acme
-    team: platform
-  annotations:
-    managed-by: base-resources
 data:
   key: value4
----
-# Source: base-resources-test/templates/loader.yaml
-apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: test-release-usesDefaultOnly
-  namespace: shared-ns
+  annotations:
+    managed-by: base-resources
   labels:
     app: shared-default
     org: acme
     team: platform
-  annotations:
-    managed-by: base-resources
+  name: test-release-overridesGlobalNamespace
+  namespace: custom-ns
+---
+# Source: base-resources-test/templates/loader.yaml
+apiVersion: v1
 data:
   key: value1
+kind: ConfigMap
+metadata:
+  annotations:
+    managed-by: base-resources
+  labels:
+    app: shared-default
+    org: acme
+    team: platform
+  name: test-release-usesDefaultOnly
+  namespace: shared-ns

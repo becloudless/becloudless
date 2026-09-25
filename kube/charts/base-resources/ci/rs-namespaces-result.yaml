@@ -3,9 +3,8 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: test-release
-  namespace: default
   labels:
     team: platform
-spec:
-  {}
+  name: test-release
+  namespace: default
+spec: {}

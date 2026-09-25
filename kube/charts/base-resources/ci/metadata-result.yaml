@@ -1,33 +1,33 @@
 ---
 # Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
+data:
+  key: value
 kind: ConfigMap
 metadata:
   name: test-release-plain
   namespace: default
-data:
-  key: value
 ---
 # Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
+data:
+  key: value
 kind: ConfigMap
 metadata:
-  name: test-release-withLabelsAndAnnotations
-  namespace: default
-  labels:
-    app: myapp
-    tier: backend
   annotations:
     note: hello
     team: platform
-data:
-  key: value
+  labels:
+    app: myapp
+    tier: backend
+  name: test-release-withLabelsAndAnnotations
+  namespace: default
 ---
 # Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
+data:
+  key: value
 kind: ConfigMap
 metadata:
   name: test-release-withNamespaceOverride
   namespace: custom-ns
-data:
-  key: value

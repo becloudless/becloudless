@@ -1,7 +1,8 @@
-{{- define "base-resources.computeMetadata" }}
+{{- define "base-resources.mutations.metadata" }}
   {{- $rootContext := .rootContext }}
   {{- $id := .id }}
   {{- $resource := .resource | default dict }}
+  {{- $object := .object | default dict }}
 
   {{- $name := include "base-resources.lib.computeResourceName" (dict "rootContext" $rootContext "id" $id "resource" $resource) }}
 
@@ -11,15 +12,15 @@
   {{- $namespace := $resource.namespace | default $globalMetadataAll.namespace | default $rootContext.Release.Namespace }}
   {{- $labels := merge ($resource.labels | default dict) ($globalMetadataAll.labels | default dict) }}
   {{- $annotations := merge ($resource.annotations | default dict) ($globalMetadataAll.annotations | default dict) }}
-metadata:
-  name: {{ $name }}
-  namespace: {{ $namespace }}
+
+  {{- $metadata := dict "name" $name "namespace" $namespace }}
   {{- if $labels }}
-  labels:
-    {{- toYaml $labels | nindent 4 }}
+    {{- $metadata = set $metadata "labels" $labels }}
   {{- end }}
   {{- if $annotations }}
-  annotations:
-    {{- toYaml $annotations | nindent 4 }}
+    {{- $metadata = set $metadata "annotations" $annotations }}
   {{- end }}
+
+  {{- $object = set $object "metadata" $metadata }}
+  {{- toYaml $object }}
 {{- end }}

@@ -3,36 +3,36 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: test-release-titi
-  namespace: default
   labels:
     app: genre2
     truc: bidule2
+  name: test-release-titi
+  namespace: default
 stringData:
   something: interesting
 ---
 # Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
+data:
+  main: cm
 kind: ConfigMap
 metadata:
   name: test-release
   namespace: default
-data:
-  main: cm
 ---
 # Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: test-release-toto
-  namespace: default
-  labels:
-    app: genre
-    truc: bidule
 binaryData:
   blob: aGVsbG8=
 data:
   something: interesting
+kind: ConfigMap
+metadata:
+  labels:
+    app: genre
+    truc: bidule
+  name: test-release-toto
+  namespace: default
 ---
 # Source: base-resources-test/templates/loader.yaml
 apiVersion: v1
