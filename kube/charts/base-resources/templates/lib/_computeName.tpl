@@ -1,4 +1,4 @@
-{{- define "base-resources.computeName" }}
+{{- define "base-resources.lib.computeResourceName" }}
   {{- $rootContext := .rootContext }}
   {{- $id := .id }}
   {{- $resource := .resource | default dict }}

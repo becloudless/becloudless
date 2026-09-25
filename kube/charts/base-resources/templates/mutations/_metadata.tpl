@@ -3,7 +3,7 @@
   {{- $id := .id }}
   {{- $resource := .resource | default dict }}
 
-  {{- $name := include "base-resources.computeName" (dict "rootContext" $rootContext "id" $id "resource" $resource) }}
+  {{- $name := include "base-resources.lib.computeResourceName" (dict "rootContext" $rootContext "id" $id "resource" $resource) }}
 
   {{- $defaultsAll := $rootContext.Values.defaults | default dict }}
   {{- $globalMetadataAll := $defaultsAll.metadata | default dict }}
