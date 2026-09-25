@@ -2,10 +2,10 @@ package mutations
 
 import "testing"
 
-func TestMergeEnabled_AddsEnabledProperty(t *testing.T) {
+func TestEnabled_AddsEnabledProperty(t *testing.T) {
 	schema := map[string]any{}
 
-	got, err := (MergeEnabled{}).Mutate(schema)
+	got, err := (Enabled{}).Mutate(schema)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -31,7 +31,7 @@ func TestMergeEnabled_AddsEnabledProperty(t *testing.T) {
 	}
 }
 
-func TestMergeEnabled_PreservesExistingProperties(t *testing.T) {
+func TestEnabled_PreservesExistingProperties(t *testing.T) {
 	schema := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
@@ -39,7 +39,7 @@ func TestMergeEnabled_PreservesExistingProperties(t *testing.T) {
 		},
 	}
 
-	got, err := (MergeEnabled{}).Mutate(schema)
+	got, err := (Enabled{}).Mutate(schema)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestMergeEnabled_PreservesExistingProperties(t *testing.T) {
 	}
 }
 
-func TestMergeEnabled_OverridesUpstreamEnabledProperty(t *testing.T) {
+func TestEnabled_OverridesUpstreamEnabledProperty(t *testing.T) {
 	// Guards against an upstream CRD ever shadowing the well-known "enabled"
 	// field with an incompatible schema, mirroring MergeMetadata's
 	// precedence over same-named upstream fields.
@@ -63,7 +63,7 @@ func TestMergeEnabled_OverridesUpstreamEnabledProperty(t *testing.T) {
 		},
 	}
 
-	got, err := (MergeEnabled{}).Mutate(schema)
+	got, err := (Enabled{}).Mutate(schema)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -75,10 +75,10 @@ func TestMergeEnabled_OverridesUpstreamEnabledProperty(t *testing.T) {
 	}
 }
 
-func TestMergeEnabled_ReturnsNoTemplateArgs(t *testing.T) {
+func TestEnabled_ReturnsNoTemplateArgs(t *testing.T) {
 	schema := map[string]any{}
 
-	got, err := (MergeEnabled{}).Mutate(schema)
+	got, err := (Enabled{}).Mutate(schema)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
