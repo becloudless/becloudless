@@ -20,3 +20,14 @@
   the code already says.
 - Keep comments very short - prefer a single short sentence or clause over a
   paragraph.
+
+## Naming
+
+- Use long, explicit, descriptive names for variables, functions, and types
+  instead of short or abbreviated ones. Prefer `maxRetryAttemptCount` over
+  `max`, `pendingInvoiceTotal` over `pit`, `isEligibleForDiscount` over
+  `flag`. A name should make the purpose of the value clear without needing
+  to read surrounding code.
+- Avoid single-letter or cryptic abbreviations, except for extremely common,
+  narrowly-scoped loop indices (e.g. `i`) or well-known idioms in the
+  language/ecosystem (e.g. Go's `err`, `ctx` for `context.Context`).
