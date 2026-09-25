@@ -1,8 +1,9 @@
 {{- define "base-resources.mutations.metadata" }}
   {{- $rootContext := .rootContext }}
   {{- $id := .id }}
-  {{- $resource := .resource | default dict }}
-  {{- $object := .object | default dict }}
+  {{- $work := .work }}
+  {{- $resource := $work.resource | default dict }}
+  {{- $object := $work.object | default dict }}
 
   {{- $name := include "base-resources.lib.computeResourceName" (dict "rootContext" $rootContext "id" $id "resource" $resource) }}
 
@@ -22,5 +23,6 @@
   {{- end }}
 
   {{- $object = set $object "metadata" $metadata }}
-  {{- toYaml $object }}
+  {{- $work = set $work "object" $object }}
+  {{- toYaml $work }}
 {{- end }}

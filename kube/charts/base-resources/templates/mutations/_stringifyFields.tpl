@@ -1,5 +1,6 @@
-{{- define "base-resources.stringifyFields" }}
-  {{- $resource := .resource | default dict }}
+{{- define "base-resources.mutations.stringifyFields" }}
+  {{- $work := .work }}
+  {{- $resource := $work.resource | default dict }}
   {{- $fields := .stringifyFields | default list }}
   {{- range $field := $fields }}
     {{- if hasKey $resource $field }}
@@ -14,5 +15,6 @@
       {{- $resource = set $resource $field $stringified }}
     {{- end }}
   {{- end }}
-  {{- $resource | toYaml }}
+  {{- $work = set $work "resource" $resource }}
+  {{- toYaml $work }}
 {{- end }}

@@ -1,9 +1,13 @@
 {{- define "base-resources.mutations.content" }}
-  {{- $object := .object | default dict }}
-  {{- $contentIsSpec := .contentIsSpec }}
-  {{- $resource := .resource | default dict }}
+  {{- $work := .work }}
+  {{- $object := $work.object | default dict }}
+  {{- $contentIsSpec := true }}
+  {{- if hasKey . "contentIsSpec" }}
+    {{- $contentIsSpec = .contentIsSpec }}
+  {{- end }}
+  {{- $resource := $work.resource | default dict }}
 
-  {{- $cleaned := omit $resource "nameOverride" "fullNameOverride" "namespace" "labels" "annotations" "enabled" }}
+  {{- $cleaned := omit $resource "nameOverride" "fullNameOverride" "namespace" "labels" "annotations" }}
   {{- if $contentIsSpec }}
     {{- $object = set $object "spec" $cleaned }}
   {{- else }}
@@ -11,5 +15,6 @@
       {{- $object = set $object $key $value }}
     {{- end }}
   {{- end }}
-  {{- toYaml $object }}
+  {{- $work = set $work "object" $object }}
+  {{- toYaml $work }}
 {{- end }}

@@ -1,10 +1,21 @@
 {{- define "base-resources.renderResource" }}
-  {{- $params := dict "rootContext" .rootContext "id" .id "apiVersion" .apiVersion "kind" .kind "contentIsSpec" .contentIsSpec "resource" (.resource | default dict) }}
+  {{- $context := . }}
+  {{- $work := dict "enabled" true "object" dict "resource" (.resource | default dict) }}
 
-  {{- $object := dict }}
-  {{- range $mutation := (list "base-resources.mutations.apiVersionKind" "base-resources.mutations.metadata" "base-resources.mutations.content") }}
-    {{- $object = include $mutation (merge (dict "object" $object) $params) | fromYaml }}
+  {{- range $mutation := (list "base-resources.mutations.mergeDefaults" 
+                               "base-resources.mutations.stringifyFields"
+                               "base-resources.mutations.enabled"
+                               "base-resources.mutations.required"
+                               "base-resources.mutations.apiVersionKind"
+                               "base-resources.mutations.metadata"
+                               "base-resources.mutations.content") }}
+    {{- $inputs := merge (dict "work" $work) $context }}
+    {{- $work = include $mutation $inputs | fromYaml }}
   {{- end }}
+
+{{- if $work.enabled }}
 ---
-{{ toYaml $object }}
+{{ toYaml $work.object }}
+{{- end }}
+
 {{- end }}
