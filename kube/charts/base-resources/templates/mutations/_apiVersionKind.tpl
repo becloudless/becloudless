@@ -1,6 +1,8 @@
 {{- define "base-resources.mutations.apiVersionKind" }}
-  {{- $object := .object | default dict }}
+  {{- $work := .work }}
+  {{- $object := $work.object | default dict }}
   {{- $object = set $object "apiVersion" .apiVersion }}
   {{- $object = set $object "kind" .kind }}
-  {{- toYaml $object }}
+  {{- $work = set $work "object" $object }}
+  {{- toYaml $work }}
 {{- end }}

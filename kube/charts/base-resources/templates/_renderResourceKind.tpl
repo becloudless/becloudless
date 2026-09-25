@@ -1,30 +1,8 @@
 {{- define "base-resources.renderResourceKind" }}
-  {{- $rootContext := .rootContext }}
-  {{- $name := .name }}
-  {{- $apiVersion := .apiVersion }}
-  {{- $kind := .kind }}
-  {{- $contentIsSpec := true }}
-  {{- if hasKey . "contentIsSpec" }}
-    {{- $contentIsSpec = .contentIsSpec }}
-  {{- end }}
-  {{- $required := .required | default list }}
-  {{- $stringifyFields := .stringifyFields | default list }}
+  {{- $context := merge dict . }}
+  {{- $resourcesAll := $context.rootContext.Values.resources | default dict }}
 
-  {{- $defaultsAll := $rootContext.Values.defaults | default dict }}
-  {{- $defaultsResourcesAll := $defaultsAll.resources | default dict }}
-  {{- $default := get $defaultsResourcesAll $name | default dict }}
-  {{- $resourcesAll := $rootContext.Values.resources | default dict }}
-
-  {{- range $id, $resource := (get $resourcesAll $name | default dict) }}
-    {{- $merged := merge ($resource | default dict) $default }}
-    {{- $merged = tpl (toYaml $merged) $rootContext | fromYaml }}
-    {{- $merged = include "base-resources.stringifyFields" (dict "resource" $merged "stringifyFields" $stringifyFields) | fromYaml }}
-
-    {{- if (include "base-resources.mutations.enabled" (dict "resource" $merged) | trim) -}}
-      {{- $merged = omit $merged "enabled" }}
-      {{- include "base-resources.mutations.required" (dict "name" $name "id" $id "resource" $merged "required" $required) }}
-
-      {{- include "base-resources.renderResource" (dict "rootContext" $rootContext "id" $id "apiVersion" $apiVersion "kind" $kind "contentIsSpec" $contentIsSpec "resource" $merged) }}
-    {{- end }}
+  {{- range $id, $resource := (get $resourcesAll $context.name | default dict) }}
+    {{- include "base-resources.renderResource" (merge (dict "id" $id "resource" ($resource | default dict)) $context) }}
   {{- end }}
 {{- end }}
