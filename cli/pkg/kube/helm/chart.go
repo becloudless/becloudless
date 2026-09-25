@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/goccy/go-yaml"
+	"github.com/helm-unittest/helm-unittest/pkg/unittest"
+	"github.com/helm-unittest/helm-unittest/pkg/unittest/printer"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
@@ -148,26 +149,23 @@ func (c *Chart) RunUnitTests() error {
 
 /////////
 
-// runUnitTest invokes the "helm unittest" plugin against this chart, using
-// the given absolute suite file paths (typically resolved from the original
-// chart's tests/ directory on disk, since the chart itself may live in a
-// generated temp directory). Each file is passed via its own "-f" flag
-// since helm-unittest does not glob-expand absolute path patterns.
+// runUnitTest runs helm-unittest test suites against this chart using the
+// helm-unittest library directly (github.com/helm-unittest/helm-unittest),
+// avoiding a dependency on the external "helm" binary or the unittest
+// plugin being installed. It uses the given absolute suite file paths
+// (typically resolved from the original chart's tests/ directory on disk,
+// since the chart itself may live in a generated temp directory).
 func (c *Chart) runUnitTest(testFiles []string) error {
 	logs.WithField("chart", c.path).Info("Running helm unittest")
 
-	args := []string{"unittest", "--with-subchart=false"}
-	for _, testFile := range testFiles {
-		args = append(args, "-f", testFile)
+	runner := unittest.TestRunner{
+		Printer:      printer.NewPrinter(os.Stdout, nil),
+		WithSubChart: false,
+		TestFiles:    testFiles,
 	}
-	args = append(args, c.path)
 
-	cmd := exec.Command("helm", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
-		return errs.WithEF(err, data.WithField("path", c.path), "Helm unit tests failed")
+	if passed := runner.RunV3([]string{c.path}); !passed {
+		return errs.WithF(data.WithField("path", c.path), "Helm unit tests failed")
 	}
 
 	return nil
