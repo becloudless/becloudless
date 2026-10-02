@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../schema/values.schema.json
 
 resources:
-  clusterPolicies:
+  kyvernoClusterPolicies:
     main:
       rules:
         - name: set-image-pull-policy
