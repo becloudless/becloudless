@@ -402,18 +402,6 @@ func (c *Chart) render(values map[string]interface{}, kubeVersion string, output
 	return nil
 }
 
-// validateServerSide performs a genuine server-side dry-run validation of
-// the rendered manifest, equivalent to `kubectl apply --dry-run=server`.
-//
-// This is needed because Helm v3's action.Install in DryRun mode never
-// actually sends the rendered objects to the Kubernetes API server: it
-// only runs a lenient, client-side OpenAPI schema check (KubeClient.Build)
-// and bails out before any Create call. That client-side check does not
-// reliably catch structural mismatches (e.g. a field that must be a list
-// being rendered as a map), which only surface once the API server
-// unmarshals the object into its typed Go struct. Sending a real
-// dry-run=server Create request per resource reproduces that server-side
-// unmarshal/validation step without persisting anything.
 func (c *Chart) validateServerSide(manifest string, ignoreMissingCRDs bool) error {
 	resources, err := c.actionConfig.KubeClient.Build(strings.NewReader(manifest), true)
 	if err != nil {
