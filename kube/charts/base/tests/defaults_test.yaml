@@ -1,0 +1,153 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: defaults merging per kind and defaults.metadata across kinds
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: applies defaults.resources.<kind> when the resource does not set the field itself
+    set:
+      defaults:
+        resources:
+          configMaps:
+            labels:
+              app: shared-default
+              team: platform
+      resources:
+        configMaps:
+          usesDefaultOnly:
+            data:
+              key: value1
+    asserts:
+      - equal:
+          path: metadata.labels
+          value:
+            app: shared-default
+            team: platform
+
+  - it: lets the resource's own field override the default for that same key
+    set:
+      defaults:
+        resources:
+          configMaps:
+            labels:
+              app: shared-default
+              team: platform
+      resources:
+        configMaps:
+          overridesDefault:
+            labels:
+              app: custom-app
+            data:
+              key: value2
+    asserts:
+      - equal:
+          path: metadata.labels
+          value:
+            app: custom-app
+            team: platform
+
+  - it: applies defaults.metadata across every kind, below defaults.resources.<kind> in precedence
+    set:
+      defaults:
+        metadata:
+          labels:
+            org: acme
+          annotations:
+            managed-by: base
+        resources:
+          configMaps:
+            labels:
+              app: shared-default
+      resources:
+        configMaps:
+          usesKindAndGlobalDefaults:
+            data:
+              key: value1
+        secrets:
+          usesGlobalDefaultOnly:
+            stringData:
+              key: value2
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: metadata.labels
+          value:
+            app: shared-default
+            org: acme
+        documentSelector:
+          path: metadata.name
+          value: test-release-usesKindAndGlobalDefaults
+      - equal:
+          path: metadata.annotations
+          value:
+            managed-by: base
+        documentSelector:
+          path: metadata.name
+          value: test-release-usesKindAndGlobalDefaults
+      - equal:
+          path: metadata.labels
+          value:
+            org: acme
+        documentSelector:
+          path: metadata.name
+          value: test-release-usesGlobalDefaultOnly
+      - equal:
+          path: metadata.annotations
+          value:
+            managed-by: base
+        documentSelector:
+          path: metadata.name
+          value: test-release-usesGlobalDefaultOnly
+
+  - it: lets the resource's own field override defaults.metadata for the same key
+    set:
+      defaults:
+        metadata:
+          labels:
+            app: global-default
+      resources:
+        configMaps:
+          overridesGlobalDefault:
+            labels:
+              app: custom-app
+            data:
+              key: value1
+    asserts:
+      - equal:
+          path: metadata.labels
+          value:
+            app: custom-app
+
+  - it: applies defaults.metadata.namespace when the resource does not set its own namespace
+    set:
+      defaults:
+        metadata:
+          namespace: shared-ns
+      resources:
+        configMaps:
+          usesGlobalNamespace:
+            data:
+              key: value1
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: shared-ns
+
+  - it: lets the resource's own namespace override defaults.metadata.namespace
+    set:
+      defaults:
+        metadata:
+          namespace: shared-ns
+      resources:
+        configMaps:
+          overridesGlobalNamespace:
+            namespace: custom-ns
+            data:
+              key: value1
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: custom-ns

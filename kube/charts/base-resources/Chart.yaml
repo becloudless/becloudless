@@ -1,4 +1,0 @@
-apiVersion: v2
-name: base-resources
-version: 0.0.0
-type: library

@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=./schema/values.schema.json
+
+checkRequiredValues: true
+
+defaults:
+  metadata:
+    namespace: "{{ .Release.Namespace }}"

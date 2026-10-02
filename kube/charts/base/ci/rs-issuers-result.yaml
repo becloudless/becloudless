@@ -1,0 +1,10 @@
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  ca:
+    secretName: immich-postgresql-ca

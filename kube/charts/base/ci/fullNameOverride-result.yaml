@@ -1,0 +1,18 @@
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+data:
+  a: b
+kind: ConfigMap
+metadata:
+  name: totally-custom-name
+  namespace: default
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+data:
+  a: b
+kind: ConfigMap
+metadata:
+  name: test-release-normal
+  namespace: default

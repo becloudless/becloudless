@@ -1,0 +1,14 @@
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  endpoints:
+  - interval: 30s
+    port: metrics
+  selector:
+    matchLabels:
+      app: main
