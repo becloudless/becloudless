@@ -16,7 +16,7 @@ tests:
               team: platform
       resources:
         configMaps:
-          usesDefaultOnly:
+          uses-default-only:
             data:
               key: value1
     asserts:
@@ -36,7 +36,7 @@ tests:
               team: platform
       resources:
         configMaps:
-          overridesDefault:
+          overrides-default:
             labels:
               app: custom-app
             data:
@@ -62,11 +62,11 @@ tests:
               app: shared-default
       resources:
         configMaps:
-          usesKindAndGlobalDefaults:
+          uses-kind-and-global-defaults:
             data:
               key: value1
         secrets:
-          usesGlobalDefaultOnly:
+          uses-global-default-only:
             stringData:
               key: value2
     asserts:
@@ -79,28 +79,28 @@ tests:
             org: acme
         documentSelector:
           path: metadata.name
-          value: test-release-usesKindAndGlobalDefaults
+          value: test-release-uses-kind-and-global-defaults
       - equal:
           path: metadata.annotations
           value:
             managed-by: base
         documentSelector:
           path: metadata.name
-          value: test-release-usesKindAndGlobalDefaults
+          value: test-release-uses-kind-and-global-defaults
       - equal:
           path: metadata.labels
           value:
             org: acme
         documentSelector:
           path: metadata.name
-          value: test-release-usesGlobalDefaultOnly
+          value: test-release-uses-global-default-only
       - equal:
           path: metadata.annotations
           value:
             managed-by: base
         documentSelector:
           path: metadata.name
-          value: test-release-usesGlobalDefaultOnly
+          value: test-release-uses-global-default-only
 
   - it: lets the resource's own field override defaults.metadata for the same key
     set:
@@ -110,7 +110,7 @@ tests:
             app: global-default
       resources:
         configMaps:
-          overridesGlobalDefault:
+          overrides-global-default:
             labels:
               app: custom-app
             data:
@@ -128,7 +128,7 @@ tests:
           namespace: shared-ns
       resources:
         configMaps:
-          usesGlobalNamespace:
+          uses-global-namespace:
             data:
               key: value1
     asserts:
@@ -143,7 +143,7 @@ tests:
           namespace: shared-ns
       resources:
         configMaps:
-          overridesGlobalNamespace:
+          overrides-global-namespace:
             namespace: custom-ns
             data:
               key: value1

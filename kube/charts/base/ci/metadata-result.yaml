@@ -20,7 +20,7 @@ metadata:
   labels:
     app: myapp
     tier: backend
-  name: test-release-withLabelsAndAnnotations
+  name: test-release-with-labels-and-annotations
   namespace: default
 ---
 # Source: base-test/templates/loader.yaml
@@ -29,5 +29,5 @@ data:
   key: value
 kind: ConfigMap
 metadata:
-  name: test-release-withNamespaceOverride
+  name: test-release-with-namespace-override
   namespace: custom-ns

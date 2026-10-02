@@ -22,6 +22,7 @@ import (
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/downloader"
 	"helm.sh/helm/v3/pkg/getter"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/cli-runtime/pkg/resource"
 )
@@ -416,6 +417,14 @@ func (c *Chart) validateServerSide(manifest string, ignoreMissingCRDs bool) erro
 	for _, info := range resources {
 		helper := resource.NewHelper(info.Client, info.Mapping).DryRun(true)
 		if _, err := helper.Create(info.Namespace, true, info.Object); err != nil {
+			if ignoreMissingCRDs && apierrors.IsNotFound(err) {
+				// A Create dry-run can only return NotFound for a missing
+				// prerequisite namespace (the resource being created can't
+				// itself be "not found"). Treat this the same as a missing
+				// CRD: an environment gap, not a chart defect.
+				logs.WithField("resource", info.Name).WithField("reason", err.Error()).Warn("Skipping validation: namespace not found on the cluster")
+				continue
+			}
 			validationErrors = append(validationErrors, errs.WithEF(err, data.WithField("resource", info.Name).WithField("kind", info.Mapping.GroupVersionKind.Kind), "Server-side validation failed"))
 		}
 	}

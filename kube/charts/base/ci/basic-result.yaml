@@ -42,9 +42,8 @@ metadata:
   namespace: default
 spec:
   ports:
-    main:
-      port: 80
-      targetPort: 8080
+  - port: 80
+    targetPort: 8080
   selector:
     app: myapp
 ---
@@ -65,9 +64,8 @@ spec:
         app: myapp
     spec:
       containers:
-        main:
-          image: myimage:latest
-          name: myapp
+      - image: myimage:latest
+        name: myapp
 ---
 # Source: base-test/templates/loader.yaml
 apiVersion: autoscaling/v2
