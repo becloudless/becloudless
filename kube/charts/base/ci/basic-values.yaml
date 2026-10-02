@@ -35,7 +35,8 @@ resources:
       selector:
         app: myapp
       ports:
-        - port: 80
+        main:
+          port: 80
           targetPort: 8080
   deployments:
     myapp:
@@ -49,5 +50,6 @@ resources:
             app: myapp
         spec:
           containers:
-            - name: myapp
+            main:
+              name: myapp
               image: myimage:latest
