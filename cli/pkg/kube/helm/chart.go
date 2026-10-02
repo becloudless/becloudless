@@ -147,7 +147,46 @@ func (c *Chart) RunUnitTests() error {
 		}
 	}
 
-	return c.testChart.runUnitTest(testFiles)
+	testErr := c.testChart.runUnitTest(testFiles)
+
+	// helm-unittest unconditionally creates a __snapshot__ directory next to
+	// every suite file, even when the suite has no matchSnapshot assertion.
+	// Since this chart doesn't use snapshot testing, remove any such
+	// directory left empty, instead of letting it linger in the working
+	// tree/repo.
+	if err := removeEmptySnapshotDirs(testFiles); err != nil {
+		logs.WithError(err).Warn("Failed to clean up empty __snapshot__ directories")
+	}
+
+	return testErr
+}
+
+// removeEmptySnapshotDirs removes any "__snapshot__" directory colocated
+// with the given test suite files, but only if that directory is empty
+// (i.e. no suite actually wrote a snapshot into it).
+func removeEmptySnapshotDirs(testFiles []string) error {
+	seen := map[string]bool{}
+	for _, testFile := range testFiles {
+		dir := filepath.Join(filepath.Dir(testFile), "__snapshot__")
+		if seen[dir] {
+			continue
+		}
+		seen[dir] = true
+
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return errs.WithEF(err, data.WithField("path", dir), "Failed to read snapshot directory")
+		}
+		if len(entries) == 0 {
+			if err := os.Remove(dir); err != nil {
+				return errs.WithEF(err, data.WithField("path", dir), "Failed to remove empty snapshot directory")
+			}
+		}
+	}
+	return nil
 }
 
 func findTestFilesRecursive(root string) ([]string, error) {
