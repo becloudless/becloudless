@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../schema/values.schema.json
 
 resources:
-  ingressRouteTCPs:
+  traefikIngressRouteTCPs:
     main:
       entryPoints:
         - websecure

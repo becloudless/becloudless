@@ -1,6 +1,8 @@
 # yaml-language-server: $schema=../schema/values.schema.json
 
 resources:
-  helmRepositories:
+  cnpgClusters:
     main:
-      url: https://charts.bitnami.com/bitnami
+      instances: 3
+      storage:
+        size: 10Gi

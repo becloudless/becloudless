@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../schema/values.schema.json
 
 resources:
-  recurringJobs:
+  longhornRecurringJobs:
     main:
       cron: 0 4 * * *
       task: backup

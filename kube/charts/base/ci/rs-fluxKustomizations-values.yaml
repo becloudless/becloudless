@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../schema/values.schema.json
 
 resources:
-  kustomizations:
+  fluxKustomizations:
     main:
       interval: 10m
       prune: true

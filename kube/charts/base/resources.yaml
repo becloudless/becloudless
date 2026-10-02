@@ -256,13 +256,13 @@ resources:
     sourceCRD:
       url: https://raw.githubusercontent.com/kyverno/kyverno/main/config/crds/kyverno/kyverno.io_clusterpolicies.yaml
       crdVersion: v1
-  - name: recurringJobs
+  - name: longhornRecurringJobs
     apiVersion: longhorn.io/v1beta2
     kind: RecurringJob
     sourceCRD:
       url: https://raw.githubusercontent.com/longhorn/longhorn/master/deploy/longhorn.yaml
       crdVersion: v1beta2
-  - name: settings
+  - name: longhornSettings
     apiVersion: longhorn.io/v1beta2
     kind: Setting
     sourceCRD:
@@ -271,91 +271,91 @@ resources:
     mutations:
       extractContent:
         contentIsOutOfSpec: true
-  - name: helmReleases
+  - name: fluxHelmReleases
     apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/helm-controller/main/config/crd/bases/helm.toolkit.fluxcd.io_helmreleases.yaml
       crdVersion: v2
-  - name: kustomizations
+  - name: fluxKustomizations
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/kustomize-controller/main/config/crd/bases/kustomize.toolkit.fluxcd.io_kustomizations.yaml
       crdVersion: v1
-  - name: gitRepositories
+  - name: fluxGitRepositories
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: GitRepository
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/source-controller/main/config/crd/bases/source.toolkit.fluxcd.io_gitrepositories.yaml
       crdVersion: v1
-  - name: helmRepositories
+  - name: fluxHelmRepositories
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: HelmRepository
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/source-controller/main/config/crd/bases/source.toolkit.fluxcd.io_helmrepositories.yaml
       crdVersion: v1
-  - name: ociRepositories
+  - name: fluxOCIRepositories
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: OCIRepository
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/source-controller/main/config/crd/bases/source.toolkit.fluxcd.io_ocirepositories.yaml
       crdVersion: v1
-  - name: imageRepositories
+  - name: fluxImageRepositories
     apiVersion: image.toolkit.fluxcd.io/v1
     kind: ImageRepository
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/image-reflector-controller/main/config/crd/bases/image.toolkit.fluxcd.io_imagerepositories.yaml
       crdVersion: v1
-  - name: imagePolicies
+  - name: fluxImagePolicies
     apiVersion: image.toolkit.fluxcd.io/v1
     kind: ImagePolicy
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/image-reflector-controller/main/config/crd/bases/image.toolkit.fluxcd.io_imagepolicies.yaml
       crdVersion: v1
-  - name: certificates
+  - name: certManagerCertificates
     apiVersion: cert-manager.io/v1
     kind: Certificate
     sourceCRD:
       url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_certificates.yaml
       crdVersion: v1
-  - name: certificateRequests
+  - name: certManagerCertificateRequests
     apiVersion: cert-manager.io/v1
     kind: CertificateRequest
     sourceCRD:
       url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_certificaterequests.yaml
       crdVersion: v1
-  - name: issuers
+  - name: certManagerIssuers
     apiVersion: cert-manager.io/v1
     kind: Issuer
     sourceCRD:
       url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_issuers.yaml
       crdVersion: v1
-  - name: clusterIssuers
+  - name: certManagerClusterIssuers
     apiVersion: cert-manager.io/v1
     kind: ClusterIssuer
     sourceCRD:
       url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_clusterissuers.yaml
       crdVersion: v1
-  - name: orders
+  - name: certManagerOrders
     apiVersion: acme.cert-manager.io/v1
     kind: Order
     sourceCRD:
       url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/acme.cert-manager.io_orders.yaml
       crdVersion: v1
-  - name: challenges
+  - name: certManagerChallenges
     apiVersion: acme.cert-manager.io/v1
     kind: Challenge
     sourceCRD:
       url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/acme.cert-manager.io_challenges.yaml
       crdVersion: v1
-  - name: clusters
+  - name: cnpgClusters
     apiVersion: postgresql.cnpg.io/v1
     kind: Cluster
     sourceCRD:
       url: https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/main/config/crd/bases/postgresql.cnpg.io_clusters.yaml
       crdVersion: v1
-  - name: scheduledBackups
+  - name: cnpgScheduledBackups
     apiVersion: postgresql.cnpg.io/v1
     kind: ScheduledBackup
     sourceCRD:
@@ -367,19 +367,19 @@ resources:
     sourceCRD:
       url: https://raw.githubusercontent.com/external-secrets/external-secrets/main/config/crds/bases/external-secrets.io_secretstores.yaml
       crdVersion: v1
-  - name: alerts
+  - name: fluxAlerts
     apiVersion: notification.toolkit.fluxcd.io/v1beta3
     kind: Alert
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_alerts.yaml
       crdVersion: v1beta3
-  - name: receivers
+  - name: fluxReceivers
     apiVersion: notification.toolkit.fluxcd.io/v1
     kind: Receiver
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_receivers.yaml
       crdVersion: v1
-  - name: providers
+  - name: fluxProviders
     apiVersion: notification.toolkit.fluxcd.io/v1beta3
     kind: Provider
     sourceCRD:
@@ -391,13 +391,13 @@ resources:
     sourceCRD:
       url: https://raw.githubusercontent.com/mittwald/kubernetes-secret-generator/master/deploy/crds/secretgenerator.mittwald.de_stringsecrets_crd.yaml
       crdVersion: v1alpha1
-  - name: ingressRouteTCPs
+  - name: traefikIngressRouteTCPs
     apiVersion: traefik.io/v1alpha1
     kind: IngressRouteTCP
     sourceCRD:
       url: https://raw.githubusercontent.com/traefik/traefik/master/docs/content/reference/dynamic-configuration/traefik.io_ingressroutetcps.yaml
       crdVersion: v1alpha1
-  - name: middlewares
+  - name: traefikMiddlewares
     apiVersion: traefik.io/v1alpha1
     kind: Middleware
     sourceCRD:

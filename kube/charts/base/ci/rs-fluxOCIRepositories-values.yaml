@@ -1,9 +1,9 @@
 # yaml-language-server: $schema=../schema/values.schema.json
 
 resources:
-  gitRepositories:
+  fluxOCIRepositories:
     main:
       interval: 5m
-      url: https://github.com/fluxcd/flux2-kustomize-helm-example
+      url: oci://ghcr.io/stefanprodan/manifests/podinfo
       ref:
-        branch: main
+        tag: latest

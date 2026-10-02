@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../schema/values.schema.json
 
 resources:
-  providers:
+  fluxProviders:
     main:
       type: slack
       address: https://hooks.slack.com/services/xxx
