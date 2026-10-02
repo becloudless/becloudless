@@ -2,7 +2,7 @@
   {{- $context := . }}
   {{- $work := dict "enabled" true "object" dict "resource" (.resource | default dict) }}
 
-  {{- range $mutation := (list "base.mutations.mergeDefaults" 
+  {{- range $mutation := (list "base.mutations.defaults" 
                                "base.mutations.stringifyFields"
                                "base.mutations.enabled"
                                "base.mutations.required"

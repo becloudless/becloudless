@@ -1,4 +1,4 @@
-{{- define "base.mutations.mergeDefaults" }}
+{{- define "base.mutations.defaults" }}
   {{- $rootContext := .rootContext }}
   {{- $work := .work }}
 

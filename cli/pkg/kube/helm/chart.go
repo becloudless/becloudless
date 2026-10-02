@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -115,14 +116,6 @@ func (c *Chart) RunCITests(kubeVersion string, validate bool, ignoreMissingCRDs 
 	return c.runCiTest(kubeVersion, validate, ignoreMissingCRDs)
 }
 
-// RunUnitTests runs helm-unittest test suites found in the chart's tests/
-// directory (*_test.yaml files). Since library charts cannot be
-// rendered/tested directly, tests run against the same synthetic wrapper
-// chart used for CI tests (see PrepareTestChart): an in-memory/temp-dir
-// chart that depends on the chart under test and exposes a single
-// "templates/loader.yaml" calling "<chart>.loader.all". Test suite files
-// only need to reference that "loader.yaml" template; no chart needs to be
-// committed under tests/.
 func (c *Chart) RunUnitTests() error {
 	logs.WithField("chart", c.chart.Metadata.Name).Info("Running chart unit tests")
 
@@ -135,8 +128,16 @@ func (c *Chart) RunUnitTests() error {
 	if err != nil {
 		return errs.WithEF(err, data.WithField("path", utFolder), "Failed to glob for unit test files")
 	}
+
+	templatesFolder := filepath.Join(c.path, "templates")
+	templateTestFiles, err := findTestFilesRecursive(templatesFolder)
+	if err != nil {
+		return errs.WithEF(err, data.WithField("path", templatesFolder), "Failed to find unit test files under templates/")
+	}
+	testFiles = append(testFiles, templateTestFiles...)
+
 	if len(testFiles) == 0 {
-		logs.WithField("chart", c.chart.Metadata.Name).Info("No tests/*_test.yaml files found, skipping unit tests")
+		logs.WithField("chart", c.chart.Metadata.Name).Info("No *_test.yaml files found in tests/ or templates/, skipping unit tests")
 		return nil
 	}
 
@@ -149,14 +150,31 @@ func (c *Chart) RunUnitTests() error {
 	return c.testChart.runUnitTest(testFiles)
 }
 
+func findTestFilesRecursive(root string) ([]string, error) {
+	var files []string
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if strings.HasSuffix(d.Name(), "_test.yaml") {
+			files = append(files, path)
+		}
+		return nil
+	})
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return files, nil
+}
+
 /////////
 
-// runUnitTest runs helm-unittest test suites against this chart using the
-// helm-unittest library directly (github.com/helm-unittest/helm-unittest),
-// avoiding a dependency on the external "helm" binary or the unittest
-// plugin being installed. It uses the given absolute suite file paths
-// (typically resolved from the original chart's tests/ directory on disk,
-// since the chart itself may live in a generated temp directory).
 func (c *Chart) runUnitTest(testFiles []string) error {
 	logs.WithField("chart", c.path).Info("Running helm unittest")
 
