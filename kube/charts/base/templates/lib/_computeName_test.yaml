@@ -82,3 +82,15 @@ tests:
         documentSelector:
           path: metadata.name
           value: test-release-normal
+
+  - it: fails when the computed resource name exceeds the Kubernetes 63 character limit
+    set:
+      resources:
+        secrets:
+          this-is-a-very-long-resource-identifier-that-pushes-the-name-over-the-limit:
+            stringData:
+              a: b
+    asserts:
+      - failedTemplate:
+          errorMessageRegex: "exceeds the Kubernetes maximum of 63 characters"
+
