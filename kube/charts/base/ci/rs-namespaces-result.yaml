@@ -1,0 +1,10 @@
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    team: platform
+  name: test-release
+  namespace: default
+spec: {}

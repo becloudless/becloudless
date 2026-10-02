@@ -1,5 +1,0 @@
-# yaml-language-server: $schema=./schema/values.schema.json
-
-defaults:
-  metadata:
-    namespace: "{{ .Release.Namespace }}"

@@ -1,0 +1,93 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "allowedTopologies": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "description": "A topology selector term represents the result of label queries. A null\nor empty topology selector term matches no objects. The requirements of\nthem are ANDed. It provides a subset of functionality as NodeSelectorTerm.\nThis is an alpha feature and may change in the future.",
+        "properties": {
+          "matchLabelExpressions": {
+            "additionalProperties": {
+              "additionalProperties": false,
+              "description": "A topology selector requirement is a selector that matches given label.\nThis is an alpha feature and may change in the future.",
+              "properties": {
+                "key": {
+                  "description": "The label key that the selector applies to.",
+                  "type": "string"
+                },
+                "values": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "An array of string values. One value must match the label to be selected.\nEach entry in Values is ORed.",
+                  "type": "object"
+                }
+              },
+              "required": [
+                "key",
+                "values"
+              ],
+              "type": "object"
+            },
+            "description": "A list of topology selector requirements by labels.",
+            "type": "object"
+          }
+        },
+        "type": "object",
+        "x-kubernetes-map-type": "atomic"
+      },
+      "description": "allowedTopologies restricts the node topologies where snapshots created\nusing this class are usable from. A snapshot is usable from a location\nif volumes created from that snapshot are guaranteed to be accessible\nfrom that location. Each volume plugin defines its own supported\ntopology specifications. An empty list means there is no topology\nrestriction. This is passed to the CSI driver as\nAccessibilityRequirements in the CreateSnapshotRequest.\nThis is an alpha field tied to the VolumeSnapshotTopology feature gate\n(KEP-5943).",
+      "type": "object"
+    },
+    "annotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "metadata.annotations for this resource.",
+      "type": "object"
+    },
+    "deletionPolicy": {
+      "description": "deletionPolicy determines whether a VolumeSnapshotContent created through\nthe VolumeSnapshotClass should be deleted when its bound VolumeSnapshot is deleted.\nSupported values are \"Retain\" and \"Delete\".\n\"Retain\" means that the VolumeSnapshotContent and its physical snapshot on underlying storage system are kept.\n\"Delete\" means that the VolumeSnapshotContent and its physical snapshot on underlying storage system are deleted.\nRequired.",
+      "enum": [
+        "Delete",
+        "Retain"
+      ],
+      "type": "string"
+    },
+    "driver": {
+      "description": "driver is the name of the storage driver that handles this VolumeSnapshotClass.\nRequired.",
+      "type": "string"
+    },
+    "enabled": {
+      "description": "Whether to render this resource. Defaults to true.",
+      "type": "boolean"
+    },
+    "fullNameOverride": {
+      "description": "Replaces the entire computed resource name, ignoring the release name and id.",
+      "type": "string"
+    },
+    "labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "metadata.labels for this resource.",
+      "type": "object"
+    },
+    "nameOverride": {
+      "description": "Replaces just the id part of the computed resource name (\u003cRelease.Name\u003e-\u003cid\u003e).",
+      "type": "string"
+    },
+    "namespace": {
+      "description": "metadata.namespace for this resource. Defaults to the release namespace.",
+      "type": "string"
+    },
+    "parameters": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "parameters is a key-value map with storage driver specific parameters for creating snapshots.\nThese values are opaque to Kubernetes.",
+      "type": "object"
+    }
+  },
+  "type": "object"
+}
