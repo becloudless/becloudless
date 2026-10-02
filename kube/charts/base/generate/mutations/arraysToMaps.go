@@ -1,5 +1,11 @@
 package mutations
 
+import (
+	"fmt"
+	"sort"
+	"strings"
+)
+
 // ArraysToMaps recursively converts array-type schema nodes into maps keyed
 // by an arbitrary string id, working around Helm's inability to
 // deep-merge arrays of objects the way .Values.resources.<kind>.<id> and
@@ -7,6 +13,10 @@ package mutations
 // (see walkSchemaNodesWithPath) to leave as plain arrays instead (e.g. a
 // container's string-typed command/args), declared per-resource-kind in
 // resources.yaml as mutations.arraysToMaps.ignore.
+//
+// Every converted path is reported back via MutationResult.TemplateArgs
+// (key "arrayPaths"), so templates/mutations/_mapsToArrays.tpl can reverse
+// the conversion at render time and emit valid Kubernetes arrays again.
 type ArraysToMaps struct {
 	Ignore []string `yaml:"ignore"`
 }
@@ -17,22 +27,35 @@ func (m ArraysToMaps) Mutate(schema map[string]any) (MutationResult, error) {
 		ignore[path] = true
 	}
 
+	var convertedPaths []string
 	walkSchemaNodesWithPath(schema, "", func(node map[string]any, path string) {
 		if ignore[path] {
 			return
 		}
-		convertArrayNodeToMap(node)
+		if convertArrayNodeToMap(node) {
+			convertedPaths = append(convertedPaths, path)
+		}
 	})
-	return MutationResult{Schema: schema}, nil
+
+	sort.Strings(convertedPaths)
+	quoted := make([]string, len(convertedPaths))
+	for i, path := range convertedPaths {
+		quoted[i] = fmt.Sprintf("%q", path)
+	}
+
+	return MutationResult{
+		Schema:       schema,
+		TemplateArgs: map[string]string{"arrayPaths": fmt.Sprintf("(list %s)", strings.Join(quoted, " "))},
+	}, nil
 }
 
-func convertArrayNodeToMap(node map[string]any) {
+func convertArrayNodeToMap(node map[string]any) bool {
 	if !schemaTypeIncludes(node["type"], "array") {
-		return
+		return false
 	}
 	items, ok := node["items"].(map[string]any)
 	if !ok {
-		return
+		return false
 	}
 
 	node["type"] = replaceSchemaType(node["type"], "array", "object")
@@ -43,4 +66,5 @@ func convertArrayNodeToMap(node map[string]any) {
 	delete(node, "uniqueItems")
 	delete(node, "x-kubernetes-list-type")
 	delete(node, "x-kubernetes-list-map-keys")
+	return true
 }

@@ -2,10 +2,10 @@
 
 resources:
   configMaps:
-    defaultEnabled:
+    default-enabled:
       data:
         main: cm
-    explicitlyEnabled:
+    explicitly-enabled:
       enabled: true
       data:
         main: cm

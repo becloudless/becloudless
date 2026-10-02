@@ -50,10 +50,10 @@ tests:
     set:
       resources:
         configMaps:
-          enabledOne:
+          enabled-one:
             data:
               key: value
-          disabledOne:
+          disabled-one:
             enabled: false
             data:
               key: value
@@ -62,7 +62,7 @@ tests:
           count: 1
       - equal:
           path: metadata.name
-          value: test-release-enabledOne
+          value: test-release-enabled-one
 
   - it: defaults.resources.<kind>.enabled false disables every resource of that kind
     set:

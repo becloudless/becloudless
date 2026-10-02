@@ -15,19 +15,19 @@ defaults:
 
 resources:
   configMaps:
-    usesDefaultOnly:
+    uses-default-only:
       data:
         key: value1
-    overridesDefault:
+    overrides-default:
       labels:
         app: custom-app
       data:
         key: value2
-    overridesGlobalNamespace:
+    overrides-global-namespace:
       namespace: custom-ns
       data:
         key: value4
   secrets:
-    usesGlobalMetadataOnly:
+    uses-global-metadata-only:
       stringData:
         key: value3

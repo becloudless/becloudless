@@ -8,6 +8,7 @@
                                "base.mutations.required"
                                "base.mutations.apiVersionKind"
                                "base.mutations.metadata"
+                               "base.mutations.mapsToArrays"
                                "base.mutations.content") }}
     {{- $inputs := merge (dict "work" $work) $context }}
     {{- $work = include $mutation $inputs | fromYaml }}

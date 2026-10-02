@@ -3,4 +3,5 @@
 resources:
   longhornSettings:
     main:
+      fullNameOverride: default-replica-count
       value: "1"

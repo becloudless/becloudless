@@ -7,7 +7,7 @@ metadata:
     managed-by: base
   labels:
     org: acme
-  name: test-release-usesGlobalMetadataOnly
+  name: test-release-uses-global-metadata-only
   namespace: shared-ns
 stringData:
   key: value3
@@ -24,7 +24,7 @@ metadata:
     app: custom-app
     org: acme
     team: platform
-  name: test-release-overridesDefault
+  name: test-release-overrides-default
   namespace: shared-ns
 ---
 # Source: base-test/templates/loader.yaml
@@ -39,7 +39,7 @@ metadata:
     app: shared-default
     org: acme
     team: platform
-  name: test-release-overridesGlobalNamespace
+  name: test-release-overrides-global-namespace
   namespace: custom-ns
 ---
 # Source: base-test/templates/loader.yaml
@@ -54,5 +54,5 @@ metadata:
     app: shared-default
     org: acme
     team: platform
-  name: test-release-usesDefaultOnly
+  name: test-release-uses-default-only
   namespace: shared-ns

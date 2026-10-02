@@ -2,7 +2,7 @@
 
 resources:
   configMaps:
-    withLabelsAndAnnotations:
+    with-labels-and-annotations:
       labels:
         app: myapp
         tier: backend
@@ -11,7 +11,7 @@ resources:
         note: hello
       data:
         key: value
-    withNamespaceOverride:
+    with-namespace-override:
       namespace: custom-ns
       data:
         key: value
