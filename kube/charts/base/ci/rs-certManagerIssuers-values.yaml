@@ -1,8 +1,7 @@
 # yaml-language-server: $schema=../schema/values.schema.json
 
 resources:
-  clusters:
+  certManagerIssuers:
     main:
-      instances: 3
-      storage:
-        size: 10Gi
+      ca:
+        secretName: immich-postgresql-ca

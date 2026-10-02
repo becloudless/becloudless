@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../schema/values.schema.json
 
 resources:
-  challenges:
+  certManagerChallenges:
     main:
       authorizationURL: https://acme-v02.api.letsencrypt.org/acme/authz/1234
       dnsName: myapp.example.com

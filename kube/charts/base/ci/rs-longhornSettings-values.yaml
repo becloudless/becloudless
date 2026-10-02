@@ -1,7 +1,6 @@
 # yaml-language-server: $schema=../schema/values.schema.json
 
 resources:
-  issuers:
+  longhornSettings:
     main:
-      ca:
-        secretName: immich-postgresql-ca
+      value: "1"

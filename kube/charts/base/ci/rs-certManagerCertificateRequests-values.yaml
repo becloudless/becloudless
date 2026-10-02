@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../schema/values.schema.json
 
 resources:
-  certificateRequests:
+  certManagerCertificateRequests:
     main:
       issuerRef:
         name: ca-issuer

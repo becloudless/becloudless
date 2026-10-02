@@ -1,11 +1,9 @@
 # yaml-language-server: $schema=../schema/values.schema.json
 
 resources:
-  certificates:
+  certManagerOrders:
     main:
-      secretName: myapp-tls
       issuerRef:
         name: letsencrypt-prod
         kind: ClusterIssuer
-      dnsNames:
-        - myapp.example.com
+      request: MIIBCjCB...

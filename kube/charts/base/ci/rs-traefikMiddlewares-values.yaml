@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../schema/values.schema.json
 
 resources:
-  middlewares:
+  traefikMiddlewares:
     body-limit-10g:
       buffering:
         maxRequestBodyBytes: 10000000000
