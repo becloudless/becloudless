@@ -23,6 +23,7 @@ import (
 	"helm.sh/helm/v3/pkg/downloader"
 	"helm.sh/helm/v3/pkg/getter"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/cli-runtime/pkg/resource"
 )
 
 type Chart struct {
@@ -392,5 +393,44 @@ func (c *Chart) render(values map[string]interface{}, kubeVersion string, output
 		return errs.WithE(err, "Failed to write manifest to output")
 	}
 
+	if validate {
+		if err := c.validateServerSide(release.Manifest, ignoreMissingCRDs); err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+// validateServerSide performs a genuine server-side dry-run validation of
+// the rendered manifest, equivalent to `kubectl apply --dry-run=server`.
+//
+// This is needed because Helm v3's action.Install in DryRun mode never
+// actually sends the rendered objects to the Kubernetes API server: it
+// only runs a lenient, client-side OpenAPI schema check (KubeClient.Build)
+// and bails out before any Create call. That client-side check does not
+// reliably catch structural mismatches (e.g. a field that must be a list
+// being rendered as a map), which only surface once the API server
+// unmarshals the object into its typed Go struct. Sending a real
+// dry-run=server Create request per resource reproduces that server-side
+// unmarshal/validation step without persisting anything.
+func (c *Chart) validateServerSide(manifest string, ignoreMissingCRDs bool) error {
+	resources, err := c.actionConfig.KubeClient.Build(strings.NewReader(manifest), true)
+	if err != nil {
+		if ignoreMissingCRDs && meta.IsNoMatchError(err) {
+			logs.WithField("reason", err.Error()).Warn("Skipping validation: CRD/kind not registered on the cluster")
+			return nil
+		}
+		return errs.WithE(err, "Failed to build resources for server-side validation")
+	}
+
+	var validationErrors []error
+	for _, info := range resources {
+		helper := resource.NewHelper(info.Client, info.Mapping).DryRun(true)
+		if _, err := helper.Create(info.Namespace, true, info.Object); err != nil {
+			validationErrors = append(validationErrors, errs.WithEF(err, data.WithField("resource", info.Name).WithField("kind", info.Mapping.GroupVersionKind.Kind), "Server-side validation failed"))
+		}
+	}
+
+	return errors.Join(validationErrors...)
 }
