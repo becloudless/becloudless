@@ -1,4 +1,4 @@
-{{- define "base.mutations.defaults" }}
+{{- define "base.resources.mutations.defaults" }}
   {{- $rootContext := .rootContext }}
   {{- $work := .work }}
 

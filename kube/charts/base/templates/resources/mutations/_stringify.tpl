@@ -1,4 +1,4 @@
-{{- define "base.mutations.stringifyFields" }}
+{{- define "base.resources.mutations.stringifyFields" }}
   {{- $work := .work }}
   {{- $resource := $work.resource | default dict }}
   {{- $fields := .stringifyFields | default list }}

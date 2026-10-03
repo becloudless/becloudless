@@ -1,4 +1,4 @@
-{{- define "base.mutations.content" }}
+{{- define "base.resources.mutations.content" }}
   {{- $work := .work }}
   {{- $object := $work.object | default dict }}
   {{- $contentIsSpec := true }}

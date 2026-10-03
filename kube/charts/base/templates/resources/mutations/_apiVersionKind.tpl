@@ -1,4 +1,4 @@
-{{- define "base.mutations.apiVersionKind" }}
+{{- define "base.resources.mutations.apiVersionKind" }}
   {{- $work := .work }}
   {{- $object := $work.object | default dict }}
   {{- $object = set $object "apiVersion" .apiVersion }}
