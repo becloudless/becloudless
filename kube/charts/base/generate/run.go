@@ -35,9 +35,9 @@ func Run() error {
 	}
 
 	// TODO make schema validation faster
-	// if err := generateChartValuesSchema(dir, entries); err != nil {
-	// 	return err
-	// }
+	if err := generateChartValuesSchema(dir, resources); err != nil {
+		return err
+	}
 
 	return nil
 }

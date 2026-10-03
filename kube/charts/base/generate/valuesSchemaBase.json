@@ -6,6 +6,10 @@
     "global": {
       "type": "object"
     },
+    "checkRequiredValues": {
+      "description": "Whether to check and fail if some values are null. Defaults to true.",
+      "type": "boolean"
+    },
     "resources": {
       "type": "object",
       "additionalProperties": false,
