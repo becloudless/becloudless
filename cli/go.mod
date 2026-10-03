@@ -1,6 +1,6 @@
 module github.com/becloudless/becloudless
 
-go 1.26.3
+go 1.26.8
 
 toolchain go1.27.1
 
@@ -21,7 +21,7 @@ require (
 	github.com/hashicorp/hc-install v0.9.5
 	github.com/hashicorp/terraform-config-inspect v0.0.0-20260904064934-75d64de68c31
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/moby/buildkit v0.33.0
+	github.com/moby/buildkit v0.33.1
 	github.com/n0rad/go-erlog v0.0.0-20260803020042-6c728ddb3e7a
 	github.com/n0rad/gomake v0.0.0-20260423115156-cb11feadac58
 	github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260120012428-7b6c2af7698a
