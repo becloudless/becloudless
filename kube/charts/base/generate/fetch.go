@@ -60,11 +60,13 @@ func fetchAndMutateSchema(client *http.Client, e *resource, dest string) error {
 	var kindSchema map[string]any
 	switch {
 	case e.SourceCRD != nil:
-		schema, err := fetchCRDManifestSchema(client, e.SourceCRD.URL, e.SourceCRD.CRDVersion, e.Kind)
+		schema, apiVersion, kind, err := fetchCRDManifestSchema(client, e.SourceCRD.URL, e.SourceCRD.CRDVersion, e.SourceCRD.Kind)
 		if err != nil {
 			return err
 		}
 		kindSchema = schema
+		e.APIVersion = apiVersion
+		e.Kind = kind
 	case e.SourceOpenAPI != nil:
 		schema, err := fetchOpenAPIV3Schema(client, e.SourceOpenAPI.URL, e.SourceOpenAPI.Component)
 		if err != nil {

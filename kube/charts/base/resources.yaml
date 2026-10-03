@@ -179,50 +179,34 @@ resources:
     apiVersion: networking.k8s.io/v1
     kind: NetworkPolicy
   - name: gateways
-    apiVersion: gateway.networking.k8s.io/v1
-    kind: Gateway
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_gateways.yaml
       crdVersion: v1
   - name: gatewayClasses
-    apiVersion: gateway.networking.k8s.io/v1
-    kind: GatewayClass
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_gatewayclasses.yaml
       crdVersion: v1
   - name: httpRoutes
-    apiVersion: gateway.networking.k8s.io/v1
-    kind: HTTPRoute
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml
       crdVersion: v1
   - name: grpcRoutes
-    apiVersion: gateway.networking.k8s.io/v1
-    kind: GRPCRoute
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_grpcroutes.yaml
       crdVersion: v1
   - name: referenceGrants
-    apiVersion: gateway.networking.k8s.io/v1beta1
-    kind: ReferenceGrant
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_referencegrants.yaml
       crdVersion: v1beta1
   - name: tcpRoutes
-    apiVersion: gateway.networking.k8s.io/v1
-    kind: TCPRoute
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_tcproutes.yaml
       crdVersion: v1
   - name: tlsRoutes
-    apiVersion: gateway.networking.k8s.io/v1
-    kind: TLSRoute
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_tlsroutes.yaml
       crdVersion: v1
   - name: udpRoutes
-    apiVersion: gateway.networking.k8s.io/v1
-    kind: UDPRoute
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_udproutes.yaml
       crdVersion: v1
@@ -236,8 +220,6 @@ resources:
       extractContent:
         contentIsOutOfSpec: true
   - name: volumeSnapshotClasses
-    apiVersion: snapshot.storage.k8s.io/v1
-    kind: VolumeSnapshotClass
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
       crdVersion: v1
@@ -245,185 +227,128 @@ resources:
       extractContent:
         contentIsOutOfSpec: true
   - name: sealedSecrets
-    apiVersion: bitnami.com/v1alpha1
-    kind: SealedSecret
     sourceCRD:
       url: https://raw.githubusercontent.com/bitnami-labs/sealed-secrets/main/helm/sealed-secrets/crds/bitnami.com_sealedsecrets.yaml
       crdVersion: v1alpha1
   - name: kyvernoClusterPolicies
-    apiVersion: kyverno.io/v1
-    kind: ClusterPolicy
     sourceCRD:
       url: https://raw.githubusercontent.com/kyverno/kyverno/main/config/crds/kyverno/kyverno.io_clusterpolicies.yaml
       crdVersion: v1
   - name: longhornRecurringJobs
-    apiVersion: longhorn.io/v1beta2
-    kind: RecurringJob
     sourceCRD:
       url: https://raw.githubusercontent.com/longhorn/longhorn/master/deploy/longhorn.yaml
       crdVersion: v1beta2
+      kind: RecurringJob
   - name: longhornSettings
-    apiVersion: longhorn.io/v1beta2
-    kind: Setting
     sourceCRD:
       url: https://raw.githubusercontent.com/longhorn/longhorn/master/deploy/longhorn.yaml
       crdVersion: v1beta2
+      kind: Setting
     mutations:
       extractContent:
         contentIsOutOfSpec: true
   - name: fluxHelmReleases
-    apiVersion: helm.toolkit.fluxcd.io/v2
-    kind: HelmRelease
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/helm-controller/main/config/crd/bases/helm.toolkit.fluxcd.io_helmreleases.yaml
       crdVersion: v2
   - name: fluxKustomizations
-    apiVersion: kustomize.toolkit.fluxcd.io/v1
-    kind: Kustomization
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/kustomize-controller/main/config/crd/bases/kustomize.toolkit.fluxcd.io_kustomizations.yaml
       crdVersion: v1
   - name: fluxGitRepositories
-    apiVersion: source.toolkit.fluxcd.io/v1
-    kind: GitRepository
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/source-controller/main/config/crd/bases/source.toolkit.fluxcd.io_gitrepositories.yaml
       crdVersion: v1
   - name: fluxHelmRepositories
-    apiVersion: source.toolkit.fluxcd.io/v1
-    kind: HelmRepository
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/source-controller/main/config/crd/bases/source.toolkit.fluxcd.io_helmrepositories.yaml
       crdVersion: v1
   - name: fluxOCIRepositories
-    apiVersion: source.toolkit.fluxcd.io/v1
-    kind: OCIRepository
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/source-controller/main/config/crd/bases/source.toolkit.fluxcd.io_ocirepositories.yaml
       crdVersion: v1
   - name: fluxImageRepositories
-    apiVersion: image.toolkit.fluxcd.io/v1
-    kind: ImageRepository
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/image-reflector-controller/main/config/crd/bases/image.toolkit.fluxcd.io_imagerepositories.yaml
       crdVersion: v1
   - name: fluxImagePolicies
-    apiVersion: image.toolkit.fluxcd.io/v1
-    kind: ImagePolicy
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/image-reflector-controller/main/config/crd/bases/image.toolkit.fluxcd.io_imagepolicies.yaml
       crdVersion: v1
   - name: certManagerCertificates
-    apiVersion: cert-manager.io/v1
-    kind: Certificate
     sourceCRD:
       url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_certificates.yaml
       crdVersion: v1
   - name: certManagerCertificateRequests
-    apiVersion: cert-manager.io/v1
-    kind: CertificateRequest
     sourceCRD:
       url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_certificaterequests.yaml
       crdVersion: v1
   - name: certManagerIssuers
-    apiVersion: cert-manager.io/v1
-    kind: Issuer
     sourceCRD:
       url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_issuers.yaml
       crdVersion: v1
   - name: certManagerClusterIssuers
-    apiVersion: cert-manager.io/v1
-    kind: ClusterIssuer
     sourceCRD:
       url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_clusterissuers.yaml
       crdVersion: v1
   - name: certManagerOrders
-    apiVersion: acme.cert-manager.io/v1
-    kind: Order
     sourceCRD:
       url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/acme.cert-manager.io_orders.yaml
       crdVersion: v1
   - name: certManagerChallenges
-    apiVersion: acme.cert-manager.io/v1
-    kind: Challenge
     sourceCRD:
       url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/acme.cert-manager.io_challenges.yaml
       crdVersion: v1
   - name: cnpgClusters
-    apiVersion: postgresql.cnpg.io/v1
-    kind: Cluster
     sourceCRD:
       url: https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/main/config/crd/bases/postgresql.cnpg.io_clusters.yaml
       crdVersion: v1
   - name: cnpgScheduledBackups
-    apiVersion: postgresql.cnpg.io/v1
-    kind: ScheduledBackup
     sourceCRD:
       url: https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/main/config/crd/bases/postgresql.cnpg.io_scheduledbackups.yaml
       crdVersion: v1
   - name: secretStores
-    apiVersion: external-secrets.io/v1
-    kind: SecretStore
     sourceCRD:
       url: https://raw.githubusercontent.com/external-secrets/external-secrets/main/config/crds/bases/external-secrets.io_secretstores.yaml
       crdVersion: v1
   - name: fluxAlerts
-    apiVersion: notification.toolkit.fluxcd.io/v1beta3
-    kind: Alert
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_alerts.yaml
       crdVersion: v1beta3
   - name: fluxReceivers
-    apiVersion: notification.toolkit.fluxcd.io/v1
-    kind: Receiver
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_receivers.yaml
       crdVersion: v1
   - name: fluxProviders
-    apiVersion: notification.toolkit.fluxcd.io/v1beta3
-    kind: Provider
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_providers.yaml
       crdVersion: v1beta3
   - name: stringSecrets
-    apiVersion: secretgenerator.mittwald.de/v1alpha1
-    kind: StringSecret
     sourceCRD:
       url: https://raw.githubusercontent.com/mittwald/kubernetes-secret-generator/master/deploy/crds/secretgenerator.mittwald.de_stringsecrets_crd.yaml
       crdVersion: v1alpha1
   - name: traefikIngressRouteTCPs
-    apiVersion: traefik.io/v1alpha1
-    kind: IngressRouteTCP
     sourceCRD:
       url: https://raw.githubusercontent.com/traefik/traefik/master/docs/content/reference/dynamic-configuration/traefik.io_ingressroutetcps.yaml
       crdVersion: v1alpha1
   - name: traefikMiddlewares
-    apiVersion: traefik.io/v1alpha1
-    kind: Middleware
     sourceCRD:
       url: https://raw.githubusercontent.com/traefik/traefik/master/docs/content/reference/dynamic-configuration/traefik.io_middlewares.yaml
       crdVersion: v1alpha1
   - name: networkAttachmentDefinitions
-    apiVersion: k8s.cni.cncf.io/v1
-    kind: NetworkAttachmentDefinition
     sourceCRD:
       url: https://raw.githubusercontent.com/k8snetworkplumbingwg/network-attachment-definition-client/master/artifacts/networks-crd.yaml
       crdVersion: v1
   - name: serviceMonitors
-    apiVersion: monitoring.coreos.com/v1
-    kind: ServiceMonitor
     sourceCRD:
       url: https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml
       crdVersion: v1
   - name: kyvernoValidatingPolicies
-    apiVersion: policies.kyverno.io/v1
-    kind: ValidatingPolicy
     sourceCRD:
       url: https://raw.githubusercontent.com/kyverno/kyverno/main/config/crds/policies.kyverno.io/policies.kyverno.io_validatingpolicies.yaml
       crdVersion: v1
   - name: verticalPodAutoscalers
-    apiVersion: autoscaling.k8s.io/v1
-    kind: VerticalPodAutoscaler
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes/autoscaler/master/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
       crdVersion: v1
+      kind: VerticalPodAutoscaler

@@ -17,8 +17,8 @@ type resourcesFile struct {
 
 type resource struct {
 	Name          string            `yaml:"name"`
-	APIVersion    string            `yaml:"apiVersion"`
-	Kind          string            `yaml:"kind"`
+	APIVersion    string            `yaml:"apiVersion"`    // required for sourceOpenAPI; self-deduced from the CRD manifest for sourceCRD, no need to set it
+	Kind          string            `yaml:"kind"`          // required for sourceOpenAPI; self-deduced from the CRD manifest for sourceCRD, no need to set it
 	SourceOpenAPI *SourceOpenAPI    `yaml:"sourceOpenAPI"` // set to fetch the schema from a Kubernetes OpenAPI v3 spec document
 	SourceCRD     *SourceCRD        `yaml:"sourceCRD"`     // set to fetch the schema from a CRD manifest (YAML)
 	Mutations     resourceMutations `yaml:"mutations"`
@@ -34,6 +34,7 @@ type SourceOpenAPI struct {
 type SourceCRD struct {
 	URL        string `yaml:"url"`
 	CRDVersion string `yaml:"crdVersion"`
+	Kind       string `yaml:"kind"` // optional: only needed to disambiguate when the manifest at URL defines multiple kinds (e.g. a full operator CRD bundle); apiVersion/kind are otherwise self-deduced from the manifest
 }
 
 type resourceMutations struct {
