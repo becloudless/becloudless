@@ -1,4 +1,6 @@
-package mutations
+package additionalPropertiesFalse
+
+import "resourceschart/templates/resources/mutations"
 
 // AdditionalPropertiesFalse recursively sets "additionalProperties": false
 // on every object-type schema node that declares its own "properties" but
@@ -9,9 +11,9 @@ package mutations
 // untouched.
 type AdditionalPropertiesFalse struct{}
 
-func (AdditionalPropertiesFalse) Mutate(schema map[string]any) (MutationResult, error) {
-	walkSchemaNodes(schema, func(node map[string]any) {
-		if !schemaTypeIncludes(node["type"], "object") {
+func (AdditionalPropertiesFalse) Mutate(schema map[string]any) (mutations.MutationResult, error) {
+	mutations.WalkSchemaNodes(schema, func(node map[string]any) {
+		if !mutations.SchemaTypeIncludes(node["type"], "object") {
 			return
 		}
 		if _, hasProps := node["properties"]; !hasProps {
@@ -25,5 +27,5 @@ func (AdditionalPropertiesFalse) Mutate(schema map[string]any) (MutationResult, 
 		}
 		node["additionalProperties"] = false
 	})
-	return MutationResult{Schema: schema}, nil
+	return mutations.MutationResult{Schema: schema}, nil
 }

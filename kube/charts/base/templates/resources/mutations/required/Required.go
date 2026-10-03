@@ -1,13 +1,15 @@
-package mutations
+package required
 
 import (
 	"fmt"
 	"strings"
+
+	"resourceschart/templates/resources/mutations"
 )
 
 type Required struct{}
 
-func (Required) Mutate(schema map[string]any) (MutationResult, error) {
+func (Required) Mutate(schema map[string]any) (mutations.MutationResult, error) {
 	var required []string
 	if req, ok := schema["required"].([]any); ok {
 		for _, r := range req {
@@ -17,7 +19,7 @@ func (Required) Mutate(schema map[string]any) (MutationResult, error) {
 		}
 	}
 	delete(schema, "required")
-	result := MutationResult{Schema: schema}
+	result := mutations.MutationResult{Schema: schema}
 	if len(required) > 0 {
 		quoted := make([]string, len(required))
 		for i, r := range required {

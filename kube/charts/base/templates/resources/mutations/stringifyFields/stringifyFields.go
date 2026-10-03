@@ -1,8 +1,10 @@
-package mutations
+package stringifyFields
 
 import (
 	"fmt"
 	"strings"
+
+	"resourceschart/templates/resources/mutations"
 )
 
 // StringifyFields relaxes the schema of the fields declared via the
@@ -30,9 +32,9 @@ type StringifyFields struct {
 	Fields []string `yaml:"fields"`
 }
 
-func (m StringifyFields) Mutate(schema map[string]any) (MutationResult, error) {
+func (m StringifyFields) Mutate(schema map[string]any) (mutations.MutationResult, error) {
 	if len(m.Fields) == 0 {
-		return MutationResult{Schema: schema}, nil
+		return mutations.MutationResult{Schema: schema}, nil
 	}
 	fields := map[string]bool{}
 	quoted := make([]string, len(m.Fields))
@@ -41,7 +43,7 @@ func (m StringifyFields) Mutate(schema map[string]any) (MutationResult, error) {
 		quoted[i] = fmt.Sprintf("%q", path)
 	}
 
-	walkSchemaNodesWithPath(schema, "", func(node map[string]any, path string) {
+	mutations.WalkSchemaNodesWithPath(schema, "", func(node map[string]any, path string) {
 		if !fields[path] {
 			return
 		}
@@ -50,7 +52,7 @@ func (m StringifyFields) Mutate(schema map[string]any) (MutationResult, error) {
 		}
 		node["additionalProperties"] = map[string]any{}
 	})
-	return MutationResult{
+	return mutations.MutationResult{
 		Schema:       schema,
 		TemplateArgs: map[string]string{"stringifyFields": fmt.Sprintf("(list %s)", strings.Join(quoted, " "))},
 	}, nil

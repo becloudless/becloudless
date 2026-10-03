@@ -1,6 +1,10 @@
-package mutations
+package content
 
-import "fmt"
+import (
+	"fmt"
+
+	"resourceschart/templates/resources/mutations"
+)
 
 // ExtractContent selects the relevant portion of a kind's full k8s JSON schema for use as the instance schema
 type ExtractContent struct {
@@ -12,14 +16,14 @@ type ExtractContent struct {
 	KindName string `yaml:"-"`
 }
 
-func (m ExtractContent) Mutate(kindSchema map[string]any) (MutationResult, error) {
+func (m ExtractContent) Mutate(kindSchema map[string]any) (mutations.MutationResult, error) {
 	if !m.ContentIsOutOfSpec {
 		props, _ := kindSchema["properties"].(map[string]any)
 		spec, _ := props["spec"].(map[string]any)
 		if spec == nil {
-			return MutationResult{}, fmt.Errorf("%s: expected top-level \"spec\" property in schema", m.KindName)
+			return mutations.MutationResult{}, fmt.Errorf("%s: expected top-level \"spec\" property in schema", m.KindName)
 		}
-		return MutationResult{Schema: spec}, nil
+		return mutations.MutationResult{Schema: spec}, nil
 	}
 
 	props, _ := kindSchema["properties"].(map[string]any)
@@ -45,7 +49,7 @@ func (m ExtractContent) Mutate(kindSchema map[string]any) (MutationResult, error
 			instance["required"] = filtered
 		}
 	}
-	return MutationResult{
+	return mutations.MutationResult{
 		Schema:       instance,
 		TemplateArgs: map[string]string{"contentIsSpec": "false"},
 	}, nil
