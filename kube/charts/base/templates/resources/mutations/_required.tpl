@@ -1,4 +1,4 @@
-{{- define "base.mutations.required" }}
+{{- define "base.resources.mutations.required" }}
   {{- $work := .work }}
   {{- if $work.enabled }}
     {{- $name := .name }}

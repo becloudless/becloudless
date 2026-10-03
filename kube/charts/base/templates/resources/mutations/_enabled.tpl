@@ -1,4 +1,4 @@
-{{- define "base.mutations.enabled" }}
+{{- define "base.resources.mutations.enabled" }}
   {{- $work := .work }}
   {{- $resource := $work.resource | default dict }}
   {{- $isEnabled := include "base.lib.isEnabled" $resource | trim }}

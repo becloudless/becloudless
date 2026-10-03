@@ -1,4 +1,4 @@
-{{- define "base.mutations.metadata" }}
+{{- define "base.resources.mutations.metadata" }}
   {{- $rootContext := .rootContext }}
   {{- $id := .id }}
   {{- $work := .work }}
