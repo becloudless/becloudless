@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"resourceschart/generate/mutations"
+	"resourceschart/templates/resources/mutations/arraysToMaps"
+	"resourceschart/templates/resources/mutations/content"
+	"resourceschart/templates/resources/mutations/stringifyFields"
 
 	"gopkg.in/yaml.v3"
 )
@@ -35,9 +37,9 @@ type SourceCRD struct {
 }
 
 type resourceMutations struct {
-	ExtractContent  *mutations.ExtractContent  `yaml:"extractContent"`
-	ArraysToMaps    *mutations.ArraysToMaps    `yaml:"arraysToMaps"`
-	StringifyFields *mutations.StringifyFields `yaml:"stringifyFields"`
+	ExtractContent  *content.ExtractContent          `yaml:"extractContent"`
+	ArraysToMaps    *arraysToMaps.ArraysToMaps       `yaml:"arraysToMaps"`
+	StringifyFields *stringifyFields.StringifyFields `yaml:"stringifyFields"`
 }
 
 func newResourcesFile(path string) (resourcesFile, error) {

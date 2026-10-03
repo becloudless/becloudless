@@ -1,11 +1,16 @@
-package mutations
+package generate
 
-import "testing"
+import (
+	"testing"
+
+	"resourceschart/templates/resources/mutations"
+	"resourceschart/templates/resources/mutations/content"
+)
 
 func TestPipeline_EnabledSurvivesFullPipeline(t *testing.T) {
 	// Mimics a CRD-style schema (content wrapped in "spec", the default),
-	// similar to the upstream k8s JSON schema fed into Apply by the
-	// generate package's fetchSchemas.
+	// similar to the upstream k8s JSON schema fed into Apply by
+	// fetchSchemas.
 	schema := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
@@ -20,7 +25,7 @@ func TestPipeline_EnabledSurvivesFullPipeline(t *testing.T) {
 			},
 		},
 	}
-	got, err := MutateSchema(Pipeline(ExtractContent{}, nil, nil), schema)
+	got, err := mutations.MutateSchema(Pipeline(content.ExtractContent{}, nil, nil), schema)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

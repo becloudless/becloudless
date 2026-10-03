@@ -1,4 +1,4 @@
-package mutations
+package arraysToMaps
 
 import "testing"
 

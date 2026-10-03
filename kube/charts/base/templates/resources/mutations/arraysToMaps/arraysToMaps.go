@@ -1,9 +1,11 @@
-package mutations
+package arraysToMaps
 
 import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"resourceschart/templates/resources/mutations"
 )
 
 // ArraysToMaps recursively converts array-type schema nodes into maps keyed
@@ -21,14 +23,14 @@ type ArraysToMaps struct {
 	Ignore []string `yaml:"ignore"`
 }
 
-func (m ArraysToMaps) Mutate(schema map[string]any) (MutationResult, error) {
+func (m ArraysToMaps) Mutate(schema map[string]any) (mutations.MutationResult, error) {
 	ignore := map[string]bool{}
 	for _, path := range m.Ignore {
 		ignore[path] = true
 	}
 
 	var convertedPaths []string
-	walkSchemaNodesWithPath(schema, "", func(node map[string]any, path string) {
+	mutations.WalkSchemaNodesWithPath(schema, "", func(node map[string]any, path string) {
 		if ignore[path] {
 			return
 		}
@@ -43,14 +45,14 @@ func (m ArraysToMaps) Mutate(schema map[string]any) (MutationResult, error) {
 		quoted[i] = fmt.Sprintf("%q", path)
 	}
 
-	return MutationResult{
+	return mutations.MutationResult{
 		Schema:       schema,
 		TemplateArgs: map[string]string{"arrayPaths": fmt.Sprintf("(list %s)", strings.Join(quoted, " "))},
 	}, nil
 }
 
 func convertArrayNodeToMap(node map[string]any) bool {
-	if !schemaTypeIncludes(node["type"], "array") {
+	if !mutations.SchemaTypeIncludes(node["type"], "array") {
 		return false
 	}
 	items, ok := node["items"].(map[string]any)
@@ -58,7 +60,7 @@ func convertArrayNodeToMap(node map[string]any) bool {
 		return false
 	}
 
-	node["type"] = replaceSchemaType(node["type"], "array", "object")
+	node["type"] = mutations.ReplaceSchemaType(node["type"], "array", "object")
 	node["additionalProperties"] = items
 	delete(node, "items")
 	delete(node, "minItems")

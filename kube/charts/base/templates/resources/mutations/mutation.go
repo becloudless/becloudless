@@ -11,26 +11,6 @@ type Mutation interface {
 	Mutate(schema map[string]any) (MutationResult, error)
 }
 
-func Pipeline(extractContent ExtractContent, arraysToMaps *ArraysToMaps, stringifyFields *StringifyFields) []Mutation {
-	if arraysToMaps == nil {
-		arraysToMaps = &ArraysToMaps{}
-	}
-	if stringifyFields == nil {
-		stringifyFields = &StringifyFields{}
-	}
-	return []Mutation{
-		extractContent,
-		FlattenAllOf{},
-		NormalizeIntOrString{},
-		Required{},
-		Metadata{},
-		Enabled{},
-		*arraysToMaps,
-		*stringifyFields,
-		AdditionalPropertiesFalse{},
-	}
-}
-
 func MutateSchema(mutations []Mutation, schema map[string]any) (MutationResult, error) {
 	templateArgs := map[string]string{}
 	for _, m := range mutations {

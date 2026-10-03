@@ -1,6 +1,10 @@
-package mutations
+package flattenAllOf
 
-import "maps"
+import (
+	"maps"
+
+	"resourceschart/templates/resources/mutations"
+)
 
 // FlattenAllOf recursively collapses "allOf" schema nodes (the pattern
 // OpenAPI-v3-derived schemas commonly use to combine a $ref with sibling
@@ -15,9 +19,9 @@ import "maps"
 // manifests).
 type FlattenAllOf struct{}
 
-func (FlattenAllOf) Mutate(schema map[string]any) (MutationResult, error) {
-	walkSchemaNodes(schema, flattenAllOfNode)
-	return MutationResult{Schema: schema}, nil
+func (FlattenAllOf) Mutate(schema map[string]any) (mutations.MutationResult, error) {
+	mutations.WalkSchemaNodes(schema, flattenAllOfNode)
+	return mutations.MutationResult{Schema: schema}, nil
 }
 
 func flattenAllOfNode(node map[string]any) {

@@ -9,7 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"resourceschart/generate/mutations"
+	"resourceschart/templates/resources/mutations"
+	"resourceschart/templates/resources/mutations/content"
 )
 
 func fetchSchemas(dir string, entries []resource) error {
@@ -74,13 +75,13 @@ func fetchAndMutateSchema(client *http.Client, e *resource, dest string) error {
 		return fmt.Errorf("%s: must set either sourceOpenAPI or sourceCRD", e.Name)
 	}
 
-	extractContent := mutations.ExtractContent{}
+	extractContent := content.ExtractContent{}
 	if e.Mutations.ExtractContent != nil {
 		extractContent = *e.Mutations.ExtractContent
 	}
 	extractContent.KindName = e.Name
 
-	pipeline := mutations.Pipeline(
+	pipeline := Pipeline(
 		extractContent,
 		e.Mutations.ArraysToMaps,
 		e.Mutations.StringifyFields,

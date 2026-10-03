@@ -1,10 +1,14 @@
-package mutations
+package metadata
 
-import "maps"
+import (
+	"maps"
+
+	"resourceschart/templates/resources/mutations"
+)
 
 type Metadata struct{}
 
-func (Metadata) Mutate(schema map[string]any) (MutationResult, error) {
+func (Metadata) Mutate(schema map[string]any) (mutations.MutationResult, error) {
 	mergedProps := map[string]any{}
 	if p, ok := schema["properties"].(map[string]any); ok {
 		maps.Copy(mergedProps, p)
@@ -12,7 +16,7 @@ func (Metadata) Mutate(schema map[string]any) (MutationResult, error) {
 	maps.Copy(mergedProps, metadataSchemaProperties())
 	schema["properties"] = mergedProps
 	schema["type"] = "object"
-	return MutationResult{Schema: schema}, nil
+	return mutations.MutationResult{Schema: schema}, nil
 }
 
 func metadataSchemaProperties() map[string]any {
