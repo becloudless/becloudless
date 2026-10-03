@@ -1,5 +1,5 @@
 {{- define "base.loader.all" }}
   {{- include "base.loader.init" $ }}
 
-  {{- include "base.render" (dict "rootContext" $) }}
+  {{- include "base.resources.renderResources" (dict "rootContext" $) }}
 {{- end }}

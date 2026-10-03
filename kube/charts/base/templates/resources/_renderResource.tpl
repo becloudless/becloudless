@@ -1,4 +1,4 @@
-{{- define "base.renderResource" }}
+{{- define "base.resources.renderResource" }}
   {{- $context := . }}
   {{- $work := dict "enabled" true "object" dict "resource" (.resource | default dict) }}
 
