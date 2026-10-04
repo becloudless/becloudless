@@ -28,8 +28,6 @@ in
     { bcl.role.knownRoles = [ "serverKube" ]; }
     (lib.mkIf (config.bcl.role.name == "serverKube") {
 
-    bcl.boot.ssh = true; # give password for disk encryption on boot
-
     bcl.role.setAdminPassword = true; # being able to log in to console
     security.sudo.wheelNeedsPassword = false;
 
