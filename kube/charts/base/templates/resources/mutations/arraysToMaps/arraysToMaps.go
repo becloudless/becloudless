@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"resourceschart/templates/resources/mutations"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations"
 )
 
 // ArraysToMaps recursively converts array-type schema nodes into maps keyed

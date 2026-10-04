@@ -1,6 +1,6 @@
 package normalizeIntOrString
 
-import "resourceschart/templates/resources/mutations"
+import "github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations"
 
 type NormalizeIntOrString struct{}
 

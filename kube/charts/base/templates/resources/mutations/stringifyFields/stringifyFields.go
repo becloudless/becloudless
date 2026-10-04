@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"resourceschart/templates/resources/mutations"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations"
 )
 
 // StringifyFields relaxes the schema of the fields declared via the

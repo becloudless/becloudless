@@ -3,7 +3,7 @@ package content
 import (
 	"fmt"
 
-	"resourceschart/templates/resources/mutations"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations"
 )
 
 // ExtractContent selects the relevant portion of a kind's full k8s JSON schema for use as the instance schema
