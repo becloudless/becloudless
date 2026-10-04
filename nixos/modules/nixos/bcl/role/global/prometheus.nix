@@ -50,7 +50,7 @@
     };
 
     services.prometheus.exporters.smartctl = {
-      enable = true;
+      enable = lib.mkIf (config.bcl.hardware.device != "vm") true;
       listenAddress = "[::1]";
       devices = config.bcl.system.devices;
     };
