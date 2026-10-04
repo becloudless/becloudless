@@ -1,12 +1,19 @@
 package chart
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/becloudless/becloudless/pkg/kube/helm"
+	"github.com/becloudless/becloudless/pkg/system/runner"
+	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"github.com/spf13/cobra"
 	"helm.sh/helm/v3/pkg/cli"
 )
+
+const buildScriptName = "build.sh"
 
 func buildCmd() *cobra.Command {
 	var path string
@@ -19,6 +26,17 @@ func buildCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 		Short: "Build a helm chart",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			buildScriptPath := filepath.Join(path, buildScriptName)
+			if _, err := os.Stat(buildScriptPath); err == nil {
+				if buildScriptPath == buildScriptName {
+					buildScriptPath = "./" + buildScriptName
+				}
+
+				if err := runner.NewLocalRunner().ExecCmd(buildScriptPath); err != nil {
+					return errs.WithEF(err, data.WithField("script", buildScriptPath), "Failed to execute build script")
+				}
+			}
+
 			chart, err := helm.OpenChart(path, cli.New())
 			if err != nil {
 				return errs.WithE(err, "Failed to open chart")
