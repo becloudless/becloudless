@@ -30,11 +30,14 @@ in {
       default = {};
       description = ''Plymouth bootsplash configuration.'';
     };
-    ssh = lib.mkEnableOption "Enable";
+    ssh = lib.mkOption {
+      type = lib.types.bool;
+      default = config.bcl.diskSystem.encrypted;
+      description = ''Enable initrd SSH server.'';
+    };
     initrdSSHPrivateKey = lib.mkOption {
       type = lib.types.str;
       description = ''Private key for initrd SSH server.'';
-#      default = lib.mkIf cfg.ssh "";
     };
     loader = lib.mkOption {
       type = lib.types.enum [ "efi" "bios" "uboot" ];
