@@ -5,7 +5,6 @@
       ssh = true; # for testing only
     };
     system = {
-      enable = true;
       hardware = "qemu-x86_64";
       group = "test-workstation";
       id.motherboardUuid = "c9b0fb14-1949-6949-9711-63409d2f9cfe";

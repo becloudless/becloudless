@@ -10,7 +10,6 @@ let
   globalRepository = config.bcl.global.git.repository or null;
 in {
   options.bcl.system = {
-    enable = lib.mkEnableOption "Enable the default settings?";
     id = lib.mkOption {
       type = lib.types.submodule {
         options = {
@@ -67,7 +66,7 @@ in {
   };
 
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf (cfg.group != "") {
     bcl.users.syncthing = lib.mkIf (cfg.sopsFile != null) (
       lib.mapAttrs (_: _: {
         sopsFile = lib.mkDefault cfg.sopsFile;
