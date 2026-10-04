@@ -1,0 +1,96 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+
+resources:
+
+  namespaces:
+    flux-system: {}
+
+  fluxOCIRepositories:
+    flux-manifests:
+      url: oci://ghcr.io/fluxcd/flux-manifests
+      ref:
+        tag: v2.9.5
+
+  networkPolicies:
+    allow-cert-manager-http-solver:
+      policyTypes:
+        Ingress: {}
+      podSelector:
+        matchLabels:
+          acme.cert-manager.io/http01-solver: "true"
+      ingress:
+        : {}
+
+  ingresses:
+    flux-webhook:
+      annotations:
+        kubernetes.io/tls-acme: "true"
+      rules:
+        main:
+          host: flux-webhook.${BCL_GLOBAL_DOMAIN}
+          http:
+            paths:
+              main:
+                path: /
+                pathType: Prefix
+                backend:
+                  service:
+                    name: webhook-receiver
+                    port:
+                      number: 80
+      tls:
+        main:
+          hosts:
+            flux-webhook.${BCL_GLOBAL_DOMAIN}: {}
+          secretName: tls-flux-webhook
+
+  fluxKustomizations:
+    flux:
+      interval: 10m # TODO default
+      path: ./ # TODO default
+      prune: true # TODO default
+      wait: true # TODO default
+      sourceRef:
+        kind: OCIRepository
+        name: flux-manifests
+      patches:
+        resources:
+          target:
+            kind: Deployment
+            name: source-controller
+            namespace: flux-system
+          patch: |-
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: anything
+            spec:
+              template:
+                spec:
+                  containers:
+                    - name: manager
+                      resources:
+                        limits:
+                          memory: 3Gi
+
+        # truecharts repo is huge
+        helmIndexSize:
+          target:
+            kind: Deployment
+            name: source-controller
+            namespace: flux-system
+          patch: |
+            - op: add
+              path: /spec/template/spec/containers/0/args/-
+              value: --helm-index-max-size=102428800
+
+        kustomizeControllerConcurrent:
+          target:
+            kind: Deployment
+            name: kustomize-controller
+            namespace: flux-system
+          patch: |
+            - op: add
+              path: /spec/template/spec/containers/0/args/-
+              value: --concurrent=10
+
