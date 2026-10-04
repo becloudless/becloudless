@@ -3,7 +3,7 @@ package flattenAllOf
 import (
 	"maps"
 
-	"resourceschart/templates/resources/mutations"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations"
 )
 
 // FlattenAllOf recursively collapses "allOf" schema nodes (the pattern

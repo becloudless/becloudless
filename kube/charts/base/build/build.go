@@ -1,4 +1,4 @@
-package generate
+package build
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-func Run() error {
+func Build() error {
 	dir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("getwd: %w", err)

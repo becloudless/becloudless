@@ -1,12 +1,12 @@
-package generate
+package build
 
 import (
 	"fmt"
 	"os"
 
-	"resourceschart/templates/resources/mutations/arraysToMaps"
-	"resourceschart/templates/resources/mutations/content"
-	"resourceschart/templates/resources/mutations/stringifyFields"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/arraysToMaps"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/content"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/stringifyFields"
 
 	"gopkg.in/yaml.v3"
 )

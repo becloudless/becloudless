@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"resourceschart/generate"
+	"github.com/becloudless/becloudless/kube/charts/base/build"
 )
 
 func main() {
-	if err := generate.Run(); err != nil {
+	if err := build.Build(); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}

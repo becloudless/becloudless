@@ -3,7 +3,7 @@ package enabled
 import (
 	"maps"
 
-	"resourceschart/templates/resources/mutations"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations"
 )
 
 type Enabled struct{}

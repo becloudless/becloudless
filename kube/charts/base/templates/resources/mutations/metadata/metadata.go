@@ -3,7 +3,7 @@ package metadata
 import (
 	"maps"
 
-	"resourceschart/templates/resources/mutations"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations"
 )
 
 type Metadata struct{}

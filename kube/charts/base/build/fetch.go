@@ -1,4 +1,4 @@
-package generate
+package build
 
 import (
 	"encoding/json"
@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"resourceschart/templates/resources/mutations"
-	"resourceschart/templates/resources/mutations/content"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/content"
 )
 
 func fetchSchemas(dir string, entries []resource) error {

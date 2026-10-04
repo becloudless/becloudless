@@ -1,6 +1,6 @@
 package additionalPropertiesFalse
 
-import "resourceschart/templates/resources/mutations"
+import "github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations"
 
 // AdditionalPropertiesFalse recursively sets "additionalProperties": false
 // on every object-type schema node that declares its own "properties" but

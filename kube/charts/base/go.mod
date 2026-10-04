@@ -1,4 +1,4 @@
-module resourceschart
+module github.com/becloudless/becloudless/kube/charts/base
 
 go 1.26
 
