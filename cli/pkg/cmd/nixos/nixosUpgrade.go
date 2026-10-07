@@ -196,7 +196,7 @@ func upgradeLocalFromGit(action string, systemName string, overrideInputs []stri
 	}
 
 	args := append([]string{nixosRebuildAction(action), "--flake", buildFlakeTarget(flakeDir, systemName), "--no-write-lock-file"}, overrideInputArgs...)
-	if err := run.ExecCmd("nixos-rebuild", args...); err != nil {
+	if err := execNixosRebuild(run, args...); err != nil {
 		return err
 	}
 	return rebootIfRequested(run, action)
@@ -211,7 +211,7 @@ func upgradeLocalFromUpstream(action string, systemName string) error {
 		return err
 	}
 
-	if err := run.ExecCmd("nixos-rebuild", nixosRebuildAction(action), "--flake", buildFlakeTarget(bcl.BCL.System.Repository, systemName),
+	if err := execNixosRebuild(run, nixosRebuildAction(action), "--flake", buildFlakeTarget(bcl.BCL.System.Repository, systemName),
 		"--no-write-lock-file", "--refresh", "--upgrade"); err != nil {
 		return err
 	}
@@ -282,11 +282,18 @@ func upgradeRemoteFromUpstream(sshConfig *runner.SshConnectionConfig, action str
 	if err != nil {
 		return errs.WithE(err, "Failed to create remote sudo runner")
 	}
-	if err := sudoRun.ExecCmd("nixos-rebuild", nixosRebuildAction(action), "--flake", buildFlakeTarget(config.Repository, systemName),
+	if err := execNixosRebuild(sudoRun, nixosRebuildAction(action), "--flake", buildFlakeTarget(config.Repository, systemName),
 		"--no-write-lock-file", "--refresh", "--upgrade"); err != nil {
 		return err
 	}
 	return rebootIfRequested(sudoRun, action)
+}
+
+// execNixosRebuild runs nixos-rebuild through the nix daemon (NIX_REMOTE=daemon). Run as root, nix opens the
+// store directly and waits for a write lock on /nix/var/nix/db/big-lock, which can block forever when long-lived
+// daemon connections (ex: the editor's nixd language server) hold it. `env` is used so the variable survives sudo.
+func execNixosRebuild(run runner.Runner, args ...string) error {
+	return run.ExecCmd("env", append([]string{"NIX_REMOTE=daemon", "nixos-rebuild"}, args...)...)
 }
 
 // nixosRebuildAction translates the meta "reboot" action (switch boot config, then reboot) into the
