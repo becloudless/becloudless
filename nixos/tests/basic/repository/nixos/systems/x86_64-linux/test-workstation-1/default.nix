@@ -1,9 +1,5 @@
 {
   bcl = {
-    boot = {
-      # TODO check if still required
-      ssh = true; # for testing only
-    };
     system = {
       hardware = "qemu-x86_64";
       group = "test-workstation";

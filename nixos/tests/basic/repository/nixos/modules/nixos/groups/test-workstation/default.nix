@@ -10,12 +10,17 @@
         wm.name = "gnome";
       };
 
+
+
       bcl.users.syncthing.auser = {
         enable = true;
         sopsFile = ./default.secrets.yaml;
         homeFolderId = "home-4242";
       };
 
+
+      # we want to ssh into the VM for testing
+      bcl.boot.ssh = lib.mkForce true;
       bcl.boot.initrdSSHPrivateKey = ''
         -----BEGIN OPENSSH PRIVATE KEY-----
         b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
