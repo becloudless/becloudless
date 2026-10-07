@@ -31,9 +31,11 @@ in {
       };
       users.groups.nixos = {};
 
-      # nixos-anywhere with --build-on remote copies the (unsigned) flake/derivations
-      # to the installer over the ssh login user. Without trusting it, the remote
-      # nix-daemon rejects them with "lacks a signature by a trusted key".
+      # nixos-anywhere with --build-on remote pushes locally evaluated/built (unsigned) paths into the
+      # installer store over ssh-ng. Being a trusted user is not enough: the daemon still checks
+      # signatures and fails with "lacks a signature by a trusted key". The installer is a throwaway
+      # system only reachable with the admin ssh keys, so signatures are not required.
+      nix.settings.require-sigs = false;
       nix.settings.trusted-users = [ "root" "nixos" "@wheel" ];
 
       # give time to dhcp to get IP, so it will be display
