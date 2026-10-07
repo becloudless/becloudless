@@ -24,6 +24,8 @@ in
 
     # Set date format for calendar to "Day 31 May" instead of "May 31"
     environment.variables.LC_TIME = lib.mkForce "en_GB.UTF-8";
+    # the locale must be generated, environment.variables does not add it to the supported ones
+    i18n.extraLocales = [ "en_GB.UTF-8/UTF-8" ];
 
     environment.gnome.excludePackages = (with pkgs; [
       # gnome-photos
