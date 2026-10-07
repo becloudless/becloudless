@@ -322,15 +322,14 @@ in
           # `gnome-extensions list` for a list
           enabled-extensions = [
             "dash-to-panel@jderose9.github.com"
-            # TODO one of the extension make gnomes-shell crash on out of suspend
-            # "weatheroclock@CleoMenezesJr.github.io"
-            # "system-monitor-next@paradoxxx.zero.gmail.com"
-            # "wsmatrix@martin.zurowietz.de"
-            # "workspace-indicator@gnome-shell-extensions.gcampax.github.com"
-            # "quake-terminal@diegodario88.github.io"
-            # "azwallpaper@azwallpaper.gitlab.com"
-            # "SmartAutoMoveNG@lauinger-clan.de"
-            # "no-overview@fthx"
+            "weatheroclock@CleoMenezesJr.github.io"
+            "system-monitor-next@paradoxxx.zero.gmail.com"
+            "wsmatrix@martin.zurowietz.de"
+            "workspace-indicator@gnome-shell-extensions.gcampax.github.com"
+            "quake-terminal@diegodario88.github.io"
+            "azwallpaper@azwallpaper.gitlab.com"
+            # "SmartAutoMoveNG@lauinger-clan.de" # need update to not crash system resume
+            "no-overview@fthx"
           ];
         };
       };
