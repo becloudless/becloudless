@@ -61,7 +61,24 @@ func nixosIsoBuildCmd() *cobra.Command {
 					}
 				}()
 
-				sopsFile := infra.GetNixosDir() + "/modules/nixos/groups/install/default.secrets.yaml"
+				// isoConfigurations.<name> is the built image derivation (no `.config` to eval), and the iso
+				// system has no group, so the secret file cannot come from nix eval. The install group may be
+				// at modules/nixos/groups/install or under a namespace folder (ex: modules/nixos/lmr/groups/install).
+				sopsFiles := []string{}
+				for _, pattern := range []string{"modules/nixos/groups/install", "modules/nixos/*/groups/install"} {
+					matches, err := filepath.Glob(filepath.Join(infra.GetNixosDir(), pattern, "default.secrets.yaml"))
+					if err != nil {
+						return errs.WithE(err, "Failed to look for install group secret file")
+					}
+					sopsFiles = append(sopsFiles, matches...)
+				}
+				if len(sopsFiles) == 0 {
+					return errs.WithF(data.WithField("nixosDir", infra.GetNixosDir()), "Cannot find the install group secret file (groups/install/default.secrets.yaml)")
+				}
+				if len(sopsFiles) > 1 {
+					logs.WithField("files", sopsFiles).Warn("Multiple install group secret files found, using the first one")
+				}
+				sopsFile := sopsFiles[0]
 				logs.WithField("file", sopsFile).Info("Extracting install host key from group")
 
 				content, err := security.DecryptSopsYAMLWithAgeKey(sopsFile, "")
@@ -108,7 +125,6 @@ func nixosIsoBuildCmd() *cobra.Command {
 					return errs.WithE(err, "Iso build failed")
 				}
 			}
-
 
 			if device == "" {
 				logs.WithField("path", isoPath).Info("Your iso is available")
