@@ -36,7 +36,7 @@ in
     };
 
 
-    services.resolved.dnssec = "true";
+    services.resolved.settings.Resolve.DNSSEC = "true";
     networking.firewall.enable = false;
   })
     (lib.mkIf (cfg.vlans != []) {
