@@ -62,7 +62,7 @@ in
       alias k='kubectl'
     '';
 
-    services.resolved.dnssec = "true";
+    services.resolved.settings.Resolve.DNSSEC = "true";
     networking.firewall.enable = false;
 
     systemd.network.networks.kube = {
