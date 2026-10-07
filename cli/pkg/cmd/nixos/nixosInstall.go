@@ -15,6 +15,7 @@ import (
 func nixosInstallCmd() *cobra.Command {
 	var diskPassword string
 	var diskPasswordFile string
+	var buildOn string
 
 	var sshConfig runner.SshConnectionConfig
 	sudoPassword := memguarded.NewService()
@@ -36,7 +37,7 @@ func nixosInstallCmd() *cobra.Command {
 				diskPassword = string(content)
 			}
 
-			return nixos.InstallAnywhere(&sshConfig, diskPassword)
+			return nixos.InstallAnywhere(&sshConfig, diskPassword, buildOn)
 		},
 	}
 
@@ -48,5 +49,6 @@ func nixosInstallCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&diskPassword, "disk-password", "", "disk password")
 	cmd.Flags().StringVar(&diskPasswordFile, "disk-password-file", "", "disk password file")
+	cmd.Flags().StringVar(&buildOn, "build-on", "auto", "where to build the system closure: remote, local or auto")
 	return cmd
 }

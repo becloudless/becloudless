@@ -21,7 +21,7 @@ import (
 
 const fileFacter = "facter.json"
 
-func InstallAnywhere(sshConfig *runner.SshConnectionConfig, diskPassword string) error {
+func InstallAnywhere(sshConfig *runner.SshConnectionConfig, diskPassword string, buildOn string) error {
 	infra, err := bcl.FindInfraFromPath(".")
 	if err != nil {
 		return errs.WithE(err, "Failed to open current infra repository")
@@ -91,6 +91,9 @@ func InstallAnywhere(sshConfig *runner.SshConnectionConfig, diskPassword string)
 		"--debug",
 		"-p", strconv.Itoa(sshConfig.Port),
 		"--flake", infra.GetNixosDir() + "#" + systemName,
+	}
+	if buildOn != "" {
+		nixosAnywhereArgs = append(nixosAnywhereArgs, "--build-on", buildOn)
 	}
 
 	if sshConfig.IdentifyFile != "" {
