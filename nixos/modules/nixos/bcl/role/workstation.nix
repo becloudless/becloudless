@@ -12,6 +12,7 @@ in
     bcl.diskSystem.encrypted = true;
     bcl.boot.plymouth.enable = true;
     bcl.boot.quiet = true;
+    bcl.boot.ssh = false;
     bcl.bluetooth.enable = true;
     bcl.sound.enable = true;
     bcl.wifi.enable = true;
