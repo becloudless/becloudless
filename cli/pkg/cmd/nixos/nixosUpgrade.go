@@ -283,7 +283,7 @@ func upgradeRemoteFromUpstream(sshConfig *runner.SshConnectionConfig, action str
 		return errs.WithE(err, "Failed to create remote sudo runner")
 	}
 	if err := execNixosRebuild(sudoRun, nixosRebuildAction(action), "--flake", buildFlakeTarget(config.Repository, systemName),
-		"--no-write-lock-file", "--refresh", "--upgrade"); err != nil {
+		"--no-write-lock-file", "--refresh"); err != nil {
 		return err
 	}
 	return rebootIfRequested(sudoRun, action)
