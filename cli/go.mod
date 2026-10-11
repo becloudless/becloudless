@@ -2,7 +2,7 @@ module github.com/becloudless/becloudless
 
 go 1.26.8
 
-toolchain go1.27.1
+toolchain go1.27.2
 
 require (
 	charm.land/huh/v2 v2.0.3
