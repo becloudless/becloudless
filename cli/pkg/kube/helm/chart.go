@@ -293,36 +293,8 @@ func (c *Chart) PrepareTestChart() error {
 	}
 
 	// prepate the test chart directories and files
-	ChartMetadata := chart.Metadata{
-		Name:        c.chart.Metadata.Name + "-test",
-		Version:     c.chart.Metadata.Version,
-		AppVersion:  c.chart.Metadata.AppVersion,
-		Description: c.chart.Metadata.Description,
-		Type:        "application",
-		Dependencies: []*chart.Dependency{
-			{
-				Name:       c.chart.Metadata.Name,
-				Version:    ">0.0.0-0",
-				Repository: "file://" + c.path,
-			},
-		},
-	}
-
-	yamlData, err := yaml.Marshal(ChartMetadata)
-	if err != nil {
-		return errs.WithE(err, "Failed to marshal chart metadata to YAML")
-	}
-	if err := os.WriteFile(filepath.Join(tempDir, "Chart.yaml"), yamlData, 0644); err != nil {
-		return errs.WithE(err, "Failed to write Chart.yaml file")
-	}
-
-	if err := os.MkdirAll(filepath.Join(tempDir, "templates"), 0755); err != nil {
-		return errs.WithE(err, "Failed to create templates directory")
-	}
-
-	var baseTemplate = "{{- include \"" + c.chart.Metadata.Name + ".loader.all\" . }}\n"
-	if err := os.WriteFile(filepath.Join(tempDir, "templates", "loader.yaml"), []byte(baseTemplate), 0644); err != nil {
-		return errs.WithE(err, "Failed to write loader.yaml file")
+	if err := c.writeLoaderChart(tempDir, c.chart.Metadata.Name+"-test", c.chart.Metadata.Version, ">0.0.0-0", "file://"+c.path); err != nil {
+		return err
 	}
 
 	chart, err := loader.LoadDir(tempDir)
@@ -353,6 +325,44 @@ func (c *Chart) PrepareTestChart() error {
 		return errs.WithE(err, "Failed to reload chart after updating dependencies")
 	}
 	c.testChart.chart = reloadedChart
+
+	return nil
+}
+
+// writeLoaderChart writes into dir an application chart which depends on this
+// library chart and whose only template is the library's loader.
+func (c *Chart) writeLoaderChart(dir, name, version, depVersion, depRepository string) error {
+	metadata := chart.Metadata{
+		Name:        name,
+		Version:     version,
+		AppVersion:  c.chart.Metadata.AppVersion,
+		Description: c.chart.Metadata.Description,
+		Type:        "application",
+		Dependencies: []*chart.Dependency{
+			{
+				Name:       c.chart.Metadata.Name,
+				Version:    depVersion,
+				Repository: depRepository,
+			},
+		},
+	}
+
+	yamlData, err := yaml.Marshal(metadata)
+	if err != nil {
+		return errs.WithE(err, "Failed to marshal chart metadata to YAML")
+	}
+	if err := os.WriteFile(filepath.Join(dir, "Chart.yaml"), yamlData, 0644); err != nil {
+		return errs.WithE(err, "Failed to write Chart.yaml file")
+	}
+
+	if err := os.MkdirAll(filepath.Join(dir, "templates"), 0755); err != nil {
+		return errs.WithE(err, "Failed to create templates directory")
+	}
+
+	baseTemplate := "{{- include \"" + c.chart.Metadata.Name + ".loader.all\" . }}\n"
+	if err := os.WriteFile(filepath.Join(dir, "templates", "loader.yaml"), []byte(baseTemplate), 0644); err != nil {
+		return errs.WithE(err, "Failed to write loader.yaml file")
+	}
 
 	return nil
 }

@@ -1601,6 +1601,34 @@
             "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
             "type": "string"
           },
+          "retry": {
+            "additionalProperties": false,
+            "description": "Retry defines the configuration for when to retry an HTTP request.\n\nSupport: Extended",
+            "properties": {
+              "attempts": {
+                "default": 1,
+                "description": "Attempts specifies the maximum number of times an individual request\nfrom the Gateway to a backend should be retried in addition to the\ninitial request.\n\nIf the maximum number of retries has been attempted without a successful\nresponse from the backend, the Gateway MUST return an error.\n\nSupport: Extended",
+                "minimum": 1,
+                "type": "integer"
+              },
+              "backoff": {
+                "description": "Backoff specifies the base interval for a backoff strategy between\nretry attempts and is represented in Gateway API Duration formatting.\nThe duration a Gateway waits before a retry attempt is determined\nby the base interval and the implementation's retry strategy.\n\nImplementations MAY add random jitter and MAY cap the delay at an\nimplementation-defined maximum, which SHOULD NOT be less than the base\ninterval. The precise backoff curve and jitter calculation are\nimplementation-specific and not exposed in the Gateway API specification.\nImplementations typically apply exponential backoff with jitter to\nmitigate thundering-herd issues.\n\nIf a Request timeout (`rules[].timeouts.request`) is configured on the\nroute, the entire duration of the initial request and any retry attempts\nMUST not exceed the Request timeout duration. If any retry attempts are\nstill in progress when the Request timeout duration has been reached,\nthese SHOULD be canceled if possible and the Gateway MUST immediately\nreturn a timeout error.\n\nIf a BackendRequest timeout (`rules[].timeouts.backendRequest`) is\nconfigured on the route, any retry attempts which reach the configured\nBackendRequest timeout duration without a response SHOULD be canceled if\npossible and the Gateway SHOULD schedule the next retry attempt according\nto the configured backoff.\n\nIf a BackendRequest timeout is _not_ configured on the route, retry\nattempts MAY time out after an implementation default duration, or MAY\nremain pending until a configured Request timeout or implementation\ndefault duration for total request time is reached.\n\nWhen this field is unspecified, the backoff strategy and base interval\nare implementation-specific.\n\nImplementations which retry immediately with no backoff MUST NOT advertise\nsupport for this field and MUST set the Accepted Condition for the Route\nto `status: False` with a Reason of `UnsupportedValue` when this field is\nset.\n\nSupport: Implementation-specific",
+                "pattern": "^([0-9]{1,5}(h|m|s|ms)){1,4}$",
+                "type": "string"
+              },
+              "codes": {
+                "additionalProperties": {
+                  "description": "HTTPRouteRetryStatusCode defines an HTTP response status code for\nwhich a backend request should be retried.\n\nImplementations MUST support the following status codes as retriable:\n\n* 500\n* 502\n* 503\n* 504\n\nImplementations MAY support specifying additional discrete values in the\n500-599 range.\n\nImplementations MAY support specifying discrete values in the 400-499 range,\nwhich are often inadvisable to retry.",
+                  "maximum": 599,
+                  "minimum": 400,
+                  "type": "integer"
+                },
+                "description": "Codes defines the HTTP response status codes for which a backend request\nshould be retried.\n\nSupport: Extended",
+                "type": "object"
+              }
+            },
+            "type": "object"
+          },
           "timeouts": {
             "additionalProperties": false,
             "description": "Timeouts defines the timeouts that can be configured for an HTTP request.\n\nSupport: Extended",

@@ -10,7 +10,7 @@ func ChartsCmd() *cobra.Command {
 	}
 	cmd.AddCommand(
 		buildCmd(),
-		//pushCmd(),
+		pushCmd(),
 	)
 	return &cmd
 }

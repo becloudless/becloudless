@@ -1,5 +1,9 @@
 # yaml-language-server: $schema=../base/schema/values.schema.json
 
+global:
+  name:
+  domain:
+
 resources:
 
   namespaces:
@@ -27,7 +31,7 @@ resources:
         kubernetes.io/tls-acme: "true"
       rules:
         main:
-          host: flux-webhook.${BCL_GLOBAL_DOMAIN}
+          host: flux-webhook.{{ .Values.global.domain }}
           http:
             paths:
               main:
@@ -41,7 +45,7 @@ resources:
       tls:
         main:
           hosts:
-            flux-webhook.${BCL_GLOBAL_DOMAIN}: {}
+            flux-webhook.{{ .Values.global.domain }}: {}
           secretName: tls-flux-webhook
 
   fluxKustomizations:

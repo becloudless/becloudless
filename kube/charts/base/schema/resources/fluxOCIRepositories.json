@@ -79,7 +79,6 @@
       "type": "string"
     },
     "provider": {
-      "default": "generic",
       "description": "The provider used for authentication, can be 'aws', 'azure', 'gcp' or 'generic'.\nWhen not specified, defaults to 'generic'.",
       "enum": [
         "generic",
@@ -149,7 +148,6 @@
       "type": "boolean"
     },
     "timeout": {
-      "default": "60s",
       "description": "The timeout for remote OCI Repository operations like pulling, defaults to 60s.",
       "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m))+$",
       "type": "string"
