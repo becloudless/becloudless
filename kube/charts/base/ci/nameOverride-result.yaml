@@ -1,0 +1,27 @@
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-release
+  namespace: default
+stringData:
+  a: b
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-release-my-custom-id
+  namespace: default
+stringData:
+  a: b
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-release-plain
+  namespace: default
+stringData:
+  a: b

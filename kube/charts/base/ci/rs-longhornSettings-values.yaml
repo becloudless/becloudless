@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  longhornSettings:
+    main:
+      fullNameOverride: default-replica-count
+      value: "1"

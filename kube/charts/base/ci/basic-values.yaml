@@ -1,0 +1,55 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  configMaps:
+    main:
+      data:
+        main: cm
+    toto:
+      labels:
+        app: genre
+        truc: bidule
+      data:
+        something: interesting
+      binaryData:
+        blob: aGVsbG8=
+  secrets:
+    titi:
+      labels:
+        app: genre2
+        truc: bidule2
+      stringData:
+        something: interesting
+  horizontalPodAutoscalers:
+    myhpa:
+      nameOverride: override
+      scaleTargetRef:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: myapp
+      minReplicas: 1
+      maxReplicas: 3
+  services:
+    myservice:
+      fullNameOverride: fulloverride
+      selector:
+        app: myapp
+      ports:
+        main:
+          port: 80
+          targetPort: 8080
+  deployments:
+    myapp:
+      replicas: 2
+      selector:
+        matchLabels:
+          app: myapp
+      template:
+        metadata:
+          labels:
+            app: myapp
+        spec:
+          containers:
+            main:
+              name: myapp
+              image: myimage:latest

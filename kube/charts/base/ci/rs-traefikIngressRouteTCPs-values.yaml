@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  traefikIngressRouteTCPs:
+    main:
+      entryPoints:
+        - websecure
+      routes:
+        - match: HostSNI(`ssh-gitea.example.com`)
+          services:
+            - name: gitea-ssh
+              port: 22
+      tls:
+        passthrough: false

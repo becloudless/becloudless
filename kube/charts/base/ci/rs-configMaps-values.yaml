@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  configMaps:
+    main:
+      data:
+        key: value
+        structured:
+          foo: bar
+          nested:
+            - a
+            - b

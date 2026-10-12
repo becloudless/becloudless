@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  cnpgScheduledBackups:
+    main:
+      schedule: "0 0 4 * * *"
+      cluster:
+        name: authelia-postgresql
+      backupOwnerReference: self
+      immediate: true
+      method: volumeSnapshot

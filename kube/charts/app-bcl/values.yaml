@@ -1,0 +1,31 @@
+
+# yaml-language-server: $schema=../base/schema/values.schema.json
+
+resources:
+  namespaces:
+    bcl: {}
+
+  fluxOCIRepositories:
+    bcl:
+      url: oci://ghcr.io/becloudless/bcl
+  
+  fluxHelmReleases:
+    flux:
+      chart:
+        spec:
+          chart: flux
+          sourceRef:
+            kind: HelmRepository
+            name: bcl
+            namespace: bcl
+          version: 0.0.0
+      interval: 10m
+      storageNamespace: bcl
+      targetNamespace: flux-system
+      install:
+        createNamespace: true
+      valuesFrom:
+        something:
+          kind: ConfigMap
+          name: RELEASE-NAME-chart-flux
+          valuesKey: data

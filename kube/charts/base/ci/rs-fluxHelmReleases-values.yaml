@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  fluxHelmReleases:
+    main:
+      interval: 5m
+      chart:
+        spec:
+          chart: podinfo
+          version: "6.x"
+          sourceRef:
+            kind: HelmRepository
+            name: podinfo
+            namespace: flux-system
+      values:
+        replicaCount: 2

@@ -1,0 +1,75 @@
+package chart
+
+import (
+	"os"
+	"path/filepath"
+
+	"github.com/becloudless/becloudless/pkg/kube/helm"
+	"github.com/becloudless/becloudless/pkg/system/runner"
+	"github.com/n0rad/go-erlog/data"
+	"github.com/n0rad/go-erlog/errs"
+	"github.com/n0rad/go-erlog/logs"
+	"github.com/spf13/cobra"
+	"helm.sh/helm/v3/pkg/cli"
+)
+
+const buildScriptName = "build.sh"
+
+// BuildChart runs the build script, updates dependencies and runs unit and CI tests of the chart at path.
+func BuildChart(path string, kubeVersion string, validate bool, ignoreMissingCRDs bool) error {
+	buildScriptPath := filepath.Join(path, buildScriptName)
+	if _, err := os.Stat(buildScriptPath); err == nil {
+		if buildScriptPath == buildScriptName {
+			buildScriptPath = "./" + buildScriptName
+		}
+
+		if err := runner.NewLocalRunner().ExecCmd(buildScriptPath); err != nil {
+			return errs.WithEF(err, data.WithField("script", buildScriptPath), "Failed to execute build script")
+		}
+	}
+
+	chart, err := helm.OpenChart(path, cli.New())
+	if err != nil {
+		return errs.WithE(err, "Failed to open chart")
+	}
+
+	if err := chart.UpdateDependencies(); err != nil {
+		return errs.WithE(err, "Failed to update chart dependencies")
+	}
+
+	// running unit tests
+	if err := chart.RunUnitTests(); err != nil {
+		return errs.WithE(err, "Failed to run chart unit tests")
+	}
+
+	// running integration tests
+	if err := chart.RunCITests(kubeVersion, validate, ignoreMissingCRDs); err != nil {
+		return errs.WithE(err, "Failed to run chart CI tests")
+	}
+
+	logs.WithField("path", path).Info("Chart build completed successfully")
+	return nil
+}
+
+func buildCmd() *cobra.Command {
+	var path string
+	var kubeVersion string
+	var validate bool
+	var ignoreMissingCRDs bool
+
+	cmd := &cobra.Command{
+		Use:   "build",
+		Args:  cobra.ExactArgs(0),
+		Short: "Build a helm chart",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return BuildChart(path, kubeVersion, validate, ignoreMissingCRDs)
+		},
+	}
+
+	cmd.Flags().StringVar(&path, "path", ".", "Chart directory path")
+	cmd.Flags().StringVar(&kubeVersion, "kube-version", "1.31.0", "Kubernetes version used for Capabilities.KubeVersion")
+	cmd.Flags().BoolVar(&validate, "validate", false, "Validate CI-rendered manifests against the Kubernetes cluster you are currently pointing at via server-side dry-run (requires a reachable cluster); same validation performed on an install")
+	cmd.Flags().BoolVar(&ignoreMissingCRDs, "ignore-missing-crds", false, "When used with --validate, skip (instead of failing) resources whose CRD/kind is not registered on the cluster")
+
+	return cmd
+}

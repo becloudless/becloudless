@@ -1,0 +1,656 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "checkRequiredValues": {
+      "description": "Whether to check and fail if some values are null. Defaults to true.",
+      "type": "boolean"
+    },
+    "defaults": {
+      "additionalProperties": false,
+      "properties": {
+        "metadata": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "metadata.annotations applied to every resource of every kind.",
+              "type": "object"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "metadata.labels applied to every resource of every kind.",
+              "type": "object"
+            },
+            "namespace": {
+              "description": "metadata.namespace fallback for every resource of every kind, used when the resource doesn't set its own namespace. Defaults to the release namespace.",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "resources": {
+          "additionalProperties": false,
+          "properties": {
+            "certManagerCertificateRequests": {
+              "$ref": "./resources/certManagerCertificateRequests.json"
+            },
+            "certManagerCertificates": {
+              "$ref": "./resources/certManagerCertificates.json"
+            },
+            "certManagerChallenges": {
+              "$ref": "./resources/certManagerChallenges.json"
+            },
+            "certManagerClusterIssuers": {
+              "$ref": "./resources/certManagerClusterIssuers.json"
+            },
+            "certManagerIssuers": {
+              "$ref": "./resources/certManagerIssuers.json"
+            },
+            "certManagerOrders": {
+              "$ref": "./resources/certManagerOrders.json"
+            },
+            "clusterRoleBindings": {
+              "$ref": "./resources/clusterRoleBindings.json"
+            },
+            "clusterRoles": {
+              "$ref": "./resources/clusterRoles.json"
+            },
+            "cnpgClusters": {
+              "$ref": "./resources/cnpgClusters.json"
+            },
+            "cnpgScheduledBackups": {
+              "$ref": "./resources/cnpgScheduledBackups.json"
+            },
+            "configMaps": {
+              "$ref": "./resources/configMaps.json"
+            },
+            "cronJobs": {
+              "$ref": "./resources/cronJobs.json"
+            },
+            "daemonSets": {
+              "$ref": "./resources/daemonSets.json"
+            },
+            "deployments": {
+              "$ref": "./resources/deployments.json"
+            },
+            "fluxAlerts": {
+              "$ref": "./resources/fluxAlerts.json"
+            },
+            "fluxGitRepositories": {
+              "$ref": "./resources/fluxGitRepositories.json"
+            },
+            "fluxHelmReleases": {
+              "$ref": "./resources/fluxHelmReleases.json"
+            },
+            "fluxHelmRepositories": {
+              "$ref": "./resources/fluxHelmRepositories.json"
+            },
+            "fluxImagePolicies": {
+              "$ref": "./resources/fluxImagePolicies.json"
+            },
+            "fluxImageRepositories": {
+              "$ref": "./resources/fluxImageRepositories.json"
+            },
+            "fluxKustomizations": {
+              "$ref": "./resources/fluxKustomizations.json"
+            },
+            "fluxOCIRepositories": {
+              "$ref": "./resources/fluxOCIRepositories.json"
+            },
+            "fluxProviders": {
+              "$ref": "./resources/fluxProviders.json"
+            },
+            "fluxReceivers": {
+              "$ref": "./resources/fluxReceivers.json"
+            },
+            "gatewayClasses": {
+              "$ref": "./resources/gatewayClasses.json"
+            },
+            "gateways": {
+              "$ref": "./resources/gateways.json"
+            },
+            "grpcRoutes": {
+              "$ref": "./resources/grpcRoutes.json"
+            },
+            "horizontalPodAutoscalers": {
+              "$ref": "./resources/horizontalPodAutoscalers.json"
+            },
+            "httpRoutes": {
+              "$ref": "./resources/httpRoutes.json"
+            },
+            "ingresses": {
+              "$ref": "./resources/ingresses.json"
+            },
+            "jobs": {
+              "$ref": "./resources/jobs.json"
+            },
+            "kyvernoClusterPolicies": {
+              "$ref": "./resources/kyvernoClusterPolicies.json"
+            },
+            "kyvernoValidatingPolicies": {
+              "$ref": "./resources/kyvernoValidatingPolicies.json"
+            },
+            "longhornRecurringJobs": {
+              "$ref": "./resources/longhornRecurringJobs.json"
+            },
+            "longhornSettings": {
+              "$ref": "./resources/longhornSettings.json"
+            },
+            "namespaces": {
+              "$ref": "./resources/namespaces.json"
+            },
+            "networkAttachmentDefinitions": {
+              "$ref": "./resources/networkAttachmentDefinitions.json"
+            },
+            "networkPolicies": {
+              "$ref": "./resources/networkPolicies.json"
+            },
+            "persistentVolumeClaims": {
+              "$ref": "./resources/persistentVolumeClaims.json"
+            },
+            "persistentVolumes": {
+              "$ref": "./resources/persistentVolumes.json"
+            },
+            "podDisruptionBudgets": {
+              "$ref": "./resources/podDisruptionBudgets.json"
+            },
+            "referenceGrants": {
+              "$ref": "./resources/referenceGrants.json"
+            },
+            "roleBindings": {
+              "$ref": "./resources/roleBindings.json"
+            },
+            "roles": {
+              "$ref": "./resources/roles.json"
+            },
+            "sealedSecrets": {
+              "$ref": "./resources/sealedSecrets.json"
+            },
+            "secretStores": {
+              "$ref": "./resources/secretStores.json"
+            },
+            "secrets": {
+              "$ref": "./resources/secrets.json"
+            },
+            "serviceAccounts": {
+              "$ref": "./resources/serviceAccounts.json"
+            },
+            "serviceMonitors": {
+              "$ref": "./resources/serviceMonitors.json"
+            },
+            "services": {
+              "$ref": "./resources/services.json"
+            },
+            "statefulSets": {
+              "$ref": "./resources/statefulSets.json"
+            },
+            "storageClasses": {
+              "$ref": "./resources/storageClasses.json"
+            },
+            "stringSecrets": {
+              "$ref": "./resources/stringSecrets.json"
+            },
+            "tcpRoutes": {
+              "$ref": "./resources/tcpRoutes.json"
+            },
+            "tlsRoutes": {
+              "$ref": "./resources/tlsRoutes.json"
+            },
+            "traefikIngressRouteTCPs": {
+              "$ref": "./resources/traefikIngressRouteTCPs.json"
+            },
+            "traefikMiddlewares": {
+              "$ref": "./resources/traefikMiddlewares.json"
+            },
+            "udpRoutes": {
+              "$ref": "./resources/udpRoutes.json"
+            },
+            "verticalPodAutoscalers": {
+              "$ref": "./resources/verticalPodAutoscalers.json"
+            },
+            "volumeSnapshotClasses": {
+              "$ref": "./resources/volumeSnapshotClasses.json"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "global": {
+      "type": "object"
+    },
+    "resources": {
+      "additionalProperties": false,
+      "properties": {
+        "certManagerCertificateRequests": {
+          "additionalProperties": {
+            "$ref": "./resources/certManagerCertificateRequests.json"
+          },
+          "description": "CertificateRequest instances, keyed by id.",
+          "type": "object"
+        },
+        "certManagerCertificates": {
+          "additionalProperties": {
+            "$ref": "./resources/certManagerCertificates.json"
+          },
+          "description": "Certificate instances, keyed by id.",
+          "type": "object"
+        },
+        "certManagerChallenges": {
+          "additionalProperties": {
+            "$ref": "./resources/certManagerChallenges.json"
+          },
+          "description": "Challenge instances, keyed by id.",
+          "type": "object"
+        },
+        "certManagerClusterIssuers": {
+          "additionalProperties": {
+            "$ref": "./resources/certManagerClusterIssuers.json"
+          },
+          "description": "ClusterIssuer instances, keyed by id.",
+          "type": "object"
+        },
+        "certManagerIssuers": {
+          "additionalProperties": {
+            "$ref": "./resources/certManagerIssuers.json"
+          },
+          "description": "Issuer instances, keyed by id.",
+          "type": "object"
+        },
+        "certManagerOrders": {
+          "additionalProperties": {
+            "$ref": "./resources/certManagerOrders.json"
+          },
+          "description": "Order instances, keyed by id.",
+          "type": "object"
+        },
+        "clusterRoleBindings": {
+          "additionalProperties": {
+            "$ref": "./resources/clusterRoleBindings.json"
+          },
+          "description": "ClusterRoleBinding instances, keyed by id.",
+          "type": "object"
+        },
+        "clusterRoles": {
+          "additionalProperties": {
+            "$ref": "./resources/clusterRoles.json"
+          },
+          "description": "ClusterRole instances, keyed by id.",
+          "type": "object"
+        },
+        "cnpgClusters": {
+          "additionalProperties": {
+            "$ref": "./resources/cnpgClusters.json"
+          },
+          "description": "Cluster instances, keyed by id.",
+          "type": "object"
+        },
+        "cnpgScheduledBackups": {
+          "additionalProperties": {
+            "$ref": "./resources/cnpgScheduledBackups.json"
+          },
+          "description": "ScheduledBackup instances, keyed by id.",
+          "type": "object"
+        },
+        "configMaps": {
+          "additionalProperties": {
+            "$ref": "./resources/configMaps.json"
+          },
+          "description": "ConfigMap instances, keyed by id.",
+          "type": "object"
+        },
+        "cronJobs": {
+          "additionalProperties": {
+            "$ref": "./resources/cronJobs.json"
+          },
+          "description": "CronJob instances, keyed by id.",
+          "type": "object"
+        },
+        "daemonSets": {
+          "additionalProperties": {
+            "$ref": "./resources/daemonSets.json"
+          },
+          "description": "DaemonSet instances, keyed by id.",
+          "type": "object"
+        },
+        "deployments": {
+          "additionalProperties": {
+            "$ref": "./resources/deployments.json"
+          },
+          "description": "Deployment instances, keyed by id.",
+          "type": "object"
+        },
+        "fluxAlerts": {
+          "additionalProperties": {
+            "$ref": "./resources/fluxAlerts.json"
+          },
+          "description": "Alert instances, keyed by id.",
+          "type": "object"
+        },
+        "fluxGitRepositories": {
+          "additionalProperties": {
+            "$ref": "./resources/fluxGitRepositories.json"
+          },
+          "description": "GitRepository instances, keyed by id.",
+          "type": "object"
+        },
+        "fluxHelmReleases": {
+          "additionalProperties": {
+            "$ref": "./resources/fluxHelmReleases.json"
+          },
+          "description": "HelmRelease instances, keyed by id.",
+          "type": "object"
+        },
+        "fluxHelmRepositories": {
+          "additionalProperties": {
+            "$ref": "./resources/fluxHelmRepositories.json"
+          },
+          "description": "HelmRepository instances, keyed by id.",
+          "type": "object"
+        },
+        "fluxImagePolicies": {
+          "additionalProperties": {
+            "$ref": "./resources/fluxImagePolicies.json"
+          },
+          "description": "ImagePolicy instances, keyed by id.",
+          "type": "object"
+        },
+        "fluxImageRepositories": {
+          "additionalProperties": {
+            "$ref": "./resources/fluxImageRepositories.json"
+          },
+          "description": "ImageRepository instances, keyed by id.",
+          "type": "object"
+        },
+        "fluxKustomizations": {
+          "additionalProperties": {
+            "$ref": "./resources/fluxKustomizations.json"
+          },
+          "description": "Kustomization instances, keyed by id.",
+          "type": "object"
+        },
+        "fluxOCIRepositories": {
+          "additionalProperties": {
+            "$ref": "./resources/fluxOCIRepositories.json"
+          },
+          "description": "OCIRepository instances, keyed by id.",
+          "type": "object"
+        },
+        "fluxProviders": {
+          "additionalProperties": {
+            "$ref": "./resources/fluxProviders.json"
+          },
+          "description": "Provider instances, keyed by id.",
+          "type": "object"
+        },
+        "fluxReceivers": {
+          "additionalProperties": {
+            "$ref": "./resources/fluxReceivers.json"
+          },
+          "description": "Receiver instances, keyed by id.",
+          "type": "object"
+        },
+        "gatewayClasses": {
+          "additionalProperties": {
+            "$ref": "./resources/gatewayClasses.json"
+          },
+          "description": "GatewayClass instances, keyed by id.",
+          "type": "object"
+        },
+        "gateways": {
+          "additionalProperties": {
+            "$ref": "./resources/gateways.json"
+          },
+          "description": "Gateway instances, keyed by id.",
+          "type": "object"
+        },
+        "grpcRoutes": {
+          "additionalProperties": {
+            "$ref": "./resources/grpcRoutes.json"
+          },
+          "description": "GRPCRoute instances, keyed by id.",
+          "type": "object"
+        },
+        "horizontalPodAutoscalers": {
+          "additionalProperties": {
+            "$ref": "./resources/horizontalPodAutoscalers.json"
+          },
+          "description": "HorizontalPodAutoscaler instances, keyed by id.",
+          "type": "object"
+        },
+        "httpRoutes": {
+          "additionalProperties": {
+            "$ref": "./resources/httpRoutes.json"
+          },
+          "description": "HTTPRoute instances, keyed by id.",
+          "type": "object"
+        },
+        "ingresses": {
+          "additionalProperties": {
+            "$ref": "./resources/ingresses.json"
+          },
+          "description": "Ingress instances, keyed by id.",
+          "type": "object"
+        },
+        "jobs": {
+          "additionalProperties": {
+            "$ref": "./resources/jobs.json"
+          },
+          "description": "Job instances, keyed by id.",
+          "type": "object"
+        },
+        "kyvernoClusterPolicies": {
+          "additionalProperties": {
+            "$ref": "./resources/kyvernoClusterPolicies.json"
+          },
+          "description": "ClusterPolicy instances, keyed by id.",
+          "type": "object"
+        },
+        "kyvernoValidatingPolicies": {
+          "additionalProperties": {
+            "$ref": "./resources/kyvernoValidatingPolicies.json"
+          },
+          "description": "ValidatingPolicy instances, keyed by id.",
+          "type": "object"
+        },
+        "longhornRecurringJobs": {
+          "additionalProperties": {
+            "$ref": "./resources/longhornRecurringJobs.json"
+          },
+          "description": "RecurringJob instances, keyed by id.",
+          "type": "object"
+        },
+        "longhornSettings": {
+          "additionalProperties": {
+            "$ref": "./resources/longhornSettings.json"
+          },
+          "description": "Setting instances, keyed by id.",
+          "type": "object"
+        },
+        "namespaces": {
+          "additionalProperties": {
+            "$ref": "./resources/namespaces.json"
+          },
+          "description": "Namespace instances, keyed by id.",
+          "type": "object"
+        },
+        "networkAttachmentDefinitions": {
+          "additionalProperties": {
+            "$ref": "./resources/networkAttachmentDefinitions.json"
+          },
+          "description": "NetworkAttachmentDefinition instances, keyed by id.",
+          "type": "object"
+        },
+        "networkPolicies": {
+          "additionalProperties": {
+            "$ref": "./resources/networkPolicies.json"
+          },
+          "description": "NetworkPolicy instances, keyed by id.",
+          "type": "object"
+        },
+        "persistentVolumeClaims": {
+          "additionalProperties": {
+            "$ref": "./resources/persistentVolumeClaims.json"
+          },
+          "description": "PersistentVolumeClaim instances, keyed by id.",
+          "type": "object"
+        },
+        "persistentVolumes": {
+          "additionalProperties": {
+            "$ref": "./resources/persistentVolumes.json"
+          },
+          "description": "PersistentVolume instances, keyed by id.",
+          "type": "object"
+        },
+        "podDisruptionBudgets": {
+          "additionalProperties": {
+            "$ref": "./resources/podDisruptionBudgets.json"
+          },
+          "description": "PodDisruptionBudget instances, keyed by id.",
+          "type": "object"
+        },
+        "referenceGrants": {
+          "additionalProperties": {
+            "$ref": "./resources/referenceGrants.json"
+          },
+          "description": "ReferenceGrant instances, keyed by id.",
+          "type": "object"
+        },
+        "roleBindings": {
+          "additionalProperties": {
+            "$ref": "./resources/roleBindings.json"
+          },
+          "description": "RoleBinding instances, keyed by id.",
+          "type": "object"
+        },
+        "roles": {
+          "additionalProperties": {
+            "$ref": "./resources/roles.json"
+          },
+          "description": "Role instances, keyed by id.",
+          "type": "object"
+        },
+        "sealedSecrets": {
+          "additionalProperties": {
+            "$ref": "./resources/sealedSecrets.json"
+          },
+          "description": "SealedSecret instances, keyed by id.",
+          "type": "object"
+        },
+        "secretStores": {
+          "additionalProperties": {
+            "$ref": "./resources/secretStores.json"
+          },
+          "description": "SecretStore instances, keyed by id.",
+          "type": "object"
+        },
+        "secrets": {
+          "additionalProperties": {
+            "$ref": "./resources/secrets.json"
+          },
+          "description": "Secret instances, keyed by id.",
+          "type": "object"
+        },
+        "serviceAccounts": {
+          "additionalProperties": {
+            "$ref": "./resources/serviceAccounts.json"
+          },
+          "description": "ServiceAccount instances, keyed by id.",
+          "type": "object"
+        },
+        "serviceMonitors": {
+          "additionalProperties": {
+            "$ref": "./resources/serviceMonitors.json"
+          },
+          "description": "ServiceMonitor instances, keyed by id.",
+          "type": "object"
+        },
+        "services": {
+          "additionalProperties": {
+            "$ref": "./resources/services.json"
+          },
+          "description": "Service instances, keyed by id.",
+          "type": "object"
+        },
+        "statefulSets": {
+          "additionalProperties": {
+            "$ref": "./resources/statefulSets.json"
+          },
+          "description": "StatefulSet instances, keyed by id.",
+          "type": "object"
+        },
+        "storageClasses": {
+          "additionalProperties": {
+            "$ref": "./resources/storageClasses.json"
+          },
+          "description": "StorageClass instances, keyed by id.",
+          "type": "object"
+        },
+        "stringSecrets": {
+          "additionalProperties": {
+            "$ref": "./resources/stringSecrets.json"
+          },
+          "description": "StringSecret instances, keyed by id.",
+          "type": "object"
+        },
+        "tcpRoutes": {
+          "additionalProperties": {
+            "$ref": "./resources/tcpRoutes.json"
+          },
+          "description": "TCPRoute instances, keyed by id.",
+          "type": "object"
+        },
+        "tlsRoutes": {
+          "additionalProperties": {
+            "$ref": "./resources/tlsRoutes.json"
+          },
+          "description": "TLSRoute instances, keyed by id.",
+          "type": "object"
+        },
+        "traefikIngressRouteTCPs": {
+          "additionalProperties": {
+            "$ref": "./resources/traefikIngressRouteTCPs.json"
+          },
+          "description": "IngressRouteTCP instances, keyed by id.",
+          "type": "object"
+        },
+        "traefikMiddlewares": {
+          "additionalProperties": {
+            "$ref": "./resources/traefikMiddlewares.json"
+          },
+          "description": "Middleware instances, keyed by id.",
+          "type": "object"
+        },
+        "udpRoutes": {
+          "additionalProperties": {
+            "$ref": "./resources/udpRoutes.json"
+          },
+          "description": "UDPRoute instances, keyed by id.",
+          "type": "object"
+        },
+        "verticalPodAutoscalers": {
+          "additionalProperties": {
+            "$ref": "./resources/verticalPodAutoscalers.json"
+          },
+          "description": "VerticalPodAutoscaler instances, keyed by id.",
+          "type": "object"
+        },
+        "volumeSnapshotClasses": {
+          "additionalProperties": {
+            "$ref": "./resources/volumeSnapshotClasses.json"
+          },
+          "description": "VolumeSnapshotClass instances, keyed by id.",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "type": "object"
+}

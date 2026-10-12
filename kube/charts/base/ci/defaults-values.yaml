@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+defaults:
+  metadata:
+    labels:
+      org: acme
+    annotations:
+      managed-by: base
+    namespace: shared-ns
+  resources:
+    configMaps:
+      labels:
+        app: shared-default
+        team: platform
+
+resources:
+  configMaps:
+    uses-default-only:
+      data:
+        key: value1
+    overrides-default:
+      labels:
+        app: custom-app
+      data:
+        key: value2
+    overrides-global-namespace:
+      namespace: custom-ns
+      data:
+        key: value4
+  secrets:
+    uses-global-metadata-only:
+      stringData:
+        key: value3

@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  fluxReceivers:
+    main:
+      type: github
+      events:
+        - ping
+        - push
+      secretRef:
+        name: infra-webhook
+      resources:
+        - kind: GitRepository
+          name: infra

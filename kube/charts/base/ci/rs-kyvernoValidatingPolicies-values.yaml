@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  kyvernoValidatingPolicies:
+    main:
+      validationActions:
+        - Deny
+      matchConstraints:
+        resourceRules:
+          - apiGroups: [""]
+            apiVersions: ["v1"]
+            operations: ["CREATE", "UPDATE"]
+            resources: ["pods"]
+      validations:
+        - expression: "object.spec.containers.size() > 0"
+          message: "at least one container is required"

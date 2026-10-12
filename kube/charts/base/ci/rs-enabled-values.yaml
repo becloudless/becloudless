@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  configMaps:
+    default-enabled:
+      data:
+        main: cm
+    explicitly-enabled:
+      enabled: true
+      data:
+        main: cm
+    disabled:
+      enabled: false
+      data:
+        main: cm

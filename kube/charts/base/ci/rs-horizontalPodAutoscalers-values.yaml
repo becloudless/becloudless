@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  horizontalPodAutoscalers:
+    main:
+      scaleTargetRef:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: myapp
+      minReplicas: 1
+      maxReplicas: 3

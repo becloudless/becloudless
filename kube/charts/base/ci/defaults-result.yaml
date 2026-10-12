@@ -1,0 +1,58 @@
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  annotations:
+    managed-by: base
+  labels:
+    org: acme
+  name: test-release-uses-global-metadata-only
+  namespace: shared-ns
+stringData:
+  key: value3
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+data:
+  key: value2
+kind: ConfigMap
+metadata:
+  annotations:
+    managed-by: base
+  labels:
+    app: custom-app
+    org: acme
+    team: platform
+  name: test-release-overrides-default
+  namespace: shared-ns
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+data:
+  key: value4
+kind: ConfigMap
+metadata:
+  annotations:
+    managed-by: base
+  labels:
+    app: shared-default
+    org: acme
+    team: platform
+  name: test-release-overrides-global-namespace
+  namespace: custom-ns
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+data:
+  key: value1
+kind: ConfigMap
+metadata:
+  annotations:
+    managed-by: base
+  labels:
+    app: shared-default
+    org: acme
+    team: platform
+  name: test-release-uses-default-only
+  namespace: shared-ns

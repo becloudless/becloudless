@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  networkAttachmentDefinitions:
+    br0-dhcp:
+      config: |
+        {
+          "cniVersion": "0.3.0",
+          "name": "mymacvlan",
+          "plugins": [
+            {
+              "type": "macvlan",
+              "master": "br0",
+              "mode": "bridge",
+              "ipam": {
+                "type": "dhcp",
+                "request": [
+                  {
+                    "skipDefault": true,
+                    "option": "subnet-mask"
+                  }
+                ]
+              }
+            }
+          ]
+        }

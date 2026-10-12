@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  volumeSnapshotClasses:
+    main:
+      driver: driver.longhorn.io
+      deletionPolicy: Delete
+      parameters:
+        type: snap

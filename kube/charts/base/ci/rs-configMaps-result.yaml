@@ -1,0 +1,14 @@
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+data:
+  key: value
+  structured: |-
+    foo: bar
+    nested:
+    - a
+    - b
+kind: ConfigMap
+metadata:
+  name: test-release
+  namespace: default

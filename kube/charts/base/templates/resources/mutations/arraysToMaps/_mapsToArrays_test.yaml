@@ -1,0 +1,171 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: mapsToArrays mutation (reverses the schema-time ArraysToMaps conversion)
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: converts a top-level id-keyed map field into an array sorted alphabetically by key (Service.spec.ports)
+    set:
+      resources:
+        services:
+          mysvc:
+            selector:
+              app: myapp
+            ports:
+              https:
+                port: 443
+                targetPort: 8443
+              http:
+                port: 80
+                targetPort: 8080
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - port: 80
+              targetPort: 8080
+            - port: 443
+              targetPort: 8443
+
+  - it: leaves a field at a configured arrayPath untouched when it is already given as a plain list
+    set:
+      resources:
+        services:
+          mysvc:
+            selector:
+              app: myapp
+            ports:
+              - port: 80
+                targetPort: 8080
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - port: 80
+              targetPort: 8080
+
+  - it: omits the field entirely when not set, without erroring
+    set:
+      resources:
+        services:
+          mysvc:
+            selector:
+              app: myapp
+    asserts:
+      - notExists:
+          path: spec.ports
+
+  - it: converts a deeply nested id-keyed map field (Deployment.spec.template.spec.containers)
+    set:
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                containers:
+                  web:
+                    name: web
+                    image: nginx:1.27
+                    command:
+                      - sh
+                      - -c
+                      - echo hi
+                  api:
+                    name: api
+                    image: myapi:latest
+    asserts:
+      - equal:
+          path: spec.template.spec.containers
+          value:
+            - name: api
+              image: myapi:latest
+            - name: web
+              image: nginx:1.27
+              command:
+                - sh
+                - -c
+                - echo hi
+
+  - it: leaves an ignored array-typed field (container command/args) untouched as a plain list, not reinterpreted as an id-keyed map
+    set:
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: nginx
+                    command:
+                      - sh
+                      - -c
+                      - echo hi
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value:
+            - sh
+            - -c
+            - echo hi
+
+  - it: recursively converts a nested id-keyed map inside an already-converted array item (container volumeMounts)
+    set:
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: nginx
+                    volumeMounts:
+                      data:
+                        name: data
+                        mountPath: /data
+                      cache:
+                        name: cache
+                        mountPath: /cache
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts
+          value:
+            - mountPath: /cache
+              name: cache
+            - mountPath: /data
+              name: data
+
+  - it: leaves nested maps untouched for kinds with no configured arrayPaths at all (ConfigMap.binaryData)
+    set:
+      resources:
+        configMaps:
+          myconfig:
+            binaryData:
+              nested:
+                foo: bar
+    asserts:
+      - equal:
+          path: binaryData.nested
+          value:
+            foo: bar

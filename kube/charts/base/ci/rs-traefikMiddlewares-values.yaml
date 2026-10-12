@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  traefikMiddlewares:
+    body-limit-10g:
+      buffering:
+        maxRequestBodyBytes: 10000000000
+    https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true

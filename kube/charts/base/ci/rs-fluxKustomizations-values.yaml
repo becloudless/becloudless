@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  fluxKustomizations:
+    main:
+      interval: 10m
+      prune: true
+      sourceRef:
+        kind: GitRepository
+        name: myapp-repo
+      path: "./deploy/overlays/production"
+      targetNamespace: default

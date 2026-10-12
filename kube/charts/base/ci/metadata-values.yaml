@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  configMaps:
+    with-labels-and-annotations:
+      labels:
+        app: myapp
+        tier: backend
+      annotations:
+        team: platform
+        note: hello
+      data:
+        key: value
+    with-namespace-override:
+      namespace: custom-ns
+      data:
+        key: value
+    plain:
+      data:
+        key: value

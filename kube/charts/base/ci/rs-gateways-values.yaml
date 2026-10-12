@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  gateways:
+    main:
+      gatewayClassName: nginx
+      listeners:
+        - name: http
+          port: 80
+          protocol: HTTP

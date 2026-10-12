@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Charts
+
+on:
+  push:
+
+jobs:
+  changes:
+    uses: ./.github/workflows/changes.yaml
+    with:
+      paths: |
+        kube/charts/
+        .github/workflows/charts.yaml
+
+  build:
+    needs: changes
+    if: needs.changes.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download bcl
+        run: |
+          VERSION="$(grep -E '^\s+version = ' nixos/packages/bcl/default.nix | sed 's/.*"\(.*\)".*/\1/')"
+          mkdir -p cli/dist
+          curl -fsSL "https://github.com/becloudless/becloudless/releases/download/v${VERSION}/bcl-linux-amd64.tar.gz" \
+            | tar -xz -C cli/dist
+          chmod +x cli/dist/bcl-linux-amd64/bcl
+
+      - name: Build/Push charts
+        run: cli/dist/bcl-linux-amd64/bcl ci chart -L trace

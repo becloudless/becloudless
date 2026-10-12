@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  serviceMonitors:
+    main:
+      selector:
+        matchLabels:
+          app: main
+      endpoints:
+        - port: metrics
+          interval: 30s
