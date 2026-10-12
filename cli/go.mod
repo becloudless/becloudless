@@ -35,6 +35,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.22.0
 	helm.sh/helm/v4 v4.3.0
+	k8s.io/apimachinery v0.37.0
+	k8s.io/cli-runtime v0.37.0
 )
 
 require (
@@ -115,12 +117,14 @@ require (
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/cloudflare/circl v1.6.5 // indirect
+	github.com/cloudfoundry/jibber_jabber v0.0.0-20151120183258-bcc4c8345a21 // indirect
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2 // indirect
 	github.com/containerd/typeurl/v2 v2.3.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/cyphar/filepath-securejoin v0.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/docker/go-units v0.5.0 // indirect
+	github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dylibso/observe-sdk/go v0.0.0-20240819160327-2d926c5d788a // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
@@ -134,7 +138,7 @@ require (
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/fluxcd/cli-utils v1.2.2 // indirect
-	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
+	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
 	github.com/getsops/gopgagent v0.0.0-20241224165529-7044f28e491e // indirect
 	github.com/go-bindata/go-bindata v3.1.2+incompatible // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
@@ -163,7 +167,7 @@ require (
 	github.com/gofrs/flock v0.13.1 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/google/btree v1.1.3 // indirect
-	github.com/google/gnostic-models v0.7.0 // indirect
+	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-github/v63 v63.0.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
@@ -215,6 +219,7 @@ require (
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/oklog/run v1.2.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
@@ -234,7 +239,7 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.10.2 // indirect
 	github.com/sosodev/duration v1.4.0 // indirect
-	github.com/spf13/cast v1.7.0 // indirect
+	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.8.1 // indirect
 	github.com/tetratelabs/wabin v0.0.0-20230304001439-f6f874872834 // indirect
@@ -242,9 +247,11 @@ require (
 	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/tonistiigi/go-csvvalue v0.0.0-20240814133006-030d3b2625d0 // indirect
 	github.com/urfave/cli v1.22.17 // indirect
+	github.com/vmware-labs/yaml-jsonpath v0.3.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
+	github.com/yargevad/filepathx v1.0.0 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/zclconf/go-cty v1.14.4 // indirect
 	go.mongodb.org/mongo-driver v1.17.9 // indirect
@@ -279,15 +286,13 @@ require (
 	gopkg.in/ini.v1 v1.67.3 // indirect
 	k8s.io/api v0.37.0 // indirect
 	k8s.io/apiextensions-apiserver v0.37.0 // indirect
-	k8s.io/apimachinery v0.37.0 // indirect
 	k8s.io/apiserver v0.37.0 // indirect
-	k8s.io/cli-runtime v0.37.0 // indirect
 	k8s.io/client-go v0.37.0 // indirect
 	k8s.io/component-base v0.37.0 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
 	k8s.io/kubectl v0.37.0 // indirect
-	k8s.io/utils v0.0.0-20260626114624-be93311217bd // indirect
+	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3 // indirect
 	oras.land/oras-go/v2 v2.6.2 // indirect
 	sigs.k8s.io/controller-runtime v0.24.1 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
