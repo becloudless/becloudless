@@ -124,7 +124,6 @@ require (
 	github.com/cyphar/filepath-securejoin v0.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dylibso/observe-sdk/go v0.0.0-20240819160327-2d926c5d788a // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
@@ -302,6 +301,9 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+// required by helm-unittest (replace directives are not inherited from dependencies)
+replace github.com/vmware-labs/yaml-jsonpath v0.3.2 => github.com/helm-unittest/yaml-jsonpath v0.4.0
 
 //replace github.com/n0rad/memguarded => ../../n0rad/memguarded
 // replace github.com/n0rad/go-erlog => ../../../n0rad/go-erlog
