@@ -5,3 +5,4 @@ checkRequiredValues: true
 defaults:
   metadata:
     namespace: "{{ .Release.Namespace }}"
+
