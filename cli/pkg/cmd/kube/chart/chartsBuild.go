@@ -15,6 +15,42 @@ import (
 
 const buildScriptName = "build.sh"
 
+// BuildChart runs the build script, updates dependencies and runs unit and CI tests of the chart at path.
+func BuildChart(path string, kubeVersion string, validate bool, ignoreMissingCRDs bool) error {
+	buildScriptPath := filepath.Join(path, buildScriptName)
+	if _, err := os.Stat(buildScriptPath); err == nil {
+		if buildScriptPath == buildScriptName {
+			buildScriptPath = "./" + buildScriptName
+		}
+
+		if err := runner.NewLocalRunner().ExecCmd(buildScriptPath); err != nil {
+			return errs.WithEF(err, data.WithField("script", buildScriptPath), "Failed to execute build script")
+		}
+	}
+
+	chart, err := helm.OpenChart(path, cli.New())
+	if err != nil {
+		return errs.WithE(err, "Failed to open chart")
+	}
+
+	if err := chart.UpdateDependencies(); err != nil {
+		return errs.WithE(err, "Failed to update chart dependencies")
+	}
+
+	// running unit tests
+	if err := chart.RunUnitTests(); err != nil {
+		return errs.WithE(err, "Failed to run chart unit tests")
+	}
+
+	// running integration tests
+	if err := chart.RunCITests(kubeVersion, validate, ignoreMissingCRDs); err != nil {
+		return errs.WithE(err, "Failed to run chart CI tests")
+	}
+
+	logs.WithField("path", path).Info("Chart build completed successfully")
+	return nil
+}
+
 func buildCmd() *cobra.Command {
 	var path string
 	var kubeVersion string
@@ -26,38 +62,7 @@ func buildCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 		Short: "Build a helm chart",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			buildScriptPath := filepath.Join(path, buildScriptName)
-			if _, err := os.Stat(buildScriptPath); err == nil {
-				if buildScriptPath == buildScriptName {
-					buildScriptPath = "./" + buildScriptName
-				}
-
-				if err := runner.NewLocalRunner().ExecCmd(buildScriptPath); err != nil {
-					return errs.WithEF(err, data.WithField("script", buildScriptPath), "Failed to execute build script")
-				}
-			}
-
-			chart, err := helm.OpenChart(path, cli.New())
-			if err != nil {
-				return errs.WithE(err, "Failed to open chart")
-			}
-
-			if err := chart.UpdateDependencies(); err != nil {
-				return errs.WithE(err, "Failed to update chart dependencies")
-			}
-
-			// running unit tests
-			if err := chart.RunUnitTests(); err != nil {
-				return errs.WithE(err, "Failed to run chart unit tests")
-			}
-
-			// running integration tests
-			if err := chart.RunCITests(kubeVersion, validate, ignoreMissingCRDs); err != nil {
-				return errs.WithE(err, "Failed to run chart CI tests")
-			}
-
-			logs.WithField("path", path).Info("Chart build completed successfully")
-			return nil
+			return BuildChart(path, kubeVersion, validate, ignoreMissingCRDs)
 		},
 	}
 

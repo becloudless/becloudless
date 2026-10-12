@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/becloudless/becloudless/pkg/version"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
@@ -16,7 +17,7 @@ const baseLibraryAnnotation = "base-library"
 type PushOptions struct {
 	// Remote is the OCI registry location, e.g. oci://ghcr.io/owner. The chart name is appended by Helm.
 	Remote string
-	// Version overrides the chart version when set.
+	// Version overrides the chart version when set. Defaults to a version generated from the date and git state (1.YYMMDD.HHMM-H<hash>).
 	Version string
 	// AppVersion overrides the chart appVersion when set.
 	AppVersion string
@@ -49,6 +50,14 @@ func (c *Chart) Push(opts PushOptions) error {
 		return errs.WithE(err, "Failed to create registry client")
 	}
 	c.actionConfig.RegistryClient = registryClient
+
+	if opts.Version == "" {
+		opts.Version, err = version.GenerateVersionFromDateAndGitState(1, c.path)
+		if err != nil {
+			return errs.WithE(err, "Failed to generate chart version")
+		}
+		logs.WithField("version", opts.Version).Info("Generated chart version")
+	}
 
 	if err := c.packageAndPush(c.path, opts); err != nil {
 		return err

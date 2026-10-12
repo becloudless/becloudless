@@ -2,3 +2,5 @@ apiVersion: v2
 name: base
 version: 0.0.0
 type: library
+annotations:
+  base-library: "true"
