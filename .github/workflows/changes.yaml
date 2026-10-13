@@ -28,19 +28,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download bcl
-        run: |
-          VERSION="$(grep -E '^\s+version = ' nixos/packages/bcl/default.nix | sed 's/.*"\(.*\)".*/\1/')"
-          mkdir -p cli/dist
-          curl -fsSL "https://github.com/becloudless/becloudless/releases/download/v${VERSION}/bcl-linux-amd64.tar.gz" \
-            | tar -xz -C cli/dist
-          chmod +x cli/dist/bcl-linux-amd64/bcl
-
       - name: Check for changes
         id: changes
-        env:
-          PATHS: ${{ inputs.paths }}
-        run: cli/dist/bcl-linux-amd64/bcl ci changes "$PATHS"
+        run: |
+          mergeBase=$(git merge-base origin/main "${{ github.sha }}")
+          if [ "$mergeBase" = "${{ github.sha }}" ]; then
+            mergeBase=$(git rev-parse "${{ github.sha }}~1")
+          fi
+          pattern=$(echo "${{ inputs.paths }}" | sed '/^$/d' | sed 's|.*|^&|' | paste -sd'|')
+          if git diff --name-only "$mergeBase" "${{ github.sha }}" | grep -Eq "$pattern"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Report changes
         run: echo "changed=${{ steps.changes.outputs.changed }}"
