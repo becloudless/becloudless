@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-go run build.go
+PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+go run $PATH/build.go
