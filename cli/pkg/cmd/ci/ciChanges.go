@@ -43,6 +43,11 @@ Prints "changed=true" or "changed=false", also appended to the file pointed by $
 				return err
 			}
 
+			logs.WithField("prefixes", prefixes).Info("Path prefixes to check")
+			for file, changeType := range changes {
+				logs.WithField("file", file).WithField("type", string(changeType)).Info("Changed file")
+			}
+
 			changed := false
 			for file := range changes {
 				for _, prefix := range prefixes {
