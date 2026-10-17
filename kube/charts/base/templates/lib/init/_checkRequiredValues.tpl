@@ -9,8 +9,7 @@
       {{- range $i,$v := $rootContext.required }}
           {{- $res = printf "%s'%s' is required\n" $res $v }}
       {{- end }}
-      {{- include "base.lib.utils.fail" (dict "rootContext" $rootContext
-                                            "msg" (printf "\n\n%s" $res)) }}
+      {{- fail (printf "\n\n%s" $res) }}
     {{- end }}
   {{- end }}
 {{- end }}

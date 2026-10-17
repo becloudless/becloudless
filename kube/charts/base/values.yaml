@@ -6,3 +6,6 @@ defaults:
   metadata:
     namespace: "{{ .Release.Namespace }}"
 
+  resources:
+    fluxHelmRepositories:
+      interval: 10m
