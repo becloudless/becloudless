@@ -22,7 +22,7 @@ resources:
     allow-cert-manager-http-solver:
       fullNameOverride: allow-cert-manager-http-solver
       policyTypes:
-        Ingress: {}
+        XXX: Ingress
       podSelector:
         matchLabels:
           acme.cert-manager.io/http01-solver: "true"
@@ -50,7 +50,7 @@ resources:
       tls:
         main:
           hosts:
-            flux-webhook.{{ .Values.global.domain }}: {}
+            flux-webhook: flux-webhook.{{ .Values.global.domain }}
           secretName: tls-flux-webhook
 
   fluxKustomizations:
