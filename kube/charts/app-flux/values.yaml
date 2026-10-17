@@ -23,7 +23,7 @@ resources:
         matchLabels:
           acme.cert-manager.io/http01-solver: "true"
       ingress:
-        : {}
+       something: {}
 
   ingresses:
     flux-webhook:
