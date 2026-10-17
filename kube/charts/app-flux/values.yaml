@@ -1,7 +1,6 @@
 # yaml-language-server: $schema=../base/schema/values.schema.json
 
 global:
-  name:
   domain:
 
 defaults:
