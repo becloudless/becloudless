@@ -9,10 +9,12 @@ defaults:
 resources:
   fluxHelmRepositories:
     cilium:
+      fullNameOverride: cilium
       url: https://helm.cilium.io
 
   fluxHelmReleases:
     cilium:
+      fullNameOverride: cilium
       chart:
         spec:
           chart: cilium
