@@ -25,11 +25,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1786408680,
-        "narHash": "sha256-+ZfL9DsmRAR84l1HBp7VAHY8QoRCZkmAvCUpX3LupII=",
+        "lastModified": 1792266168,
+        "narHash": "sha256-MtOk9oK3dNl/LznKo3lrW3dEnRU2hxv7Mg0oodVVssM=",
         "owner": "becloudless",
         "repo": "file-integrity-manager",
-        "rev": "ecbd992ecc181f356e430544e8eb95c61e49c5c0",
+        "rev": "a652615505ccac5839043eb485a8bb216983b048",
         "type": "github"
       },
       "original": {
