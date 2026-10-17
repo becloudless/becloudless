@@ -85,6 +85,21 @@
 
   packageRules: [
     {
+      description: "wait 3 days before proposing a bugfix update",
+      matchUpdateTypes: ["patch"],
+      minimumReleaseAge: "3 days",
+    },
+    {
+      description: "wait 7 days before proposing a minor update",
+      matchUpdateTypes: ["minor"],
+      minimumReleaseAge: "7 days",
+    },
+    {
+      description: "wait 30 days before proposing a major update",
+      matchUpdateTypes: ["major"],
+      minimumReleaseAge: "30 days",
+    },
+    {
       description: "bump bcl version fast",
       matchPackageNames: ["becloudless/becloudless"],
       minimumReleaseAge: "1 day",
@@ -97,6 +112,12 @@
     {
       matchPackagePatterns: ["intel-gpu"],
       groupName: "intel-gpu",
+    },
+    {
+      description: "jellyfin switched from X.Y.Z to X.Y tags. docker versioning ignores tags with a different number of segments. Exclude dated and rc tags",
+      matchPackageNames: ["ghcr.io/jellyfin/jellyfin"],
+      versioning: "loose",
+      allowedVersions: "/^\\d+\\.\\d+(\\.\\d+)?$/",
     },
     {
       matchPackageNames: ["becloudless/becloudless", "bcl"],
