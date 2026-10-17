@@ -29,7 +29,7 @@ type PushOptions struct {
 
 // Push packages the chart and pushes it to an OCI registry.
 // A library chart annotated with base-library=true is pushed together with a
-// "<name>-application" chart depending on it, which renders the library loader.
+// "<name>-loader" chart depending on it, which renders the library loader.
 func (c *Chart) Push(opts PushOptions) error {
 	if !registry.IsOCI(opts.Remote) {
 		return errs.WithF(data.WithField("remote", opts.Remote), "Remote must be an OCI reference (oci://...)")
@@ -64,38 +64,39 @@ func (c *Chart) Push(opts PushOptions) error {
 	}
 
 	if c.IsLibraryChart() && c.chart.Metadata.Annotations[baseLibraryAnnotation] == "true" {
-		if err := c.pushApplicationChart(opts); err != nil {
-			return errs.WithE(err, "Failed to push application chart")
+		if err := c.pushLoaderChart(opts); err != nil {
+			return errs.WithE(err, "Failed to push loader chart")
 		}
 	}
 
 	return nil
 }
 
-func (c *Chart) pushApplicationChart(opts PushOptions) error {
+func (c *Chart) pushLoaderChart(opts PushOptions) error {
 	version := c.chart.Metadata.Version
 	if opts.Version != "" {
 		version = opts.Version
 	}
 
-	appDir, err := os.MkdirTemp("", "chart-application-*")
+	appDir, err := os.MkdirTemp("", "chart-loader-*")
 	if err != nil {
-		return errs.WithE(err, "Failed to create temporary directory for application chart")
+		return errs.WithE(err, "Failed to create temporary directory for loader chart")
 	}
 	defer os.RemoveAll(appDir)
 
-	name := c.chart.Metadata.Name + "-application"
+	name := c.chart.Metadata.Name + "-loader"
 
 	// resolve the dependency locally so it is vendored in charts/, using the local library
-	if err := c.writeLoaderChart(appDir, name, version, version, "file://"+c.path); err != nil {
+	// any version (prereleases included) is accepted so the local library resolves whatever its version is
+	if err := c.writeLoaderChart(appDir, name, version, ">=0.0.0-0", "file://"+c.path); err != nil {
 		return err
 	}
 	appChart, err := OpenChart(appDir, c.settings)
 	if err != nil {
-		return errs.WithE(err, "Failed to open application chart")
+		return errs.WithE(err, "Failed to open loader chart")
 	}
 	if err := appChart.UpdateDependencies(); err != nil {
-		return errs.WithE(err, "Failed to update application chart dependencies")
+		return errs.WithE(err, "Failed to update loader chart dependencies")
 	}
 
 	// published chart must reference the library from the registry, not from a local path
