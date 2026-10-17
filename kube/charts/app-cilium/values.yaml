@@ -14,7 +14,7 @@ resources:
 
   fluxHelmReleases:
     cilium:
-      fullNameOverride: cilium
+      fullNameOverride: cilium        
       chart:
         spec:
           chart: cilium

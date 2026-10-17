@@ -10,11 +10,12 @@ defaults:
 resources:
   fluxHelmRepositories:
     coredns:
+      fullNameOverride: coredns
       url: https://coredns.github.io/helm
-      # interval: 10m # TODO make it default?
 
   fluxHelmReleases:
     coredns:
+      fullNameOverride: coredns
       interval: 10m
       chart:
         spec:
