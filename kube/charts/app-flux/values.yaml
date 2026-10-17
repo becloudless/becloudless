@@ -4,8 +4,11 @@ global:
   name:
   domain:
 
-resources:
+defaults:
+  metadata:
+    namespace: flux-system
 
+resources:
   namespaces:
     flux-system: {}
 

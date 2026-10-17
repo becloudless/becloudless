@@ -13,8 +13,6 @@ resources:
 
   fluxHelmReleases:
     cilium:
-      interval: 10m
-      timeout: 2m
       chart:
         spec:
           chart: cilium
@@ -22,10 +20,6 @@ resources:
           sourceRef:
             kind: HelmRepository
             name: cilium
-      install:
-        crds: CreateReplace
-      rollback:
-        cleanupOnFail: true
       values:
         extraEnv:
         - name: PATH
@@ -34,15 +28,11 @@ resources:
         k8sServiceHost: kube.{{.Values.global.domain}}
         k8sServicePort: 8443
 
-        devices:
-          - br0
+        devices: br0
         nodePort:
           directRoutingDevice: br0
 
         kubeProxyReplacement: true
-        extraArgs:
-          - --devices=br0
-          - --direct-routing-device=br0
 
         operator:
           replicas: 1

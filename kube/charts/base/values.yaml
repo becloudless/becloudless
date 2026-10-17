@@ -9,3 +9,11 @@ defaults:
   resources:
     fluxHelmRepositories:
       interval: 10m
+
+    fluxHelmReleases:
+      interval: 10m
+      timeout: 2m
+      rollback:
+        cleanupOnFail: true
+      install:
+        crds: CreateReplace
