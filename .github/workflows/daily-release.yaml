@@ -46,10 +46,10 @@ jobs:
             exit 0
           fi
 
-          changed_files="$(git diff --name-only "${latest_tag}" origin/main -- ':!cli/')"
+          new_commits="$(git rev-list --count "${latest_tag}..origin/main")"
 
-          if [[ -n "${changed_files}" ]]; then
-            echo "main has changes since ${latest_tag}"
+          if [[ "${new_commits}" -gt 0 ]]; then
+            echo "main has ${new_commits} new commit(s) since ${latest_tag}"
             echo "should_release=true" >> "$GITHUB_OUTPUT"
           else
             echo "No changes on main since ${latest_tag}"
