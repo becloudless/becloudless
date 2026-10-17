@@ -16,7 +16,7 @@ resources:
       fullNameOverride: flux-manifests
       url: oci://ghcr.io/fluxcd/flux-manifests
       ref:
-        tag: v2.9.5
+        tag: v2.9.6
 
   networkPolicies:
     allow-cert-manager-http-solver:
