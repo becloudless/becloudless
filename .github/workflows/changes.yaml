@@ -35,7 +35,14 @@ jobs:
           if [ "$mergeBase" = "${{ github.sha }}" ]; then
             mergeBase=$(git rev-parse "${{ github.sha }}~1")
           fi
+
           pattern=$(echo "${{ inputs.paths }}" | sed '/^$/d' | sed 's|.*|^&|' | paste -sd'|')
+
+          echo "Changed files (${mergeBase}..${{ github.sha }}):"
+          git diff --name-only "$mergeBase" "${{ github.sha }}" | sed 's/^/  /'
+          echo "Path prefixes:"
+          echo "${{ inputs.paths }}" | sed '/^$/d' | sed 's/^/  /'
+
           if git diff --name-only "$mergeBase" "${{ github.sha }}" | grep -Eq "$pattern"; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else

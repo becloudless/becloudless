@@ -11,6 +11,7 @@ func CiCmd() *cobra.Command {
 	}
 	cmd.AddCommand(
 		CiDockerCmd(),
-		CiChartCmd())
+		CiChartCmd(),
+		CiChangesCmd())
 	return cmd
 }
