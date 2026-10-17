@@ -14,7 +14,7 @@ import (
 )
 
 func version() (string, error) {
-	return bclVersion.GenerateVersion(0), nil
+	return bclVersion.GenerateIncrementalVersion(0, ".")
 }
 
 func main() {
