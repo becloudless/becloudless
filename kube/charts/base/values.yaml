@@ -7,6 +7,9 @@ defaults:
     namespace: "{{ .Release.Namespace }}"
 
   resources:
+    fluxOCIRepositories:
+      interval: 10m
+
     fluxHelmRepositories:
       interval: 10m
 
