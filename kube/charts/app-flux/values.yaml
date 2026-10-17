@@ -13,12 +13,14 @@ resources:
 
   fluxOCIRepositories:
     flux-manifests:
+      fullNameOverride: flux-manifests
       url: oci://ghcr.io/fluxcd/flux-manifests
       ref:
         tag: v2.9.5
 
   networkPolicies:
     allow-cert-manager-http-solver:
+      fullNameOverride: allow-cert-manager-http-solver
       policyTypes:
         Ingress: {}
       podSelector:
@@ -29,6 +31,7 @@ resources:
 
   ingresses:
     flux-webhook:
+      fullNameOverride: flux-webhook
       annotations:
         kubernetes.io/tls-acme: "true"
       rules:
@@ -52,6 +55,7 @@ resources:
 
   fluxKustomizations:
     flux:
+      fullNameOverride: flux
       interval: 10m # TODO default
       path: ./ # TODO default
       prune: true # TODO default
