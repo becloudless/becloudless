@@ -3,7 +3,7 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: test-release-allow-cert-manager-http-solver
+  name: allow-cert-manager-http-solver
   namespace: flux-system
 spec:
   ingress:
@@ -12,7 +12,7 @@ spec:
     matchLabels:
       acme.cert-manager.io/http01-solver: "true"
   policyTypes:
-  - {}
+  - Ingress
 ---
 # Source: app-flux/templates/loader.yaml
 apiVersion: networking.k8s.io/v1
@@ -20,7 +20,7 @@ kind: Ingress
 metadata:
   annotations:
     kubernetes.io/tls-acme: "true"
-  name: test-release-flux-webhook
+  name: flux-webhook
   namespace: flux-system
 spec:
   rules:
@@ -36,14 +36,14 @@ spec:
         pathType: Prefix
   tls:
   - hosts:
-    - {}
+    - flux-webhook.test.com
     secretName: tls-flux-webhook
 ---
 # Source: app-flux/templates/loader.yaml
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: test-release-flux
+  name: flux
   namespace: flux-system
 spec:
   interval: 10m
@@ -92,9 +92,10 @@ spec:
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
-  name: test-release-flux-manifests
+  name: flux-manifests
   namespace: flux-system
 spec:
+  interval: 10m
   ref:
     tag: v2.9.5
   url: oci://ghcr.io/fluxcd/flux-manifests
