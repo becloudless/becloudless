@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/becloudless/becloudless/pkg/cmd/kube/chart"
-	"github.com/becloudless/becloudless/pkg/docker"
 	"github.com/becloudless/becloudless/pkg/git"
 	"github.com/becloudless/becloudless/pkg/kube/helm"
 	"github.com/n0rad/go-erlog/data"
@@ -61,7 +60,7 @@ func CiChartCmd() *cobra.Command {
 
 			remote := ""
 			if isMain && len(toBuild) > 0 {
-				remote, err = chartRemoteFromGitRepository(repo)
+				remote, err = chart.RemoteFromGitRepository(repo)
 				if err != nil {
 					return err
 				}
@@ -92,18 +91,6 @@ func CiChartCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&kubeVersion, "kube-version", "1.31.0", "Kubernetes version used for Capabilities.KubeVersion")
 	return cmd
-}
-
-func chartRemoteFromGitRepository(repo *git.Repository) (string, error) {
-	url, err := repo.GetRemoteOriginURL()
-	if err != nil {
-		return "", errs.WithE(err, "Failed to get remote origin URL")
-	}
-	registry, _, err := docker.GetRegistryAndRepositoryFromGitUrl(url)
-	if err != nil {
-		return "", errs.WithE(err, "Failed to deduce registry from git URL")
-	}
-	return "oci://" + registry, nil
 }
 
 // findChartFolderFromFile returns the closest parent folder of file containing a Chart.yaml, within the charts folder.
