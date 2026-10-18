@@ -54,7 +54,7 @@ resources:
           enabled: true
           default: true
           loadbalancerMode: shared
-          enforceHttps: true
+          enforceHttps: false # TODO true redirects the whole host to https, including the cert-manager http-01 challenge path, so certificates can never be issued or renewed
         envoy:
           streamIdleTimeoutDurationSeconds: 600 # required by immich for big files upload
 

@@ -40,7 +40,7 @@ spec:
     ingressController:
       default: true
       enabled: true
-      enforceHttps: true
+      enforceHttps: false
       loadbalancerMode: shared
     ipam:
       mode: kubernetes
