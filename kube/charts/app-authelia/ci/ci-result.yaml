@@ -144,6 +144,9 @@ spec:
           - whoami.test.com
           policy: one_factor
       authentication_backend:
+        file:
+          enabled: true
+          path: /config/users_database.yml
         ldap:
           address: ldaps://lldaps.test.com:443
           attributes:
@@ -157,12 +160,9 @@ spec:
                 name: immich_role
                 value_type: string
           base_dn: dc=test,dc=com
-          enabled: true
+          enabled: false
           implementation: lldap
-          password:
-            path: password
-            secret_name: authelia-ldap
-            value: password
+          password: {}
           tls:
             minimum_version: TLS1.2
             skip_verify: false
@@ -368,12 +368,37 @@ spec:
       env:
       - name: TZ
         value: Europe/Paris
+      extraVolumeMounts:
+      - mountPath: /config
+        name: authelia
+      extraVolumes:
+      - emptyDir:
+          sizeLimit: 100Mi
+        name: authelia
+      initContainers:
+      - command:
+        - sh
+        - -ec
+        - |
+          hash=$(authelia crypto hash generate argon2 --password "$(cat /secrets/authelia-admin/password)" | sed 's/^Digest: //')
+          printf 'users:\n  admin:\n    displayname: Admin\n    email: admin@%s\n    password: "%s"\n    groups:\n      - role_admin\n' "$DOMAIN" "$hash" > /config/users_database.yml
+        env:
+        - name: DOMAIN
+          value: test.com
+        image: ghcr.io/authelia/authelia:4.39.24
+        name: users-database
+        volumeMounts:
+        - mountPath: /config
+          name: authelia
+        - mountPath: /secrets/authelia-admin
+          name: secret-authelia-admin
+          readOnly: true
       kind: Deployment
       replicas: 1
     secret:
       additionalSecrets:
+        authelia-admin: {}
         authelia-generated: {}
-        authelia-ldap: {}
         authelia-postgresql-app: {}
         authelia-valkey: {}
 ---
@@ -506,6 +531,18 @@ spec:
   - group: ""
     kind: Service
     name: authelia
+---
+# Source: app-authelia/templates/loader.yaml
+apiVersion: secretgenerator.mittwald.de/v1alpha1
+kind: StringSecret
+metadata:
+  name: authelia-admin
+  namespace: authelia
+spec:
+  fields:
+  - encoding: hex
+    fieldName: password
+    length: "32"
 ---
 # Source: app-authelia/templates/loader.yaml
 apiVersion: secretgenerator.mittwald.de/v1alpha1

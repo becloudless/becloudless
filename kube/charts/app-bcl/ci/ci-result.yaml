@@ -30,7 +30,6 @@ spec:
   - name: app-cert-manager
   - name: app-cnpg
   - name: app-gateway-api
-  - name: app-lldap
   - name: app-longhorn
   - name: app-secret-generator
   install:
