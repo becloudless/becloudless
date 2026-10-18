@@ -32,4 +32,4 @@ resources:
         metrics:
           enabled: true
         serviceMonitor:
-          enabled: true # TODO what about pop clusters, since it requires prom stack ?
+          enabled: false # TODO what about pop clusters, since it requires prom stack ?
