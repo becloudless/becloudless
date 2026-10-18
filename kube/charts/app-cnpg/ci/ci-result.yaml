@@ -1,0 +1,39 @@
+---
+# Source: app-cnpg/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cnpg-system
+  namespace: cnpg-system
+spec: {}
+---
+# Source: app-cnpg/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cnpg
+  namespace: cnpg-system
+spec:
+  chart:
+    spec:
+      chart: cloudnative-pg
+      sourceRef:
+        kind: HelmRepository
+        name: cnpg
+      version: 0.29.1
+  install:
+    crds: CreateReplace
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+---
+# Source: app-cnpg/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: cnpg
+  namespace: cnpg-system
+spec:
+  interval: 10m
+  url: https://cloudnative-pg.github.io/charts

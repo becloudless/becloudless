@@ -30,6 +30,12 @@ apps:
     groups: [all, server, pop]
   metrics-server:
     groups: [all, server, pop]
+  cnpg:
+    groups: [all, server, pop]
+  secret-generator:
+    groups: [all, server, pop]
+  descheduler:
+    groups: [all, server]
 
 
 resources:
