@@ -28,10 +28,15 @@ spec:
         name: bcl
   install:
     crds: CreateReplace
+    remediation:
+      retries: -1
   interval: 10m
   rollback:
     cleanupOnFail: true
-  timeout: 2m
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
   valuesFrom:
   - kind: ConfigMap
     name: test-release-global-values
@@ -52,10 +57,44 @@ spec:
         name: bcl
   install:
     crds: CreateReplace
+    remediation:
+      retries: -1
   interval: 10m
   rollback:
     cleanupOnFail: true
-  timeout: 2m
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: test-release-global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-cnpg
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-cnpg
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
   valuesFrom:
   - kind: ConfigMap
     name: test-release-global-values
@@ -76,10 +115,73 @@ spec:
         name: bcl
   install:
     crds: CreateReplace
+    remediation:
+      retries: -1
   interval: 10m
   rollback:
     cleanupOnFail: true
-  timeout: 2m
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: test-release-global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-descheduler
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-descheduler
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: test-release-global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-external-snapshotter
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-external-snapshotter
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
   valuesFrom:
   - kind: ConfigMap
     name: test-release-global-values
@@ -100,10 +202,167 @@ spec:
         name: bcl
   install:
     crds: CreateReplace
+    remediation:
+      retries: -1
   interval: 10m
   rollback:
     cleanupOnFail: true
-  timeout: 2m
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: test-release-global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-kyverno
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-kyverno
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: test-release-global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-lldap
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-lldap
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+  dependsOn:
+  - name: app-cert-manager
+  - name: app-cnpg
+  - name: app-longhorn
+  - name: app-secret-generator
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: test-release-global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-longhorn
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-longhorn
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+  dependsOn:
+  - name: app-kyverno
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: test-release-global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-metrics-server
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-metrics-server
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: test-release-global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-secret-generator
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-secret-generator
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
   valuesFrom:
   - kind: ConfigMap
     name: test-release-global-values

@@ -16,6 +16,7 @@ Any key set next to `enabled` and `groups` (ex: `values`, `interval`) is merged 
     {{- $hr := dict
           "fullNameOverride" $hrName
           "interval" "10m"
+          "timeout" "10m"
           "rollback" (dict "cleanupOnFail" true)
           "chart" (dict "spec" (dict
             "chart" (printf "./kube/charts/%s" $hrName)

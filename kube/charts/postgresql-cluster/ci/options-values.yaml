@@ -1,0 +1,10 @@
+instances: 1
+storageSize: 5Gi
+issuer: my-issuer
+clientCertAuth: true
+postgresql:
+  parameters:
+    max_slot_wal_keep_size: 500MB
+backup:
+  schedule: "0 0 2 * * *"
+  snapshotClass: my-snapshot-class

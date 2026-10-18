@@ -23,6 +23,8 @@ spec:
       version: 3.9.1
   install:
     crds: CreateReplace
+    remediation:
+      retries: -1
   interval: 10m
   rollback:
     cleanupOnFail: true
@@ -53,10 +55,15 @@ spec:
   - name: kyverno
   install:
     crds: CreateReplace
+    remediation:
+      retries: -1
   interval: 10m
   rollback:
     cleanupOnFail: true
   timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
 ---
 # Source: app-kyverno/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

@@ -3,7 +3,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: test-release-coredns
+  name: coredns
   namespace: kube-system
 spec:
   chart:
@@ -13,7 +13,17 @@ spec:
         kind: HelmRepository
         name: coredns
       version: 1.48.2
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
   interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
   values:
     affinity:
       nodeAffinity:
@@ -78,7 +88,8 @@ spec:
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
-  name: test-release-coredns
+  name: coredns
   namespace: kube-system
 spec:
+  interval: 10m
   url: https://coredns.github.io/helm

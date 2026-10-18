@@ -1,0 +1,69 @@
+# yaml-language-server: $schema=../../base/schema/values.schema.json
+
+defaults:
+  metadata:
+    namespace: longhorn-system
+
+resources:
+  longhornRecurringJobs:
+    daily-backups:
+      fullNameOverride: daily-backups
+      cron: 0 4 * * * # Daily at 4am
+      task: backup
+      groups:
+        - default
+      retain: 2
+      concurrency: 1
+
+  longhornSettings:
+    concurrent-automatic-engine-upgrade-per-node-limit:
+      fullNameOverride: concurrent-automatic-engine-upgrade-per-node-limit
+      value: "1"
+    default-backup-block-size:
+      fullNameOverride: default-backup-block-size
+      value: "16"
+
+  storageClasses:
+    longhorn-single-local-replica:
+      fullNameOverride: longhorn-single-local-replica
+      annotations:
+        storageclass.kubernetes.io/is-default-class: "false"
+      provisioner: driver.longhorn.io
+      allowVolumeExpansion: true
+      volumeBindingMode: Immediate
+      reclaimPolicy: Delete
+      parameters:
+        numberOfReplicas: "2"
+        staleReplicaTimeout: "60" # 1h
+        fsType: ext4
+        dataLocality: strict-local
+        recurringJobSelector: '[{"name":"single-local-replica","isGroup":true}]'
+
+  # needs the snapshot CRDs from external-snapshotter
+  volumeSnapshotClasses:
+    longhorn-snapshot:
+      fullNameOverride: longhorn-snapshot
+      driver: driver.longhorn.io
+      deletionPolicy: Delete
+      parameters:
+        type: snap
+    longhorn-backing-image:
+      fullNameOverride: longhorn-backing-image
+      driver: driver.longhorn.io
+      deletionPolicy: Delete
+      parameters:
+        type: bi
+        export-type: qcow2 # default is raw
+    longhorn-backup-incremental:
+      fullNameOverride: longhorn-backup-incremental
+      driver: driver.longhorn.io
+      deletionPolicy: Delete
+      parameters:
+        type: bak
+    longhorn-backup-full:
+      fullNameOverride: longhorn-backup-full
+      driver: driver.longhorn.io
+      deletionPolicy: Delete
+      parameters:
+        type: bak
+        backupMode: full

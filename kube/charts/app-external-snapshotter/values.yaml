@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+
+resources:
+  fluxGitRepositories:
+    external-snapshotter:
+      fullNameOverride: external-snapshotter
+      url: https://github.com/kubernetes-csi/external-snapshotter
+      interval: 24h
+      ref:
+        tag: v8.7.0 # TODO renovate
+
+  fluxKustomizations:
+    external-snapshotter-crds:
+      fullNameOverride: external-snapshotter-crds
+      interval: 24h
+      timeout: 1m
+      path: ./client/config/crd
+      prune: false
+      wait: true
+      sourceRef:
+        kind: GitRepository
+        name: external-snapshotter
+
+    # the controller (deployed in kube-system by upstream manifests) needs the CRDs
+    external-snapshotter:
+      fullNameOverride: external-snapshotter
+      interval: 24h
+      timeout: 1m
+      path: ./deploy/kubernetes/snapshot-controller
+      prune: false
+      wait: true
+      sourceRef:
+        kind: GitRepository
+        name: external-snapshotter
+      dependsOn:
+        crds:
+          name: external-snapshotter-crds

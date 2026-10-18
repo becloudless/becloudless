@@ -25,6 +25,8 @@ spec:
       version: v1.21.2
   install:
     crds: CreateReplace
+    remediation:
+      retries: -1
   interval: 10m
   rollback:
     cleanupOnFail: true
@@ -60,10 +62,15 @@ spec:
   - name: cert-manager
   install:
     crds: CreateReplace
+    remediation:
+      retries: -1
   interval: 10m
   rollback:
     cleanupOnFail: true
   timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
   values:
     global:
       domain: test.com

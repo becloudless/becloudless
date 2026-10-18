@@ -23,10 +23,15 @@ spec:
       version: 0.29.1
   install:
     crds: CreateReplace
+    remediation:
+      retries: -1
   interval: 10m
   rollback:
     cleanupOnFail: true
   timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
 ---
 # Source: app-cnpg/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

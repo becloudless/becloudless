@@ -1,0 +1,18 @@
+# The cluster is named after the release and lives in the release namespace (or `defaults.metadata.namespace`).
+
+instances: 2
+storageSize: 1Gi
+
+# ClusterIssuer signing the CA of the cluster
+issuer: self-signed
+
+# require client certificates for the `app` user
+clientCertAuth: false
+
+# `spec.postgresql` of the cluster, ex: parameters
+postgresql: {}
+
+backup:
+  enabled: true
+  schedule: "0 0 4 * * *" # cron with seconds
+  snapshotClass: longhorn-backup-incremental

@@ -1,0 +1,18 @@
+defaults:
+  metadata:
+    namespace: myapp
+
+backup:
+  enabled: false
+
+# generated fields can be overridden or extended through the base resources
+resources:
+  cnpgClusters:
+    main:
+      bootstrap:
+        recovery:
+          backup:
+            name: backup-example
+  certManagerCertificates:
+    ca:
+      duration: 87600h

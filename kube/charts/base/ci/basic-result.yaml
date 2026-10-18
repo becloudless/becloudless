@@ -42,7 +42,8 @@ metadata:
   namespace: default
 spec:
   ports:
-  - port: 80
+  - name: main
+    port: 80
     targetPort: 8080
   selector:
     app: myapp

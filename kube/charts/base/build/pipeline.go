@@ -6,9 +6,11 @@ import (
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/arraysToMaps"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/content"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/enabled"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/envMaps"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/flattenAllOf"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/metadata"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/normalizeIntOrString"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/portMaps"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/required"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/stringifyFields"
 )
@@ -29,6 +31,8 @@ func Pipeline(extractContent content.ExtractContent, arrays *arraysToMaps.Arrays
 		required.Required{},
 		metadata.Metadata{},
 		enabled.Enabled{},
+		envMaps.EnvMaps{},   // before arraysToMaps, which would otherwise convert env to an id-keyed map
+		portMaps.PortMaps{}, // before arraysToMaps, same reason as envMaps
 		*arrays,
 		*stringify,
 		additionalPropertiesFalse.AdditionalPropertiesFalse{},

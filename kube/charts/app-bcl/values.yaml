@@ -36,6 +36,24 @@ apps:
     groups: [all, server, pop]
   descheduler:
     groups: [all, server]
+  external-snapshotter:
+    groups: [all, server, pop]
+  longhorn:
+    groups: [all, server]
+    dependsOn: # the ClusterPolicy needs the kyverno CRDs
+      kyverno:
+        name: app-kyverno
+  lldap:
+    groups: [all, server]
+    dependsOn: # certificates and issuers, the postgresql cluster, its volume snapshots, generated secrets
+      cert-manager:
+        name: app-cert-manager
+      cnpg:
+        name: app-cnpg
+      longhorn:
+        name: app-longhorn
+      secret-generator:
+        name: app-secret-generator
 
 
 resources:

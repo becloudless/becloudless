@@ -20,3 +20,8 @@ defaults:
         cleanupOnFail: true
       install:
         crds: CreateReplace
+        remediation:
+          retries: -1
+      upgrade:
+        remediation:
+          retries: 3

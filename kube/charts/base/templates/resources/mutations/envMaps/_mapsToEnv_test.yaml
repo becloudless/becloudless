@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: mapsToEnv mutation (env map key = variable name, scalar value = value, object value = valueFrom)
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: converts an env map into a list of EnvVar sorted by name
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                    env:
+                      TZ: europe/paris
+                      PORT: 8080
+                      DEBUG: true
+                      PASSWORD:
+                        secretKeyRef:
+                          name: db
+                          key: password
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env
+          value:
+            - name: DEBUG
+              value: "true"
+            - name: PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db
+                  key: password
+            - name: PORT
+              value: "8080"
+            - name: TZ
+              value: europe/paris
+
+  - it: converts the env of initContainers too
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                initContainers:
+                  init:
+                    name: init
+                    image: busybox
+                    env:
+                      FOO: bar
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].env
+          value:
+            - name: FOO
+              value: bar

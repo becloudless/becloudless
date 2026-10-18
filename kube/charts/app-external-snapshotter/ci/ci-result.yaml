@@ -1,0 +1,46 @@
+---
+# Source: app-external-snapshotter/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: external-snapshotter
+  namespace: default
+spec:
+  interval: 24h
+  ref:
+    tag: v8.7.0
+  url: https://github.com/kubernetes-csi/external-snapshotter
+---
+# Source: app-external-snapshotter/templates/loader.yaml
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: external-snapshotter
+  namespace: default
+spec:
+  dependsOn:
+  - name: external-snapshotter-crds
+  interval: 24h
+  path: ./deploy/kubernetes/snapshot-controller
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: external-snapshotter
+  timeout: 1m
+  wait: true
+---
+# Source: app-external-snapshotter/templates/loader.yaml
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: external-snapshotter-crds
+  namespace: default
+spec:
+  interval: 24h
+  path: ./client/config/crd
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: external-snapshotter
+  timeout: 1m
+  wait: true

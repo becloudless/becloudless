@@ -1,0 +1,221 @@
+---
+# Source: app-lldap/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lldap
+  namespace: lldap
+spec: {}
+---
+# Source: app-lldap/templates/loader.yaml
+apiVersion: v1
+data:
+  lldap_config.toml: |-
+    # verbose = false
+    http_url = "https://lldap.test.com"
+    database_url = "postgres://"
+    ldap_base_dn = "dc=test,dc=com"
+
+    [ldaps_options]
+    enabled=true
+    key_file="/cert/tls.key"
+    cert_file="/cert/tls.crt"
+kind: ConfigMap
+metadata:
+  name: lldap-config
+  namespace: lldap
+---
+# Source: app-lldap/templates/loader.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: lldap
+  namespace: lldap
+spec:
+  ports:
+  - name: http
+    port: 17170
+  - name: ldaps
+    port: 6360
+  selector:
+    app.kubernetes.io/name: lldap
+---
+# Source: app-lldap/templates/loader.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lldap
+  namespace: lldap
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: lldap
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: lldap
+    spec:
+      containers:
+      - env:
+        - name: PGDATABASE
+          value: app
+        - name: PGHOST
+          value: lldap-postgresql-rw
+        - name: PGSSLCERT
+          value: /dbcert/tls.crt
+        - name: PGSSLKEY
+          value: /dbcert/tls.key
+        - name: PGSSLMODE
+          value: verify-full
+        - name: PGSSLROOTCERT
+          value: /dbcert/ca.crt
+        - name: PGUSER
+          value: app
+        - name: TZ
+          value: europe/paris
+        envFrom:
+        - secretRef:
+            name: lldap-generated
+        - secretRef:
+            name: lldap
+        image: lldap/lldap:2026-09-22-debian-rootless
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 17170
+        name: lldap
+        ports:
+        - containerPort: 17170
+          name: http
+        - containerPort: 6360
+          name: ldaps
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 17170
+        startupProbe:
+          httpGet:
+            path: /
+            port: 17170
+        volumeMounts:
+        - mountPath: /cert
+          name: cert
+          readOnly: true
+        - mountPath: /data
+          name: data
+        - mountPath: /dbcert
+          name: dbcert
+          readOnly: true
+      securityContext:
+        runAsGroup: 1000
+        runAsUser: 1000
+      volumes:
+      - name: cert
+        secret:
+          secretName: tls-lldaps
+      - configMap:
+          name: lldap-config
+        name: data
+      - name: dbcert
+        secret:
+          secretName: lldap-postgresql-app-tls
+---
+# Source: app-lldap/templates/loader.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/tls-acme: "true"
+  name: lldap
+  namespace: lldap
+spec:
+  rules:
+  - host: lldap.test.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: lldap
+            port:
+              number: 17170
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - lldap.test.com
+    secretName: tls-lldap
+---
+# Source: app-lldap/templates/loader.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tls-lldaps
+  namespace: lldap
+spec:
+  dnsNames:
+  - lldaps.test.com
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: tls-lldaps
+---
+# Source: app-lldap/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: lldap-postgresql
+  namespace: lldap
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/postgresql-cluster
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    clientCertAuth: true
+    postgresql:
+      parameters:
+        max_slot_wal_keep_size: 500MB
+---
+# Source: app-lldap/templates/loader.yaml
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: lldap-ldaps
+  namespace: lldap
+spec:
+  entryPoints:
+  - websecure
+  routes:
+  - match: HostSNI(`lldaps.test.com`)
+    services:
+    - name: lldap
+      port: 6360
+  tls:
+    passthrough: true
+---
+# Source: app-lldap/templates/loader.yaml
+apiVersion: secretgenerator.mittwald.de/v1alpha1
+kind: StringSecret
+metadata:
+  name: lldap-generated
+  namespace: lldap
+spec:
+  fields:
+  - fieldName: LLDAP_JWT_SECRET
+  - fieldName: LLDAP_LDAP_USER_DN
+  - fieldName: LLDAP_LDAP_USER_PASS
