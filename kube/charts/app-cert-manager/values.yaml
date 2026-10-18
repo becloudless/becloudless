@@ -1,4 +1,6 @@
 # yaml-language-server: $schema=../base/schema/values.schema.json
+global:
+  domain:
 
 defaults:
   metadata:
@@ -30,9 +32,28 @@ resources:
         remediation:
           retries: 3
       values:
-        installCRDs: true
+        crds:
+          enabled: true
         ingressShim:
           defaultIssuerName: letsencrypt-prod
           defaultIssuerKind: ClusterIssuer
         prometheus:
           enabled: true
+
+    # ClusterIssuers need the cert-manager CRDs, so they are installed once cert-manager is ready
+    cert-manager-config:
+      fullNameOverride: cert-manager-config
+      dependsOn:
+        cert-manager:
+          name: cert-manager
+      chart:
+        spec:
+          chart: ./kube/charts/app-cert-manager/config
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: "{{ .Release.Namespace }}"
+      values:
+        global:
+          domain: "{{ .Values.global.domain }}"

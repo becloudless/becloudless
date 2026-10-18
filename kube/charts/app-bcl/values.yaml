@@ -19,13 +19,13 @@ appsGroups:
 
 apps:
   flux:
-    groups: [minimal, server, pop]
+    groups: [all, minimal, server, pop]
   cilium:
-    groups: [minimal, server, pop]
+    groups: [all, minimal, server, pop]
   coredns:
-    groups: [minimal, server, pop]
+    groups: [all, minimal, server, pop]
   cert-manager:
-    groups: [server, pop]
+    groups: [all, server, pop]
 
 
 resources:

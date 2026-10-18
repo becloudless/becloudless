@@ -33,12 +33,40 @@ spec:
     remediation:
       retries: 3
   values:
+    crds:
+      enabled: true
     ingressShim:
       defaultIssuerKind: ClusterIssuer
       defaultIssuerName: letsencrypt-prod
-    installCRDs: true
     prometheus:
       enabled: true
+---
+# Source: app-cert-manager/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cert-manager-config
+  namespace: cert-manager
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-cert-manager/config
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  dependsOn:
+  - name: cert-manager
+  install:
+    crds: CreateReplace
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  values:
+    global:
+      domain: test.com
 ---
 # Source: app-cert-manager/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1
