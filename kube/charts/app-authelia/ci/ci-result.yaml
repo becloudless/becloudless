@@ -527,6 +527,9 @@ spec:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
     namespace: longhorn-system
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: prometheus
   to:
   - group: ""
     kind: Service

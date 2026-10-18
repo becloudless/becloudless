@@ -1,0 +1,543 @@
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prometheus
+  namespace: prometheus
+spec: {}
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: pushprox
+  namespace: prometheus
+spec:
+  ports:
+  - name: http
+    port: 8080
+  selector:
+    app.kubernetes.io/name: pushprox
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pushprox
+  namespace: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pushprox
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pushprox
+    spec:
+      containers:
+      - image: quay.io/prometheuscommunity/pushprox:v0.2.0
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+        name: pushprox
+        ports:
+        - containerPort: 8080
+          name: http
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+      securityContext:
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: alertmanager-gateway
+  namespace: prometheus
+spec:
+  dnsNames:
+  - alertmanager.test.com
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: tls-alertmanager-gateway
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: grafana-gateway
+  namespace: prometheus
+spec:
+  dnsNames:
+  - grafana.test.com
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: tls-grafana-gateway
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: prometheus-gateway
+  namespace: prometheus
+spec:
+  dnsNames:
+  - prometheus.test.com
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: tls-prometheus-gateway
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: pushprox-gateway
+  namespace: prometheus
+spec:
+  dnsNames:
+  - pushprox.test.com
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: tls-pushprox-gateway
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: alertmanager
+  namespace: prometheus
+spec:
+  hostnames:
+  - alertmanager.test.com
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: prometheus
+    sectionName: alertmanager
+  rules:
+  - backendRefs:
+    - name: prometheus-kube-prometheus-alertmanager
+      port: 9093
+    filters:
+    - externalAuth:
+        backendRef:
+          name: authelia
+          namespace: authelia
+          port: 80
+        http:
+          allowedHeaders:
+          - accept
+          - cookie
+          - proxy-authorization
+          - x-forwarded-for
+          - x-forwarded-proto
+          path: /api/authz/ext-authz/
+        protocol: HTTP
+      type: ExternalAuth
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana
+  namespace: prometheus
+spec:
+  hostnames:
+  - grafana.test.com
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: prometheus
+    sectionName: grafana
+  rules:
+  - backendRefs:
+    - name: prometheus-grafana
+      port: 80
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: prometheus
+  namespace: prometheus
+spec:
+  hostnames:
+  - prometheus.test.com
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: prometheus
+    sectionName: prometheus
+  rules:
+  - backendRefs:
+    - name: prometheus-kube-prometheus-prometheus
+      port: 9090
+    filters:
+    - externalAuth:
+        backendRef:
+          name: authelia
+          namespace: authelia
+          port: 80
+        http:
+          allowedHeaders:
+          - accept
+          - cookie
+          - proxy-authorization
+          - x-forwarded-for
+          - x-forwarded-proto
+          path: /api/authz/ext-authz/
+        protocol: HTTP
+      type: ExternalAuth
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: pushprox
+  namespace: prometheus
+spec:
+  hostnames:
+  - pushprox.test.com
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: prometheus
+    sectionName: pushprox
+  rules:
+  - backendRefs:
+    - name: pushprox
+      port: 8080
+    filters:
+    - externalAuth:
+        backendRef:
+          name: authelia
+          namespace: authelia
+          port: 80
+        http:
+          allowedHeaders:
+          - accept
+          - cookie
+          - proxy-authorization
+          - x-forwarded-for
+          - x-forwarded-proto
+          path: /api/authz/ext-authz/
+        protocol: HTTP
+      type: ExternalAuth
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: prometheus
+  namespace: prometheus
+spec:
+  chart:
+    spec:
+      chart: kube-prometheus-stack
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+      version: 92.3.1
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 0
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    alertmanager:
+      alertmanagerSpec:
+        externalUrl: https://alertmanager.test.com
+        podAntiAffinity: hard
+        replicas: 1
+        storage:
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+              - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 1Gi
+              storageClassName: longhorn
+      config:
+        global:
+          resolve_timeout: 5m
+        inhibit_rules:
+        - equal:
+          - alertname
+          - cluster
+          - service
+          source_match:
+            severity: critical
+          target_match:
+            severity: warning
+        receivers:
+        - name: "null"
+        route:
+          group_by:
+          - alertname
+          - severity
+          - job
+          - namespace
+          - kubernetes_cluster
+          group_interval: 1m
+          group_wait: 30s
+          receiver: "null"
+          repeat_interval: 4h
+      ingress:
+        enabled: false
+    defaultRules:
+      rules:
+        kubeProxy: false
+    grafana:
+      dashboardProviders:
+        dashboardproviders.yaml:
+          apiVersion: 1
+          providers:
+          - disableDeletion: false
+            editable: true
+            folder: default
+            name: default
+            options:
+              path: /var/lib/grafana/dashboards/default
+            orgId: 1
+            type: file
+          - disableDeletion: false
+            editable: true
+            folder: network
+            name: network
+            options:
+              path: /var/lib/grafana/dashboards/network
+            orgId: 1
+            type: file
+          - disableDeletion: false
+            editable: true
+            folder: hardware
+            name: hardware
+            options:
+              path: /var/lib/grafana/dashboards/hardware
+            orgId: 1
+            type: file
+      dashboards:
+        default:
+          kubernetes:
+            datasource: Prometheus
+            gnetId: 6417
+            revision: 1
+          longhorn:
+            datasource: Prometheus
+            gnetId: 17626
+            revision: 1
+          prometheus-stats:
+            datasource: Prometheus
+            gnetId: 2
+            revision: 1
+        hardware:
+          node-exporter:
+            datasource: Prometheus
+            gnetId: 1860
+            revision: 45
+          smart:
+            datasource: Prometheus
+            gnetId: 20204
+            revision: 1
+        network:
+          icmp:
+            datasource: Prometheus
+            gnetId: 12412
+            revision: 1
+          mikrotik:
+            datasource: Prometheus
+            gnetId: 13679
+            revision: 1
+          pdu:
+            datasource: Prometheus
+            gnetId: 14309
+            revision: 1
+          prometheus-blackbox:
+            datasource: Prometheus
+            gnetId: 12275
+            revision: 1
+          speedtest:
+            datasource: Prometheus
+            gnetId: 12004
+            revision: 1
+          unbound:
+            datasource: Prometheus
+            gnetId: 18077
+            revision: 1
+          ups:
+            datasource: Prometheus
+            gnetId: 12340
+            revision: 1
+          uptimerobot:
+            datasource: Prometheus
+            gnetId: 9955
+            revision: 1
+      grafana.ini:
+        server:
+          root_url: https://grafana.test.com
+      ingress:
+        enabled: false
+      persistence:
+        enabled: false
+      plugins:
+      - grafana-piechart-panel
+      - grafana-clock-panel
+      - jdbranham-diagram-panel
+      - camptocamp-prometheus-alertmanager-datasource
+      - flant-statusmap-panel
+      - grafana-polystat-panel
+      sidecar:
+        dashboards:
+          enabled: true
+          provider:
+            allowUiUpdates: true
+            disableDelete: true
+            folder: dashboards
+            foldersFromFilesStructure: true
+          searchNamespace: ALL
+    kubeControllerManager:
+      service:
+        port: 10257
+        selector:
+          component: kube-controller-manager
+        targetPort: 10257
+      serviceMonitor:
+        https: true
+        insecureSkipVerify: true
+    kubeEtcd:
+      enabled: false
+    kubeProxy:
+      enabled: false
+    kubeScheduler:
+      service:
+        port: 10259
+        selector:
+          component: kube-scheduler
+        targetPort: 10259
+      serviceMonitor:
+        https: true
+        insecureSkipVerify: true
+    nodeExporter:
+      enabled: false
+    prometheus:
+      ingress:
+        enabled: false
+      prometheusSpec:
+        additionalAlertRelabelConfigs:
+        - action: labeldrop
+          regex: replica
+        evaluationInterval: 30s
+        externalLabels:
+          kubernetes_cluster: test
+        externalUrl: https://prometheus.test.com/
+        podAntiAffinity: hard
+        podMonitorSelectorNilUsesHelmValues: false
+        replicaExternalLabelName: replica
+        replicas: 1
+        retentionSize: 20GB
+        ruleSelectorNilUsesHelmValues: false
+        scrapeConfigSelectorNilUsesHelmValues: false
+        scrapeInterval: 30s
+        serviceMonitorSelectorNilUsesHelmValues: false
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+              - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 50Gi
+              storageClassName: longhorn
+    prometheusOperator:
+      kubeletService:
+        enabled: false
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: prometheus-community
+  namespace: prometheus
+spec:
+  interval: 10m
+  url: https://prometheus-community.github.io/helm-charts
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: prometheus
+  namespace: prometheus
+spec:
+  listeners:
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: alertmanager.test.com
+    name: alertmanager
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - name: tls-alertmanager-gateway
+      mode: Terminate
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: grafana.test.com
+    name: grafana
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - name: tls-grafana-gateway
+      mode: Terminate
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: prometheus.test.com
+    name: prometheus
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - name: tls-prometheus-gateway
+      mode: Terminate
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: pushprox.test.com
+    name: pushprox
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - name: tls-pushprox-gateway
+      mode: Terminate
+  parentRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: shared
+    namespace: kube-system

@@ -116,6 +116,17 @@ apps:
         name: app-cert-manager
       gateway-api:
         name: app-gateway-api
+  prometheus:
+    groups: [all, server]
+    dependsOn: # the certificates, the Gateway, the ReferenceGrant to authelia and the volumes
+      authelia:
+        name: app-authelia
+      cert-manager:
+        name: app-cert-manager
+      gateway-api:
+        name: app-gateway-api
+      longhorn:
+        name: app-longhorn
 
 
 resources:

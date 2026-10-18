@@ -85,6 +85,10 @@ resources:
           group: gateway.networking.k8s.io
           kind: HTTPRoute
           namespace: homer
+        prometheus:
+          group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          namespace: prometheus
       to:
         authelia:
           group: ""
