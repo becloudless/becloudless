@@ -24,7 +24,7 @@ spec:
   install:
     crds: CreateReplace
     remediation:
-      retries: -1
+      retries: 0
   interval: 60m
   rollback:
     cleanupOnFail: true
@@ -36,7 +36,7 @@ spec:
     image:
       registry: ghcr.io
       repository: becloudless/secret-generator
-      tag: latest
+      tag: 1.261018.1316
     secretLength: 100
 ---
 # Source: app-secret-generator/templates/loader.yaml

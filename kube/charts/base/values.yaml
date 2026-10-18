@@ -21,7 +21,7 @@ defaults:
       install:
         crds: CreateReplace
         remediation:
-          retries: -1
+          retries: 0 # a failed install is left as is instead of being uninstalled, which would delete what it created (ex: namespaces)
       upgrade:
         remediation:
           retries: 3
