@@ -104,3 +104,14 @@ resources:
               path: /spec/template/spec/containers/0/args/-
               value: --concurrent=10
 
+        # cancel the running health check when a new revision is available
+        helmControllerCancelHealthCheck:
+          target:
+            kind: Deployment
+            name: helm-controller
+            namespace: flux-system
+          patch: |
+            - op: add
+              path: /spec/template/spec/containers/0/args/-
+              value: --feature-gates=CancelHealthCheckOnNewRevision=true
+

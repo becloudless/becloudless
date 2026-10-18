@@ -1,2 +1,6 @@
+
 config:
-  domain: test.com
+  domain: awired.net
+appsGroups:
+  all:
+    enabled: true
