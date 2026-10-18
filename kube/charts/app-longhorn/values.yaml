@@ -88,11 +88,13 @@ resources:
           backupTargetCredentialSecret: backupstore
           pollInterval: 180
 
-        # the UI has no authentication of its own and cilium ingress has no forward auth (authelia): not exposed
+        # WARNING: the UI has no authentication of its own and cilium ingress has no forward auth (authelia)
         ingress:
-          enabled: false
+          enabled: true
+          ingressClassName: cilium
           host: longhorn.{{ .Values.global.domain }}
           tls: true
+          tlsSecret: tls-longhorn
           annotations:
             kubernetes.io/tls-acme: "true"
 
