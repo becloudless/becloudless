@@ -83,8 +83,8 @@ apps:
         name: app-cnpg
       gateway-api:
         name: app-gateway-api
-      # lldap:
-      #   name: app-lldap
+      lldap:
+        name: app-lldap
       longhorn:
         name: app-longhorn
       secret-generator:
@@ -96,6 +96,17 @@ apps:
         name: app-cert-manager
       gateway-api:
         name: app-gateway-api
+  forgejo:
+    groups: [all, server]
+    dependsOn: # the certificate and the Gateway, the postgresql cluster and its volume snapshots, the volume
+      cert-manager:
+        name: app-cert-manager
+      cnpg:
+        name: app-cnpg
+      gateway-api:
+        name: app-gateway-api
+      longhorn:
+        name: app-longhorn
   homer:
     groups: [all, server]
     dependsOn: # the certificate, the Gateway and the ReferenceGrant to authelia
