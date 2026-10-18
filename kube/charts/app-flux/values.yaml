@@ -107,10 +107,7 @@ resources:
   fluxKustomizations:
     flux:
       fullNameOverride: flux
-      interval: 10m # TODO default
       path: ./ # TODO default
-      prune: true # TODO default
-      wait: true # TODO default
       sourceRef:
         kind: OCIRepository
         name: flux-manifests

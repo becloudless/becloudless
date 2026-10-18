@@ -82,9 +82,9 @@ resources:
                 generated:
                   secretRef:
                     name: lldap-generated
-                lldap:
-                  secretRef:
-                    name: lldap
+                # lldap:
+                #   secretRef:
+                #     name: lldap
               env:
                 TZ: europe/paris
                 PGUSER: app

@@ -25,3 +25,8 @@ defaults:
       upgrade:
         remediation:
           retries: 3
+
+    fluxKustomizations:
+      interval: 10m
+      prune: true
+      wait: true
