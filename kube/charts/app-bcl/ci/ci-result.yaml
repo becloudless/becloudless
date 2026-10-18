@@ -33,6 +33,8 @@ spec:
   - name: app-lldap
   - name: app-longhorn
   - name: app-secret-generator
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -64,6 +66,8 @@ spec:
         name: bcl
   dependsOn:
   - name: app-gateway-api
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -95,6 +99,8 @@ spec:
         name: bcl
   dependsOn:
   - name: app-gateway-api
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -126,6 +132,8 @@ spec:
         name: bcl
   dependsOn:
   - name: app-external-snapshotter
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -155,6 +163,8 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -184,6 +194,8 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -213,6 +225,8 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -242,6 +256,8 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -276,6 +292,8 @@ spec:
   - name: app-cnpg
   - name: app-gateway-api
   - name: app-longhorn
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -305,6 +323,8 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -338,6 +358,8 @@ spec:
   - name: app-authelia
   - name: app-cert-manager
   - name: app-gateway-api
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -373,6 +395,8 @@ spec:
   - name: app-gateway-api
   - name: app-longhorn
   - name: app-secret-generator
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -406,6 +430,8 @@ spec:
   - name: app-cert-manager
   - name: app-gateway-api
   - name: app-longhorn
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -435,6 +461,8 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -464,6 +492,8 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -496,6 +526,8 @@ spec:
   dependsOn:
   - name: app-cert-manager
   - name: app-gateway-api
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -531,6 +563,8 @@ spec:
   - name: app-gateway-api
   - name: app-longhorn
   - name: app-secret-generator
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -564,6 +598,8 @@ spec:
   - name: app-cert-manager
   - name: app-gateway-api
   - name: app-kyverno
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -593,6 +629,8 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -627,6 +665,8 @@ spec:
   - name: app-cert-manager
   - name: app-gateway-api
   - name: app-longhorn
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -656,6 +696,8 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
