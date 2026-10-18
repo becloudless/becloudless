@@ -61,19 +61,19 @@ apps:
         name: app-cert-manager
       gateway-api:
         name: app-gateway-api
-  lldap:
-    groups: [all, server]
-    dependsOn: # certificates and issuers, the postgresql cluster, its volume snapshots, generated secrets, the Gateway API CRDs
-      cert-manager:
-        name: app-cert-manager
-      cnpg:
-        name: app-cnpg
-      gateway-api:
-        name: app-gateway-api
-      longhorn:
-        name: app-longhorn
-      secret-generator:
-        name: app-secret-generator
+  # lldap:
+  #   groups: [all, server]
+  #   dependsOn: # certificates and issuers, the postgresql cluster, its volume snapshots, generated secrets, the Gateway API CRDs
+  #     cert-manager:
+  #       name: app-cert-manager
+  #     cnpg:
+  #       name: app-cnpg
+  #     gateway-api:
+  #       name: app-gateway-api
+  #     longhorn:
+  #       name: app-longhorn
+  #     secret-generator:
+  #       name: app-secret-generator
   authelia:
     groups: [all, server]
     dependsOn: # certificates and issuers, the postgresql cluster, its volume snapshots, generated secrets, the ldap backend, the Gateway API CRDs
