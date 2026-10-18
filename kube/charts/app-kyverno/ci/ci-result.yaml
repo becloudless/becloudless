@@ -24,7 +24,7 @@ spec:
   install:
     crds: CreateReplace
     remediation:
-      retries: 0
+      retries: -1
   interval: 10m
   rollback:
     cleanupOnFail: true
@@ -56,7 +56,7 @@ spec:
   install:
     crds: CreateReplace
     remediation:
-      retries: 0
+      retries: -1
   interval: 10m
   rollback:
     cleanupOnFail: true

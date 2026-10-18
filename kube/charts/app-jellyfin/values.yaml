@@ -83,12 +83,8 @@ resources:
                 http:
                   containerPort: 8096
               env:
-                tz:
-                  name: TZ
-                  value: Europe/Paris
-                published-server-url:
-                  name: JELLYFIN_PublishedServerUrl
-                  value: https://jellyfin.{{ .Values.global.domain }}
+                TZ: Europe/Paris
+                JELLYFIN_PublishedServerUrl: https://jellyfin.{{ .Values.global.domain }}
               startupProbe:
                 httpGet:
                   path: /health

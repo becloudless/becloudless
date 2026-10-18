@@ -18,7 +18,7 @@ spec:
   - ReadWriteMany
   resources:
     requests:
-      storage: 100Gi
+      storage: 10Gi
   storageClassName: longhorn
 ---
 # Source: app-immich/templates/loader.yaml
@@ -75,7 +75,7 @@ spec:
   install:
     crds: CreateReplace
     remediation:
-      retries: 0
+      retries: -1
   interval: 10m
   rollback:
     cleanupOnFail: true
@@ -137,7 +137,7 @@ spec:
   install:
     crds: CreateReplace
     remediation:
-      retries: 0
+      retries: -1
   interval: 10m
   rollback:
     cleanupOnFail: true
@@ -180,7 +180,7 @@ spec:
   install:
     crds: CreateReplace
     remediation:
-      retries: 0
+      retries: -1
   interval: 10m
   rollback:
     cleanupOnFail: true

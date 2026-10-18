@@ -57,7 +57,7 @@ spec:
   install:
     crds: CreateReplace
     remediation:
-      retries: 0
+      retries: -1
   interval: 10m
   rollback:
     cleanupOnFail: true
@@ -81,7 +81,6 @@ spec:
               protocol: TLS
               tls:
                 mode: Passthrough
-          namespace: default
           parentRef:
             group: gateway.networking.k8s.io
             kind: Gateway
@@ -92,7 +91,6 @@ spec:
           fullNameOverride: kube
           hostnames:
             kube: kube.test.com
-          namespace: default
           parentRefs:
             kube:
               group: gateway.networking.k8s.io

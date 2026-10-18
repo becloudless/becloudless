@@ -20,7 +20,7 @@ metadata:
 spec:
   interval: 24h
   path: ./config/crd/experimental
-  prune: false
+  prune: true
   sourceRef:
     kind: GitRepository
     name: gateway-api
