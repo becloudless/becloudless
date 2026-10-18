@@ -107,6 +107,19 @@ apps:
         name: app-gateway-api
       longhorn:
         name: app-longhorn
+  immich:
+    groups: [all, server]
+    dependsOn: # the certificate and the Gateway, the postgresql cluster and its volume snapshots, the volumes, the valkey secret
+      cert-manager:
+        name: app-cert-manager
+      cnpg:
+        name: app-cnpg
+      gateway-api:
+        name: app-gateway-api
+      longhorn:
+        name: app-longhorn
+      secret-generator:
+        name: app-secret-generator
   homer:
     groups: [all, server]
     dependsOn: # the certificate, the Gateway and the ReferenceGrant to authelia

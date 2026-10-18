@@ -1,0 +1,217 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+global:
+  domain:
+  name:
+
+# Nothing has to be created by hand:
+#  - the database is a CloudNativePG cluster (with the vectorchord extension), the password of its `app` user is created by CNPG (`immich-postgresql-app`)
+#  - the valkey users are generated in the `immich-valkey` secret
+#  - the first user to register in the web UI becomes the admin of immich
+# Not configured: SSO (authelia OIDC is disabled), mails, the immich configuration file (everything can be set in the UI).
+
+defaults:
+  metadata:
+    namespace: immich
+
+resources:
+  namespaces:
+    immich:
+      fullNameOverride: immich
+
+  stringSecrets:
+    # users of valkey, the key is the name of the user
+    immich-valkey:
+      fullNameOverride: immich-valkey
+      fields:
+        default:
+          fieldName: default
+        app:
+          fieldName: app
+
+  certManagerCertificates:
+    # certificate of the web UI, terminated by the Gateway
+    immich-gateway:
+      fullNameOverride: immich-gateway
+      secretName: tls-immich-gateway
+      dnsNames:
+        immich: immich.{{ .Values.global.domain }}
+      issuerRef:
+        name: letsencrypt-prod
+        kind: ClusterIssuer
+
+  # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
+  # It is not protected by forward auth: the mobile apps cannot follow the login redirect of authelia, immich has its own login.
+  # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
+  listenerSets:
+    immich:
+      fullNameOverride: immich
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: shared
+        namespace: kube-system
+      listeners:
+        https:
+          name: https
+          hostname: immich.{{ .Values.global.domain }}
+          port: 443
+          protocol: HTTPS
+          tls:
+            mode: Terminate
+            certificateRefs:
+              tls:
+                name: tls-immich-gateway
+          allowedRoutes:
+            namespaces:
+              from: Same
+
+  httpRoutes:
+    immich:
+      fullNameOverride: immich
+      parentRefs:
+        immich:
+          group: gateway.networking.k8s.io
+          kind: ListenerSet
+          name: immich
+      hostnames:
+        immich: immich.{{ .Values.global.domain }}
+      rules:
+        root:
+          backendRefs:
+            immich:
+              name: immich-server
+              port: 2283
+          timeouts:
+            request: 0s # uploads and downloads of videos can be long
+
+  # the photos and videos, shared by the pods of the server
+  persistentVolumeClaims:
+    immich-data:
+      fullNameOverride: immich-data
+      accessModes:
+        - ReadWriteMany
+      storageClassName: longhorn
+      resources:
+        requests:
+          storage: 100Gi
+
+  fluxHelmRepositories:
+    immich:
+      fullNameOverride: immich
+      url: https://immich-app.github.io/immich-charts
+    immich-valkey:
+      fullNameOverride: immich-valkey
+      url: https://valkey.io/valkey-helm/
+
+  fluxHelmReleases:
+    # the database is prepared by the postgresql-cluster chart (certificates, issuer, cluster and backups)
+    # the cluster is named after the release, which is the name of this HelmRelease
+    immich-postgresql:
+      fullNameOverride: immich-postgresql
+      chart:
+        spec:
+          chart: ./kube/charts/postgresql-cluster
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: "{{ .Release.Namespace }}"
+      values:
+        storageSize: 5Gi
+        postgresql:
+          shared_preload_libraries:
+            - vchord.so
+          parameters:
+            max_connections: "400"
+            shared_buffers: 256MB
+        resources:
+          cnpgClusters:
+            main:
+              # https://github.com/tensorchord/cloudnative-vectorchord/pkgs/container/cloudnative-vectorchord/versions?filters%5Bversion_type%5D=tagged
+              imageName: tensorchord/cloudnative-vectorchord:18.3-1.1.1
+              bootstrap:
+                initdb:
+                  postInitApplicationSQL:
+                    - CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
+                    - CREATE EXTENSION IF NOT EXISTS earthdistance CASCADE;
+
+    immich-valkey:
+      fullNameOverride: immich-valkey
+      chart:
+        spec:
+          chart: valkey
+          version: 0.12.0
+          sourceRef:
+            kind: HelmRepository
+            name: immich-valkey
+      values:
+        replicaCount: 1
+        dataStorage:
+          enabled: true
+          requestedSize: 1Gi
+
+        auth:
+          enabled: true
+          aclUsers:
+            default:
+              permissions: "~* -@all"
+            app:
+              permissions: "~* &* +@all"
+          usersExistingSecret: immich-valkey
+
+    immich:
+      fullNameOverride: immich
+      timeout: 10m # the pods wait for the database
+      dependsOn:
+        immich-postgresql:
+          name: immich-postgresql
+        immich-valkey:
+          name: immich-valkey
+      chart:
+        spec:
+          chart: immich
+          version: 0.12.0
+          sourceRef:
+            kind: HelmRepository
+            name: immich
+      values:
+        # https://github.com/immich-app/immich-charts/blob/main/charts/immich/values.yaml
+        # exposed by the Cilium Gateway, see the `listenerSets` and `httpRoutes` resources
+        immich:
+          persistence:
+            library:
+              existingClaim: immich-data
+
+        controllers:
+          main:
+            containers:
+              main:
+                image:
+                  tag: v2.5.6
+                env:
+                  TZ: Europe/Paris
+                  PGUSER: app
+                  PGDATABASE: app
+                  PGHOST: immich-postgresql-rw
+                  PGPASSWORD:
+                    valueFrom:
+                      secretKeyRef:
+                        name: immich-postgresql-app
+                        key: password
+                  # immich does not do the client certificate authentication of libpq, only the password is used
+                  DB_URL: postgresql://?uselibpqcompat=true
+
+                  REDIS_HOSTNAME: immich-valkey
+                  REDIS_USERNAME: app
+                  REDIS_PASSWORD:
+                    valueFrom:
+                      secretKeyRef:
+                        name: immich-valkey
+                        key: app
+
+        machine-learning:
+          persistence:
+            cache:
+              type: persistentVolumeClaim
+              accessMode: ReadWriteMany
+              storageClass: longhorn
