@@ -24,6 +24,8 @@ apps:
     groups: [minimal, server, pop]
   coredns:
     groups: [minimal, server, pop]
+  cert-manager:
+    groups: [server, pop]
 
 
 resources:

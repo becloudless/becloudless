@@ -1,0 +1,7 @@
+apiVersion: v2
+name: app-cert-manager
+version: 0.0.0
+dependencies:
+  - name: base
+    version: 0.0.0
+    repository: "file://../base"

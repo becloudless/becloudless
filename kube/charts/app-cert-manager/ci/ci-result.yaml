@@ -1,0 +1,51 @@
+---
+# Source: app-cert-manager/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    certmanager.k8s.io/disable-validation: "true"
+  name: cert-manager
+  namespace: cert-manager
+spec: {}
+---
+# Source: app-cert-manager/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cert-manager
+  namespace: cert-manager
+spec:
+  chart:
+    spec:
+      chart: cert-manager
+      sourceRef:
+        kind: HelmRepository
+        name: cert-manager
+      version: v1.21.2
+  install:
+    crds: CreateReplace
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    ingressShim:
+      defaultIssuerKind: ClusterIssuer
+      defaultIssuerName: letsencrypt-prod
+    installCRDs: true
+    prometheus:
+      enabled: true
+---
+# Source: app-cert-manager/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: cert-manager
+  namespace: cert-manager
+spec:
+  interval: 10m
+  url: https://charts.jetstack.io

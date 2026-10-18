@@ -1,0 +1,85 @@
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    global:
+      domain: test.com
+      ldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: test-release-global-values
+  namespace: default
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-cilium
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-cilium
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+  install:
+    crds: CreateReplace
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  valuesFrom:
+  - kind: ConfigMap
+    name: test-release-global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-coredns
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-coredns
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+  install:
+    crds: CreateReplace
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  valuesFrom:
+  - kind: ConfigMap
+    name: test-release-global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-flux
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-flux
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+  install:
+    crds: CreateReplace
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  valuesFrom:
+  - kind: ConfigMap
+    name: test-release-global-values
