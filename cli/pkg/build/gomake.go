@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	bclVersion "github.com/becloudless/becloudless/pkg/version"
 	"github.com/n0rad/go-erlog/errs"
@@ -22,6 +23,7 @@ func main() {
 		WithName("bcl").
 		WithVersionFunc(version).
 		WithStep(&gomake.StepBuild{
+			Version: "0.0.0",
 			PreBuildHook: func(build gomake.StepBuild) error {
 				if err := gomake.EnsureTool("go-jsonschema", "github.com/atombender/go-jsonschema"); err != nil {
 					return err
@@ -59,12 +61,37 @@ func copyDir(src, dst string) error {
 		if err != nil {
 			return err
 		}
+		if skip, skipDir := skipFromAssets(rel, d); skip {
+			if skipDir {
+				return filepath.SkipDir
+			}
+			return nil
+		}
 		target := filepath.Join(dst, rel)
 		if d.IsDir() {
 			return os.MkdirAll(target, 0755)
 		}
 		return copyFile(path, target)
 	})
+}
+
+// skipFromAssets tells if a file of the kube folder must not be embedded in the binary.
+// The chart build tooling is not needed to render a chart, and Go ignores the files of a folder having its own go.mod
+// (the base chart is its own module) while it would compile the other Go sources as part of the cli module.
+func skipFromAssets(rel string, d fs.DirEntry) (skip bool, skipDir bool) {
+	if d.IsDir() {
+		if ok, _ := filepath.Match("charts/*/build", rel); ok {
+			return true, true
+		}
+		return false, false
+	}
+
+	name := d.Name()
+	switch name {
+	case "go.mod", "go.sum", "build.sh":
+		return true, false
+	}
+	return strings.HasSuffix(name, ".go"), false
 }
 
 func copyFile(src, dst string) error {

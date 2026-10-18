@@ -26,6 +26,7 @@ import (
 	"helm.sh/helm/v4/pkg/cli"
 	"helm.sh/helm/v4/pkg/cli/values"
 	"helm.sh/helm/v4/pkg/getter"
+	helmkube "helm.sh/helm/v4/pkg/kube"
 	repo "helm.sh/helm/v4/pkg/repo/v1"
 	"helm.sh/helm/v4/pkg/storage/driver"
 )
@@ -433,6 +434,8 @@ func prepareAndApplyFluxHelmRelease(ctx kube.Context, hr flux.HelmRelease, resou
 	upgrade := action.NewUpgrade(actionConfig)
 	upgrade.Namespace = hr.Metadata.Namespace
 	upgrade.Version = hr.Spec.Chart.Spec.Version
+	// do not wait for the resources to be ready: cilium and coredns cannot be ready before the whole bootstrap is done
+	upgrade.WaitStrategy = helmkube.HookOnlyStrategy
 	if adoptResources {
 		upgrade.TakeOwnership = true
 	}
@@ -482,6 +485,7 @@ func prepareAndApplyFluxHelmRelease(ctx kube.Context, hr flux.HelmRelease, resou
 			inst.ReleaseName = hr.Metadata.Name
 			inst.Namespace = hr.Metadata.Namespace
 			inst.Version = hr.Spec.Chart.Spec.Version
+			inst.WaitStrategy = helmkube.HookOnlyStrategy
 			if adoptResources {
 				inst.TakeOwnership = true
 			}
