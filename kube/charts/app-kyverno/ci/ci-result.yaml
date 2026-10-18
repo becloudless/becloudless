@@ -1,0 +1,69 @@
+---
+# Source: app-kyverno/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kyverno
+  namespace: kyverno
+spec: {}
+---
+# Source: app-kyverno/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kyverno
+  namespace: kyverno
+spec:
+  chart:
+    spec:
+      chart: kyverno
+      sourceRef:
+        kind: HelmRepository
+        name: kyverno
+      version: 3.9.1
+  install:
+    crds: CreateReplace
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    admissionController:
+      replicas: 3
+---
+# Source: app-kyverno/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kyverno-config
+  namespace: kyverno
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-kyverno/config
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  dependsOn:
+  - name: kyverno
+  install:
+    crds: CreateReplace
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+---
+# Source: app-kyverno/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: kyverno
+  namespace: kyverno
+spec:
+  interval: 10m
+  url: https://kyverno.github.io/kyverno

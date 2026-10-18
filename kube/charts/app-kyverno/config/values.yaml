@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=../../base/schema/values.schema.json
+
+resources:
+  kyvernoClusterPolicies:
+    set-image-pull-policy:
+      fullNameOverride: set-image-pull-policy
+      rules:
+        set-image-pull-policy:
+          name: set-image-pull-policy
+          match:
+            any:
+              pods:
+                resources:
+                  kinds:
+                    - Pod
+          mutate:
+            patchStrategicMerge:
+              spec:
+                containers:
+                  - (image): "*"
+                    imagePullPolicy: IfNotPresent

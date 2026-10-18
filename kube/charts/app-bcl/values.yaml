@@ -26,6 +26,8 @@ apps:
     groups: [all, minimal, server, pop]
   cert-manager:
     groups: [all, server, pop]
+  kyverno:
+    groups: [all, server, pop]
 
 
 resources:

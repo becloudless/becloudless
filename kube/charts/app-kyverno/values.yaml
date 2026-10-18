@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+
+defaults:
+  metadata:
+    namespace: kyverno
+
+resources:
+  namespaces:
+    kyverno:
+      fullNameOverride: kyverno
+
+  fluxHelmRepositories:
+    kyverno:
+      fullNameOverride: kyverno
+      url: https://kyverno.github.io/kyverno
+
+  fluxHelmReleases:
+    kyverno:
+      fullNameOverride: kyverno
+      chart:
+        spec:
+          chart: kyverno
+          version: 3.9.1
+          sourceRef:
+            kind: HelmRepository
+            name: kyverno
+      upgrade:
+        remediation:
+          retries: 3
+      values:
+        admissionController:
+          replicas: 3
+
+    # ClusterPolicies need the Kyverno CRDs, so they are installed once kyverno is ready
+    kyverno-config:
+      fullNameOverride: kyverno-config
+      dependsOn:
+        kyverno:
+          name: kyverno
+      chart:
+        spec:
+          chart: ./kube/charts/app-kyverno/config
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: "{{ .Release.Namespace }}"
