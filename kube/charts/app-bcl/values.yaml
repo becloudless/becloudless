@@ -20,12 +20,17 @@ appsGroups:
 apps:
   flux:
     groups: [all, minimal, server, pop]
+  gateway-api:
+    groups: [all, minimal, server, pop]
   cilium:
     groups: [all, minimal, server, pop]
   coredns:
     groups: [all, minimal, server, pop]
   cert-manager:
     groups: [all, server, pop]
+    dependsOn: # the Gateway API CRDs must exist when cert-manager starts, for the gatewayHTTPRoute http-01 solver
+      gateway-api:
+        name: app-gateway-api
   kyverno:
     groups: [all, server, pop]
   metrics-server:
@@ -38,11 +43,9 @@ apps:
     groups: [all, server]
   external-snapshotter:
     groups: [all, server, pop]
-  gateway-api:
-    groups: [all, server, pop]
   longhorn:
     groups: [all, server]
-    dependsOn: # the ClusterPolicy needs the kyverno CRDs, the UI needs the certificate and Gateway API CRDs
+    dependsOn: # the ClusterPolicy needs the kyverno CRDs, the UI needs the certificate and the Gateway
       kyverno:
         name: app-kyverno
       cert-manager:
@@ -51,18 +54,20 @@ apps:
         name: app-gateway-api
   lldap:
     groups: [all, server]
-    dependsOn: # certificates and issuers, the postgresql cluster, its volume snapshots, generated secrets
+    dependsOn: # certificates and issuers, the postgresql cluster, its volume snapshots, generated secrets, the Gateway API CRDs
       cert-manager:
         name: app-cert-manager
       cnpg:
         name: app-cnpg
+      gateway-api:
+        name: app-gateway-api
       longhorn:
         name: app-longhorn
       secret-generator:
         name: app-secret-generator
   authelia:
     groups: [all, server]
-    dependsOn: # certificates and issuers, the postgresql cluster, its volume snapshots, generated secrets, the ldap backend, the ReferenceGrant
+    dependsOn: # certificates and issuers, the postgresql cluster, its volume snapshots, generated secrets, the ldap backend, the Gateway API CRDs
       cert-manager:
         name: app-cert-manager
       cnpg:

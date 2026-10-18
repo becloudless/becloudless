@@ -40,6 +40,16 @@ resources:
 
   # key pair signing the OIDC tokens, mounted from /secrets/authelia-jwks
   certManagerCertificates:
+    # certificate of the portal, terminated by the Gateway
+    authelia-gateway:
+      fullNameOverride: authelia-gateway
+      secretName: tls-authelia-gateway
+      dnsNames:
+        authelia: authelia.{{ .Values.global.domain }}
+      issuerRef:
+        name: letsencrypt-prod
+        kind: ClusterIssuer
+
     authelia-jwks:
       fullNameOverride: authelia-jwks
       secretName: authelia-jwks
@@ -63,6 +73,48 @@ resources:
           group: ""
           kind: Service
           name: authelia
+
+  # Portal exposed by the Cilium Gateway `shared` (kube-system). It is not protected by forward auth itself.
+  # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
+  listenerSets:
+    authelia:
+      fullNameOverride: authelia
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: shared
+        namespace: kube-system
+      listeners:
+        https:
+          name: https
+          hostname: authelia.{{ .Values.global.domain }}
+          port: 443
+          protocol: HTTPS
+          tls:
+            mode: Terminate
+            certificateRefs:
+              tls:
+                name: tls-authelia-gateway
+          allowedRoutes:
+            namespaces:
+              from: Same
+
+  httpRoutes:
+    authelia:
+      fullNameOverride: authelia
+      parentRefs:
+        authelia:
+          group: gateway.networking.k8s.io
+          kind: ListenerSet
+          name: authelia
+      hostnames:
+        authelia: authelia.{{ .Values.global.domain }}
+      rules:
+        root:
+          backendRefs:
+            authelia:
+              name: authelia
+              port: 80
 
   fluxHelmRepositories:
     authelia:
@@ -127,12 +179,9 @@ resources:
             name: authelia
       values:
         # https://github.com/authelia/chartrepo/blob/master/charts/authelia/values.yaml
+        # exposed by the Cilium Gateway, see the `listenerSets` resources
         ingress:
-          enabled: true
-          className: cilium
-          certManager: true
-          tls:
-            enabled: true
+          enabled: false
 
         pod:
           kind: Deployment
@@ -187,7 +236,7 @@ resources:
             ldap:
               enabled: true
               implementation: lldap
-              # served by the lldap ldaps ingress (tls passthrough) with a publicly trusted certificate
+              # served by the lldap ldaps listener of the Gateway (tls passthrough) with a publicly trusted certificate
               address: ldaps://lldaps.{{ .Values.global.domain }}:443
               base_dn: "{{ .Values.global.ldapdn }}"
               user: 'UID=authelia,OU=people,{{ .Values.global.ldapdn }}'

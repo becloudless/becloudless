@@ -40,6 +40,17 @@ resources:
           cert_file="/cert/tls.crt"
 
   certManagerCertificates:
+    # certificate of the web UI, terminated by the Gateway
+    lldap-gateway:
+      fullNameOverride: lldap-gateway
+      secretName: tls-lldap-gateway
+      dnsNames:
+        lldap: lldap.{{ .Values.global.domain }}
+      issuerRef:
+        name: letsencrypt-prod
+        kind: ClusterIssuer
+
+    # certificate of ldaps, used by the lldap pod
     tls-lldaps:
       fullNameOverride: tls-lldaps
       secretName: tls-lldaps
@@ -137,48 +148,78 @@ resources:
         ldaps:
           port: 6360
 
-  ingresses:
+  # Exposed by the Cilium Gateway `shared` (kube-system), both on port 443 and routed by SNI:
+  #  - lldap.<domain>: web UI, TLS terminated by the Gateway
+  #  - lldaps.<domain>: ldaps served by lldap itself (tls-lldaps certificate), the TLS stream is forwarded as is (passthrough)
+  # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
+  listenerSets:
     lldap:
       fullNameOverride: lldap
-      annotations:
-        kubernetes.io/tls-acme: "true"
-      rules:
-        lldap:
-          host: lldap.{{ .Values.global.domain }}
-          http:
-            paths:
-              root:
-                path: /
-                pathType: Prefix
-                backend:
-                  service:
-                    name: lldap
-                    port:
-                      number: 17170
-      tls:
-        lldap:
-          secretName: tls-lldap
-          hosts:
-            lldap: lldap.{{ .Values.global.domain }}
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: shared
+        namespace: kube-system
+      listeners:
+        https:
+          name: https
+          hostname: lldap.{{ .Values.global.domain }}
+          port: 443
+          protocol: HTTPS
+          tls:
+            mode: Terminate
+            certificateRefs:
+              tls:
+                name: tls-lldap-gateway
+          allowedRoutes:
+            namespaces:
+              from: Same
+        ldaps:
+          name: ldaps
+          hostname: lldaps.{{ .Values.global.domain }}
+          port: 443
+          protocol: TLS
+          tls:
+            mode: Passthrough
+          allowedRoutes:
+            namespaces:
+              from: Same
 
-    # ldaps is served by lldap itself (tls-lldaps certificate): the TLS stream is forwarded as is, routed by SNI
+  httpRoutes:
+    lldap:
+      fullNameOverride: lldap
+      parentRefs:
+        lldap:
+          group: gateway.networking.k8s.io
+          kind: ListenerSet
+          name: lldap
+          sectionName: https
+      hostnames:
+        lldap: lldap.{{ .Values.global.domain }}
+      rules:
+        root:
+          backendRefs:
+            lldap:
+              name: lldap
+              port: 17170
+
+  tlsRoutes:
     lldap-ldaps:
       fullNameOverride: lldap-ldaps
-      annotations:
-        ingress.cilium.io/tls-passthrough: enabled
+      parentRefs:
+        lldap:
+          group: gateway.networking.k8s.io
+          kind: ListenerSet
+          name: lldap
+          sectionName: ldaps
+      hostnames:
+        lldaps: lldaps.{{ .Values.global.domain }}
       rules:
-        lldaps:
-          host: lldaps.{{ .Values.global.domain }}
-          http:
-            paths:
-              root:
-                path: /
-                pathType: Prefix
-                backend:
-                  service:
-                    name: lldap
-                    port:
-                      number: 6360
+        ldaps:
+          backendRefs:
+            lldap:
+              name: lldap
+              port: 6360
 
   fluxHelmReleases:
     # the database is prepared by the postgresql-cluster chart (certificates, issuer, cluster and backups)

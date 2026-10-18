@@ -11,6 +11,20 @@ spec: {}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
+  name: authelia-gateway
+  namespace: authelia
+spec:
+  dnsNames:
+  - authelia.test.com
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: tls-authelia-gateway
+---
+# Source: app-authelia/templates/loader.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
   name: authelia-jwks
   namespace: authelia
 spec:
@@ -19,6 +33,24 @@ spec:
     kind: ClusterIssuer
     name: self-signed
   secretName: authelia-jwks
+---
+# Source: app-authelia/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: authelia
+  namespace: authelia
+spec:
+  hostnames:
+  - authelia.test.com
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: authelia
+  rules:
+  - backendRefs:
+    - name: authelia
+      port: 80
 ---
 # Source: app-authelia/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -326,11 +358,7 @@ spec:
       webauthn:
         display_name: test Authelia
     ingress:
-      certManager: true
-      className: cilium
-      enabled: true
-      tls:
-        enabled: true
+      enabled: false
     pod:
       env:
       - name: TZ
@@ -431,6 +459,31 @@ metadata:
 spec:
   interval: 10m
   url: https://valkey.io/valkey-helm/
+---
+# Source: app-authelia/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: authelia
+  namespace: authelia
+spec:
+  listeners:
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: authelia.test.com
+    name: https
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - name: tls-authelia-gateway
+      mode: Terminate
+  parentRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: shared
+    namespace: kube-system
 ---
 # Source: app-authelia/templates/loader.yaml
 apiVersion: gateway.networking.k8s.io/v1beta1

@@ -40,10 +40,7 @@ spec:
     gatewayAPI:
       enabled: true
     ingressController:
-      default: true
-      enabled: true
-      enforceHttps: false
-      loadbalancerMode: shared
+      enabled: false
     ipam:
       mode: kubernetes
     k8sServiceHost: kube.test.com
@@ -125,7 +122,7 @@ spec:
             http:
               allowedRoutes:
                 namespaces:
-                  from: Same
+                  from: All
               name: http
               port: 80
               protocol: HTTP

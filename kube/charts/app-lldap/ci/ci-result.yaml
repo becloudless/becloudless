@@ -121,50 +121,18 @@ spec:
           secretName: lldap-postgresql-app-tls
 ---
 # Source: app-lldap/templates/loader.yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: cert-manager.io/v1
+kind: Certificate
 metadata:
-  annotations:
-    kubernetes.io/tls-acme: "true"
-  name: lldap
+  name: lldap-gateway
   namespace: lldap
 spec:
-  rules:
-  - host: lldap.test.com
-    http:
-      paths:
-      - backend:
-          service:
-            name: lldap
-            port:
-              number: 17170
-        path: /
-        pathType: Prefix
-  tls:
-  - hosts:
-    - lldap.test.com
-    secretName: tls-lldap
----
-# Source: app-lldap/templates/loader.yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  annotations:
-    ingress.cilium.io/tls-passthrough: enabled
-  name: lldap-ldaps
-  namespace: lldap
-spec:
-  rules:
-  - host: lldaps.test.com
-    http:
-      paths:
-      - backend:
-          service:
-            name: lldap
-            port:
-              number: 6360
-        path: /
-        pathType: Prefix
+  dnsNames:
+  - lldap.test.com
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: tls-lldap-gateway
 ---
 # Source: app-lldap/templates/loader.yaml
 apiVersion: cert-manager.io/v1
@@ -179,6 +147,25 @@ spec:
     kind: ClusterIssuer
     name: letsencrypt-prod
   secretName: tls-lldaps
+---
+# Source: app-lldap/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: lldap
+  namespace: lldap
+spec:
+  hostnames:
+  - lldap.test.com
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: lldap
+    sectionName: https
+  rules:
+  - backendRefs:
+    - name: lldap
+      port: 17170
 ---
 # Source: app-lldap/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -213,6 +200,40 @@ spec:
         max_slot_wal_keep_size: 500MB
 ---
 # Source: app-lldap/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: lldap
+  namespace: lldap
+spec:
+  listeners:
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: lldap.test.com
+    name: https
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - name: tls-lldap-gateway
+      mode: Terminate
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: lldaps.test.com
+    name: ldaps
+    port: 443
+    protocol: TLS
+    tls:
+      mode: Passthrough
+  parentRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: shared
+    namespace: kube-system
+---
+# Source: app-lldap/templates/loader.yaml
 apiVersion: secretgenerator.mittwald.de/v1alpha1
 kind: StringSecret
 metadata:
@@ -223,3 +244,22 @@ spec:
   - fieldName: LLDAP_JWT_SECRET
   - fieldName: LLDAP_LDAP_USER_DN
   - fieldName: LLDAP_LDAP_USER_PASS
+---
+# Source: app-lldap/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
+metadata:
+  name: lldap-ldaps
+  namespace: lldap
+spec:
+  hostnames:
+  - lldaps.test.com
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: lldap
+    sectionName: ldaps
+  rules:
+  - backendRefs:
+    - name: lldap
+      port: 6360

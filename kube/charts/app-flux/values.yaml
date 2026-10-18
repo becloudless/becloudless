@@ -29,29 +29,61 @@ resources:
       ingress:
        something: {}
 
-  ingresses:
+  # Webhook receiver exposed by the Cilium Gateway `shared` (kube-system). Disabled by default: it needs the Gateway API CRDs
+  # and cert-manager, which a cluster only gets with the apps of the server groups. A cluster enables it with
+  # `apps.flux.values.resources.<kind>.<name>.enabled: true` and `apps.flux.dependsOn` on app-gateway-api and app-cert-manager.
+  certManagerCertificates:
+    flux-webhook-gateway:
+      enabled: false
+      fullNameOverride: flux-webhook-gateway
+      secretName: tls-flux-webhook-gateway
+      dnsNames:
+        webhook: flux-webhook.{{ .Values.global.domain }}
+      issuerRef:
+        name: letsencrypt-prod
+        kind: ClusterIssuer
+
+  listenerSets:
     flux-webhook:
+      enabled: false
       fullNameOverride: flux-webhook
-      annotations:
-        kubernetes.io/tls-acme: "true"
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: shared
+        namespace: kube-system
+      listeners:
+        https:
+          name: https
+          hostname: flux-webhook.{{ .Values.global.domain }}
+          port: 443
+          protocol: HTTPS
+          tls:
+            mode: Terminate
+            certificateRefs:
+              tls:
+                name: tls-flux-webhook-gateway
+          allowedRoutes:
+            namespaces:
+              from: Same
+
+  httpRoutes:
+    flux-webhook:
+      enabled: false
+      fullNameOverride: flux-webhook
+      parentRefs:
+        flux-webhook:
+          group: gateway.networking.k8s.io
+          kind: ListenerSet
+          name: flux-webhook
+      hostnames:
+        webhook: flux-webhook.{{ .Values.global.domain }}
       rules:
-        main:
-          host: flux-webhook.{{ .Values.global.domain }}
-          http:
-            paths:
-              main:
-                path: /
-                pathType: Prefix
-                backend:
-                  service:
-                    name: webhook-receiver
-                    port:
-                      number: 80
-      tls:
-        main:
-          hosts:
-            flux-webhook: flux-webhook.{{ .Values.global.domain }}
-          secretName: tls-flux-webhook
+        root:
+          backendRefs:
+            webhook-receiver:
+              name: webhook-receiver
+              port: 80
 
   fluxKustomizations:
     flux:

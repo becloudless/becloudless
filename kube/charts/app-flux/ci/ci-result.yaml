@@ -15,31 +15,6 @@ spec:
   - Ingress
 ---
 # Source: app-flux/templates/loader.yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  annotations:
-    kubernetes.io/tls-acme: "true"
-  name: flux-webhook
-  namespace: flux-system
-spec:
-  rules:
-  - host: flux-webhook.test.com
-    http:
-      paths:
-      - backend:
-          service:
-            name: webhook-receiver
-            port:
-              number: 80
-        path: /
-        pathType: Prefix
-  tls:
-  - hosts:
-    - flux-webhook.test.com
-    secretName: tls-flux-webhook
----
-# Source: app-flux/templates/loader.yaml
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:

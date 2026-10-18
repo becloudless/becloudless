@@ -35,6 +35,9 @@ spec:
     remediation:
       retries: 3
   values:
+    config:
+      gatewayAPI:
+        enabled: true
     crds:
       enabled: true
     ingressShim:
@@ -82,8 +85,13 @@ spec:
             server: https://acme-v02.api.letsencrypt.org/directory
             solvers:
             - http01:
-                ingress:
-                  class: cilium
+                gatewayHTTPRoute:
+                  parentRefs:
+                  - group: gateway.networking.k8s.io
+                    kind: Gateway
+                    name: shared
+                    namespace: kube-system
+                    sectionName: http
           fullNameOverride: letsencrypt-prod
         letsencrypt-staging:
           acme:
@@ -93,8 +101,13 @@ spec:
             server: https://acme-staging-v02.api.letsencrypt.org/directory
             solvers:
             - http01:
-                ingress:
-                  class: cilium
+                gatewayHTTPRoute:
+                  parentRefs:
+                  - group: gateway.networking.k8s.io
+                    kind: Gateway
+                    name: shared
+                    namespace: kube-system
+                    sectionName: http
           fullNameOverride: letsencrypt-staging
         self-signed:
           fullNameOverride: self-signed

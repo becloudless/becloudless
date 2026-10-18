@@ -56,8 +56,8 @@ resources:
 
   # UI behind the Cilium Gateway `shared` (kube-system) with Authelia forward auth.
   # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
-  # The certificate is issued by the http-01 solver of the ClusterIssuer (ingress), which only needs the host to be
-  # reachable on port 80 through the ingress.
+  # The certificate is issued by the http-01 solver of the ClusterIssuer (gatewayHTTPRoute), which only needs the host to be
+  # reachable on port 80 through the http listener of the Gateway.
   certManagerCertificates:
     longhorn-ui:
       fullNameOverride: longhorn-ui

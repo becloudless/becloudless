@@ -50,12 +50,9 @@ resources:
         cni:
           exclusive: false # let multus install
 
+        # No ingress controller: every app is exposed by the shared Gateway (see `cilium-config`), which is the only entry point.
         ingressController:
-          enabled: true
-          default: true
-          loadbalancerMode: shared
-          enforceHttps: false # TODO true redirects the whole host to https, including the cert-manager http-01 challenge path, so certificates can never be issued or renewed
-        # Gateway API is used when forward auth (authelia) is needed: the ingress controller cannot do it.
+          enabled: false
         # Needs the CRDs of app-gateway-api at operator start, restart the cilium-operator once after they are first installed.
         gatewayAPI:
           enabled: true
@@ -113,9 +110,9 @@ resources:
                     matchLabels:
                       advertise: bgp
 
-          # Entry point of the apps protected by forward auth. It has its own LoadBalancer IP, different from the ingress one:
-          # the cluster pins it with `addresses` and routes the hosts of these apps to it.
-          # Each app attaches its https listener and certificate with a ListenerSet in its own namespace.
+          # Single entry point of the apps (http, https and tls passthrough), with its own LoadBalancer IP that the cluster pins with `addresses`.
+          # Each app attaches its listeners and certificate with a ListenerSet in its own namespace, and its routes to that ListenerSet.
+          # Apps needing authentication use the `ExternalAuth` filter of their HTTPRoute to call authelia.
           gateways:
             shared:
               fullNameOverride: shared
@@ -128,6 +125,6 @@ resources:
                   name: http
                   protocol: HTTP
                   port: 80
-                  allowedRoutes:
+                  allowedRoutes: # the http-01 solver of cert-manager creates its route in the namespace of each certificate
                     namespaces:
-                      from: Same
+                      from: All

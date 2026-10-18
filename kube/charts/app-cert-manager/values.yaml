@@ -34,6 +34,10 @@ resources:
       values:
         crds:
           enabled: true
+        # needed by the `gatewayHTTPRoute` http-01 solver of the issuers. Gateway API CRDs must exist when cert-manager starts: app-bcl makes this app depend on app-gateway-api
+        config:
+          gatewayAPI:
+            enabled: true
         ingressShim:
           defaultIssuerName: letsencrypt-prod
           defaultIssuerKind: ClusterIssuer
@@ -66,8 +70,13 @@ resources:
                   name: letsencrypt-prod
                 solvers:
                   - http01:
-                      ingress:
-                        class: cilium
+                      gatewayHTTPRoute: # the route is created in the namespace of the certificate and attached to the http listener of the shared Gateway
+                        parentRefs:
+                          - group: gateway.networking.k8s.io
+                            kind: Gateway
+                            name: shared
+                            namespace: kube-system
+                            sectionName: http
 
             letsencrypt-staging:
               fullNameOverride: letsencrypt-staging
@@ -78,8 +87,13 @@ resources:
                   name: letsencrypt-staging
                 solvers:
                   - http01:
-                      ingress:
-                        class: cilium
+                      gatewayHTTPRoute:
+                        parentRefs:
+                          - group: gateway.networking.k8s.io
+                            kind: Gateway
+                            name: shared
+                            namespace: kube-system
+                            sectionName: http
 
             self-signed:
               fullNameOverride: self-signed
