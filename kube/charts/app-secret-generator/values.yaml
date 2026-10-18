@@ -28,7 +28,8 @@ resources:
             name: secret-generator
       values:
         secretLength: 100
-        image: # upstream only publishes amd64, this one is built for amd64 and arm64 from docker/misc/secret-generator
+        # upstream only publishes amd64, this one is built for amd64 and arm64 from docker/misc/secret-generator
+        image: 
           registry: ghcr.io
           repository: becloudless/secret-generator
-          tag: latest # TODO pin to the generated version once the image is published
+          tag: 1.261018.1316
