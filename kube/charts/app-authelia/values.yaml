@@ -68,6 +68,10 @@ resources:
           group: gateway.networking.k8s.io
           kind: HTTPRoute
           namespace: longhorn-system
+        homer:
+          group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          namespace: homer
       to:
         authelia:
           group: ""
@@ -234,7 +238,7 @@ resources:
 
           authentication_backend:
             ldap:
-              enabled: true
+              enabled: false # TODO
               implementation: lldap
               # served by the lldap ldaps listener of the Gateway (tls passthrough) with a publicly trusted certificate
               address: ldaps://lldaps.{{ .Values.global.domain }}:443

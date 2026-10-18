@@ -93,6 +93,15 @@ apps:
         name: app-cert-manager
       gateway-api:
         name: app-gateway-api
+  homer:
+    groups: [all, server]
+    dependsOn: # the certificate, the Gateway and the ReferenceGrant to authelia
+      authelia:
+        name: app-authelia
+      cert-manager:
+        name: app-cert-manager
+      gateway-api:
+        name: app-gateway-api
 
 
 resources:

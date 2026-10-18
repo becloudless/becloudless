@@ -1,0 +1,407 @@
+---
+# Source: app-homer/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: homer
+  namespace: homer
+spec: {}
+---
+# Source: app-homer/templates/loader.yaml
+apiVersion: v1
+data:
+  config.yml: |-
+    documentTitle: "test.com - Home"
+    logo: "assets/logo.png"
+    # Alternatively a fa icon can be provided:
+    icon: https://gitea.test.com/test/test.com/src/branch/master/docs/logo/v2/favicon.ico
+    header: false
+    footer: false
+    columns: "4" # "auto" or number (must be a factor of 12: 1, 2, 3, 4, 6, 12)
+    connectivityCheck: false # whether you want to display a message when the apps are not accessible anymore (VPN disconnected for example).
+    # Optional: Proxy / hosting option
+    proxy:
+      useCredentials: false # send cookies & authorization headers when fetching service specific data. Set to `true` if you use an authentication proxy. Can be overrided on service level.
+    defaults:
+      layout: columns
+      colorTheme: dark
+    # Optional theming
+    theme: default # 'default' or one of the themes available in 'src/assets/themes'.
+    stylesheet:
+      - "assets/custom.css"
+    # Here is the exhaustive list of customization parameters
+    # However all value are optional and will fallback to default if not set.
+    # if you want to change only some of the colors, feel free to remove all unused key.
+    colors:
+      light:
+        highlight-primary: "#3367d6"
+        highlight-secondary: "#4285f4"
+        highlight-hover: "#5a95f5"
+        background: "#f5f5f5"
+        card-background: "#ffffff"
+        text: "#363636"
+        text-header: "#424242"
+        text-title: "#303030"
+        text-subtitle: "#424242"
+        card-shadow: rgba(0, 0, 0, 0.1)
+        link: "#3273dc"
+        link-hover: "#363636"
+        background-image: "assets/your/light/bg.png"
+      dark:
+        highlight-primary: "#666"
+        highlight-secondary: "#666"
+        highlight-hover: "#666"
+        background: "#12152B"
+        card-background: "rgba(0, 0, 0, 0.7)"
+        text: "#eaeaea"
+        text-header: "#FFFFFF"
+        text-title: "#fafafa"
+        text-subtitle: "#8B8D9C"
+        card-shadow: rgba(0, 0, 0, 0.5)
+        link: "#c1c1c1"
+        link-hover: "#fafafa"
+        #                highlight-primary: "#3367d6"
+        #                highlight-secondary: "#4285f4"
+        #                highlight-hover: "#5a95f5"
+        #                background: "#131313"
+        #                card-background: "#2b2b2b"
+        #                text: "#eaeaea"
+        #                text-header: "#ffffff"
+        #                text-title: "#fafafa"
+        #                text-subtitle: "#f5f5f5"
+        #                card-shadow: rgba(0, 0, 0, 0.4)
+        #                link: "#3273dc"
+        #                link-hover: "#ffdd57"
+        background-image: "https://unsplash.com/photos/ESkw2ayO2As/download?ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzQ2MjE4MDQyfA&force=true"
+    # Services
+    # First level array represents a group.
+    # Leave only a "items" key if not using group (group name, icon & tagstyle are optional, section separation will not be displayed).
+    services:
+      - name: "Media"
+        icon: "fas fa-heartbeat"
+        items:
+          - name: Jellyfin
+            subtitle: Media player
+            logo: https://jellyfin.org/images/favicon.ico # assets on the service are hashed, so we cannot use them directly
+            url: https://jellyfin.test.com
+          - name: Seerr
+            subtitle: Media discovery
+            logo: https://seerr.test.com/favicon.ico
+            url: https://seerr.test.com
+          - name: Immich
+            subtitle: Photos management
+            logo: https://immich.test.com/favicon.ico
+            url: https://immich.test.com
+      - name: "Applications"
+        icon: "fas fa-heartbeat"
+        items:
+          - name: Gitea
+            subtitle: Source code management
+            logo: https://gitea.test.com/assets/img/favicon.png
+            url: https://gitea.test.com
+          - name: RuTorrent
+            subtitle: Torrent downloader
+            logo: https://rutorrent.test.com/images/favicon.ico
+            url: https://rutorrent.test.com
+          - name: Mailu
+            subtitle: Emails
+            logo: https://mail.test.com/favicon.ico
+            url: https://mail.test.com
+          - name: Seafile
+            subtitle: Files hosting
+            logo: https://seafile.test.com/media/favicons/favicon.png
+            url: https://seafile.test.com
+      - name: "System"
+        #                    - name: Paperless
+        #                      subtitle: Document management
+        #                      logo: https://paperless.test.com/favicon.ico
+        #                      url: https://paperless.test.com
+
+        icon: "fas fa-code-branch"
+        items:
+          - name: Longhorn
+            subtitle: Distributed cluster storage
+            logo: https://longhorn.test.com/favicon.ico
+            url: https://longhorn.test.com
+          - name: Authelia
+            subtitle: Login portal
+            logo: https://authelia.test.com/favicon.ico
+            url: https://authelia.test.com
+          - name: Lldap
+            subtitle: Accounts management
+            url: https://lldap.test.com
+          - name: WhoAmI
+            subtitle: Info about current connection
+            url: https://whoami.test.com
+      - name: "Observability"
+        icon: "fas fa-network-wired"
+        items:
+          - name: Grafana
+            subtitle: Graph dashbards
+            logo: https://grafana.test.com/public/build/img/fav32.png
+            url: https://grafana.test.com
+          - name: "Prometheus"
+            subtitle: Metrics monitoring
+            logo: https://prometheus.test.com/favicon.svg
+            # subtitle: "Network-wide Ad Blocking" # optional, if no subtitle is defined, PiHole statistics will be shown
+            tag: "other"
+            url: "https://prometheus.test.com"
+            type: "PiHole" # optional, loads a specific component that provides extra features. MUST MATCH a file name (without file extension) available in `src/components/services`
+            target: "_blank" # optional html a tag target attribute
+            # class: "green" # optional custom CSS class for card, useful with custom stylesheet
+            # background: red # optional color for card to set color directly without custom stylesheet
+          - name: AlertManager
+            subtitle: Alerting
+            logo: https://alertmanager.test.com/favicon.ico
+            url: https://alertmanager.test.com
+  custom.css: |-
+    @charset "UTF-8";
+    /* raleway-regular - latin */
+    @font-face {
+      font-family: 'Raleway';
+      font-style: normal;
+      font-weight: 400;
+      src: url('./fonts/raleway-v22-latin-regular.eot'); /* IE9 Compat Modes */
+      src: local(''),
+          url('./fonts/raleway-v22-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+          url('./fonts/raleway-v22-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+          url('./fonts/raleway-v22-latin-regular.woff') format('woff'), /* Modern Browsers */
+          url('./fonts/raleway-v22-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+          url('./fonts/raleway-v22-latin-regular.svg#Raleway') format('svg'); /* Legacy iOS */
+    }
+
+    /* lato-regular - latin */
+    @font-face {
+      font-family: 'Lato';
+      font-style: normal;
+      font-weight: 400;
+      src: url('./fonts/lato-v20-latin-regular.eot'); /* IE9 Compat Modes */
+      src: local(''),
+          url('./fonts/lato-v20-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+          url('./fonts/lato-v20-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+          url('./fonts/lato-v20-latin-regular.woff') format('woff'), /* Modern Browsers */
+          url('./fonts/lato-v20-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+          url('./fonts/lato-v20-latin-regular.svg#Lato') format('svg'); /* Legacy iOS */
+    }
+
+    /* lato-700 - latin */
+    @font-face {
+      font-family: 'Lato';
+      font-style: normal;
+      font-weight: 700;
+      src: url('./fonts/lato-v20-latin-700.eot'); /* IE9 Compat Modes */
+      src: local(''),
+          url('./fonts/lato-v20-latin-700.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+          url('./fonts/lato-v20-latin-700.woff2') format('woff2'), /* Super Modern Browsers */
+          url('./fonts/lato-v20-latin-700.woff') format('woff'), /* Modern Browsers */
+          url('./fonts/lato-v20-latin-700.ttf') format('truetype'), /* Safari, Android, iOS */
+          url('./fonts/lato-v20-latin-700.svg#Lato') format('svg'); /* Legacy iOS */
+    }
+
+    /* lato-900 - latin */
+    @font-face {
+      font-family: 'Lato';
+      font-style: normal;
+      font-weight: 900;
+      src: url('./fonts/lato-v20-latin-900.eot'); /* IE9 Compat Modes */
+      src: local(''),
+          url('./fonts/lato-v20-latin-900.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+          url('./fonts/lato-v20-latin-900.woff2') format('woff2'), /* Super Modern Browsers */
+          url('./fonts/lato-v20-latin-900.woff') format('woff'), /* Modern Browsers */
+          url('./fonts/lato-v20-latin-900.ttf') format('truetype'), /* Safari, Android, iOS */
+          url('./fonts/lato-v20-latin-900.svg#Lato') format('svg'); /* Legacy iOS */
+    }
+
+    /* Sets the group title to be a bolder font */
+    .group-title {
+      font-family: Lato;
+      font-weight: 800;
+      text-shadow: 1px 1px 2px black;
+    }
+
+    /* Changes the card title to be a bolder font */
+    .title {
+      font-weight: 700;
+    }
+
+    /* Changes the subtitle to be a bolder font */
+    .subtitle {
+      font-weight: 500;
+    }
+
+    /* Adds spacing to the bottom of cards */
+    body #app .card-content {
+      margin-bottom: 0.75rem;
+    }
+
+    /*Adds more border radius to the cards */
+    body .layout-vertical .column div:first-of-type .card {
+      border-radius: 1rem;
+    }
+    body .layout-vertical .card {
+      border-radius: 1rem;
+    }
+    .card {
+        border-radius: 1rem;
+    }
+    body .layout-vertical .column div:last-of-type .card {
+        border-radius: 1rem;
+    }
+
+    /* Changes Header Opacity */
+    body #bighead .first-line {
+      background-color: rgba(0, 0, 0, 0);
+    }
+    body #bighead .navbar {
+      background-color: rgba(0, 0, 0, 0);
+    }
+
+    body .search-bar input {
+        opacity: 80%;
+    }
+
+    body #bighead .navbar a:focus, body #bighead .navbar a:hover {
+      background-color: rgba(0, 0, 0, 0);
+      color: var(--link-hover);
+    }
+kind: ConfigMap
+metadata:
+  name: homer-config
+  namespace: homer
+---
+# Source: app-homer/templates/loader.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: homer
+  namespace: homer
+spec:
+  ports:
+  - name: http
+    port: 8080
+  selector:
+    app.kubernetes.io/name: homer
+---
+# Source: app-homer/templates/loader.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homer
+  namespace: homer
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: homer
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: homer
+    spec:
+      containers:
+      - image: b4bz/homer:v26.08.3
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+        name: homer
+        ports:
+        - containerPort: 8080
+          name: http
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - mountPath: /www/assets/config.yml
+          name: config
+          readOnly: true
+          subPath: config.yml
+        - mountPath: /www/assets/custom.css
+          name: config
+          readOnly: true
+          subPath: custom.css
+      securityContext:
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      volumes:
+      - configMap:
+          name: homer-config
+        name: config
+---
+# Source: app-homer/templates/loader.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: homer
+  namespace: homer
+spec:
+  dnsNames:
+  - homer.test.com
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: tls-homer
+---
+# Source: app-homer/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: homer
+  namespace: homer
+spec:
+  hostnames:
+  - homer.test.com
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: homer
+  rules:
+  - backendRefs:
+    - name: homer
+      port: 8080
+    filters:
+    - externalAuth:
+        backendRef:
+          name: authelia
+          namespace: authelia
+          port: 80
+        http:
+          allowedHeaders:
+          - accept
+          - cookie
+          - proxy-authorization
+          path: /api/authz/ext-authz/
+        protocol: HTTP
+      type: ExternalAuth
+---
+# Source: app-homer/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: homer
+  namespace: homer
+spec:
+  listeners:
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: homer.test.com
+    name: https
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - name: tls-homer
+      mode: Terminate
+  parentRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: shared
+    namespace: kube-system

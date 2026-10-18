@@ -93,6 +93,8 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
+  dependsOn:
+  - name: app-gateway-api
   install:
     crds: CreateReplace
     remediation:
@@ -122,6 +124,8 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
+  dependsOn:
+  - name: app-external-snapshotter
   install:
     crds: CreateReplace
     remediation:
@@ -267,6 +271,39 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: test-release-global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-homer
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-homer
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+  dependsOn:
+  - name: app-authelia
+  - name: app-cert-manager
+  - name: app-gateway-api
   install:
     crds: CreateReplace
     remediation:
