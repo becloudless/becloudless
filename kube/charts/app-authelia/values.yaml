@@ -1,0 +1,424 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+global:
+  domain:
+  name:
+  ldapdn:
+
+# Secrets to create in the `authelia` namespace for the cluster (not generated):
+#  - authelia: `notifier.smtp.password.txt`, `authentication.ldap.password.txt` (password of the lldap `authelia` user)
+#    and `storage.encryption.key`
+#  - authelia-oidc: `oidc.client.<client>.value` for gitea, grafana, jellyfin and immich (hashed client secrets)
+
+defaults:
+  metadata:
+    namespace: authelia
+
+resources:
+  namespaces:
+    authelia:
+      fullNameOverride: authelia
+
+  stringSecrets:
+    authelia-generated:
+      fullNameOverride: authelia-generated
+      fields:
+        oidc-hmac:
+          fieldName: identity_providers.oidc.hmac.key
+        reset-password-hmac:
+          fieldName: identity_validation.reset_password.jwt.hmac.key
+        session-encryption:
+          fieldName: session.encryption.key
+
+    # users of valkey, the key is the name of the user
+    authelia-valkey:
+      fullNameOverride: authelia-valkey
+      fields:
+        default:
+          fieldName: default
+        authelia:
+          fieldName: authelia
+
+  # key pair signing the OIDC tokens, mounted from /secrets/authelia-jwks
+  certManagerCertificates:
+    authelia-jwks:
+      fullNameOverride: authelia-jwks
+      secretName: authelia-jwks
+      commonName: authelia-jwks
+      issuerRef:
+        name: self-signed
+        kind: ClusterIssuer
+
+  fluxHelmRepositories:
+    authelia:
+      fullNameOverride: authelia
+      url: https://charts.authelia.com
+    authelia-valkey:
+      fullNameOverride: authelia-valkey
+      url: https://valkey.io/valkey-helm/
+
+  fluxHelmReleases:
+    # the database is prepared by the postgresql-cluster chart (certificates, issuer, cluster and backups)
+    # the cluster is named after the release, which is the name of this HelmRelease
+    authelia-postgresql:
+      fullNameOverride: authelia-postgresql
+      chart:
+        spec:
+          chart: ./kube/charts/postgresql-cluster
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: "{{ .Release.Namespace }}"
+
+    authelia-valkey:
+      fullNameOverride: authelia-valkey
+      chart:
+        spec:
+          chart: valkey
+          version: 0.12.0
+          sourceRef:
+            kind: HelmRepository
+            name: authelia-valkey
+      values:
+        replicaCount: 1
+        dataStorage:
+          enabled: true
+          requestedSize: 1Gi
+
+        auth:
+          enabled: true
+          aclUsers:
+            default:
+              permissions: "~* -@all"
+            authelia:
+              permissions: "~* &* +@all"
+          usersExistingSecret: authelia-valkey
+
+    authelia:
+      fullNameOverride: authelia
+      timeout: 10m # the pods wait for the database
+      dependsOn:
+        authelia-postgresql:
+          name: authelia-postgresql
+        authelia-valkey:
+          name: authelia-valkey
+      chart:
+        spec:
+          chart: authelia
+          version: 0.11.22
+          sourceRef:
+            kind: HelmRepository
+            name: authelia
+      values:
+        # https://github.com/authelia/chartrepo/blob/master/charts/authelia/values.yaml
+        ingress:
+          enabled: true
+          className: cilium
+          certManager: true
+          tls:
+            enabled: true
+
+        pod:
+          kind: Deployment
+          replicas: 2
+          env:
+            - name: TZ
+              value: Europe/Paris
+
+        secret:
+          existingSecret: authelia
+          additionalSecrets:
+            authelia-generated: {}
+            authelia-postgresql-app: {}
+            authelia-valkey: {}
+            authelia-oidc: {}
+            authelia-jwks: {}
+
+        configMap:
+          theme: dark
+
+          telemetry:
+            metrics:
+              enabled: true
+          storage:
+            postgres:
+              enabled: true
+              address: tcp://authelia-postgresql-rw
+              database: app
+              username: app
+              password:
+                secret_name: authelia-postgresql-app
+                value: password
+                path: password
+          notifier:
+            # filesystem:
+            #   enabled: true
+            disable_startup_check: false # in case of emergency
+            smtp:
+              enabled: true
+              address: submissions://mail.{{ .Values.global.domain }}:465
+              sender: '{{ .Values.global.name }} Authelia <authelia@{{ .Values.global.domain }}>'
+              username: authelia@{{ .Values.global.domain }}
+              password: {}
+
+          authentication_backend:
+            ldap:
+              enabled: true
+              implementation: lldap
+              # served by the lldap ldaps ingress (tls passthrough) with a publicly trusted certificate
+              address: ldaps://lldaps.{{ .Values.global.domain }}:443
+              base_dn: "{{ .Values.global.ldapdn }}"
+              user: 'UID=authelia,OU=people,{{ .Values.global.ldapdn }}'
+              password: {}
+              tls:
+                skip_verify: false
+                minimum_version: TLS1.2
+              attributes:
+                extra:
+                  immichquota: # The attribute name from LDAP
+                    name: 'immich_quota'
+                    multi_valued: false
+                    value_type: 'integer'
+                  immichrole:
+                    name: 'immich_role'
+                    multi_valued: false
+                    value_type: 'string'
+
+          session:
+            expiration: 16 hours # sessions expires every day
+            inactivity: 8 hours # destroy sessions if nothing is done
+            remember_me: -1      # always apply the same behavior
+            redis:
+              enabled: true
+              host: authelia-valkey
+              username: authelia
+              password:
+                secret_name: authelia-valkey
+                value: authelia
+                path: authelia
+            cookies:
+              - domain: "{{ .Values.global.domain }}"
+                subdomain: authelia
+            encryption_key:
+              secret_name: authelia-generated
+
+          password_policy:
+            zxcvbn:
+              enabled: true
+              min_score: 4
+
+          totp:
+            issuer: "{{ .Values.global.name }} Authelia"
+          webauthn:
+            display_name: "{{ .Values.global.name }} Authelia"
+
+          access_control:
+            default_policy: deny
+            rules:
+              - domain:
+                  - gitea.{{ .Values.global.domain }}
+                  - homer.{{ .Values.global.domain }}
+                  - lldap.{{ .Values.global.domain }}
+                  - longhorn.{{ .Values.global.domain }}
+                  - mail.{{ .Values.global.domain }}
+                  - grafana.{{ .Values.global.domain }}
+                  - alertmanager.{{ .Values.global.domain }}
+                  - prometheus.{{ .Values.global.domain }}
+                  - fluxwebhook.{{ .Values.global.domain }}
+                  - rutorrent.{{ .Values.global.domain }}
+                subject:
+                  - [ 'group:role_admin' ]
+                policy: two_factor
+              - domain:
+                  - homer.{{ .Values.global.domain }}
+                subject:
+                  - [ 'group:role_user' ]
+                  - [ 'group:role_admin' ]
+                policy: one_factor
+              - domain:
+                  - seerr.{{ .Values.global.domain }}
+                subject:
+                  - [ 'group:app_seerr' ]
+                  - [ 'group:role_admin' ]
+                policy: two_factor
+              - domain:
+                  - jellyfin.{{ .Values.global.domain }}
+                subject:
+                  - [ 'group:app_jellyfin' ]
+                  - [ 'group:role_admin' ]
+                policy: two_factor
+              - domain:
+                  - gitea.{{ .Values.global.domain }}
+                subject:
+                  - [ 'group:app_gitea' ]
+                  - [ 'group:role_admin' ]
+                policy: two_factor
+              - domain:
+                  - pushprox.{{ .Values.global.domain }}
+                subject:
+                  - [ 'group:app_pushprox' ]
+                  - [ 'group:role_admin' ]
+                policy: one_factor
+              - domain:
+                  - immich.{{ .Values.global.domain }}
+                subject:
+                  - [ 'group:app_immich' ]
+                  - [ 'group:role_admin' ]
+                policy: two_factor
+              - domain:
+                  - immich.{{ .Values.global.domain }}
+                subject:
+                  - [ 'group:app_immich_one_factor' ]
+                policy: one_factor
+              - domain:
+                  - whoami.{{ .Values.global.domain }}
+                policy: one_factor
+
+          identity_validation:
+            reset_password:
+              secret:
+                secret_name: authelia-generated
+
+          identity_providers:
+            oidc:
+              enabled: true
+              hmac_secret:
+                secret_name: authelia-generated
+              jwks:
+                - key_id: ''
+                  algorithm: 'RS256'
+                  use: 'sig'
+                  key:
+                    path: '/secrets/authelia-jwks/tls.key'
+                  certificate_chain:
+                    path: '/secrets/authelia-jwks/tls.crt'
+              authorization_policies:
+                immich_authz:
+                  default_policy: deny
+                  rules:
+                    - policy: two_factor
+                      subject:
+                        - 'group:role_admin'
+                        - 'group:app_immich'
+                    - policy: one_factor
+                      subject:
+                        - 'group:app_immich_one_factor'
+
+              claims_policies:
+                grafana:
+                  id_token: [ 'email', 'name', 'groups', 'preferred_username' ]
+                immich_policy:
+                  custom_claims:
+                    immich_quota:
+                      attribute: 'immich_quota'
+                    immich_role:
+                      attribute: 'immich_role'
+              scopes:
+                immich_scope:
+                  claims:
+                    - 'immich_quota'
+                    - 'immich_role'
+              ## See: https://www.authelia.com/c/oidc
+              # generate a client_id
+              # docker run --rm authelia/authelia:latest authelia crypto rand --length 72 --charset rfc3986
+              # generate a client_secret
+              # docker run --rm authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
+              clients:
+                  # gitea admin auth add-oauth --provider=openidConnect --name=authelia --key=gitea --secret=insecure_secret --auto-discover-url=https://authelia.{{ .Values.global.domain }}/.well-known/openid-configuration --scopes='openid email profile'
+                - client_id: 'gitea'
+                  client_name: 'Gitea'
+                  client_secret:
+                    path: '/secrets/authelia-oidc/oidc.client.gitea.value'
+                  public: false
+                  authorization_policy: 'two_factor'
+                  require_pkce: false
+                  pkce_challenge_method: ''
+                  pre_configured_consent_duration: 1 year
+                  redirect_uris:
+                    - 'https://gitea.{{ .Values.global.domain }}/user/oauth2/authelia/callback'
+                  scopes:
+                    - 'openid'
+                    - 'email'
+                    - 'profile'
+                  response_types:
+                    - 'code'
+                  grant_types:
+                    - 'authorization_code'
+                  access_token_signed_response_alg: 'none'
+                  userinfo_signed_response_alg: 'none'
+                  token_endpoint_auth_method: 'client_secret_basic'
+
+                - client_id: 'grafana'
+                  client_name: 'Grafana'
+                  client_secret:
+                    path: '/secrets/authelia-oidc/oidc.client.grafana.value'
+                  claims_policy: 'grafana'
+                  public: false
+                  authorization_policy: 'two_factor'
+                  require_pkce: true
+                  pkce_challenge_method: 'S256'
+                  pre_configured_consent_duration: 1 year
+                  redirect_uris:
+                    - 'https://grafana.{{ .Values.global.domain }}/login/generic_oauth'
+                  scopes:
+                    - 'openid'
+                    - 'profile'
+                    - 'groups'
+                    - 'email'
+                  response_types:
+                    - 'code'
+                  grant_types:
+                    - 'authorization_code'
+                  access_token_signed_response_alg: 'none'
+                  userinfo_signed_response_alg: 'none'
+                  token_endpoint_auth_method: 'client_secret_basic'
+
+                - client_id: 'jellyfin'
+                  client_name: 'Jellyfin'
+                  client_secret:
+                    path: '/secrets/authelia-oidc/oidc.client.jellyfin.value'
+                  public: false
+                  authorization_policy: 'two_factor'
+                  require_pkce: true
+                  pkce_challenge_method: 'S256'
+                  pre_configured_consent_duration: 1 year
+                  redirect_uris:
+                    - 'https://jellyfin.{{ .Values.global.domain }}/sso/OID/redirect/authelia'
+                  scopes:
+                    - 'openid'
+                    - 'profile'
+                    - 'groups'
+                  response_types:
+                    - 'code'
+                  grant_types:
+                    - 'authorization_code'
+                  access_token_signed_response_alg: 'none'
+                  userinfo_signed_response_alg: 'none'
+                  token_endpoint_auth_method: 'client_secret_post'
+
+                - client_id: 'immich'
+                  client_name: 'immich'
+                  client_secret:
+                    path: '/secrets/authelia-oidc/oidc.client.immich.value'
+                  public: false
+                  authorization_policy: 'immich_authz'
+                  require_pkce: false
+                  pkce_challenge_method: ''
+                  pre_configured_consent_duration: 1 year
+                  redirect_uris:
+                    - 'https://immich.{{ .Values.global.domain }}/auth/login'
+                    - 'https://immich.{{ .Values.global.domain }}/user-settings'
+                    - 'app.immich:///oauth-callback'
+                  scopes:
+                    - 'openid'
+                    - 'profile'
+                    - 'email'
+                    - 'immich_scope'
+                  claims_policy: 'immich_policy'
+                  response_types:
+                    - 'code'
+                  grant_types:
+                    - 'authorization_code'
+                  access_token_signed_response_alg: 'RS256'
+                  userinfo_signed_response_alg: 'RS256'
+                  token_endpoint_auth_method: 'client_secret_post'
