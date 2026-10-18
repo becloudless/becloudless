@@ -88,13 +88,13 @@ resources:
           backupTargetCredentialSecret: backupstore
           pollInterval: 180
 
+        # the UI has no authentication of its own and cilium ingress has no forward auth (authelia): not exposed
         ingress:
-          enabled: true
+          enabled: false
           host: longhorn.{{ .Values.global.domain }}
           tls: true
           annotations:
             kubernetes.io/tls-acme: "true"
-            traefik.ingress.kubernetes.io/router.middlewares: traefik-authelia@kubernetescrd
 
     # settings, recurring jobs, storage and snapshot classes need the Longhorn CRDs, so they are installed once longhorn is ready
     # the VolumeSnapshotClasses also need the snapshot CRDs from app-external-snapshotter

@@ -54,6 +54,18 @@
             "certManagerOrders": {
               "$ref": "./resources/certManagerOrders.json"
             },
+            "ciliumBGPAdvertisements": {
+              "$ref": "./resources/ciliumBGPAdvertisements.json"
+            },
+            "ciliumBGPClusterConfigs": {
+              "$ref": "./resources/ciliumBGPClusterConfigs.json"
+            },
+            "ciliumBGPPeerConfigs": {
+              "$ref": "./resources/ciliumBGPPeerConfigs.json"
+            },
+            "ciliumLoadBalancerIPPools": {
+              "$ref": "./resources/ciliumLoadBalancerIPPools.json"
+            },
             "clusterRoleBindings": {
               "$ref": "./resources/clusterRoleBindings.json"
             },
@@ -268,6 +280,34 @@
             "$ref": "./resources/certManagerOrders.json"
           },
           "description": "Order instances, keyed by id.",
+          "type": "object"
+        },
+        "ciliumBGPAdvertisements": {
+          "additionalProperties": {
+            "$ref": "./resources/ciliumBGPAdvertisements.json"
+          },
+          "description": "CiliumBGPAdvertisement instances, keyed by id.",
+          "type": "object"
+        },
+        "ciliumBGPClusterConfigs": {
+          "additionalProperties": {
+            "$ref": "./resources/ciliumBGPClusterConfigs.json"
+          },
+          "description": "CiliumBGPClusterConfig instances, keyed by id.",
+          "type": "object"
+        },
+        "ciliumBGPPeerConfigs": {
+          "additionalProperties": {
+            "$ref": "./resources/ciliumBGPPeerConfigs.json"
+          },
+          "description": "CiliumBGPPeerConfig instances, keyed by id.",
+          "type": "object"
+        },
+        "ciliumLoadBalancerIPPools": {
+          "additionalProperties": {
+            "$ref": "./resources/ciliumLoadBalancerIPPools.json"
+          },
+          "description": "CiliumLoadBalancerIPPool instances, keyed by id.",
           "type": "object"
         },
         "clusterRoleBindings": {

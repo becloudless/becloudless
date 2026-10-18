@@ -93,8 +93,7 @@ spec:
     ingress:
       annotations:
         kubernetes.io/tls-acme: "true"
-        traefik.ingress.kubernetes.io/router.middlewares: traefik-authelia@kubernetescrd
-      enabled: true
+      enabled: false
       host: longhorn.test.com
       tls: true
 ---

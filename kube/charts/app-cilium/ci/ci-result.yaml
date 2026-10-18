@@ -32,9 +32,16 @@ spec:
     cni:
       exclusive: false
     devices: br0
+    envoy:
+      streamIdleTimeoutDurationSeconds: 600
     extraEnv:
     - name: PATH
       value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/run/wrappers/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin
+    ingressController:
+      default: true
+      enabled: true
+      enforceHttps: true
+      loadbalancerMode: shared
     ipam:
       mode: kubernetes
     k8sServiceHost: kube.test.com
@@ -44,6 +51,38 @@ spec:
       directRoutingDevice: br0
     operator:
       replicas: 1
+---
+# Source: app-cilium/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cilium-config
+  namespace: kube-system
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-cilium/config
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  dependsOn:
+  - name: cilium
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    global:
+      domain: test.com
 ---
 # Source: app-cilium/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

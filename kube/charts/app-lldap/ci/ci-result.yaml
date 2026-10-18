@@ -146,6 +146,27 @@ spec:
     secretName: tls-lldap
 ---
 # Source: app-lldap/templates/loader.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    ingress.cilium.io/tls-passthrough: enabled
+  name: lldap-ldaps
+  namespace: lldap
+spec:
+  rules:
+  - host: lldaps.test.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: lldap
+            port:
+              number: 6360
+        path: /
+        pathType: Prefix
+---
+# Source: app-lldap/templates/loader.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -190,23 +211,6 @@ spec:
     postgresql:
       parameters:
         max_slot_wal_keep_size: 500MB
----
-# Source: app-lldap/templates/loader.yaml
-apiVersion: traefik.io/v1alpha1
-kind: IngressRouteTCP
-metadata:
-  name: lldap-ldaps
-  namespace: lldap
-spec:
-  entryPoints:
-  - websecure
-  routes:
-  - match: HostSNI(`lldaps.test.com`)
-    services:
-    - name: lldap
-      port: 6360
-  tls:
-    passthrough: true
 ---
 # Source: app-lldap/templates/loader.yaml
 apiVersion: secretgenerator.mittwald.de/v1alpha1

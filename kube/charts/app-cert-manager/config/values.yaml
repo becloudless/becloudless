@@ -14,7 +14,7 @@ resources:
         solvers:
           - http01:
               ingress:
-                class: traefik
+                class: cilium
 
     letsencrypt-staging:
       fullNameOverride: letsencrypt-staging
@@ -26,7 +26,7 @@ resources:
         solvers:
           - http01:
               ingress:
-                class: traefik
+                class: cilium
 
     self-signed:
       fullNameOverride: self-signed

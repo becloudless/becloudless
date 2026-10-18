@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=../../base/schema/values.schema.json
+global:
+  domain:
+
+# The cluster specific parts are set by the cluster:
+#  - ciliumLoadBalancerIPPools: the range used for LoadBalancer services
+#  - ciliumBGPClusterConfigs: the local/peer ASN and the router to peer with
+# See ci/ci-values.yaml for an example.
+resources:
+  # Advertise the LoadBalancer IPs of every service over BGP
+  ciliumBGPAdvertisements:
+    bgp-advertisement:
+      fullNameOverride: bgp-advertisement
+      labels:
+        advertise: bgp
+      advertisements:
+        service:
+          advertisementType: Service
+          service:
+            addresses:
+              loadBalancerIP: LoadBalancerIP
+          selector: # an always true selector, an empty one matches nothing
+            matchExpressions:
+              never:
+                key: somekey
+                operator: NotIn
+                values:
+                  never-used-value: never-used-value
+
+  ciliumBGPPeerConfigs:
+    bgp-peer-config:
+      fullNameOverride: bgp-peer-config
+      families:
+        ipv4-unicast:
+          afi: ipv4
+          safi: unicast
+          advertisements:
+            matchLabels:
+              advertise: bgp

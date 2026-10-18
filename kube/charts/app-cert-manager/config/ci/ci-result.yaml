@@ -14,7 +14,7 @@ spec:
     solvers:
     - http01:
         ingress:
-          class: traefik
+          class: cilium
 ---
 # Source: cert-manager-config/templates/loader.yaml
 apiVersion: cert-manager.io/v1
@@ -31,7 +31,7 @@ spec:
     solvers:
     - http01:
         ingress:
-          class: traefik
+          class: cilium
 ---
 # Source: cert-manager-config/templates/loader.yaml
 apiVersion: cert-manager.io/v1

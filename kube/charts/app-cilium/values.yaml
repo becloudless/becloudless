@@ -49,3 +49,30 @@ resources:
           enabled: true
         cni:
           exclusive: false # let multus install
+
+        ingressController:
+          enabled: true
+          default: true
+          loadbalancerMode: shared
+          enforceHttps: true
+        envoy:
+          streamIdleTimeoutDurationSeconds: 600 # required by immich for big files upload
+
+    # LoadBalancer pool and BGP need the Cilium CRDs, so they are installed once cilium is ready.
+    # The cluster sets its pool and BGP cluster config through `resources.fluxHelmReleases.cilium-config.values.resources`.
+    cilium-config:
+      fullNameOverride: cilium-config
+      dependsOn:
+        cilium:
+          name: cilium
+      chart:
+        spec:
+          chart: ./kube/charts/app-cilium/config
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: "{{ .Release.Namespace }}"
+      values:
+        global:
+          domain: "{{ .Values.global.domain }}"

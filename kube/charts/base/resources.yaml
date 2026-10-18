@@ -352,3 +352,19 @@ resources:
       url: https://raw.githubusercontent.com/kubernetes/autoscaler/master/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
       crdVersion: v1
       kind: VerticalPodAutoscaler
+  - name: ciliumLoadBalancerIPPools
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumloadbalancerippools.yaml
+      crdVersion: v2
+  - name: ciliumBGPAdvertisements
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumbgpadvertisements.yaml
+      crdVersion: v2
+  - name: ciliumBGPPeerConfigs
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumbgppeerconfigs.yaml
+      crdVersion: v2
+  - name: ciliumBGPClusterConfigs
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumbgpclusterconfigs.yaml
+      crdVersion: v2

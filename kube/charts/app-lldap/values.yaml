@@ -161,21 +161,24 @@ resources:
           hosts:
             lldap: lldap.{{ .Values.global.domain }}
 
-  # requires the traefik CRDs
-  traefikIngressRouteTCPs:
+    # ldaps is served by lldap itself (tls-lldaps certificate): the TLS stream is forwarded as is, routed by SNI
     lldap-ldaps:
       fullNameOverride: lldap-ldaps
-      entryPoints:
-        websecure: websecure
-      routes:
+      annotations:
+        ingress.cilium.io/tls-passthrough: enabled
+      rules:
         lldaps:
-          match: HostSNI(`lldaps.{{ .Values.global.domain }}`)
-          services:
-            lldap:
-              name: lldap
-              port: 6360
-      tls:
-        passthrough: true
+          host: lldaps.{{ .Values.global.domain }}
+          http:
+            paths:
+              root:
+                path: /
+                pathType: Prefix
+                backend:
+                  service:
+                    name: lldap
+                    port:
+                      number: 6360
 
   fluxHelmReleases:
     # the database is prepared by the postgresql-cluster chart (certificates, issuer, cluster and backups)
