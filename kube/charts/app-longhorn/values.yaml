@@ -133,12 +133,17 @@ resources:
               retain: 2
               concurrency: 1
 
+          # Longhorn refuses to delete its settings, which makes a helm uninstall fail, so helm must never delete them
           longhornSettings:
             concurrent-automatic-engine-upgrade-per-node-limit:
               fullNameOverride: concurrent-automatic-engine-upgrade-per-node-limit
+              annotations:
+                helm.sh/resource-policy: keep
               value: "1"
             default-backup-block-size:
               fullNameOverride: default-backup-block-size
+              annotations:
+                helm.sh/resource-policy: keep
               value: "16"
 
           storageClasses:

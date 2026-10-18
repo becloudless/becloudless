@@ -146,9 +146,13 @@ spec:
           task: backup
       longhornSettings:
         concurrent-automatic-engine-upgrade-per-node-limit:
+          annotations:
+            helm.sh/resource-policy: keep
           fullNameOverride: concurrent-automatic-engine-upgrade-per-node-limit
           value: "1"
         default-backup-block-size:
+          annotations:
+            helm.sh/resource-policy: keep
           fullNameOverride: default-backup-block-size
           value: "16"
       storageClasses:
