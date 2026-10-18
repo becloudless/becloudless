@@ -97,7 +97,7 @@ apps:
       gateway-api:
         name: app-gateway-api
   forgejo:
-    groups: [all, server]
+    groups: [server]
     dependsOn: # the certificate and the Gateway, the postgresql cluster and its volume snapshots, the volume
       cert-manager:
         name: app-cert-manager
@@ -108,7 +108,7 @@ apps:
       longhorn:
         name: app-longhorn
   jellyfin:
-    groups: [all, server]
+    groups: [server]
     dependsOn: # the certificate and the Gateway, the volume
       cert-manager:
         name: app-cert-manager
@@ -117,7 +117,7 @@ apps:
       longhorn:
         name: app-longhorn
   immich:
-    groups: [all, server]
+    groups: [server]
     dependsOn: # the certificate and the Gateway, the postgresql cluster and its volume snapshots, the volumes, the valkey secret
       cert-manager:
         name: app-cert-manager
@@ -139,7 +139,7 @@ apps:
       gateway-api:
         name: app-gateway-api
   prometheus:
-    groups: [all, server]
+    groups: [server]
     dependsOn: # the certificates, the Gateway, the ReferenceGrant to authelia and the volumes
       authelia:
         name: app-authelia
