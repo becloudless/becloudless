@@ -128,9 +128,7 @@ resources:
                 name: jellyfin-config
             media:
               name: media
-              hostPath:
-                path: /data/Media
-                type: Directory
+              emptyDir: {} # TODO
 
   services:
     jellyfin:
