@@ -200,8 +200,9 @@ resources:
             authelia-generated: {}
             authelia-postgresql-app: {}
             authelia-valkey: {}
-            authelia-oidc: {}
-            authelia-jwks: {}
+            # TODO
+            # authelia-oidc: {}
+            # authelia-jwks: {}
 
         configMap:
           theme: dark
