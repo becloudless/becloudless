@@ -1,31 +1,31 @@
 
-# yaml-language-server: $schema=../base/schema/values.schema.json
+# yaml-language-server: $schema=./schema/values.schema.json
+
+config:
+  domain:
+  # name: # deduced from domain by default
+  # ldapdn: # deduced from domain by default (dc=example,dc=com)
+
+
+# Groups of apps to install. An app is installed when one of its `groups` is enabled here,
+# unless `apps.<name>.enabled` is explicitly set to true/false.
+appsGroups:
+  minimal:
+    enabled: true
+  server:
+    enabled: false
+  pop:
+    enabled: false
+
+apps:
+  flux:
+    groups: [minimal, server, pop]
+  cilium:
+    groups: [minimal, server, pop]
+  coredns:
+    groups: [minimal, server, pop]
+
 
 resources:
   namespaces:
     bcl: {}
-
-  fluxOCIRepositories:
-    bcl:
-      url: oci://ghcr.io/becloudless/bcl
-  
-  fluxHelmReleases:
-    flux:
-      chart:
-        spec:
-          chart: flux
-          sourceRef:
-            kind: HelmRepository
-            name: bcl
-            namespace: bcl
-          version: 0.0.0
-      interval: 10m
-      storageNamespace: bcl
-      targetNamespace: flux-system
-      install:
-        createNamespace: true
-      valuesFrom:
-        something:
-          kind: ConfigMap
-          name: RELEASE-NAME-chart-flux
-          valuesKey: data

@@ -1,1 +1,12 @@
-{{- include "base.loader.all" $ }}
+
+{{- include "base.loader.init" $ }}
+
+{{- /* Each feature output is the base, values set by the user take precedence. Merged one by one so a feature can rely on the previous ones. */}}
+{{- range $feature := list "app-bcl.features.globalValues"
+                           "app-bcl.features.appsGroups"
+                           "app-bcl.features.apps" }}
+  {{- $featureValues := include $feature (dict "rootContext" $) | fromYaml }}
+  {{- $_ := set $ "Values" (mustMergeOverwrite $featureValues $.Values) }}
+{{- end }}
+
+{{- include "base.resources.renderResources" (dict "rootContext" $) }}
