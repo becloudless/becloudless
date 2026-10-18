@@ -34,6 +34,9 @@ resources:
           database_url = "postgres://"
           ldap_base_dn = "{{ .Values.global.ldapdn }}"
 
+          [ldap_options]
+          enable_samba = true
+
           [ldaps_options]
           enabled=true
           key_file="/cert/tls.key"

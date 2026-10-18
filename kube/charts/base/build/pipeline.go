@@ -13,6 +13,7 @@ import (
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/portMaps"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/required"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/stringifyFields"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/templatedStrings"
 )
 
 // Pipeline returns the ordered list of schema mutations applied to every
@@ -35,6 +36,7 @@ func Pipeline(extractContent content.ExtractContent, arrays *arraysToMaps.Arrays
 		portMaps.PortMaps{}, // before arraysToMaps, same reason as envMaps
 		*arrays,
 		*stringify,
+		templatedStrings.TemplatedStrings{}, // last of the schema relaxations: wraps the validation the other mutations left on the strings
 		additionalPropertiesFalse.AdditionalPropertiesFalse{},
 	}
 }

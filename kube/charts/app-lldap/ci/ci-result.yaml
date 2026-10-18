@@ -16,6 +16,9 @@ data:
     database_url = "postgres://"
     ldap_base_dn = "dc=test,dc=com"
 
+    [ldap_options]
+    enable_samba = true
+
     [ldaps_options]
     enabled=true
     key_file="/cert/tls.key"
@@ -76,8 +79,6 @@ spec:
         envFrom:
         - secretRef:
             name: lldap-generated
-        - secretRef:
-            name: lldap
         image: lldap/lldap:2026-09-22-debian-rootless
         livenessProbe:
           httpGet:

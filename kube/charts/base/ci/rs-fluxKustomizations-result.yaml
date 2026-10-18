@@ -13,3 +13,4 @@ spec:
     kind: GitRepository
     name: myapp-repo
   targetNamespace: default
+  wait: true

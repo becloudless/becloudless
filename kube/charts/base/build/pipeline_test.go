@@ -3,8 +3,8 @@ package build
 import (
 	"testing"
 
-	"resourceschart/templates/resources/mutations"
-	"resourceschart/templates/resources/mutations/content"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/content"
 )
 
 func TestPipeline_EnabledSurvivesFullPipeline(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"resourceschart/templates/resources/mutations/arraysToMaps"
-	"resourceschart/templates/resources/mutations/stringifyFields"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/arraysToMaps"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/stringifyFields"
 )
 
 func writeResourcesYAML(t *testing.T, content string) string {
