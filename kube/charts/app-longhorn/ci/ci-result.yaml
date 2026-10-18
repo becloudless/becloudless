@@ -96,6 +96,7 @@ spec:
       enabled: true
       host: longhorn.test.com
       ingressClassName: cilium
+      pathType: Prefix
       tls: true
       tlsSecret: tls-longhorn
 ---

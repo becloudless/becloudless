@@ -95,6 +95,7 @@ resources:
           host: longhorn.{{ .Values.global.domain }}
           tls: true
           tlsSecret: tls-longhorn
+          pathType: Prefix # cilium turns ImplementationSpecific "/" into an exact match of "/" only, so css/js are 404
           annotations:
             kubernetes.io/tls-acme: "true"
 
