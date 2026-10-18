@@ -1,0 +1,169 @@
+---
+# Source: app-landing/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: landing
+  namespace: landing
+spec: {}
+---
+# Source: app-landing/templates/loader.yaml
+apiVersion: v1
+data:
+  index.html: |-
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>test.com</title>
+      <style>
+        html, body { height: 100%; margin: 0; }
+        body {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #111827;
+          color: #e5e7eb;
+          font-family: system-ui, sans-serif;
+        }
+        main { text-align: center; }
+        h1 { font-size: 2.5rem; font-weight: 600; margin: 0 0 .5rem; }
+        p { color: #9ca3af; margin: 0; }
+      </style>
+    </head>
+    <body>
+      <main>
+        <h1>test.com</h1>
+        <p>Nothing to see here.</p>
+      </main>
+    </body>
+    </html>
+kind: ConfigMap
+metadata:
+  name: landing-html
+  namespace: landing
+---
+# Source: app-landing/templates/loader.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: landing
+  namespace: landing
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: landing
+---
+# Source: app-landing/templates/loader.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: landing
+  namespace: landing
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: landing
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: landing
+    spec:
+      containers:
+      - image: nginxinc/nginx-unprivileged:1.29.3-alpine
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+        name: nginx
+        ports:
+        - containerPort: 8080
+          name: http
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /usr/share/nginx/html
+          name: html
+          readOnly: true
+        - mountPath: /tmp
+          name: tmp
+      securityContext:
+        runAsGroup: 101
+        runAsNonRoot: true
+        runAsUser: 101
+      volumes:
+      - configMap:
+          name: landing-html
+        name: html
+      - emptyDir: {}
+        name: tmp
+---
+# Source: app-landing/templates/loader.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: landing
+  namespace: landing
+spec:
+  dnsNames:
+  - test.com
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: tls-landing
+---
+# Source: app-landing/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: landing
+  namespace: landing
+spec:
+  hostnames:
+  - test.com
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: landing
+  rules:
+  - backendRefs:
+    - name: landing
+      port: 80
+---
+# Source: app-landing/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: landing
+  namespace: landing
+spec:
+  listeners:
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: test.com
+    name: https
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - name: tls-landing
+      mode: Terminate
+  parentRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: shared
+    namespace: kube-system

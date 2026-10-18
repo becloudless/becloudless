@@ -80,6 +80,13 @@ apps:
         name: app-longhorn
       secret-generator:
         name: app-secret-generator
+  landing:
+    groups: [all, server]
+    dependsOn: # the certificate and the Gateway
+      cert-manager:
+        name: app-cert-manager
+      gateway-api:
+        name: app-gateway-api
 
 
 resources:
