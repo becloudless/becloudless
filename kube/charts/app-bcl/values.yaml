@@ -80,8 +80,8 @@ apps:
         name: app-cnpg
       gateway-api:
         name: app-gateway-api
-      lldap:
-        name: app-lldap
+      # lldap:
+      #   name: app-lldap
       longhorn:
         name: app-longhorn
       secret-generator:
