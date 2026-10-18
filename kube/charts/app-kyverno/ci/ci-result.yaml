@@ -45,7 +45,7 @@ metadata:
 spec:
   chart:
     spec:
-      chart: ./kube/charts/app-kyverno/config
+      chart: ./kube/charts/base-loader
       reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
@@ -64,6 +64,26 @@ spec:
   upgrade:
     remediation:
       retries: 3
+  values:
+    resources:
+      kyvernoClusterPolicies:
+        set-image-pull-policy:
+          fullNameOverride: set-image-pull-policy
+          rules:
+            set-image-pull-policy:
+              match:
+                any:
+                  pods:
+                    resources:
+                      kinds:
+                      - Pod
+              mutate:
+                patchStrategicMerge:
+                  spec:
+                    containers:
+                    - (image): '*'
+                      imagePullPolicy: IfNotPresent
+              name: set-image-pull-policy
 ---
 # Source: app-kyverno/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

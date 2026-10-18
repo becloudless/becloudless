@@ -109,7 +109,7 @@ metadata:
 spec:
   chart:
     spec:
-      chart: ./kube/charts/app-longhorn/config
+      chart: ./kube/charts/base-loader
       reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
@@ -130,6 +130,69 @@ spec:
   upgrade:
     remediation:
       retries: 3
+  values:
+    defaults:
+      metadata:
+        namespace: longhorn-system
+    resources:
+      longhornRecurringJobs:
+        daily-backups:
+          concurrency: 1
+          cron: 0 4 * * *
+          fullNameOverride: daily-backups
+          groups:
+          - default
+          retain: 2
+          task: backup
+      longhornSettings:
+        concurrent-automatic-engine-upgrade-per-node-limit:
+          fullNameOverride: concurrent-automatic-engine-upgrade-per-node-limit
+          value: "1"
+        default-backup-block-size:
+          fullNameOverride: default-backup-block-size
+          value: "16"
+      storageClasses:
+        longhorn-single-local-replica:
+          allowVolumeExpansion: true
+          annotations:
+            storageclass.kubernetes.io/is-default-class: "false"
+          fullNameOverride: longhorn-single-local-replica
+          parameters:
+            dataLocality: strict-local
+            fsType: ext4
+            numberOfReplicas: "2"
+            recurringJobSelector: '[{"name":"single-local-replica","isGroup":true}]'
+            staleReplicaTimeout: "60"
+          provisioner: driver.longhorn.io
+          reclaimPolicy: Delete
+          volumeBindingMode: Immediate
+      volumeSnapshotClasses:
+        longhorn-backing-image:
+          deletionPolicy: Delete
+          driver: driver.longhorn.io
+          fullNameOverride: longhorn-backing-image
+          parameters:
+            export-type: qcow2
+            type: bi
+        longhorn-backup-full:
+          deletionPolicy: Delete
+          driver: driver.longhorn.io
+          fullNameOverride: longhorn-backup-full
+          parameters:
+            backupMode: full
+            type: bak
+        longhorn-backup-incremental:
+          deletionPolicy: Delete
+          driver: driver.longhorn.io
+          fullNameOverride: longhorn-backup-incremental
+          parameters:
+            type: bak
+        longhorn-snapshot:
+          deletionPolicy: Delete
+          driver: driver.longhorn.io
+          fullNameOverride: longhorn-snapshot
+          parameters:
+            type: snap
 ---
 # Source: app-longhorn/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

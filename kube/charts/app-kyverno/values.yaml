@@ -39,9 +39,29 @@ resources:
           name: kyverno
       chart:
         spec:
-          chart: ./kube/charts/app-kyverno/config
+          chart: ./kube/charts/base-loader
           reconcileStrategy: Revision
           sourceRef:
             kind: GitRepository
             name: bcl
             namespace: "{{ .Release.Namespace }}"
+      values:
+        resources:
+          kyvernoClusterPolicies:
+            set-image-pull-policy:
+              fullNameOverride: set-image-pull-policy
+              rules:
+                set-image-pull-policy:
+                  name: set-image-pull-policy
+                  match:
+                    any:
+                      pods:
+                        resources:
+                          kinds:
+                            - Pod
+                  mutate:
+                    patchStrategicMerge:
+                      spec:
+                        containers:
+                          - (image): "*"
+                            imagePullPolicy: IfNotPresent

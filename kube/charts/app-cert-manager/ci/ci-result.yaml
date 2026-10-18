@@ -52,7 +52,7 @@ metadata:
 spec:
   chart:
     spec:
-      chart: ./kube/charts/app-cert-manager/config
+      chart: ./kube/charts/base-loader
       reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
@@ -72,8 +72,33 @@ spec:
     remediation:
       retries: 3
   values:
-    global:
-      domain: test.com
+    resources:
+      certManagerClusterIssuers:
+        letsencrypt-prod:
+          acme:
+            email: admin@test.com
+            privateKeySecretRef:
+              name: letsencrypt-prod
+            server: https://acme-v02.api.letsencrypt.org/directory
+            solvers:
+            - http01:
+                ingress:
+                  class: cilium
+          fullNameOverride: letsencrypt-prod
+        letsencrypt-staging:
+          acme:
+            email: admin@test.com
+            privateKeySecretRef:
+              name: letsencrypt-staging
+            server: https://acme-staging-v02.api.letsencrypt.org/directory
+            solvers:
+            - http01:
+                ingress:
+                  class: cilium
+          fullNameOverride: letsencrypt-staging
+        self-signed:
+          fullNameOverride: self-signed
+          selfSigned: {}
 ---
 # Source: app-cert-manager/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

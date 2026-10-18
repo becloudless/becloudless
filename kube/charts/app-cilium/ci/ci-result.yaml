@@ -61,7 +61,7 @@ metadata:
 spec:
   chart:
     spec:
-      chart: ./kube/charts/app-cilium/config
+      chart: ./kube/charts/base-loader
       reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
@@ -81,8 +81,35 @@ spec:
     remediation:
       retries: 3
   values:
-    global:
-      domain: test.com
+    resources:
+      ciliumBGPAdvertisements:
+        bgp-advertisement:
+          advertisements:
+            service:
+              advertisementType: Service
+              selector:
+                matchExpressions:
+                  never:
+                    key: somekey
+                    operator: NotIn
+                    values:
+                      never-used-value: never-used-value
+              service:
+                addresses:
+                  loadBalancerIP: LoadBalancerIP
+          fullNameOverride: bgp-advertisement
+          labels:
+            advertise: bgp
+      ciliumBGPPeerConfigs:
+        bgp-peer-config:
+          families:
+            ipv4-unicast:
+              advertisements:
+                matchLabels:
+                  advertise: bgp
+              afi: ipv4
+              safi: unicast
+          fullNameOverride: bgp-peer-config
 ---
 # Source: app-cilium/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1
