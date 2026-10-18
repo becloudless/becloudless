@@ -285,6 +285,11 @@ spec:
         zxcvbn:
           enabled: true
           min_score: 4
+      server:
+        endpoints:
+          authz:
+            ext-authz:
+              implementation: ExtAuthz
       session:
         cookies:
         - domain: test.com
@@ -426,6 +431,22 @@ metadata:
 spec:
   interval: 10m
   url: https://valkey.io/valkey-helm/
+---
+# Source: app-authelia/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: ext-authz
+  namespace: authelia
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: longhorn-system
+  to:
+  - group: ""
+    kind: Service
+    name: authelia
 ---
 # Source: app-authelia/templates/loader.yaml
 apiVersion: secretgenerator.mittwald.de/v1alpha1

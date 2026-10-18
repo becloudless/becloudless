@@ -54,6 +54,77 @@ resources:
                       - configMapRef:
                           name: longhorn-nixos-path
 
+  # UI behind the Cilium Gateway `shared` (kube-system) with Authelia forward auth.
+  # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
+  # The certificate is issued by the http-01 solver of the ClusterIssuer (ingress), which only needs the host to be
+  # reachable on port 80 through the ingress.
+  certManagerCertificates:
+    longhorn-ui:
+      fullNameOverride: longhorn-ui
+      secretName: tls-longhorn
+      dnsNames:
+        ui: longhorn.{{ .Values.global.domain }}
+      issuerRef:
+        name: letsencrypt-prod
+        kind: ClusterIssuer
+
+  listenerSets:
+    longhorn:
+      fullNameOverride: longhorn
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: shared
+        namespace: kube-system
+      listeners:
+        https:
+          name: https
+          hostname: longhorn.{{ .Values.global.domain }}
+          port: 443
+          protocol: HTTPS
+          tls:
+            mode: Terminate
+            certificateRefs:
+              tls:
+                name: tls-longhorn
+          allowedRoutes:
+            namespaces:
+              from: Same
+
+  httpRoutes:
+    longhorn:
+      fullNameOverride: longhorn
+      parentRefs:
+        longhorn:
+          group: gateway.networking.k8s.io
+          kind: ListenerSet
+          name: longhorn
+      hostnames:
+        ui: longhorn.{{ .Values.global.domain }}
+      rules:
+        ui:
+          filters:
+            authelia:
+              type: ExternalAuth
+              externalAuth:
+                protocol: HTTP
+                backendRef:
+                  name: authelia
+                  namespace: authelia
+                  port: 80
+                http:
+                  path: /api/authz/ext-authz/
+                  allowedHeaders: # what authelia needs to find the session and to redirect to the login page
+                    cookie: cookie
+                    accept: accept
+                    proxy-authorization: proxy-authorization
+                    x-forwarded-proto: x-forwarded-proto
+                    x-forwarded-for: x-forwarded-for
+          backendRefs:
+            frontend:
+              name: longhorn-frontend
+              port: 80
+
   fluxHelmRepositories:
     longhorn:
       fullNameOverride: longhorn
@@ -88,16 +159,9 @@ resources:
           backupTargetCredentialSecret: backupstore
           pollInterval: 180
 
-        # WARNING: the UI has no authentication of its own and cilium ingress has no forward auth (authelia)
+        # the UI has no authentication of its own: it is served by the Cilium Gateway with Authelia forward auth (see httpRoutes)
         ingress:
-          enabled: true
-          ingressClassName: cilium
-          host: longhorn.{{ .Values.global.domain }}
-          tls: true
-          tlsSecret: tls-longhorn
-          pathType: Prefix # cilium turns ImplementationSpecific "/" into an exact match of "/" only, so css/js are 404
-          annotations:
-            kubernetes.io/tls-acme: "true"
+          enabled: false
 
     # settings, recurring jobs, storage and snapshot classes need the Longhorn CRDs, so they are installed once longhorn is ready
     # the VolumeSnapshotClasses also need the snapshot CRDs from app-external-snapshotter

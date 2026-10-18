@@ -37,6 +37,8 @@ spec:
     extraEnv:
     - name: PATH
       value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/run/wrappers/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin
+    gatewayAPI:
+      enabled: true
     ingressController:
       default: true
       enabled: true
@@ -69,6 +71,8 @@ spec:
         namespace: default
   dependsOn:
   - name: cilium
+  - name: app-gateway-api
+    namespace: default
   install:
     crds: CreateReplace
     remediation:
@@ -110,6 +114,21 @@ spec:
               afi: ipv4
               safi: unicast
           fullNameOverride: bgp-peer-config
+      gateways:
+        shared:
+          allowedListeners:
+            namespaces:
+              from: All
+          fullNameOverride: shared
+          gatewayClassName: cilium
+          listeners:
+            http:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              name: http
+              port: 80
+              protocol: HTTP
 ---
 # Source: app-cilium/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

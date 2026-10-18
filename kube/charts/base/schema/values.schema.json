@@ -147,6 +147,9 @@
             "kyvernoValidatingPolicies": {
               "$ref": "./resources/kyvernoValidatingPolicies.json"
             },
+            "listenerSets": {
+              "$ref": "./resources/listenerSets.json"
+            },
             "longhornRecurringJobs": {
               "$ref": "./resources/longhornRecurringJobs.json"
             },
@@ -497,6 +500,13 @@
             "$ref": "./resources/kyvernoValidatingPolicies.json"
           },
           "description": "ValidatingPolicy instances, keyed by id.",
+          "type": "object"
+        },
+        "listenerSets": {
+          "additionalProperties": {
+            "$ref": "./resources/listenerSets.json"
+          },
+          "description": "ListenerSet instances, keyed by id.",
           "type": "object"
         },
         "longhornRecurringJobs": {

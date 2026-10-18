@@ -188,7 +188,12 @@ resources:
       crdVersion: v1
   - name: httpRoutes
     sourceCRD:
-      url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml
+      # experimental channel for the ExternalAuth filter (forward auth), keep in sync with app-gateway-api
+      url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.6.1/config/crd/experimental/gateway.networking.k8s.io_httproutes.yaml
+      crdVersion: v1
+  - name: listenerSets
+    sourceCRD:
+      url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.6.1/config/crd/standard/gateway.networking.k8s.io_listenersets.yaml
       crdVersion: v1
   - name: grpcRoutes
     sourceCRD:

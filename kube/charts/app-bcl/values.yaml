@@ -38,11 +38,17 @@ apps:
     groups: [all, server]
   external-snapshotter:
     groups: [all, server, pop]
+  gateway-api:
+    groups: [all, server, pop]
   longhorn:
     groups: [all, server]
-    dependsOn: # the ClusterPolicy needs the kyverno CRDs
+    dependsOn: # the ClusterPolicy needs the kyverno CRDs, the UI needs the certificate and Gateway API CRDs
       kyverno:
         name: app-kyverno
+      cert-manager:
+        name: app-cert-manager
+      gateway-api:
+        name: app-gateway-api
   lldap:
     groups: [all, server]
     dependsOn: # certificates and issuers, the postgresql cluster, its volume snapshots, generated secrets
@@ -56,11 +62,13 @@ apps:
         name: app-secret-generator
   authelia:
     groups: [all, server]
-    dependsOn: # certificates and issuers, the postgresql cluster, its volume snapshots, generated secrets, the ldap backend
+    dependsOn: # certificates and issuers, the postgresql cluster, its volume snapshots, generated secrets, the ldap backend, the ReferenceGrant
       cert-manager:
         name: app-cert-manager
       cnpg:
         name: app-cnpg
+      gateway-api:
+        name: app-gateway-api
       lldap:
         name: app-lldap
       longhorn:

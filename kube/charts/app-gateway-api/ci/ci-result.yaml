@@ -1,0 +1,28 @@
+---
+# Source: app-gateway-api/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: gateway-api
+  namespace: default
+spec:
+  interval: 24h
+  ref:
+    tag: v1.6.1
+  url: https://github.com/kubernetes-sigs/gateway-api
+---
+# Source: app-gateway-api/templates/loader.yaml
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: gateway-api-crds
+  namespace: default
+spec:
+  interval: 24h
+  path: ./config/crd/experimental
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: gateway-api
+  timeout: 1m
+  wait: true

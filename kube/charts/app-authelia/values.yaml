@@ -48,6 +48,22 @@ resources:
         name: self-signed
         kind: ClusterIssuer
 
+  # Forward auth for the apps behind the Cilium Gateway: the `ExternalAuth` filter of their HTTPRoute calls the authelia service.
+  # An HTTPRoute can only reference a service of another namespace when it is granted here: add the namespace of each app.
+  referenceGrants:
+    ext-authz:
+      fullNameOverride: ext-authz
+      from:
+        longhorn:
+          group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          namespace: longhorn-system
+      to:
+        authelia:
+          group: ""
+          kind: Service
+          name: authelia
+
   fluxHelmRepositories:
     authelia:
       fullNameOverride: authelia
@@ -136,6 +152,12 @@ resources:
 
         configMap:
           theme: dark
+
+          server:
+            endpoints:
+              authz:
+                ext-authz: # called by the Envoy of the Cilium Gateway on /api/authz/ext-authz/
+                  implementation: ExtAuthz
 
           telemetry:
             metrics:
