@@ -14,7 +14,10 @@ resources:
 
   fluxHelmReleases:
     cilium:
-      fullNameOverride: cilium        
+      fullNameOverride: cilium     
+      uninstall:
+        deletionPropagation: orphan
+
       chart:
         spec:
           chart: cilium
