@@ -4,50 +4,68 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"maps"
+	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/becloudless/becloudless/pkg/bcl"
+	"github.com/becloudless/becloudless/pkg/cmd/flags"
 	"github.com/becloudless/becloudless/pkg/flux"
-	"github.com/becloudless/becloudless/pkg/git"
 	"github.com/becloudless/becloudless/pkg/kube"
-	"github.com/becloudless/becloudless/pkg/security"
+	bclhelm "github.com/becloudless/becloudless/pkg/kube/helm"
+	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	"helm.sh/helm/v4/pkg/action"
-	helmchart "helm.sh/helm/v4/pkg/chart"
-	"helm.sh/helm/v4/pkg/chart/loader"
-	"helm.sh/helm/v4/pkg/cli"
-	"helm.sh/helm/v4/pkg/cli/values"
-	"helm.sh/helm/v4/pkg/getter"
-	helmkube "helm.sh/helm/v4/pkg/kube"
-	repo "helm.sh/helm/v4/pkg/repo/v1"
-	"helm.sh/helm/v4/pkg/storage/driver"
 )
 
+const (
+	bclChartsFolder     = "assets/kube/charts" // embedded in the binary, extracted under bcl.BCL.EmbeddedPath
+	bclAppChartName     = "app-bcl"
+	bclAppChartPrefix   = "app-"
+	clusterAppBclHrFile = "bcl/app-bcl.hr.yaml"
+	bclGitRepoFile      = "bcl/bcl.gitrepo.yaml"
+	defaultBclNamespace = "bcl"
+	remoteKubeconfig    = "/etc/kubernetes/admin.conf"
+	apiServerPort       = "8443"
+)
+
+type bootstrapRemoteOptions struct {
+	ssh            runner.SshConnectionConfig
+	group          string
+	kubeVersion    string
+	adoptResources bool
+}
+
 func kubeBootstrapCmd() *cobra.Command {
-	var adoptResources bool
+	opts := bootstrapRemoteOptions{}
 	cmd := cobra.Command{
 		Use:   "bootstrap",
-		Short: "Bootstrap Kubernetes clusters till Flux being able to take over and apply gitops",
-		Long: `The bootstrap command manually apply the necessary components, especially networking and Flux, till being able to hand over to Flux for gitops.
-				  This script is re-entrant, and apply the components, like they are applied by gitops, so it can be run anytime.`,
-		Aliases: []string{"boot"},
+		Short: "Fetch the cluster credentials from a server and apply the minimal apps resources extracted from the app charts",
+		Long: `Fetch the kubeconfig of the cluster from a server through ssh, then render the app-bcl chart with the values of the cluster
+(bcl/app-bcl.hr.yaml) restricted to the apps of the minimal group, render each of these app charts, and apply the resources
+flux needs to start: namespaces, helm releases coming from helm repositories (ex: cilium, coredns) and the flux installation.
+Everything else is left to flux once it runs. This command is re-entrant.`,
+		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return Bootstrap(adoptResources)
+			return BootstrapRemote(opts)
 		},
 	}
-	cmd.Flags().BoolVar(&adoptResources, "adopt", false, "Take ownership of existing Kubernetes resources not managed by Helm")
+	flags.WithSSHRemoteFlags(&cmd, &opts.ssh)
+	cmd.Flags().StringVar(&opts.group, "group", "minimal", "Group of apps to apply")
+	cmd.Flags().StringVar(&opts.kubeVersion, "kube-version", "1.31.0", "Kubernetes version used for Capabilities.KubeVersion when rendering the charts")
+	cmd.Flags().BoolVar(&opts.adoptResources, "adopt", false, "Take ownership of existing Kubernetes resources not managed by Helm")
+	_ = cmd.MarkFlagRequired("host")
 	return &cmd
 }
 
-func Bootstrap(adoptResources bool) error {
+func BootstrapRemote(opts bootstrapRemoteOptions) error {
 	ctx, err := kube.GetContext(".")
 	if err != nil {
 		return errs.WithE(err, "Cannot find kube cluster context. Are you in a cluster folder?")
@@ -56,256 +74,317 @@ func Bootstrap(adoptResources bool) error {
 		return errs.With("Current directory is not in a kube/cluster folder")
 	}
 
-	repository, err := git.OpenRepository(".")
+	if err := fetchKubeconfig(ctx.KubeConfig, opts); err != nil {
+		return errs.WithE(err, "Failed to fetch the kubeconfig")
+	}
+
+	apps, err := renderGroupApps(ctx, opts)
 	if err != nil {
-		return errs.WithE(err, "Failed to open git repository")
-	}
-	config, err := kube.GetBclConfig(repository)
-	if err != nil {
-		return errs.WithE(err, "Failed to read BCL config")
-	}
-	envs := config.ToEnv()
-
-	k3sServingExists, err := secretExists(ctx, "kube-system", "k3s-serving")
-	if err != nil {
-		return errs.WithE(err, "Failed to check for existing k3s-serving secret")
+		return errs.WithE(err, "Failed to render the apps of the group")
 	}
 
-	if !k3sServingExists {
-		// cilium network
-		if err := applyFluxHelmReleaseWithHelm(ctx,
-			filepath.Join(bcl.BCL.EmbeddedPath, "assets/kube/apps/cilium"),
-			flux.NamespacedObjectKindReference{Name: "cilium", Namespace: "kube-system"},
-			envs, adoptResources); err != nil {
-			return errs.WithE(err, "Failed to apply cilium")
-		}
-
-		// coredns dns
-		if err := applyFluxHelmReleaseWithHelm(ctx,
-			filepath.Join(bcl.BCL.EmbeddedPath, "assets/kube/apps/coredns"),
-			flux.NamespacedObjectKindReference{Name: "coredns", Namespace: "kube-system"},
-			envs, adoptResources); err != nil {
-			return errs.WithE(err, "Failed to apply coredns")
-		}
+	if err := applyRenderedApps(ctx, apps, opts.adoptResources); err != nil {
+		return err
 	}
 
-	// flux
-	if err := applyFluxKustomizationWithKustomize(ctx, filepath.Join(bcl.BCL.EmbeddedPath, "assets/kube/apps/flux"), flux.NamespacedObjectKindReference{Name: "flux", Namespace: "flux-system"}); err != nil {
-		return errs.WithE(err, "Failed to bootstrap flux")
+	return applyBcl(ctx)
+}
+
+// applyBcl hands over to flux: the bcl namespace, the bcl git repository and the app-bcl helm release of the cluster.
+func applyBcl(ctx kube.Context) error {
+	if err := waitFluxCRDs(ctx); err != nil {
+		return errs.WithE(err, "Failed to wait for the flux CRDs")
 	}
 
-	// bcl namespace
 	if err := applyBclNamespace(ctx); err != nil {
-		return errs.WithE(err, "Failed to ensure bcl namespace")
+		return errs.WithE(err, "Failed to apply the bcl namespace")
 	}
 
-	// flux sops key, to open secrets in git
-	if err := applyInfraFluxSopsKey(ctx); err != nil {
-		return errs.WithE(err, "Failed to apply flux sops key")
+	for _, file := range []string{bclGitRepoFile, clusterAppBclHrFile} {
+		logs.WithField("file", file).Info("Applying bcl resources")
+		if err := applyResourcesFile(ctx, filepath.Join(ctx.ClusterPath, file)); err != nil {
+			return errs.WithEF(err, data.WithField("file", file), "Failed to apply bcl resources")
+		}
 	}
-
-	// git repo secret, to fetch infra repo
-	if err := applyInfraGitRepoSecret(ctx); err != nil {
-		return errs.WithE(err, "Failed to apply git repo secret")
-	}
-
-	// infra git repo
-	if err := applyResourcesFile(ctx, "bcl/infra.gitrepo.yaml"); err != nil {
-		return errs.WithE(err, "Failed to apply infra git repo")
-	}
-
-	// infra kustomization from git repo to bootstrap rest
-	if err := applyResourcesFile(ctx, "bcl/infra.ks.yaml"); err != nil {
-		return errs.WithE(err, "Failed to apply infra kustomization")
-	}
-
-	//
-	// from there, if git is actually in the cluster, it requires more applies
-	// gitea (bcl-server) + longhorm (bcl-global) + gitea-secrets + ??
-
-	if err := applyKustomizationFolder(ctx, filepath.Join(ctx.ClusterPath, "../../../config")); err != nil {
-		return errs.WithE(err, "Failed to apply infra kustomization")
-	}
-
-	if err := applyResourcesFile(ctx, filepath.Join(ctx.ClusterPath, "bcl/bcl.gitrepo.yaml")); err != nil {
-		return errs.WithE(err, "Failed to apply infra kustomization")
-	}
-
-	if err := applyResourcesFile(ctx, filepath.Join(ctx.ClusterPath, "bcl/bcl-global.ks.yaml")); err != nil {
-		return errs.WithE(err, "Failed to apply infra kustomization")
-	}
-
-	if err := applyResourcesFile(ctx, filepath.Join(ctx.ClusterPath, "bcl/bcl-server.ks.yaml")); err != nil {
-		return errs.WithE(err, "Failed to apply infra kustomization")
-	}
-
 	return nil
 }
 
-func applyBclNamespace(ctx kube.Context) error {
-	logs.Info("Applying bcl namespace")
-
-	nsYAML := `apiVersion: v1
-kind: Namespace
-metadata:
-  name: bcl
-`
-	cmd := exec.Command("kubectl", "apply", "-f", "-")
+// waitFluxCRDs waits for the CRDs of the resources applied to hand over to flux, since flux was just installed.
+func waitFluxCRDs(ctx kube.Context) error {
+	cmd := exec.Command("kubectl", "wait", "--for=condition=Established", "--timeout=120s",
+		"crd/gitrepositories.source.toolkit.fluxcd.io",
+		"crd/helmreleases.helm.toolkit.fluxcd.io")
 	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
-	cmd.Stdin = strings.NewReader(nsYAML)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return errs.WithEF(err, data.WithField("output", string(output)), "Failed to apply bcl namespace")
-	}
-
-	return nil
-}
-
-func applyResourcesFile(ctx kube.Context, file string) error {
-	applyCmd := exec.Command("kubectl", "apply", "-f", file)
-	applyCmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
-	output, err := applyCmd.CombinedOutput()
-	if err != nil {
-		return errs.WithEF(err, data.WithField("output", string(output)).WithField("file", file), "Failed to apply infra kustomization manifest")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return errs.WithEF(err, data.WithField("output", string(output)), "Flux CRDs are not established")
 	}
 	return nil
 }
 
-func applyKustomizationFolder(ctx kube.Context, path string) error {
-	cmd := exec.Command("kubectl", "apply", "-k", path)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
-	output, err := cmd.CombinedOutput()
+// fetchKubeconfig reads the kubeconfig on the server and writes it to destination.
+func fetchKubeconfig(destination string, opts bootstrapRemoteOptions) error {
+	logs.WithField("host", opts.ssh.Host).WithField("path", remoteKubeconfig).Info("Fetching kubeconfig")
+	sshRunner, err := runner.NewSshRunner(&opts.ssh)
 	if err != nil {
-		return errs.WithEF(err, data.WithField("output", string(output)), "Failed to apply kustomization")
+		return errs.WithEF(err, data.WithField("host", opts.ssh.Host), "Failed to connect to the server")
+	}
+	kubeconfig, err := sshRunner.ExecCmdGetStdout("sudo", "cat", remoteKubeconfig)
+	if err != nil {
+		return errs.WithEF(err, data.WithField("host", opts.ssh.Host).WithField("path", remoteKubeconfig), "Failed to read the kubeconfig through ssh")
 	}
 
-	return nil
-}
-
-func applyInfraFluxSopsKey(context kube.Context) error {
-	logs.Info("Applying infra's flux sops key")
-
-	key, err := resolveAgeIdentityKey(context)
+	content, err := rewriteKubeconfigServer([]byte(kubeconfig+"\n"), opts.ssh.Host)
 	if err != nil {
 		return err
 	}
-	secretYAML := fmt.Sprintf(`apiVersion: v1
-kind: Secret
-metadata:
-  name: sops-age
-  namespace: bcl
-stringData:
-  age.agekey: %s
-`, key)
 
-	applyCmd := exec.Command("kubectl", "apply", "-f", "-")
-	applyCmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", context.KubeConfig))
-	applyCmd.Stdin = strings.NewReader(secretYAML)
-	output, err := applyCmd.CombinedOutput()
-	if err != nil {
-		return errs.WithEF(err, data.WithField("output", string(output)), "Failed to apply sops-age secret")
+	if err := os.MkdirAll(filepath.Dir(destination), 0o700); err != nil {
+		return errs.WithEF(err, data.WithField("path", filepath.Dir(destination)), "Failed to create kubeconfig folder")
 	}
-
+	if err := os.WriteFile(destination, content, 0o600); err != nil {
+		return errs.WithEF(err, data.WithField("path", destination), "Failed to write kubeconfig")
+	}
+	logs.WithField("path", destination).Info("Kubeconfig written")
 	return nil
 }
 
-func resolveAgeIdentityKey(context kube.Context) (string, error) {
-	if os.Geteuid() == 0 {
-		// Running as root, assume bootstrap on host and use host ssh private key
-		_, privateKey, err := security.Ed25519PrivateKeyFileToPublicAndPrivateAgeKeys("/nix/etc/ssh/ssh_host_ed25519_key")
-		return privateKey, err
+// rewriteKubeconfigServer sets the API url of the clusters to https://<serverHost>:8443,
+// since the kubeconfig of a control plane node targets itself.
+func rewriteKubeconfigServer(content []byte, serverHost string) ([]byte, error) {
+	var config map[string]any
+	if err := yaml.Unmarshal(content, &config); err != nil {
+		return nil, errs.WithE(err, "Failed to parse the kubeconfig")
 	}
 
-	// Non-root: decrypt bcl/infra.secret.yaml, extract identity, convert to age.
-	sshPriv, err := readIdentitySSHPrivateKeyFromSopsSecret(context, filepath.Join(context.ClusterPath, "bcl/infra.secret.yaml"))
-	if err != nil {
-		return "", err
+	clusters, _ := config["clusters"].([]any)
+	for _, c := range clusters {
+		entry, _ := c.(map[string]any)
+		cluster, _ := entry["cluster"].(map[string]any)
+		if cluster == nil {
+			continue
+		}
+		cluster["server"] = "https://" + net.JoinHostPort(serverHost, apiServerPort)
 	}
-	_, privateKey, err := security.Ed25519ToPublicAndPrivateAgeKeys(sshPriv)
-	return privateKey, err
+
+	result, err := yaml.Marshal(config)
+	if err != nil {
+		return nil, errs.WithE(err, "Failed to marshal the kubeconfig")
+	}
+	return result, nil
 }
 
-func readIdentitySSHPrivateKeyFromSopsSecret(context kube.Context, path string) ([]byte, error) {
-	ageKey := ""
-	if os.Geteuid() == 0 {
-		_, privateKey, err := security.Ed25519PrivateKeyFileToPublicAndPrivateAgeKeys("/nix/etc/ssh/ssh_host_ed25519_key")
-		if err != nil {
-			return nil, errs.WithE(err, "Failed to read host ed25519 private key")
-		}
-		ageKey = privateKey
+type renderedApp struct {
+	name string
+	docs []map[string]any
+}
+
+// renderGroupApps renders app-bcl with the values of the cluster, restricted to the group, then renders the app chart of each app of the group.
+func renderGroupApps(ctx kube.Context, opts bootstrapRemoteOptions) ([]renderedApp, error) {
+	if bcl.BCL.EmbeddedPath == "" {
+		return nil, errs.With("The charts are not embedded in this build")
+	}
+	chartsPath := filepath.Join(bcl.BCL.EmbeddedPath, bclChartsFolder)
+
+	hrPath := filepath.Join(ctx.ClusterPath, clusterAppBclHrFile)
+	hrContent, err := os.ReadFile(hrPath)
+	if err != nil {
+		return nil, errs.WithEF(err, data.WithField("path", hrPath), "Failed to read the app-bcl helm release of the cluster")
+	}
+	var appBclHr struct {
+		Metadata flux.Metadata `yaml:"metadata"`
+		Spec     struct {
+			Values map[string]any `yaml:"values"`
+		} `yaml:"spec"`
+	}
+	if err := yaml.Unmarshal(hrContent, &appBclHr); err != nil {
+		return nil, errs.WithEF(err, data.WithField("path", hrPath), "Failed to parse the app-bcl helm release of the cluster")
+	}
+	if appBclHr.Metadata.Name == "" {
+		appBclHr.Metadata.Name = bclAppChartName
+	}
+	if appBclHr.Metadata.Namespace == "" {
+		appBclHr.Metadata.Namespace = defaultBclNamespace
 	}
 
-	plaintext, err := security.DecryptSopsYAMLWithAgeKey(path, ageKey)
+	appBclChart, err := bclhelm.LoadChartWithLocalDependencies(filepath.Join(chartsPath, bclAppChartName))
 	if err != nil {
 		return nil, err
 	}
 
-	var doc struct {
-		StringData struct {
-			Identity   string `yaml:"identity"`
-			KnownHosts string `yaml:"known_hosts"`
-		} `yaml:"stringData"`
-	}
-	if err := yaml.Unmarshal(plaintext, &doc); err != nil {
-		return nil, errs.WithE(err, "Failed to parse decrypted yaml")
+	groupApps := appsOfGroup(appBclChart.Values, opts.group)
+	if len(groupApps) == 0 {
+		return nil, errs.WithF(data.WithField("group", opts.group), "No app belongs to the group")
 	}
 
-	if doc.StringData.Identity == "" {
-		return nil, errs.WithF(data.WithField("path", path), "Missing .stringData.identity in decrypted secret")
+	// only the group is enabled, every other group the cluster may enable is disabled
+	values := appBclHr.Spec.Values
+	if values == nil {
+		values = map[string]any{}
 	}
-	return []byte(doc.StringData.Identity), nil
+	groups := map[string]any{}
+	if existing, ok := values["appsGroups"].(map[string]any); ok {
+		for name := range existing {
+			groups[name] = map[string]any{"enabled": false}
+		}
+	}
+	groups[opts.group] = map[string]any{"enabled": true}
+	values["appsGroups"] = groups
+
+	manifest, err := bclhelm.RenderChart(appBclChart, values, appBclHr.Metadata.Name, appBclHr.Metadata.Namespace, opts.kubeVersion)
+	if err != nil {
+		return nil, err
+	}
+	appBclDocs, err := splitManifest(manifest)
+	if err != nil {
+		return nil, err
+	}
+
+	var apps []renderedApp
+	for _, name := range groupApps {
+		hrName := bclAppChartPrefix + name
+		hr := findDoc(appBclDocs, "HelmRelease", hrName)
+		if hr == nil {
+			logs.WithField("app", name).Info("App is disabled by the cluster values, skipping")
+			continue
+		}
+
+		hrNamespace, _ := nestedValue(hr, "metadata", "namespace").(string)
+		if hrNamespace == "" {
+			hrNamespace = appBclHr.Metadata.Namespace
+		}
+
+		appValues, err := helmReleaseValues(hr, appBclDocs)
+		if err != nil {
+			return nil, errs.WithEF(err, data.WithField("app", name), "Failed to compute the values of the app")
+		}
+
+		appChart, err := bclhelm.LoadChartWithLocalDependencies(filepath.Join(chartsPath, hrName))
+		if err != nil {
+			return nil, err
+		}
+		appManifest, err := bclhelm.RenderChart(appChart, appValues, hrName, hrNamespace, opts.kubeVersion)
+		if err != nil {
+			return nil, err
+		}
+		docs, err := splitManifest(appManifest)
+		if err != nil {
+			return nil, err
+		}
+		apps = append(apps, renderedApp{name: name, docs: docs})
+	}
+
+	return apps, nil
 }
 
-func applyFluxKustomizationWithKustomize(ctx kube.Context, resourcesPath string, objectRef flux.NamespacedObjectKindReference) error {
-	found := false
-	if err := filepath.WalkDir(resourcesPath, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
+// appsOfGroup returns the sorted names of the apps declaring the group in `apps.<name>.groups` of the chart values.
+func appsOfGroup(chartValues map[string]any, group string) []string {
+	var names []string
+	apps, _ := chartValues["apps"].(map[string]any)
+	for name, app := range apps {
+		appMap, _ := app.(map[string]any)
+		groups, _ := appMap["groups"].([]any)
+		for _, g := range groups {
+			if g == group {
+				names = append(names, name)
+				break
+			}
 		}
-		if found {
-			return filepath.SkipAll
-		}
-		if d.IsDir() {
-			return nil
-		}
-		content, err := os.ReadFile(path)
-		if err != nil {
-			return errs.WithEF(err, data.WithField("path", path), "Failed to read file")
-		}
-		var fluxKs flux.Kustomization
-
-		if err := yaml.Unmarshal(content, &fluxKs); err != nil {
-			return errs.WithE(err, "Failed to parse flux Kustomization patches")
-		}
-
-		if !(fluxKs.Kind == "Kustomization" &&
-			fluxKs.Metadata.Name == objectRef.Name &&
-			fluxKs.Metadata.Namespace == objectRef.Namespace) {
-			return nil
-		}
-
-		found = true
-		return prepareAndApplyFluxKustomization(ctx, fluxKs, resourcesPath)
-
-	}); err != nil {
-		return errs.WithEF(err, data.WithField("folder", resourcesPath), "Failed to walk resources folder to find flux kustomization")
 	}
-	if !found {
-		return errs.WithF(data.WithField("name", objectRef.Name).WithField("namespace", objectRef.Namespace), "Kustomization not found in resources")
+	sort.Strings(names)
+	return names
+}
+
+// helmReleaseValues computes the values flux gives to the chart: the valuesFrom config maps in order, then the inline values.
+func helmReleaseValues(hr map[string]any, docs []map[string]any) (map[string]any, error) {
+	result := map[string]any{}
+
+	valuesFrom, _ := nestedValue(hr, "spec", "valuesFrom").([]any)
+	for _, from := range valuesFrom {
+		fromMap, _ := from.(map[string]any)
+		kind, _ := fromMap["kind"].(string)
+		name, _ := fromMap["name"].(string)
+		if kind != "ConfigMap" {
+			return nil, errs.WithF(data.WithField("kind", kind).WithField("name", name), "Only ConfigMap valuesFrom are supported")
+		}
+		key, _ := fromMap["valuesKey"].(string)
+		if key == "" {
+			key = "values.yaml"
+		}
+
+		configMap := findDoc(docs, kind, name)
+		if configMap == nil {
+			return nil, errs.WithF(data.WithField("name", name), "ConfigMap of valuesFrom not found in the rendered app-bcl")
+		}
+		content, _ := nestedValue(configMap, "data", key).(string)
+		var fromValues map[string]any
+		if err := yaml.Unmarshal([]byte(content), &fromValues); err != nil {
+			return nil, errs.WithEF(err, data.WithField("name", name).WithField("key", key), "Failed to parse the values of the ConfigMap")
+		}
+		result = mergeValues(result, fromValues)
+	}
+
+	inline, _ := nestedValue(hr, "spec", "values").(map[string]any)
+	return mergeValues(result, inline), nil
+}
+
+// mergeValues deeply merges override on top of base.
+func mergeValues(base map[string]any, override map[string]any) map[string]any {
+	for k, v := range override {
+		overrideMap, overrideIsMap := v.(map[string]any)
+		baseMap, baseIsMap := base[k].(map[string]any)
+		if overrideIsMap && baseIsMap {
+			base[k] = mergeValues(baseMap, overrideMap)
+		} else {
+			base[k] = v
+		}
+	}
+	return base
+}
+
+func splitManifest(manifest string) ([]map[string]any, error) {
+	var docs []map[string]any
+	decoder := yaml.NewDecoder(strings.NewReader(manifest))
+	for {
+		var doc map[string]any
+		if err := decoder.Decode(&doc); err != nil {
+			if errors.Is(err, io.EOF) {
+				return docs, nil
+			}
+			return nil, errs.WithE(err, "Failed to parse the rendered manifest")
+		}
+		if len(doc) > 0 {
+			docs = append(docs, doc)
+		}
+	}
+}
+
+func nestedValue(doc map[string]any, keys ...string) any {
+	var current any = doc
+	for _, key := range keys {
+		m, ok := current.(map[string]any)
+		if !ok {
+			return nil
+		}
+		current = m[key]
+	}
+	return current
+}
+
+func findDoc(docs []map[string]any, kind string, name string) map[string]any {
+	for _, doc := range docs {
+		if doc["kind"] == kind && nestedValue(doc, "metadata", "name") == name {
+			return doc
+		}
 	}
 	return nil
 }
 
-func prepareAndApplyFluxKustomization(ctx kube.Context, ks flux.Kustomization, resourcesFolder string) error {
-	_, ref, err := flux.GetRepositoryUrlAndRef(resourcesFolder, ks.Spec.SourceRef.DeduceNamespaceFromMetadata(ks.Metadata))
+// applyRenderedApps applies the namespaces, then the helm releases coming from helm repositories, then the flux kustomizations coming from oci repositories.
+// Other resources, like helm releases built from the bcl git repository, are left to flux.
+func applyRenderedApps(ctx kube.Context, apps []renderedApp, adoptResources bool) error {
+	tmpDir, err := os.MkdirTemp("", "bcl-bootstrap-remote-")
 	if err != nil {
-		return err
-	}
-
-	// Build a temporary directory for the generated kustomization
-	tmpDir, err := os.MkdirTemp("", "bcl-flux-")
-	if err != nil {
-		return errs.WithE(err, "Failed to create temp directory for flux kustomization")
+		return errs.WithE(err, "Failed to create temp directory")
 	}
 	defer func() {
 		if err := os.RemoveAll(tmpDir); err != nil {
@@ -313,265 +392,94 @@ func prepareAndApplyFluxKustomization(ctx kube.Context, ks flux.Kustomization, r
 		}
 	}()
 
-	// Write patches as separate files and build a kustomization.yaml that applies them
-	kustomization := struct {
-		APIVersion string   `yaml:"apiVersion"`
-		Kind       string   `yaml:"kind"`
-		Resources  []string `yaml:"resources,omitempty"`
-		Patches    []struct {
-			Path   string `yaml:"path"`
-			Target struct {
-				Kind      string `yaml:"kind,omitempty"`
-				Name      string `yaml:"name,omitempty"`
-				Namespace string `yaml:"namespace,omitempty"`
-			} `yaml:"target"`
-		} `yaml:"patches,omitempty"`
-	}{
-		APIVersion: "kustomize.config.k8s.io/v1beta1",
-		Kind:       "Kustomization",
+	type fluxResource struct {
+		folder string
+		ref    flux.NamespacedObjectKindReference
 	}
+	var namespaces []map[string]any
+	var helmReleases []fluxResource
+	var kustomizations []fluxResource
 
-	// Add the core Flux manifests resource, using the version from the OCIRepository
-	kustomization.Resources = append(kustomization.Resources, fmt.Sprintf("github.com/fluxcd/flux2/manifests/install?ref=%s", ref))
-
-	for i, p := range ks.Spec.Patches {
-		patchFile := fmt.Sprintf("patch-%d.yaml", i)
-		if err := os.WriteFile(filepath.Join(tmpDir, patchFile), []byte(p.Patch), 0o644); err != nil {
-			return errs.WithEF(err, data.WithField("path", patchFile), "Failed to write flux patch file")
-		}
-		entry := struct {
-			Path   string `yaml:"path"`
-			Target struct {
-				Kind      string `yaml:"kind,omitempty"`
-				Name      string `yaml:"name,omitempty"`
-				Namespace string `yaml:"namespace,omitempty"`
-			} `yaml:"target"`
-		}{}
-		entry.Path = patchFile
-		entry.Target.Kind = p.Target.Kind
-		entry.Target.Name = p.Target.Name
-		entry.Target.Namespace = p.Target.Namespace
-		kustomization.Patches = append(kustomization.Patches, entry)
-	}
-
-	kustomContent, err := yaml.Marshal(&kustomization)
-	if err != nil {
-		return errs.WithE(err, "Failed to marshal generated kustomization")
-	}
-
-	kustomizationPath := filepath.Join(tmpDir, "kustomization.yaml")
-	if err := os.WriteFile(kustomizationPath, kustomContent, 0o644); err != nil {
-		return errs.WithEF(err, data.WithField("path", kustomizationPath), "Failed to write generated kustomization")
-	}
-
-	logs.WithField("ref", ref).Info("Applying flux kustomization")
-	return applyKustomizationFolder(ctx, tmpDir)
-}
-
-func applyFluxHelmReleaseWithHelm(ctx kube.Context, resourcesPath string, objectRef flux.NamespacedObjectKindReference, envs map[string]string, adoptResources bool) error {
-	found := false
-	if err := filepath.WalkDir(resourcesPath, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if found {
-			return filepath.SkipAll
-		}
-		if d.IsDir() {
-			return nil
-		}
-		content, err := os.ReadFile(path)
-		if err != nil {
-			return errs.WithEF(err, data.WithField("path", path), "Failed to read file")
+	for _, app := range apps {
+		appDir := filepath.Join(tmpDir, app.name)
+		if err := os.MkdirAll(appDir, 0o700); err != nil {
+			return errs.WithEF(err, data.WithField("path", appDir), "Failed to create app temp directory")
 		}
 
-		var hr flux.HelmRelease
+		for i, doc := range app.docs {
+			kind, _ := doc["kind"].(string)
+			name, _ := nestedValue(doc, "metadata", "name").(string)
+			namespace, _ := nestedValue(doc, "metadata", "namespace").(string)
+			ref := flux.NamespacedObjectKindReference{Kind: kind, Name: name, Namespace: namespace}
+			sourceKind, _ := nestedValue(doc, "spec", "sourceRef", "kind").(string)
+			chartSourceKind, _ := nestedValue(doc, "spec", "chart", "spec", "sourceRef", "kind").(string)
 
-		if err := yaml.Unmarshal(content, &hr); err != nil {
-			return errs.WithE(err, "Failed to parse flux Kustomization patches")
-		}
-
-		if !(hr.Kind == "HelmRelease" &&
-			hr.Metadata.Name == objectRef.Name &&
-			hr.Metadata.Namespace == objectRef.Namespace) {
-			return nil
-		}
-
-		found = true
-		return prepareAndApplyFluxHelmRelease(ctx, hr, resourcesPath, envs, adoptResources)
-
-	}); err != nil {
-		return errs.WithEF(err, data.WithField("folder", resourcesPath), "Failed to walk resources folder to find helm release")
-	}
-	if !found {
-		return errs.WithF(data.WithField("name", objectRef.Name).WithField("namespace", objectRef.Namespace), "HelmRelease not found in resources")
-	}
-	return nil
-}
-
-func prepareAndApplyFluxHelmRelease(ctx kube.Context, hr flux.HelmRelease, resourcesPath string, envs map[string]string, adoptResources bool) error {
-	settings := cli.New()
-	settings.KubeConfig = ctx.KubeConfig
-
-	// repo
-	repoUrl, _, err := flux.GetRepositoryUrlAndRef(resourcesPath, hr.Spec.Chart.Spec.SourceRef.DeduceNamespaceFromMetadata(hr.Metadata))
-	if err != nil {
-		return errs.WithE(err, "Failed to read helmRepo file to get chart")
-	}
-	chartRepo, err := repo.NewChartRepository(&repo.Entry{Name: hr.Spec.Chart.Spec.SourceRef.Name, URL: repoUrl}, getter.All(settings))
-	if err != nil {
-		return errs.WithE(err, "Failed to create chart repository client")
-	}
-	if _, err := chartRepo.DownloadIndexFile(); err != nil {
-		return errs.WithE(err, "Failed to download Helm repo index")
-	}
-
-	actionConfig := new(action.Configuration)
-	if err := actionConfig.Init(settings.RESTClientGetter(), hr.Metadata.Namespace, os.Getenv("HELM_DRIVER")); err != nil {
-		return errs.WithE(err, "Failed to initialize Helm action configuration")
-	}
-
-	upgrade := action.NewUpgrade(actionConfig)
-	upgrade.Namespace = hr.Metadata.Namespace
-	upgrade.Version = hr.Spec.Chart.Spec.Version
-	// do not wait for the resources to be ready: cilium and coredns cannot be ready before the whole bootstrap is done
-	upgrade.WaitStrategy = helmkube.HookOnlyStrategy
-	if adoptResources {
-		upgrade.TakeOwnership = true
-	}
-
-	// Build values from the HR spec
-	p := values.Options{}
-	vals, err := p.MergeValues(getter.All(settings))
-	if err != nil {
-		return errs.WithE(err, "Failed to build Helm values")
-	}
-
-	processedValuesAny := substituteEnvInStructure(hr.Spec.Values, envs)
-	processedValues, ok := processedValuesAny.(map[string]any)
-	if !ok {
-		return errs.With("Processed values are not a map[string]any")
-	}
-	maps.Copy(vals, processedValues)
-
-	chartPathOptions := &action.ChartPathOptions{
-		RepoURL: repoUrl,
-		Version: hr.Spec.Chart.Spec.Version,
-	}
-	chartPath, err := chartPathOptions.LocateChart(hr.Spec.Chart.Spec.Chart, settings)
-	if err != nil {
-		return errs.WithE(err, "Failed to locate helm chart")
-	}
-
-	chart, err := loader.Load(chartPath)
-	// chart, err := loader.LoadDir(chartPath)
-	if err != nil {
-		return errs.WithE(err, "Failed to load helm chart")
-	}
-
-	chartAc, err := helmchart.NewAccessor(chart)
-	if err != nil {
-		return errs.WithE(err, "Failed to create chart accessor")
-	}
-	chartVersion, _ := chartAc.MetadataAsMap()["Version"].(string)
-	logs.WithField("chart", chartAc.Name()).
-		WithField("version", chartVersion).
-		Info("Applying helm release")
-
-	if _, err := upgrade.Run(hr.Metadata.Name, chart, vals); err != nil {
-		if errors.Is(err, driver.ErrReleaseNotFound) ||
-			errors.Is(err, driver.ErrNoDeployedReleases) {
-			inst := action.NewInstall(actionConfig)
-			inst.ReleaseName = hr.Metadata.Name
-			inst.Namespace = hr.Metadata.Namespace
-			inst.Version = hr.Spec.Chart.Spec.Version
-			inst.WaitStrategy = helmkube.HookOnlyStrategy
-			if adoptResources {
-				inst.TakeOwnership = true
-			}
-			if _, err := inst.Run(chart, vals); err != nil {
-				return errs.WithE(err, "Failed to install helm release")
-			}
-		} else {
-			return errs.WithE(err, "Failed to upgrade helm release")
-		}
-	}
-
-	return nil
-}
-
-func applyInfraGitRepoSecret(context kube.Context) error {
-	path := filepath.Join(context.ClusterPath, "bcl/infra.secret.yaml")
-	logs.WithField("path", path).Info("Applying infra git secret")
-
-	ageKey := ""
-	if os.Geteuid() == 0 {
-		_, privateKey, err := security.Ed25519PrivateKeyFileToPublicAndPrivateAgeKeys("/nix/etc/ssh/ssh_host_ed25519_key")
-		if err != nil {
-			return errs.WithE(err, "Failed to read host ed25519 private key")
-		}
-		ageKey = privateKey
-	}
-
-	plaintext, err := security.DecryptSopsYAMLWithAgeKey(path, ageKey)
-	if err != nil {
-		return errs.WithEF(err, data.WithField("path", path), "Failed to decrypt infra secret")
-	}
-
-	applyCmd := exec.Command("kubectl", "apply", "-f", "-")
-	applyCmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", context.KubeConfig))
-	applyCmd.Stdin = bytes.NewReader(plaintext)
-	output, err := applyCmd.CombinedOutput()
-	if err != nil {
-		return errs.WithEF(err, data.WithField("output", string(output)), "Failed to apply decrypted infra secret")
-	}
-
-	logs.Info("infra git secret applied")
-	return nil
-}
-
-func substituteEnvInStructure(value any, envs map[string]string) any {
-	switch v := value.(type) {
-	case map[string]any:
-		res := make(map[string]any, len(v))
-		for k, val := range v {
-			res[k] = substituteEnvInStructure(val, envs)
-		}
-		return res
-	case []any:
-		res := make([]any, len(v))
-		for i, val := range v {
-			res[i] = substituteEnvInStructure(val, envs)
-		}
-		return res
-	case string:
-		res := v
-		for k, v2 := range envs {
-			if k == "" {
+			switch {
+			case kind == "Namespace":
+				namespaces = append(namespaces, doc)
+				continue
+			case kind == "HelmRepository" || kind == "OCIRepository":
+			case kind == "HelmRelease" && chartSourceKind == "HelmRepository":
+				helmReleases = append(helmReleases, fluxResource{folder: appDir, ref: ref})
+			case kind == "Kustomization" && sourceKind == "OCIRepository":
+				kustomizations = append(kustomizations, fluxResource{folder: appDir, ref: ref})
+			default:
+				logs.WithField("app", app.name).WithField("kind", kind).WithField("name", name).Debug("Left to flux")
 				continue
 			}
-			placeholder := "${" + k + "}"
-			if strings.Contains(res, placeholder) {
-				res = strings.ReplaceAll(res, placeholder, v2)
+
+			content, err := yaml.Marshal(doc)
+			if err != nil {
+				return errs.WithEF(err, data.WithField("app", app.name).WithField("kind", kind).WithField("name", name), "Failed to marshal resource")
+			}
+			file := filepath.Join(appDir, fmt.Sprintf("%03d-%s-%s.yaml", i, strings.ToLower(kind), name))
+			if err := os.WriteFile(file, content, 0o600); err != nil {
+				return errs.WithEF(err, data.WithField("path", file), "Failed to write resource")
 			}
 		}
-		return res
-	default:
-		return v
 	}
+
+	if err := applyNamespaces(ctx, namespaces); err != nil {
+		return errs.WithE(err, "Failed to apply namespaces")
+	}
+
+	for _, hr := range helmReleases {
+		if err := applyFluxHelmReleaseWithHelm(ctx, hr.folder, hr.ref, nil, adoptResources); err != nil {
+			return errs.WithEF(err, data.WithField("name", hr.ref.Name), "Failed to apply helm release")
+		}
+	}
+
+	for _, ks := range kustomizations {
+		if err := applyFluxKustomizationWithKustomize(ctx, ks.folder, ks.ref); err != nil {
+			return errs.WithEF(err, data.WithField("name", ks.ref.Name), "Failed to apply kustomization")
+		}
+	}
+
+	return nil
 }
 
-func secretExists(ctx kube.Context, namespace, name string) (bool, error) {
-	cmd := exec.Command("kubectl", "get", "secret", name, "-n", namespace)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
-	if err := cmd.Run(); err != nil {
-		// If kubectl returns a non-zero exit code, the secret probably does not exist.
-		// Distinguish between "NotFound" and other errors by inspecting the error type.
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			return false, nil
-		}
-		return false, err
+func applyNamespaces(ctx kube.Context, namespaces []map[string]any) error {
+	if len(namespaces) == 0 {
+		return nil
 	}
-	return true, nil
+
+	var content bytes.Buffer
+	for _, ns := range namespaces {
+		out, err := yaml.Marshal(ns)
+		if err != nil {
+			return errs.WithE(err, "Failed to marshal namespace")
+		}
+		content.WriteString("---\n")
+		content.Write(out)
+	}
+
+	logs.Info("Applying namespaces")
+	cmd := exec.Command("kubectl", "apply", "-f", "-")
+	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
+	cmd.Stdin = &content
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return errs.WithEF(err, data.WithField("output", string(output)), "Failed to apply namespaces")
+	}
+	return nil
 }
