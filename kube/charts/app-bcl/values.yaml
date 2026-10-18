@@ -28,6 +28,8 @@ apps:
     groups: [all, server, pop]
   kyverno:
     groups: [all, server, pop]
+  metrics-server:
+    groups: [all, server, pop]
 
 
 resources:

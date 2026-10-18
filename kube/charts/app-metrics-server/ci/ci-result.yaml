@@ -1,0 +1,43 @@
+---
+# Source: app-metrics-server/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: metrics-server
+  namespace: kube-system
+spec:
+  chart:
+    spec:
+      chart: metrics-server
+      sourceRef:
+        kind: HelmRepository
+        name: metrics-server
+      version: 3.14.0
+  install:
+    crds: CreateReplace
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    args:
+    - --kubelet-insecure-tls
+    - --metric-resolution=10s
+    - --kubelet-request-timeout=2s
+    metrics:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+---
+# Source: app-metrics-server/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: metrics-server
+  namespace: kube-system
+spec:
+  interval: 10m
+  url: https://kubernetes-sigs.github.io/metrics-server

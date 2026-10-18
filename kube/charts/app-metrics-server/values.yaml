@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+
+defaults:
+  metadata:
+    namespace: kube-system
+
+resources:
+  fluxHelmRepositories:
+    metrics-server:
+      fullNameOverride: metrics-server
+      url: https://kubernetes-sigs.github.io/metrics-server
+
+  fluxHelmReleases:
+    metrics-server:
+      fullNameOverride: metrics-server
+      chart:
+        spec:
+          chart: metrics-server
+          version: 3.14.0
+          sourceRef:
+            kind: HelmRepository
+            name: metrics-server
+      upgrade:
+        remediation:
+          retries: 3
+      values:
+        args:
+          - --kubelet-insecure-tls
+          - --metric-resolution=10s
+          - --kubelet-request-timeout=2s
+
+        metrics:
+          enabled: true
+        serviceMonitor:
+          enabled: true # TODO what about pop clusters, since it requires prom stack ?
