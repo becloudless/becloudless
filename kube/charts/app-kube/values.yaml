@@ -1,0 +1,108 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+
+global:
+  domain:
+
+# Kubernetes own objects that the cluster needs and that nothing else installs.
+
+resources:
+  # Standard kubeadm-bootstrapped RBAC objects that authorize the API server (identified by its apiserver-kubelet-client
+  # cert, CN=kube-apiserver-kubelet-client) to call kubelet endpoints. Required for `kubectl logs`, `exec`, `port-forward`,
+  # `attach` and `top node`/`top pod`.
+  #
+  # They are normally created once by `kubeadm init` and are NOT part of the apiserver's auto-reconciled default bootstrap
+  # policy, so if they are ever missing they won't come back on their own.
+  clusterRoles:
+    kube-apiserver-to-kubelet:
+      fullNameOverride: kube-apiserver-to-kubelet
+      labels:
+        kubernetes.io/bootstrapping: rbac-defaults
+      rules:
+        nodes:
+          apiGroups:
+            core: ""
+          resources:
+            proxy: nodes/proxy
+            stats: nodes/stats
+            log: nodes/log
+            spec: nodes/spec
+            metrics: nodes/metrics
+          verbs:
+            all: "*"
+
+  clusterRoleBindings:
+    kube-apiserver:
+      fullNameOverride: kube-apiserver-kubelet-client
+      labels:
+        kubernetes.io/bootstrapping: rbac-defaults
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: kube-apiserver-to-kubelet
+      subjects:
+        apiserver-kubelet-client:
+          apiGroup: rbac.authorization.k8s.io
+          kind: User
+          name: kube-apiserver-kubelet-client
+
+  fluxHelmReleases:
+    # Public access to the API server on kube.<domain>:443, through the Cilium Gateway `shared` (kube-system).
+    # The TLS stream is forwarded as is (passthrough): the API server terminates TLS itself and authenticates the client,
+    # kube.<domain> is one of its certificate SANs. The route lives in the namespace of the `kubernetes` service it targets,
+    # so no ReferenceGrant is needed. Port 443 is shared with the https listeners of the apps, routed by SNI.
+    # It is a separate release because this app is installed before the Gateway API CRDs exist.
+    kube-apiserver:
+      fullNameOverride: kube-apiserver
+      dependsOn:
+        gateway-api:
+          name: app-gateway-api
+          namespace: "{{ .Release.Namespace }}"
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: "{{ .Release.Namespace }}"
+      values:
+        resources:
+          listenerSets:
+            kube:
+              fullNameOverride: kube
+              namespace: default
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                apiserver:
+                  name: apiserver
+                  hostname: kube.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: TLS
+                  tls:
+                    mode: Passthrough
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          tlsRoutes:
+            kube:
+              fullNameOverride: kube
+              namespace: default
+              parentRefs:
+                kube:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: kube
+                  sectionName: apiserver
+              hostnames:
+                kube: kube.{{ .Values.global.domain }}
+              rules:
+                apiserver:
+                  backendRefs:
+                    kubernetes:
+                      name: kubernetes
+                      port: 443

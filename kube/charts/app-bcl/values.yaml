@@ -18,6 +18,8 @@ appsGroups:
     enabled: false
 
 apps:
+  kube: # the RBAC the API server needs to reach the kubelets (logs, exec, top)
+    groups: [all, minimal, server, pop]
   flux:
     groups: [all, minimal, server, pop]
   gateway-api:
@@ -29,6 +31,7 @@ apps:
         name: app-gateway-api # cilium gatewayAPI need the CRDs before starting, or will require manual restart
   coredns:
     groups: [all, minimal, server, pop]
+
   cert-manager:
     groups: [all, server, pop]
     dependsOn: # the Gateway API CRDs must exist when cert-manager starts, for the gatewayHTTPRoute http-01 solver

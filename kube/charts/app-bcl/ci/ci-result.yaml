@@ -322,6 +322,35 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
+  name: app-kube
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-kube
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 0
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: test-release-global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
   name: app-kyverno
   namespace: default
 spec:

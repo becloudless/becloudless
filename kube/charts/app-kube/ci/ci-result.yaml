@@ -1,0 +1,107 @@
+---
+# Source: app-kube/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: kube-apiserver-to-kubelet
+  namespace: default
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes/log
+  - nodes/metrics
+  - nodes/proxy
+  - nodes/spec
+  - nodes/stats
+  verbs:
+  - '*'
+---
+# Source: app-kube/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: kube-apiserver-kubelet-client
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-apiserver-to-kubelet
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: kube-apiserver-kubelet-client
+---
+# Source: app-kube/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-apiserver
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  dependsOn:
+  - name: app-gateway-api
+    namespace: default
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 0
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    resources:
+      listenerSets:
+        kube:
+          fullNameOverride: kube
+          listeners:
+            apiserver:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: kube.test.com
+              name: apiserver
+              port: 443
+              protocol: TLS
+              tls:
+                mode: Passthrough
+          namespace: default
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+      tlsRoutes:
+        kube:
+          fullNameOverride: kube
+          hostnames:
+            kube: kube.test.com
+          namespace: default
+          parentRefs:
+            kube:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: kube
+              sectionName: apiserver
+          rules:
+            apiserver:
+              backendRefs:
+                kubernetes:
+                  name: kubernetes
+                  port: 443
