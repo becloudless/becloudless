@@ -195,7 +195,7 @@ resources:
               value: Europe/Paris
 
         secret:
-          existingSecret: authelia
+          # existingSecret: authelia
           additionalSecrets:
             authelia-generated: {}
             authelia-postgresql-app: {}
@@ -231,7 +231,7 @@ resources:
             #   enabled: true
             disable_startup_check: false # in case of emergency
             smtp:
-              enabled: true
+              enabled: false
               address: submissions://mail.{{ .Values.global.domain }}:465
               sender: '{{ .Values.global.name }} Authelia <authelia@{{ .Values.global.domain }}>'
               username: authelia@{{ .Values.global.domain }}
