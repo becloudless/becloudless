@@ -4,7 +4,7 @@ FROM --platform=$BUILDPLATFORM golang:1.25.3 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 # renovate: datasource=github-tags depName=mittwald/kubernetes-secret-generator
-ARG SECRET_GENERATOR_VERSION=v3.4.1
+ARG SECRET_GENERATOR_VERSION=v3.5.0
 
 RUN git clone --depth 1 --branch ${SECRET_GENERATOR_VERSION} https://github.com/mittwald/kubernetes-secret-generator /workdir
 WORKDIR /workdir
