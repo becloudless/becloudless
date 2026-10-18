@@ -43,7 +43,7 @@ resources:
     # certificate of the portal, terminated by the Gateway
     authelia-gateway:
       fullNameOverride: authelia-gateway
-      secretName: tls-authelia-gateway
+      # secretName: tls-authelia-gateway
       dnsNames:
         authelia: authelia.{{ .Values.global.domain }}
       issuerRef:
@@ -52,7 +52,7 @@ resources:
 
     authelia-jwks:
       fullNameOverride: authelia-jwks
-      secretName: authelia-jwks
+      # secretName: authelia-jwks
       commonName: authelia-jwks
       issuerRef:
         name: self-signed
