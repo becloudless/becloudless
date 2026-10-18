@@ -93,7 +93,7 @@ resources:
       storageClassName: longhorn
       resources:
         requests:
-          storage: 100Gi
+          storage: 10Gi
 
   fluxHelmRepositories:
     immich:

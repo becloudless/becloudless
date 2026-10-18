@@ -107,6 +107,15 @@ apps:
         name: app-gateway-api
       longhorn:
         name: app-longhorn
+  jellyfin:
+    groups: [all, server]
+    dependsOn: # the certificate and the Gateway, the volume
+      cert-manager:
+        name: app-cert-manager
+      gateway-api:
+        name: app-gateway-api
+      longhorn:
+        name: app-longhorn
   immich:
     groups: [all, server]
     dependsOn: # the certificate and the Gateway, the postgresql cluster and its volume snapshots, the volumes, the valkey secret

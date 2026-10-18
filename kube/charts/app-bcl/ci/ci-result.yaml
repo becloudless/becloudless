@@ -392,6 +392,39 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
+  name: app-jellyfin
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-jellyfin
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+  dependsOn:
+  - name: app-cert-manager
+  - name: app-gateway-api
+  - name: app-longhorn
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 0
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: test-release-global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
   name: app-kube
   namespace: default
 spec:
