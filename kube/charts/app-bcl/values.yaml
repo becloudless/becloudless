@@ -37,6 +37,9 @@ apps:
     groups: [all, server, pop]
   cnpg:
     groups: [all, server, pop]
+    dependsOn:
+      app-external-snapshotter:
+        name: app-external-snapshotter
   secret-generator:
     groups: [all, server, pop]
   descheduler:
