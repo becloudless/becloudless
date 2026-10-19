@@ -5,6 +5,7 @@ Flux does not run a resource without `spec.serviceAccountName` with its own perm
 `serviceAccountName: flux-apps`.
 It is applied by `bcl kube bootstrap` before the HelmRelease, since the release cannot create the account it runs as, and adopted by
 the release afterwards.
+The account and its binding are kept (`helm.sh/resource-policy: keep`), the release must be able to run its own uninstall.
 */}}
 {{- define "app-apps.features.appsServiceAccount" }}
 {{- $rootContext := .rootContext }}
@@ -12,10 +13,15 @@ the release afterwards.
 {{- $name := "flux-apps" }}
 {{- $namespace := $rootContext.Release.Namespace }}
 
+{{- /* keep SA and bindings so flux can uninstall the release */}}
+{{- $keep := dict "helm.sh/resource-policy" "keep" }}
+
 {{- dict "resources" (dict
       "serviceAccounts" (dict $name (dict
-        "namespace" $namespace))
+        "namespace" $namespace
+        "annotations" $keep))
       "clusterRoleBindings" (dict $name (dict
+        "annotations" $keep
         "roleRef" (dict
           "apiGroup" "rbac.authorization.k8s.io"
           "kind" "ClusterRole"

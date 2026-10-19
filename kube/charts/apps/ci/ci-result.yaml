@@ -39,6 +39,8 @@ spec: {}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-apps
   namespace: apps
 ---
@@ -46,6 +48,8 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-cilium
   namespace: kube-system
 ---
@@ -53,6 +57,8 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-coredns
   namespace: kube-system
 ---
@@ -60,6 +66,8 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-flux
   namespace: flux-system
 ---
@@ -67,6 +75,8 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-gateway-api
   namespace: gateway-api
 ---
@@ -74,6 +84,8 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-kube
   namespace: kube-system
 ---
@@ -81,6 +93,8 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-something
   namespace: something
 ---
@@ -153,6 +167,8 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-apps
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -167,6 +183,8 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-cilium
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -181,6 +199,8 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-coredns
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -195,6 +215,8 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-flux
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -209,6 +231,8 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-gateway-api
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -223,6 +247,8 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-kube
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -237,6 +263,8 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-something
   namespace: something
 roleRef:
