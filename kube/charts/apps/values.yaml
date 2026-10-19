@@ -143,15 +143,15 @@ apps:
       cluster: true
     appChart:
       name: app-homer
-  
+
+  # extra
   prometheus:
     groups:
-      cluster: true
+      extra: true
     clusterAdmin: true # CRDs
     appChart:
       name: app-prometheus
-  
-  # extra
+
   forgejo:
     groups:
       extra: true
