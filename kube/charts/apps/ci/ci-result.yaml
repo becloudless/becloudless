@@ -5,6 +5,15 @@ kind: Namespace
 metadata:
   annotations:
     helm.sh/resource-policy: keep
+  name: apps
+spec: {}
+---
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-system
 spec: {}
 ---
@@ -25,6 +34,13 @@ metadata:
     helm.sh/resource-policy: keep
   name: something
 spec: {}
+---
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: flux-apps
+  namespace: apps
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: v1
@@ -79,6 +95,19 @@ data:
 kind: ConfigMap
 metadata:
   name: global-values
+  namespace: apps
+---
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    global:
+      domain: test.com
+      ldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
   namespace: flux-system
 ---
 # Source: apps/templates/loader.yaml
@@ -119,6 +148,20 @@ kind: ConfigMap
 metadata:
   name: global-values
   namespace: something
+---
+# Source: apps/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: flux-apps
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-apps
+  namespace: apps
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1

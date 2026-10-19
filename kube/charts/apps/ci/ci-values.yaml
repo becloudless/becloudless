@@ -5,6 +5,8 @@ config:
 apps:
   something:
     namespace: something
+    appChart:
+      name: app-something
     values:
       resources:
         fluxHelmReleases:

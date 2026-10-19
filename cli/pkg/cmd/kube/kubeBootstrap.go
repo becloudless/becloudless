@@ -106,10 +106,14 @@ func applyBcl(ctx kube.Context, gitRepositories []map[string]any) error {
 		"metadata":   map[string]any{"name": appsHr.Metadata.Namespace},
 	}}
 	var repositories []map[string]any
+	var accounts []map[string]any
 	for _, doc := range gitRepositories {
-		if doc["kind"] == "Namespace" {
+		switch doc["kind"] {
+		case "Namespace":
 			namespaces = append(namespaces, doc)
-		} else {
+		case "ServiceAccount", "ClusterRoleBinding":
+			accounts = append(accounts, doc)
+		default:
 			repositories = append(repositories, doc)
 		}
 	}
@@ -120,12 +124,13 @@ func applyBcl(ctx kube.Context, gitRepositories []map[string]any) error {
 		return errs.WithE(err, "Failed to apply the git repositories")
 	}
 
-	// flux reconciles resources without service account as an unprivileged one: the apps helm release needs its own, it creates the
-	// namespaces, service accounts and role bindings of every app so it cannot get them from the apps chart
-	if appsHr.Spec.ServiceAccountName == "" {
-		return errs.WithF(data.WithField("file", clusterAppsHrFile), "The apps helm release must set spec.serviceAccountName (ex: flux-apps), flux does not run resources without service account with its own permissions")
+	// flux does not run a resource without service account with its own permissions: the apps helm release runs as a service account
+	// declared by the apps chart (flux-apps), which is cluster-admin since it creates the accounts of every app
+	if len(accounts) == 0 {
+		return errs.WithF(data.WithField("file", clusterAppsHrFile).WithField("serviceAccountName", appsHr.Spec.ServiceAccountName),
+			"The apps helm release must set spec.serviceAccountName to the service account declared by the apps chart (flux-apps)")
 	}
-	if err := applyDocs(ctx, appsServiceAccountDocs(appsHr), "service account of the apps helm release"); err != nil {
+	if err := applyDocs(ctx, accounts, "service account of the apps helm release"); err != nil {
 		return errs.WithE(err, "Failed to apply the service account of the apps helm release")
 	}
 
@@ -329,39 +334,48 @@ func renderGroupApps(ctx kube.Context, opts bootstrapRemoteOptions) ([]renderedA
 		apps = append(apps, renderedApp{name: name, docs: docs})
 	}
 
-	return apps, gitRepositoryDocs(appsDocs, appsHr.Metadata.Name, appsHr.Metadata.Namespace), nil
+	return apps, gitRepositoryDocs(appsDocs, appsHr), nil
 }
 
-// appsServiceAccountDocs returns the service account of the apps helm release with cluster-admin: the apps chart cannot create it,
-// the helm release needs it to install the chart.
-func appsServiceAccountDocs(appsHr appsHelmRelease) []map[string]any {
+// appsServiceAccountDocs returns the service account of the apps helm release and the ClusterRoleBindings of the docs binding it:
+// the helm release cannot create the account it runs as, the apps chart declares it and the release adopts it once installed.
+func appsServiceAccountDocs(docs []map[string]any, appsHr appsHelmRelease) []map[string]any {
 	name := appsHr.Spec.ServiceAccountName
 	namespace := appsHr.Metadata.Namespace
-	return []map[string]any{
-		{
-			"apiVersion": "v1",
-			"kind":       "ServiceAccount",
-			"metadata":   map[string]any{"name": name, "namespace": namespace},
-		},
-		{
-			"apiVersion": "rbac.authorization.k8s.io/v1",
-			"kind":       "ClusterRoleBinding",
-			"metadata":   map[string]any{"name": name + "-" + namespace},
-			"roleRef": map[string]any{
-				"apiGroup": "rbac.authorization.k8s.io",
-				"kind":     "ClusterRole",
-				"name":     "cluster-admin",
-			},
-			"subjects": []any{
-				map[string]any{"kind": "ServiceAccount", "name": name, "namespace": namespace},
-			},
-		},
+
+	var result []map[string]any
+	for _, doc := range docs {
+		docName, _ := nestedValue(doc, "metadata", "name").(string)
+		docNamespace, _ := nestedValue(doc, "metadata", "namespace").(string)
+		if doc["kind"] == "ServiceAccount" && docName == name && docNamespace == namespace {
+			result = append(result, doc)
+		}
 	}
+	if len(result) == 0 {
+		return nil
+	}
+	for _, doc := range docs {
+		if doc["kind"] != "ClusterRoleBinding" {
+			continue
+		}
+		subjects, _ := doc["subjects"].([]any)
+		for _, subject := range subjects {
+			subjectDoc, _ := subject.(map[string]any)
+			if nestedValue(subjectDoc, "name") == name && nestedValue(subjectDoc, "namespace") == namespace {
+				result = append(result, doc)
+				break
+			}
+		}
+	}
+	return result
 }
 
-// gitRepositoryDocs returns the GitRepository resources of the docs, and the Namespace resources they are in.
+// gitRepositoryDocs returns the GitRepository resources of the docs, the Namespace resources they are in and the service account of
+// the apps helm release with its ClusterRoleBindings.
 // They are marked as owned by the helm release, so it adopts them when flux installs the chart that renders them.
-func gitRepositoryDocs(docs []map[string]any, releaseName string, releaseNamespace string) []map[string]any {
+func gitRepositoryDocs(docs []map[string]any, appsHr appsHelmRelease) []map[string]any {
+	releaseName := appsHr.Metadata.Name
+	releaseNamespace := appsHr.Metadata.Namespace
 	var repositories []map[string]any
 	namespaces := map[string]bool{}
 	for _, doc := range docs {
@@ -381,6 +395,7 @@ func gitRepositoryDocs(docs []map[string]any, releaseName string, releaseNamespa
 		}
 	}
 	result = append(result, repositories...)
+	result = append(result, appsServiceAccountDocs(docs, appsHr)...)
 
 	for _, doc := range result {
 		metadata, _ := doc["metadata"].(map[string]any)

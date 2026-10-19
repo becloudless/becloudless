@@ -22,6 +22,11 @@ appsGroups:
 # The `flux-<app>` service account of an app is cluster-admin on the namespace of the app only. Apps installing cluster-scoped resources
 # (CRDs, ClusterRoles, webhooks, ClusterIssuers, StorageClasses...) set `clusterAdmin: true`.
 apps:
+
+  # self
+  apps:
+    clusterAdmin: true
+
   # minimal
   gateway-api:
     groups:

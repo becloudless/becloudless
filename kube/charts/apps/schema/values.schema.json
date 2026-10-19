@@ -67,7 +67,7 @@
           },
           "appChart": {
             "additionalProperties": false,
-            "description": "The chart installed for the app, from ./kube/charts/<name>.",
+            "description": "The chart installed for the app, from ./kube/charts/<name>. An app without it has no HelmRelease, only its namespace, service account and RBAC.",
             "properties": {
               "name": {
                 "description": "Name of the chart. Defaults to app-<app name>.",

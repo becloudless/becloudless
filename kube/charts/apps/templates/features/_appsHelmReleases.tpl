@@ -8,6 +8,8 @@ controllers (app-flux), which makes a resource without service account run as th
 
 Per app:
   - `namespace`: namespace of the app, `<name>` by default
+  - `appChart`: the chart of the app. No HelmRelease is created for an app without it, only its namespace, service account and RBAC
+    ex: `apps`, the service account of the HelmRelease of the cluster that installs this chart
   - `appChart.name`: chart of the app, `app-<name>` by default, from `./kube/charts/<appChart.name>`
   - `dependsOn`: `<app>: true` makes the app wait for the HelmRelease of the enabled app `<app>`; `<app>: false` removes a dependency.
     A dependency on an app that is not enabled is ignored.
@@ -33,7 +35,9 @@ Any other key set next to these (ex: `interval`) is merged over the HelmRelease 
     {{- $fluxName := printf "flux-%s" $name }}
     {{- $hrName := printf "app-%s" $name }}
     {{- $chartName := ($app.appChart | default dict).name | default $hrName }}
+    {{- $installChart := hasKey $app "appChart" }}
 
+    {{- if $installChart }}
     {{- $dependsOn := dict }}
     {{- range $dep, $on := ($app.dependsOn | default dict) }}
       {{- $depApp := get $apps $dep | default dict }}
@@ -64,6 +68,7 @@ Any other key set next to these (ex: `interval`) is merged over the HelmRelease 
       {{- $_ := set $hr "dependsOn" $dependsOn }}
     {{- end }}
     {{- $_ := set $helmReleases $hrName (mustMergeOverwrite $hr (omit $app "enabled" "groups" "namespace" "appChart" "dependsOn" "clusterAdmin")) }}
+    {{- end }}
   {{- end }}
 {{- end }}
 
