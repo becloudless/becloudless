@@ -2,10 +2,13 @@
 config:
   domain: test.com
 
-appsGroups:
-  minimal:
-    enabled: true
-
 apps:
   something:
     namespace: something
+
+
+resources:
+  fluxGitRepositories:
+    bcl:
+      ref:
+        branch: n0/kube-proxy

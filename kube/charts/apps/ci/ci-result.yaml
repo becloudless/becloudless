@@ -262,7 +262,7 @@ metadata:
 spec:
   interval: 10m
   ref:
-    branch: main
+    branch: n0/kube-proxy
   url: https://github.com/becloudless/becloudless.git
 ---
 # Source: apps/templates/loader.yaml
