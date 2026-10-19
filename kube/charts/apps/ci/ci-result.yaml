@@ -23,15 +23,6 @@ kind: Namespace
 metadata:
   annotations:
     helm.sh/resource-policy: keep
-  name: longhorn-system
-spec: {}
----
-# Source: apps/templates/loader.yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  annotations:
-    helm.sh/resource-policy: keep
   name: something
 spec: {}
 ---
@@ -69,13 +60,6 @@ kind: ServiceAccount
 metadata:
   name: flux-kube
   namespace: kube-system
----
-# Source: apps/templates/loader.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: flux-longhorn
-  namespace: longhorn-system
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: v1
@@ -134,34 +118,7 @@ data:
 kind: ConfigMap
 metadata:
   name: global-values
-  namespace: longhorn-system
----
-# Source: apps/templates/loader.yaml
-apiVersion: v1
-data:
-  values.yaml: |-
-    global:
-      domain: test.com
-      ldapdn: dc=test,dc=com
-      name: test
-kind: ConfigMap
-metadata:
-  name: global-values
   namespace: something
----
-# Source: apps/templates/loader.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: flux-longhorn
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-- kind: ServiceAccount
-  name: flux-longhorn
-  namespace: longhorn-system
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -422,39 +379,6 @@ spec:
   rollback:
     cleanupOnFail: true
   serviceAccountName: flux-kube
-  timeout: 10m
-  upgrade:
-    remediation:
-      retries: 3
-  valuesFrom:
-  - kind: ConfigMap
-    name: global-values
----
-# Source: apps/templates/loader.yaml
-apiVersion: helm.toolkit.fluxcd.io/v2
-kind: HelmRelease
-metadata:
-  name: app-longhorn
-  namespace: longhorn-system
-spec:
-  chart:
-    spec:
-      chart: ./kube/charts/app-longhorn
-      reconcileStrategy: Revision
-      sourceRef:
-        kind: GitRepository
-        name: bcl
-        namespace: default
-  driftDetection:
-    mode: enabled
-  install:
-    crds: CreateReplace
-    remediation:
-      retries: -1
-  interval: 10m
-  rollback:
-    cleanupOnFail: true
-  serviceAccountName: flux-longhorn
   timeout: 10m
   upgrade:
     remediation:

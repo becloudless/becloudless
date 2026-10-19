@@ -79,6 +79,7 @@ apps:
   cnpg:
     groups:
       cluster: true
+    namespace: cnpg-system
     appChart:
       name: app-cnpg
 
@@ -91,6 +92,7 @@ apps:
   descheduler:
     groups:
       cluster: true
+    namespace: kube-system
     appChart:
       name: app-descheduler
 
