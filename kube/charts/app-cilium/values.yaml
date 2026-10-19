@@ -73,7 +73,7 @@ resources:
           name: cilium
         gateway-api: # the Gateway needs its CRDs
           name: app-gateway-api
-          namespace: "{{ .Release.Namespace }}"
+          namespace: gateway-api
       chart:
         spec:
           chart: ./kube/charts/base-loader

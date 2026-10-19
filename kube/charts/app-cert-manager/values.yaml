@@ -23,9 +23,10 @@ resources:
           sourceRef:
             kind: HelmRepository
             name: cert-manager
-      upgrade:
-        remediation:
-          retries: 3
+      dependsOn:
+        gateway-api: # the Gateway API CRDs must exist when cert-manager starts, for the gatewayHTTPRoute http-01 solver
+          name: app-gateway-api
+          namespace: gateway-api
       values:
         crds:
           enabled: true

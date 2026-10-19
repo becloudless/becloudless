@@ -57,7 +57,7 @@ resources:
       dependsOn:
         gateway-api:
           name: app-gateway-api
-          namespace: "{{ .Release.Namespace }}"
+          namespace: gateway-api
       chart:
         spec:
           chart: ./kube/charts/base-loader
@@ -65,7 +65,7 @@ resources:
           sourceRef:
             kind: GitRepository
             name: bcl
-            namespace: "{{ .Release.Namespace }}"
+            namespace: apps
       values:
         prefixNamesWithRelease: false
         resources:

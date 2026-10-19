@@ -21,3 +21,7 @@ resources:
           sourceRef:
             kind: HelmRepository
             name: cnpg
+      dependsOn:
+        external-snapshotter:
+          name: app-external-snapshotter
+          namespace: external-snapshotter
