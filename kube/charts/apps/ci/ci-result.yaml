@@ -250,6 +250,11 @@ spec:
   upgrade:
     remediation:
       retries: 3
+  values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-cilium
   valuesFrom:
   - kind: ConfigMap
     name: global-values
@@ -283,6 +288,11 @@ spec:
   upgrade:
     remediation:
       retries: 3
+  values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-coredns
   valuesFrom:
   - kind: ConfigMap
     name: global-values
@@ -316,6 +326,11 @@ spec:
   upgrade:
     remediation:
       retries: 3
+  values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-flux
   valuesFrom:
   - kind: ConfigMap
     name: global-values
@@ -349,6 +364,11 @@ spec:
   upgrade:
     remediation:
       retries: 3
+  values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-gateway-api
   valuesFrom:
   - kind: ConfigMap
     name: global-values
@@ -382,6 +402,11 @@ spec:
   upgrade:
     remediation:
       retries: 3
+  values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-kube
   valuesFrom:
   - kind: ConfigMap
     name: global-values
@@ -416,6 +441,10 @@ spec:
     remediation:
       retries: 3
   values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-something
     resources:
       fluxHelmReleases:
         something-config:
