@@ -81,7 +81,7 @@ resources:
           sourceRef:
             kind: GitRepository
             name: bcl
-            namespace: "{{ .Release.Namespace }}"
+            namespace: apps
       values:
         prefixNamesWithRelease: false
         resources:

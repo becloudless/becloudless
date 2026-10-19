@@ -145,7 +145,7 @@ resources:
           sourceRef:
             kind: GitRepository
             name: bcl
-            namespace: bcl
+            namespace: apps
 
     authelia-valkey:
       chart:
