@@ -225,7 +225,7 @@ resources:
           sourceRef:
             kind: GitRepository
             name: bcl
-            namespace: bcl
+            namespace: apps
       values:
         clientCertAuth: true
         postgresql:
