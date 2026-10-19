@@ -75,3 +75,76 @@ apps:
       cluster: true
     appChart:
       name: app-kyverno
+
+  cnpg:
+    groups:
+      cluster: true
+    appChart:
+      name: app-cnpg
+
+  secret-generator:
+    groups:
+      cluster: true
+    appChart:
+      name: app-secret-generator
+
+  descheduler:
+    groups:
+      cluster: true
+    appChart:
+      name: app-descheduler
+
+  external-snapshotter:
+    groups:
+      cluster: true
+    appChart:
+      name: app-external-snapshotter
+  
+  lldap:
+    groups:
+      cluster: true
+    appChart:
+      name: app-lldap
+  
+  authelia:
+    groups:
+      cluster: true
+    appChart:
+      name: app-authelia
+  
+  landing:
+    groups:
+      cluster: true
+    appChart:
+      name: app-landing
+
+  homer:
+    groups:
+      cluster: true
+    appChart:
+      name: app-homer
+  
+  prometheus:
+    groups:
+      cluster: true
+    appChart:
+      name: app-prometheus
+  
+  # extra
+  forgejo:
+    groups:
+      extra: true
+    appChart:
+      name: app-forgejo
+
+  jellyfin:
+    groups:
+      extra: true
+    appChart:
+      name: app-jellyfin
+
+  immich:
+    groups:
+      extra: true
+    appChart:
+      name: app-immich
