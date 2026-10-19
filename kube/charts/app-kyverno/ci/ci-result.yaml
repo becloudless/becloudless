@@ -44,7 +44,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: bcl
+        namespace: apps
   dependsOn:
   - name: kyverno
   driftDetection:
@@ -64,6 +64,25 @@ spec:
     prefixNamesWithRelease: false
     resources:
       kyvernoClusterPolicies:
+        require-flux-service-account:
+          failurePolicy: Ignore
+          rules:
+            require-service-account:
+              match:
+                any:
+                  flux:
+                    resources:
+                      kinds:
+                      - helm.toolkit.fluxcd.io/v2/HelmRelease
+                      - kustomize.toolkit.fluxcd.io/v1/Kustomization
+              name: require-service-account
+              validate:
+                message: spec.serviceAccountName is required, the resource would run
+                  with the permissions of the flux controller
+                pattern:
+                  spec:
+                    serviceAccountName: ?*
+          validationFailureAction: Enforce
         set-image-pull-policy:
           rules:
             set-image-pull-policy:

@@ -19,17 +19,21 @@ appsGroups:
   minimal:
     enabled: true
 
+# The `flux-<app>` service account of an app is cluster-admin on the namespace of the app only. Apps installing cluster-scoped resources
+# (CRDs, ClusterRoles, webhooks, ClusterIssuers, StorageClasses...) set `clusterAdmin: true`.
 apps:
   # minimal
   gateway-api:
     groups:
       minimal: true
+    clusterAdmin: true # CRDs
     appChart:
       name: app-gateway-api
 
   cilium:
     groups:
       minimal: true
+    clusterAdmin: true
     namespace: kube-system
     appChart:
       name: app-cilium
@@ -37,6 +41,7 @@ apps:
   flux:
     groups:
       minimal: true
+    clusterAdmin: true
     namespace: flux-system
     appChart:
       name: app-flux
@@ -52,6 +57,7 @@ apps:
   coredns:
     groups:
       minimal: true
+    clusterAdmin: true # creates a ClusterRole and a ClusterRoleBinding
     namespace: kube-system
     appChart:
       name: app-coredns
@@ -60,6 +66,7 @@ apps:
   cert-manager:
     groups:
       cluster: true
+    clusterAdmin: true
     appChart:
       name: app-cert-manager
 
@@ -74,12 +81,14 @@ apps:
   kyverno:
     groups:
       cluster: true
+    clusterAdmin: true
     appChart:
       name: app-kyverno
 
   cnpg:
     groups:
       cluster: true
+    clusterAdmin: true
     namespace: cnpg-system
     appChart:
       name: app-cnpg
@@ -87,12 +96,14 @@ apps:
   secret-generator:
     groups:
       cluster: true
+    clusterAdmin: true
     appChart:
       name: app-secret-generator
 
   descheduler:
     groups:
       cluster: true
+    clusterAdmin: true
     namespace: kube-system
     appChart:
       name: app-descheduler
@@ -100,6 +111,7 @@ apps:
   external-snapshotter:
     groups:
       cluster: true
+    clusterAdmin: true # CRDs
     appChart:
       name: app-external-snapshotter
   
@@ -130,6 +142,7 @@ apps:
   prometheus:
     groups:
       cluster: true
+    clusterAdmin: true # CRDs
     appChart:
       name: app-prometheus
   

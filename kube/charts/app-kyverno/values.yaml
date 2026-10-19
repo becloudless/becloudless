@@ -61,3 +61,24 @@ resources:
                         containers:
                           - (image): "*"
                             imagePullPolicy: IfNotPresent
+
+            # complements the `--default-service-account` flag of the flux controllers with a clear error at apply time.
+            # `Ignore`: a Kyverno outage must not block the reconciliation of the apps.
+            require-flux-service-account:
+              failurePolicy: Ignore
+              validationFailureAction: Enforce
+              rules:
+                require-service-account:
+                  name: require-service-account
+                  match:
+                    any:
+                      flux:
+                        resources:
+                          kinds:
+                            - helm.toolkit.fluxcd.io/v2/HelmRelease
+                            - kustomize.toolkit.fluxcd.io/v1/Kustomization
+                  validate:
+                    message: spec.serviceAccountName is required, the resource would run with the permissions of the flux controller
+                    pattern:
+                      spec:
+                        serviceAccountName: "?*"

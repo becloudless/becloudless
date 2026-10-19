@@ -124,22 +124,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: flux-kube
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-- kind: ServiceAccount
-  name: flux-kube
-  namespace: kube-system
----
-# Source: apps/templates/loader.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
   name: flux-cilium
-  namespace: kube-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -151,10 +136,9 @@ subjects:
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: flux-coredns
-  namespace: kube-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -166,10 +150,9 @@ subjects:
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: flux-flux
-  namespace: flux-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -181,10 +164,9 @@ subjects:
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: flux-gateway-api
-  namespace: gateway-api
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -193,6 +175,20 @@ subjects:
 - kind: ServiceAccount
   name: flux-gateway-api
   namespace: gateway-api
+---
+# Source: apps/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: flux-kube
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-kube
+  namespace: kube-system
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -255,6 +251,8 @@ spec:
       resources:
         fluxHelmReleases:
           serviceAccountName: flux-cilium
+        fluxKustomizations:
+          serviceAccountName: flux-cilium
   valuesFrom:
   - kind: ConfigMap
     name: global-values
@@ -292,6 +290,8 @@ spec:
     defaults:
       resources:
         fluxHelmReleases:
+          serviceAccountName: flux-coredns
+        fluxKustomizations:
           serviceAccountName: flux-coredns
   valuesFrom:
   - kind: ConfigMap
@@ -331,6 +331,8 @@ spec:
       resources:
         fluxHelmReleases:
           serviceAccountName: flux-flux
+        fluxKustomizations:
+          serviceAccountName: flux-flux
   valuesFrom:
   - kind: ConfigMap
     name: global-values
@@ -368,6 +370,8 @@ spec:
     defaults:
       resources:
         fluxHelmReleases:
+          serviceAccountName: flux-gateway-api
+        fluxKustomizations:
           serviceAccountName: flux-gateway-api
   valuesFrom:
   - kind: ConfigMap
@@ -407,6 +411,8 @@ spec:
       resources:
         fluxHelmReleases:
           serviceAccountName: flux-kube
+        fluxKustomizations:
+          serviceAccountName: flux-kube
   valuesFrom:
   - kind: ConfigMap
     name: global-values
@@ -444,6 +450,8 @@ spec:
     defaults:
       resources:
         fluxHelmReleases:
+          serviceAccountName: flux-something
+        fluxKustomizations:
           serviceAccountName: flux-something
     resources:
       fluxHelmReleases:

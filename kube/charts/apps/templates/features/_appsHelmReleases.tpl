@@ -1,8 +1,10 @@
 {{- /*
 Prepare one Flux HelmRelease `app-<name>` per enabled app, in the namespace of the app, installing the chart of the app as
 the `flux-<name>` service account (see the namespaces feature).
-The HelmReleases created by the chart of the app get the same service account by default (`defaults.resources.fluxHelmReleases`
-of its values), so the whole app is confined to its namespace (or to the cluster when `clusterAdmin` is set).
+The HelmReleases and Kustomizations created by the chart of the app get the same service account by default
+(`defaults.resources` of its values). This is only a default: the enforcement is the `--default-service-account` flag of the flux
+controllers (app-flux), which makes a resource without service account run as the unprivileged `default` one, and the
+`require-flux-service-account` policy (app-kyverno).
 
 Per app:
   - `namespace`: namespace of the app, `<name>` by default
@@ -54,7 +56,9 @@ Any other key set next to these (ex: `interval`) is merged over the HelmRelease 
             "reconcileStrategy" "Revision"
             "sourceRef" (dict "kind" "GitRepository" "name" "bcl" "namespace" $bclNamespace)))
           "valuesFrom" (dict "global" (dict "kind" "ConfigMap" "name" "global-values"))
-          "values" (dict "defaults" (dict "resources" (dict "fluxHelmReleases" (dict "serviceAccountName" $fluxName))))
+          "values" (dict "defaults" (dict "resources" (dict
+            "fluxHelmReleases" (dict "serviceAccountName" $fluxName)
+            "fluxKustomizations" (dict "serviceAccountName" $fluxName))))
     }}
     {{- if $dependsOn }}
       {{- $_ := set $hr "dependsOn" $dependsOn }}

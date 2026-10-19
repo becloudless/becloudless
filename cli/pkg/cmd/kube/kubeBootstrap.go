@@ -120,6 +120,15 @@ func applyBcl(ctx kube.Context, gitRepositories []map[string]any) error {
 		return errs.WithE(err, "Failed to apply the git repositories")
 	}
 
+	// flux reconciles resources without service account as an unprivileged one: the apps helm release needs its own, it creates the
+	// namespaces, service accounts and role bindings of every app so it cannot get them from the apps chart
+	if appsHr.Spec.ServiceAccountName == "" {
+		return errs.WithF(data.WithField("file", clusterAppsHrFile), "The apps helm release must set spec.serviceAccountName (ex: flux-apps), flux does not run resources without service account with its own permissions")
+	}
+	if err := applyDocs(ctx, appsServiceAccountDocs(appsHr), "service account of the apps helm release"); err != nil {
+		return errs.WithE(err, "Failed to apply the service account of the apps helm release")
+	}
+
 	logs.WithField("file", clusterAppsHrFile).Info("Applying the apps helm release")
 	if err := applyResourcesFile(ctx, filepath.Join(ctx.ClusterPath, clusterAppsHrFile)); err != nil {
 		return errs.WithEF(err, data.WithField("file", clusterAppsHrFile), "Failed to apply the apps helm release")
@@ -200,7 +209,8 @@ type renderedApp struct {
 type appsHelmRelease struct {
 	Metadata flux.Metadata `yaml:"metadata"`
 	Spec     struct {
-		Values map[string]any `yaml:"values"`
+		ServiceAccountName string         `yaml:"serviceAccountName"`
+		Values             map[string]any `yaml:"values"`
 	} `yaml:"spec"`
 }
 
@@ -320,6 +330,33 @@ func renderGroupApps(ctx kube.Context, opts bootstrapRemoteOptions) ([]renderedA
 	}
 
 	return apps, gitRepositoryDocs(appsDocs, appsHr.Metadata.Name, appsHr.Metadata.Namespace), nil
+}
+
+// appsServiceAccountDocs returns the service account of the apps helm release with cluster-admin: the apps chart cannot create it,
+// the helm release needs it to install the chart.
+func appsServiceAccountDocs(appsHr appsHelmRelease) []map[string]any {
+	name := appsHr.Spec.ServiceAccountName
+	namespace := appsHr.Metadata.Namespace
+	return []map[string]any{
+		{
+			"apiVersion": "v1",
+			"kind":       "ServiceAccount",
+			"metadata":   map[string]any{"name": name, "namespace": namespace},
+		},
+		{
+			"apiVersion": "rbac.authorization.k8s.io/v1",
+			"kind":       "ClusterRoleBinding",
+			"metadata":   map[string]any{"name": name + "-" + namespace},
+			"roleRef": map[string]any{
+				"apiGroup": "rbac.authorization.k8s.io",
+				"kind":     "ClusterRole",
+				"name":     "cluster-admin",
+			},
+			"subjects": []any{
+				map[string]any{"kind": "ServiceAccount", "name": name, "namespace": namespace},
+			},
+		},
+	}
 }
 
 // gitRepositoryDocs returns the GitRepository resources of the docs, and the Namespace resources they are in.
