@@ -1,6 +1,0 @@
-
-config:
-  domain: test.com
-appsGroups:
-  all:
-    enabled: true

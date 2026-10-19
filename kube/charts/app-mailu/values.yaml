@@ -1,0 +1,375 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+global:
+  domain:
+  name:
+
+# Generated: the secret key of mailu, the passwords of mariadb and of the roundcube database (`mailu`, `mailu-mariadb` and
+# `mailu-roundcube` secrets).
+# To create by hand in the `mailu` namespace, the wireguard configuration (`wg0.conf`) of the tunnels that forward the mail ports
+# (with the PROXY protocol) to the pods, one per pod having a vpn sidecar:
+#  - `mailu-front-vpn`
+#  - `mailu-postfix-vpn`
+# The pods do not start without them.
+# The first admin account is created from the pod of the admin: `flask mailu admin <user> <domain> <password>`.
+# Not configured: Authelia (the web UI has its own login: the authentication of mailu cannot rely on a forward auth while the mail
+# is the fallback of the factors enrollment), the external relay.
+
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
+defaults:
+  metadata:
+    namespace: mailu
+
+resources:
+  fluxHelmRepositories:
+    mailu:
+      url: https://mailu.github.io/helm-charts
+
+  fluxHelmReleases:
+    # the secrets, the certificate and the Gateway resources need the CRDs of these apps, so they are installed once they are ready
+    mailu-config:
+      dependsOn:
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+        secret-generator:
+          name: app-secret-generator
+          namespace: secret-generator
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        prefixNamesWithRelease: false
+        resources:
+          stringSecrets:
+            mailu:
+              fields:
+                secret-key:
+                  fieldName: secret-key
+                  encoding: hex
+                  length: "32"
+
+            mailu-mariadb:
+              fields:
+                root-password:
+                  fieldName: mariadb-root-password
+                  encoding: hex
+                  length: "32"
+                password:
+                  fieldName: mariadb-password
+                  encoding: hex
+                  length: "32"
+                replication-password:
+                  fieldName: mariadb-replication-password
+                  encoding: hex
+                  length: "32"
+
+            mailu-roundcube:
+              fields:
+                password:
+                  fieldName: password
+                  encoding: hex
+                  length: "32"
+
+          # certificate of the web UI (terminated by the Gateway) and of the mail protocols (served by the front of mailu)
+          certManagerCertificates:
+            mailu:
+              secretName: tls-mailu
+              dnsNames:
+                mail: mail.{{ .Values.global.domain }}
+                imap: imap.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+          # Web UI exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
+          # It is not protected by forward auth: mailu has its own login.
+          # The mail protocols are not exposed by the Gateway, they come through the vpn sidecars of the front and postfix pods.
+          listenerSets:
+            mailu:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: mail.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-mailu
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            mailu:
+              parentRefs:
+                mailu:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: mailu
+              hostnames:
+                mail: mail.{{ .Values.global.domain }}
+              rules:
+                root:
+                  backendRefs:
+                    front:
+                      name: mailu-front
+                      port: 80
+
+    mailu:
+      timeout: 15m # the first start of the databases and of clamav is slow
+      dependsOn:
+        mailu-config: # the secrets and the certificate
+          name: mailu-config
+        longhorn: # the volumes
+          name: app-longhorn
+          namespace: longhorn-system
+      chart:
+        spec:
+          chart: mailu
+          version: 2.8.0
+          sourceRef:
+            kind: HelmRepository
+            name: mailu
+      # The mail ports reach the pods through a wireguard tunnel: the vpn sidecar joins the tunnel and routes the traffic of the
+      # cluster back through the pod gateway.
+      postRenderers:
+        vpn:
+          kustomize:
+            patches:
+              front:
+                target:
+                  kind: Deployment
+                  name: mailu-front
+                patch: |
+                  apiVersion: apps/v1
+                  kind: Deployment
+                  metadata:
+                    name: mailu-front
+                  spec:
+                    template:
+                      spec:
+                        containers:
+                        - name: vpn
+                          image: ghcr.io/becloudless/alpine-wireguard:1.260202.1735-H7074dbd
+                          securityContext:
+                            privileged: true
+                          command: [ sh, -x, -e, -c ]
+                          args:
+                          - |
+                            wg-quick down wg0 || true
+                            wg-quick up wg0
+                            KUBE_GATEWAY=$(/sbin/ip route | awk '/default/ { print $3 }')
+                            ip route add 172.16.42.0/24 via $KUBE_GATEWAY || true
+                            ip route add 10.42.0.0/16 via $KUBE_GATEWAY || true
+                            sleep infinity
+                          livenessProbe:
+                            exec:
+                              command: [ping, -c1, -W2, 10.0.0.1]
+                            initialDelaySeconds: 10
+                            periodSeconds: 10
+                          volumeMounts:
+                          - mountPath: /etc/wireguard
+                            name: conf
+                        volumes:
+                        - name: conf
+                          secret:
+                            secretName: mailu-front-vpn
+                            defaultMode: 0400
+
+              postfix:
+                target:
+                  kind: Deployment
+                  name: mailu-postfix
+                patch: |
+                  apiVersion: apps/v1
+                  kind: Deployment
+                  metadata:
+                    name: mailu-postfix
+                  spec:
+                    template:
+                      spec:
+                        containers:
+                        - name: vpn
+                          image: ghcr.io/becloudless/alpine-wireguard:1.260202.1735-H7074dbd
+                          securityContext:
+                            privileged: true
+                          command: [ sh, -x, -e, -c ]
+                          args:
+                          - |
+                            wg-quick down wg0 || true
+                            wg-quick up wg0
+                            KUBE_GATEWAY=$(/sbin/ip route | awk '/default/ { print $3 }')
+                            ip route add 172.16.42.0/24 via $KUBE_GATEWAY || true
+                            ip route add 10.42.0.0/16 via $KUBE_GATEWAY || true
+                            sleep infinity
+                          livenessProbe:
+                            exec:
+                              command: [ping, -c1, -W2, 10.0.0.1]
+                            initialDelaySeconds: 10
+                            periodSeconds: 10
+                          volumeMounts:
+                          - mountPath: /etc/wireguard
+                            name: conf
+                        volumes:
+                        - name: conf
+                          secret:
+                            secretName: mailu-postfix-vpn
+                            defaultMode: 0400
+      values:
+        domain: "{{ .Values.global.domain }}"
+        subnet: 10.42.0.0/16 # the pods of the cluster
+        hostnames:
+          - mail.{{ .Values.global.domain }}
+          - imap.{{ .Values.global.domain }}
+        timezone: Europe/Paris
+        sessionTimeout: 259201 # 3d
+        permanentSessionLifetime: 31536000 # 1y
+        existingSecret: mailu
+
+        global:
+          storageClass: longhorn
+          database:
+            roundcube:
+              database: roundcube
+              existingSecret: mailu-roundcube
+              existingSecretPasswordKey: password
+
+        persistence:
+          single_pvc: false
+
+        # the web UI is exposed by the Gateway, see the `mailu-config` release
+        ingress:
+          enabled: false
+          existingSecret: tls-mailu # the certificate of the mail protocols
+          # the front serves the web UI in plain http, and the mail protocols with the certificate
+          tlsFlavorOverride: mail
+          realIpFrom: 10.0.0.0/8
+          realIpHeader: ""
+          proxyProtocol:
+            pop3: true
+            pop3s: true
+            imap: true
+            imaps: true
+            smtp: true
+            smtps: true
+            submission: true
+            manageSieve: true
+
+        front:
+          # on crio, root is needed to have the SYS_CHROOT capability, required by dovecot to run properly
+          # https://github.com/Mailu/Mailu/issues/1714
+          containerSecurityContext:
+            capabilities:
+              add:
+                - SYS_CHROOT
+            enabled: true
+            runAsUser: 0
+
+          updateStrategy:
+            type: Recreate # the volumes are ReadWriteOnce
+
+          # useless with the vpn, but required to have the proxy protocol
+          externalService:
+            enabled: true
+            type: LoadBalancer
+            externalTrafficPolicy: Cluster
+
+        mariadb:
+          enabled: true
+          auth:
+            existingSecret: mailu-mariadb
+          primary:
+            # workaround of https://github.com/Mailu/helm-charts/issues/463#issuecomment-3406122198
+            extraEnvVars:
+              - name: ROUNDCUBE_DB_PW
+                valueFrom:
+                  secretKeyRef:
+                    name: mailu-roundcube
+                    key: password
+              - name: ROUNDCUBE_DB_NAME
+                value: roundcube
+              - name: ROUNDCUBE_DB_USER
+                value: roundcube
+            persistence:
+              enabled: true
+
+        admin:
+          updateStrategy:
+            type: Recreate
+
+        postfix:
+          updateStrategy:
+            type: Recreate
+
+        dovecot:
+          # on crio, root is needed to have the SYS_CHROOT capability, required by dovecot to run properly
+          # https://github.com/Mailu/Mailu/issues/1714
+          containerSecurityContext:
+            capabilities:
+              add:
+                - SYS_CHROOT
+            enabled: true
+            runAsUser: 0
+
+          updateStrategy:
+            type: Recreate
+          resources:
+            requests:
+              memory: 500Mi
+              cpu: 100m
+            limits:
+              memory: 1.5Gi
+              cpu: 2
+
+        rspamd:
+          updateStrategy:
+            type: Recreate
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+            limits:
+              memory: 400M
+              cpu: 1
+
+        clamav:
+          resources:
+            requests:
+              memory: 1.5Gi
+              cpu: 100m
+            limits:
+              memory: 3Gi
+              cpu: 1
+
+        webmail:
+          updateStrategy:
+            type: Recreate
+          resources:
+            requests:
+              memory: 100Mi
+              cpu: 100m
+            limits:
+              memory: 200Mi
+              cpu: 1
+
+        webdav:
+          enabled: true
+          updateStrategy:
+            type: Recreate

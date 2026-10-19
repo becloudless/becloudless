@@ -105,6 +105,13 @@ apps:
     appChart:
       name: app-secret-generator
 
+  external-secrets:
+    groups:
+      cluster: true
+    clusterAdmin: true # CRDs and cluster roles
+    appChart:
+      name: app-external-secrets
+
   descheduler:
     groups:
       cluster: true
@@ -163,6 +170,18 @@ apps:
       extra: true
     appChart:
       name: app-jellyfin
+
+  seerr:
+    groups:
+      extra: true
+    appChart:
+      name: app-seerr
+
+  mailu:
+    groups:
+      extra: true
+    appChart:
+      name: app-mailu
 
   immich:
     groups:

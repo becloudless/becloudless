@@ -1,0 +1,350 @@
+---
+# Source: app-mailu/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: mailu
+  namespace: mailu
+spec:
+  chart:
+    spec:
+      chart: mailu
+      sourceRef:
+        kind: HelmRepository
+        name: mailu
+      version: 2.8.0
+  dependsOn:
+  - name: app-longhorn
+    namespace: longhorn-system
+  - name: mailu-config
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  postRenderers:
+  - kustomize:
+      patches:
+      - patch: |-
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: mailu-front
+          spec:
+            template:
+              spec:
+                containers:
+                - name: vpn
+                  image: ghcr.io/becloudless/alpine-wireguard:1.260202.1735-H7074dbd
+                  securityContext:
+                    privileged: true
+                  command: [ sh, -x, -e, -c ]
+                  args:
+                  - |
+                    wg-quick down wg0 || true
+                    wg-quick up wg0
+                    KUBE_GATEWAY=$(/sbin/ip route | awk '/default/ { print $3 }')
+                    ip route add 172.16.42.0/24 via $KUBE_GATEWAY || true
+                    ip route add 10.42.0.0/16 via $KUBE_GATEWAY || true
+                    sleep infinity
+                  livenessProbe:
+                    exec:
+                      command: [ping, -c1, -W2, 10.0.0.1]
+                    initialDelaySeconds: 10
+                    periodSeconds: 10
+                  volumeMounts:
+                  - mountPath: /etc/wireguard
+                    name: conf
+                volumes:
+                - name: conf
+                  secret:
+                    secretName: mailu-front-vpn
+                    defaultMode: 0400
+        target:
+          kind: Deployment
+          name: mailu-front
+      - patch: |-
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: mailu-postfix
+          spec:
+            template:
+              spec:
+                containers:
+                - name: vpn
+                  image: ghcr.io/becloudless/alpine-wireguard:1.260202.1735-H7074dbd
+                  securityContext:
+                    privileged: true
+                  command: [ sh, -x, -e, -c ]
+                  args:
+                  - |
+                    wg-quick down wg0 || true
+                    wg-quick up wg0
+                    KUBE_GATEWAY=$(/sbin/ip route | awk '/default/ { print $3 }')
+                    ip route add 172.16.42.0/24 via $KUBE_GATEWAY || true
+                    ip route add 10.42.0.0/16 via $KUBE_GATEWAY || true
+                    sleep infinity
+                  livenessProbe:
+                    exec:
+                      command: [ping, -c1, -W2, 10.0.0.1]
+                    initialDelaySeconds: 10
+                    periodSeconds: 10
+                  volumeMounts:
+                  - mountPath: /etc/wireguard
+                    name: conf
+                volumes:
+                - name: conf
+                  secret:
+                    secretName: mailu-postfix-vpn
+                    defaultMode: 0400
+        target:
+          kind: Deployment
+          name: mailu-postfix
+  rollback:
+    cleanupOnFail: true
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    admin:
+      updateStrategy:
+        type: Recreate
+    clamav:
+      resources:
+        limits:
+          cpu: 1
+          memory: 3Gi
+        requests:
+          cpu: 100m
+          memory: 1.5Gi
+    domain: test.com
+    dovecot:
+      containerSecurityContext:
+        capabilities:
+          add:
+          - SYS_CHROOT
+        enabled: true
+        runAsUser: 0
+      resources:
+        limits:
+          cpu: 2
+          memory: 1.5Gi
+        requests:
+          cpu: 100m
+          memory: 500Mi
+      updateStrategy:
+        type: Recreate
+    existingSecret: mailu
+    front:
+      containerSecurityContext:
+        capabilities:
+          add:
+          - SYS_CHROOT
+        enabled: true
+        runAsUser: 0
+      externalService:
+        enabled: true
+        externalTrafficPolicy: Cluster
+        type: LoadBalancer
+      updateStrategy:
+        type: Recreate
+    global:
+      database:
+        roundcube:
+          database: roundcube
+          existingSecret: mailu-roundcube
+          existingSecretPasswordKey: password
+      storageClass: longhorn
+    hostnames:
+    - mail.test.com
+    - imap.test.com
+    ingress:
+      enabled: false
+      existingSecret: tls-mailu
+      proxyProtocol:
+        imap: true
+        imaps: true
+        manageSieve: true
+        pop3: true
+        pop3s: true
+        smtp: true
+        smtps: true
+        submission: true
+      realIpFrom: 10.0.0.0/8
+      realIpHeader: ""
+      tlsFlavorOverride: mail
+    mariadb:
+      auth:
+        existingSecret: mailu-mariadb
+      enabled: true
+      primary:
+        extraEnvVars:
+        - name: ROUNDCUBE_DB_PW
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: mailu-roundcube
+        - name: ROUNDCUBE_DB_NAME
+          value: roundcube
+        - name: ROUNDCUBE_DB_USER
+          value: roundcube
+        persistence:
+          enabled: true
+    permanentSessionLifetime: 31536000
+    persistence:
+      single_pvc: false
+    postfix:
+      updateStrategy:
+        type: Recreate
+    rspamd:
+      resources:
+        limits:
+          cpu: 1
+          memory: 400M
+        requests:
+          cpu: 100m
+          memory: 100Mi
+      updateStrategy:
+        type: Recreate
+    sessionTimeout: 259201
+    subnet: 10.42.0.0/16
+    timezone: Europe/Paris
+    webdav:
+      enabled: true
+      updateStrategy:
+        type: Recreate
+    webmail:
+      resources:
+        limits:
+          cpu: 1
+          memory: 200Mi
+        requests:
+          cpu: 100m
+          memory: 100Mi
+      updateStrategy:
+        type: Recreate
+---
+# Source: app-mailu/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: mailu-config
+  namespace: mailu
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  - name: app-secret-generator
+    namespace: secret-generator
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    prefixNamesWithRelease: false
+    resources:
+      certManagerCertificates:
+        mailu:
+          dnsNames:
+            imap: imap.test.com
+            mail: mail.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-mailu
+      httpRoutes:
+        mailu:
+          hostnames:
+            mail: mail.test.com
+          parentRefs:
+            mailu:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: mailu
+          rules:
+            root:
+              backendRefs:
+                front:
+                  name: mailu-front
+                  port: 80
+      listenerSets:
+        mailu:
+          listeners:
+            https:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: mail.test.com
+              name: https
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: tls-mailu
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+      stringSecrets:
+        mailu:
+          fields:
+            secret-key:
+              encoding: hex
+              fieldName: secret-key
+              length: "32"
+        mailu-mariadb:
+          fields:
+            password:
+              encoding: hex
+              fieldName: mariadb-password
+              length: "32"
+            replication-password:
+              encoding: hex
+              fieldName: mariadb-replication-password
+              length: "32"
+            root-password:
+              encoding: hex
+              fieldName: mariadb-root-password
+              length: "32"
+        mailu-roundcube:
+          fields:
+            password:
+              encoding: hex
+              fieldName: password
+              length: "32"
+---
+# Source: app-mailu/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: mailu
+  namespace: mailu
+spec:
+  interval: 10m
+  url: https://mailu.github.io/helm-charts

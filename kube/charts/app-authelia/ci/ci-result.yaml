@@ -457,6 +457,10 @@ spec:
               group: gateway.networking.k8s.io
               kind: HTTPRoute
               namespace: prometheus
+            seerr:
+              group: gateway.networking.k8s.io
+              kind: HTTPRoute
+              namespace: seerr
           to:
             authelia:
               group: ""
