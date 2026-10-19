@@ -15,10 +15,6 @@ defaults:
     namespace: prometheus
 
 resources:
-  namespaces:
-    prometheus:
-      fullNameOverride: prometheus
-
   certManagerCertificates:
     prometheus-gateway:
       fullNameOverride: prometheus-gateway

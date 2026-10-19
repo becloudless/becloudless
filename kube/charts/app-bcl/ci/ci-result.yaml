@@ -37,11 +37,15 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
+    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
+  releaseName: app-authelia
   rollback:
     cleanupOnFail: true
+  storageNamespace: default
+  targetNamespace: authelia
   timeout: 10m
   upgrade:
     remediation:
@@ -70,11 +74,15 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
+    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
+  releaseName: app-cert-manager
   rollback:
     cleanupOnFail: true
+  storageNamespace: default
+  targetNamespace: cert-manager
   timeout: 10m
   upgrade:
     remediation:
@@ -136,11 +144,15 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
+    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
+  releaseName: app-cnpg
   rollback:
     cleanupOnFail: true
+  storageNamespace: default
+  targetNamespace: cnpg-system
   timeout: 10m
   upgrade:
     remediation:
@@ -260,47 +272,15 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
+    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
+  releaseName: app-flux
   rollback:
     cleanupOnFail: true
-  timeout: 10m
-  upgrade:
-    remediation:
-      retries: 3
-  valuesFrom:
-  - kind: ConfigMap
-    name: test-release-global-values
----
-# Source: app-bcl/templates/loader.yaml
-apiVersion: helm.toolkit.fluxcd.io/v2
-kind: HelmRelease
-metadata:
-  name: app-forgejo
-  namespace: default
-spec:
-  chart:
-    spec:
-      chart: ./kube/charts/app-forgejo
-      reconcileStrategy: Revision
-      sourceRef:
-        kind: GitRepository
-        name: bcl
-  dependsOn:
-  - name: app-cert-manager
-  - name: app-cnpg
-  - name: app-gateway-api
-  - name: app-longhorn
-  driftDetection:
-    mode: enabled
-  install:
-    crds: CreateReplace
-    remediation:
-      retries: -1
-  interval: 10m
-  rollback:
-    cleanupOnFail: true
+  storageNamespace: default
+  targetNamespace: flux-system
   timeout: 10m
   upgrade:
     remediation:
@@ -362,83 +342,15 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
+    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
+  releaseName: app-homer
   rollback:
     cleanupOnFail: true
-  timeout: 10m
-  upgrade:
-    remediation:
-      retries: 3
-  valuesFrom:
-  - kind: ConfigMap
-    name: test-release-global-values
----
-# Source: app-bcl/templates/loader.yaml
-apiVersion: helm.toolkit.fluxcd.io/v2
-kind: HelmRelease
-metadata:
-  name: app-immich
-  namespace: default
-spec:
-  chart:
-    spec:
-      chart: ./kube/charts/app-immich
-      reconcileStrategy: Revision
-      sourceRef:
-        kind: GitRepository
-        name: bcl
-  dependsOn:
-  - name: app-cert-manager
-  - name: app-cnpg
-  - name: app-gateway-api
-  - name: app-longhorn
-  - name: app-secret-generator
-  driftDetection:
-    mode: enabled
-  install:
-    crds: CreateReplace
-    remediation:
-      retries: -1
-  interval: 10m
-  rollback:
-    cleanupOnFail: true
-  timeout: 10m
-  upgrade:
-    remediation:
-      retries: 3
-  valuesFrom:
-  - kind: ConfigMap
-    name: test-release-global-values
----
-# Source: app-bcl/templates/loader.yaml
-apiVersion: helm.toolkit.fluxcd.io/v2
-kind: HelmRelease
-metadata:
-  name: app-jellyfin
-  namespace: default
-spec:
-  chart:
-    spec:
-      chart: ./kube/charts/app-jellyfin
-      reconcileStrategy: Revision
-      sourceRef:
-        kind: GitRepository
-        name: bcl
-  dependsOn:
-  - name: app-cert-manager
-  - name: app-gateway-api
-  - name: app-longhorn
-  driftDetection:
-    mode: enabled
-  install:
-    crds: CreateReplace
-    remediation:
-      retries: -1
-  interval: 10m
-  rollback:
-    cleanupOnFail: true
+  storageNamespace: default
+  targetNamespace: homer
   timeout: 10m
   upgrade:
     remediation:
@@ -496,11 +408,15 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
+    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
+  releaseName: app-kyverno
   rollback:
     cleanupOnFail: true
+  storageNamespace: default
+  targetNamespace: kyverno
   timeout: 10m
   upgrade:
     remediation:
@@ -530,11 +446,15 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
+    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
+  releaseName: app-landing
   rollback:
     cleanupOnFail: true
+  storageNamespace: default
+  targetNamespace: landing
   timeout: 10m
   upgrade:
     remediation:
@@ -567,11 +487,15 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
+    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
+  releaseName: app-lldap
   rollback:
     cleanupOnFail: true
+  storageNamespace: default
+  targetNamespace: lldap
   timeout: 10m
   upgrade:
     remediation:
@@ -602,11 +526,15 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
+    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
+  releaseName: app-longhorn
   rollback:
     cleanupOnFail: true
+  storageNamespace: default
+  targetNamespace: longhorn-system
   timeout: 10m
   upgrade:
     remediation:
@@ -650,42 +578,6 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-prometheus
-  namespace: default
-spec:
-  chart:
-    spec:
-      chart: ./kube/charts/app-prometheus
-      reconcileStrategy: Revision
-      sourceRef:
-        kind: GitRepository
-        name: bcl
-  dependsOn:
-  - name: app-authelia
-  - name: app-cert-manager
-  - name: app-gateway-api
-  - name: app-longhorn
-  driftDetection:
-    mode: enabled
-  install:
-    crds: CreateReplace
-    remediation:
-      retries: -1
-  interval: 10m
-  rollback:
-    cleanupOnFail: true
-  timeout: 10m
-  upgrade:
-    remediation:
-      retries: 3
-  valuesFrom:
-  - kind: ConfigMap
-    name: test-release-global-values
----
-# Source: app-bcl/templates/loader.yaml
-apiVersion: helm.toolkit.fluxcd.io/v2
-kind: HelmRelease
-metadata:
   name: app-secret-generator
   namespace: default
 spec:
@@ -700,11 +592,15 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
+    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
+  releaseName: app-secret-generator
   rollback:
     cleanupOnFail: true
+  storageNamespace: default
+  targetNamespace: secret-generator
   timeout: 10m
   upgrade:
     remediation:

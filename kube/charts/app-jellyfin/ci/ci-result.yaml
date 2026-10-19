@@ -1,14 +1,6 @@
 ---
 # Source: app-jellyfin/templates/loader.yaml
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: jellyfin
-  namespace: jellyfin
-spec: {}
----
-# Source: app-jellyfin/templates/loader.yaml
-apiVersion: v1
 data:
   network.xml: |-
     <?xml version="1.0" encoding="utf-8"?>
@@ -90,14 +82,10 @@ spec:
     spec:
       containers:
       - env:
-        - name: published-server-url
-          valueFrom:
-            name: JELLYFIN_PublishedServerUrl
-            value: https://jellyfin.test.com
-        - name: tz
-          valueFrom:
-            name: TZ
-            value: Europe/Paris
+        - name: JELLYFIN_PublishedServerUrl
+          value: https://jellyfin.test.com
+        - name: TZ
+          value: Europe/Paris
         image: ghcr.io/jellyfin/jellyfin:10.11.11
         livenessProbe:
           httpGet:
@@ -136,9 +124,7 @@ spec:
       - name: config
         persistentVolumeClaim:
           claimName: jellyfin-config
-      - hostPath:
-          path: /data/Media
-          type: Directory
+      - emptyDir: {}
         name: media
       - configMap:
           name: jellyfin-config

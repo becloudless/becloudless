@@ -1,14 +1,6 @@
 ---
 # Source: app-landing/templates/loader.yaml
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: landing
-  namespace: landing
-spec: {}
----
-# Source: app-landing/templates/loader.yaml
-apiVersion: v1
 data:
   index.html: |-
     <!DOCTYPE html>

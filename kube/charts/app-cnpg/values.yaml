@@ -5,10 +5,6 @@ defaults:
     namespace: cnpg-system
 
 resources:
-  namespaces:
-    cnpg-system:
-      fullNameOverride: cnpg-system
-
   fluxHelmRepositories:
     cnpg:
       fullNameOverride: cnpg

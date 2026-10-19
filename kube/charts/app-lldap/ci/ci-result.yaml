@@ -1,14 +1,6 @@
 ---
 # Source: app-lldap/templates/loader.yaml
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: lldap
-  namespace: lldap
-spec: {}
----
-# Source: app-lldap/templates/loader.yaml
-apiVersion: v1
 data:
   lldap_config.toml: |-
     # verbose = false
@@ -182,7 +174,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: default
+        namespace: bcl
   install:
     crds: CreateReplace
     remediation:

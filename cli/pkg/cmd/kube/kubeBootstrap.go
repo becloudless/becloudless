@@ -253,6 +253,13 @@ func renderGroupApps(ctx kube.Context, opts bootstrapRemoteOptions) ([]renderedA
 			hrNamespace = appBclHr.Metadata.Namespace
 		}
 
+		// flux installs the release in the target namespace, and creates it when asked to
+		releaseNamespace := hrNamespace
+		targetNamespace, _ := nestedValue(hr, "spec", "targetNamespace").(string)
+		if targetNamespace != "" {
+			releaseNamespace = targetNamespace
+		}
+
 		appValues, err := helmReleaseValues(hr, appBclDocs)
 		if err != nil {
 			return nil, errs.WithEF(err, data.WithField("app", name), "Failed to compute the values of the app")
@@ -262,13 +269,20 @@ func renderGroupApps(ctx kube.Context, opts bootstrapRemoteOptions) ([]renderedA
 		if err != nil {
 			return nil, err
 		}
-		appManifest, err := bclhelm.RenderChart(appChart, appValues, hrName, hrNamespace, opts.kubeVersion)
+		appManifest, err := bclhelm.RenderChart(appChart, appValues, hrName, releaseNamespace, opts.kubeVersion)
 		if err != nil {
 			return nil, err
 		}
 		docs, err := splitManifest(appManifest)
 		if err != nil {
 			return nil, err
+		}
+		if createNamespace, _ := nestedValue(hr, "spec", "install", "createNamespace").(bool); createNamespace && targetNamespace != "" {
+			docs = append([]map[string]any{{
+				"apiVersion": "v1",
+				"kind":       "Namespace",
+				"metadata":   map[string]any{"name": targetNamespace},
+			}}, docs...)
 		}
 		apps = append(apps, renderedApp{name: name, docs: docs})
 	}

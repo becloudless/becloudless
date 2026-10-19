@@ -7,10 +7,6 @@ defaults:
     namespace: landing
 
 resources:
-  namespaces:
-    landing:
-      fullNameOverride: landing
-
   # The static page served on the apex of the domain, replace `index.html` to change it.
   configMaps:
     landing-html:

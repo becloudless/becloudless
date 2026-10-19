@@ -14,10 +14,6 @@ defaults:
     namespace: immich
 
 resources:
-  namespaces:
-    immich:
-      fullNameOverride: immich
-
   stringSecrets:
     # users of valkey, the key is the name of the user
     immich-valkey:
@@ -115,7 +111,7 @@ resources:
           sourceRef:
             kind: GitRepository
             name: bcl
-            namespace: "{{ .Release.Namespace }}"
+            namespace: bcl
       values:
         storageSize: 5Gi
         postgresql:

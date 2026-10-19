@@ -15,10 +15,6 @@ defaults:
     namespace: forgejo
 
 resources:
-  namespaces:
-    forgejo:
-      fullNameOverride: forgejo
-
   certManagerCertificates:
     # certificate of the web UI, terminated by the Gateway
     forgejo-gateway:
@@ -93,7 +89,7 @@ resources:
           sourceRef:
             kind: GitRepository
             name: bcl
-            namespace: "{{ .Release.Namespace }}"
+            namespace: bcl
 
     forgejo:
       fullNameOverride: forgejo

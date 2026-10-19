@@ -1,13 +1,5 @@
 ---
 # Source: app-kyverno/templates/loader.yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: kyverno
-  namespace: kyverno
-spec: {}
----
-# Source: app-kyverno/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -50,7 +42,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: default
+        namespace: bcl
   dependsOn:
   - name: kyverno
   install:

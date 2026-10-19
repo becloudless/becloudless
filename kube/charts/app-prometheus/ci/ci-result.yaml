@@ -1,14 +1,6 @@
 ---
 # Source: app-prometheus/templates/loader.yaml
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: prometheus
-  namespace: prometheus
-spec: {}
----
-# Source: app-prometheus/templates/loader.yaml
-apiVersion: v1
 kind: Service
 metadata:
   name: pushprox
@@ -468,7 +460,7 @@ spec:
               - ReadWriteOnce
               resources:
                 requests:
-                  storage: 50Gi
+                  storage: 10Gi
               storageClassName: longhorn
     prometheusOperator:
       kubeletService:

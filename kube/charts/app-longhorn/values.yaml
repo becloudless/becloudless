@@ -7,10 +7,6 @@ defaults:
     namespace: longhorn-system
 
 resources:
-  namespaces:
-    longhorn-system:
-      fullNameOverride: longhorn-system
-
   configMaps:
     longhorn-nixos-path:
       fullNameOverride: longhorn-nixos-path
@@ -172,7 +168,7 @@ resources:
           name: longhorn
         external-snapshotter:
           name: app-external-snapshotter
-          namespace: "{{ .Release.Namespace }}"
+          namespace: bcl
       chart:
         spec:
           chart: ./kube/charts/base-loader
@@ -180,7 +176,7 @@ resources:
           sourceRef:
             kind: GitRepository
             name: bcl
-            namespace: "{{ .Release.Namespace }}"
+            namespace: bcl
       values:
         defaults:
           metadata:

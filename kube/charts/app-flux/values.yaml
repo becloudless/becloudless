@@ -8,9 +8,6 @@ defaults:
     namespace: flux-system
 
 resources:
-  namespaces:
-    flux-system: {}
-
   fluxOCIRepositories:
     flux-manifests:
       fullNameOverride: flux-manifests
@@ -40,10 +37,10 @@ resources:
       dependsOn:
         cert-manager:
           name: app-cert-manager
-          namespace: "{{ .Release.Namespace }}"
+          namespace: bcl
         gateway-api:
           name: app-gateway-api
-          namespace: "{{ .Release.Namespace }}"
+          namespace: bcl
       chart:
         spec:
           chart: ./kube/charts/base-loader
@@ -51,7 +48,7 @@ resources:
           sourceRef:
             kind: GitRepository
             name: bcl
-            namespace: "{{ .Release.Namespace }}"
+            namespace: bcl
       values:
         resources:
           certManagerCertificates:

@@ -1,13 +1,5 @@
 ---
 # Source: app-cnpg/templates/loader.yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: cnpg-system
-  namespace: cnpg-system
-spec: {}
----
-# Source: app-cnpg/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:

@@ -1,14 +1,6 @@
 ---
 # Source: app-homer/templates/loader.yaml
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: homer
-  namespace: homer
-spec: {}
----
-# Source: app-homer/templates/loader.yaml
-apiVersion: v1
 data:
   config.yml: |-
     documentTitle: "test.com - Home"

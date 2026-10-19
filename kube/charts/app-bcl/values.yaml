@@ -22,6 +22,7 @@ apps:
     groups: [all, minimal, server, pop]
   flux:
     groups: [all, minimal, server, pop]
+    targetNamespace: flux-system
   gateway-api:
     groups: [all, minimal, server, pop]
   cilium:
@@ -34,26 +35,31 @@ apps:
 
   cert-manager:
     groups: [all, server, pop]
+    targetNamespace: cert-manager
     dependsOn: # the Gateway API CRDs must exist when cert-manager starts, for the gatewayHTTPRoute http-01 solver
       gateway-api:
         name: app-gateway-api
   kyverno:
     groups: [all, server, pop]
+    targetNamespace: kyverno
   metrics-server:
     groups: [all, server, pop]
   cnpg:
     groups: [all, server, pop]
+    targetNamespace: cnpg-system
     dependsOn:
       app-external-snapshotter:
         name: app-external-snapshotter # cnpg snapshot support needs the CRDs before starting, or will require manual restart
   secret-generator:
     groups: [all, server, pop]
+    targetNamespace: secret-generator
   descheduler:
     groups: [all, server]
   external-snapshotter:
     groups: [all, server, pop]
   longhorn:
     groups: [all, server]
+    targetNamespace: longhorn-system
     dependsOn: # the ClusterPolicy needs the kyverno CRDs, the UI needs the certificate and the Gateway
       kyverno:
         name: app-kyverno
@@ -63,6 +69,7 @@ apps:
         name: app-gateway-api
   lldap:
     groups: [all, server]
+    targetNamespace: lldap
     dependsOn: # certificates and issuers, the postgresql cluster, its volume snapshots, generated secrets, the Gateway API CRDs
       cert-manager:
         name: app-cert-manager
@@ -76,6 +83,7 @@ apps:
         name: app-secret-generator
   authelia:
     groups: [all, server]
+    targetNamespace: authelia
     dependsOn: # certificates and issuers, the postgresql cluster, its volume snapshots, generated secrets, the ldap backend, the Gateway API CRDs
       cert-manager:
         name: app-cert-manager
@@ -91,6 +99,7 @@ apps:
         name: app-secret-generator
   landing:
     groups: [all, server]
+    targetNamespace: landing
     dependsOn: # the certificate and the Gateway
       cert-manager:
         name: app-cert-manager
@@ -98,6 +107,7 @@ apps:
         name: app-gateway-api
   forgejo:
     groups: [server]
+    targetNamespace: forgejo
     dependsOn: # the certificate and the Gateway, the postgresql cluster and its volume snapshots, the volume
       cert-manager:
         name: app-cert-manager
@@ -109,6 +119,7 @@ apps:
         name: app-longhorn
   jellyfin:
     groups: [server]
+    targetNamespace: jellyfin
     dependsOn: # the certificate and the Gateway, the volume
       cert-manager:
         name: app-cert-manager
@@ -118,6 +129,7 @@ apps:
         name: app-longhorn
   immich:
     groups: [server]
+    targetNamespace: immich
     dependsOn: # the certificate and the Gateway, the postgresql cluster and its volume snapshots, the volumes, the valkey secret
       cert-manager:
         name: app-cert-manager
@@ -131,6 +143,7 @@ apps:
         name: app-secret-generator
   homer:
     groups: [all, server]
+    targetNamespace: homer
     dependsOn: # the certificate, the Gateway and the ReferenceGrant to authelia
       authelia:
         name: app-authelia
@@ -140,6 +153,7 @@ apps:
         name: app-gateway-api
   prometheus:
     groups: [server]
+    targetNamespace: prometheus
     dependsOn: # the certificates, the Gateway, the ReferenceGrant to authelia and the volumes
       authelia:
         name: app-authelia
@@ -150,7 +164,3 @@ apps:
       longhorn:
         name: app-longhorn
 
-
-resources:
-  namespaces:
-    bcl: {}

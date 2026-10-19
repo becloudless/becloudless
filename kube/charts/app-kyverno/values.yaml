@@ -5,10 +5,6 @@ defaults:
     namespace: kyverno
 
 resources:
-  namespaces:
-    kyverno:
-      fullNameOverride: kyverno
-
   fluxHelmRepositories:
     kyverno:
       fullNameOverride: kyverno
@@ -44,7 +40,7 @@ resources:
           sourceRef:
             kind: GitRepository
             name: bcl
-            namespace: "{{ .Release.Namespace }}"
+            namespace: bcl
       values:
         resources:
           kyvernoClusterPolicies:

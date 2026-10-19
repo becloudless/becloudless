@@ -8,10 +8,6 @@ defaults:
     namespace: homer
 
 resources:
-  namespaces:
-    homer:
-      fullNameOverride: homer
-
   configMaps:
     homer-config:
       fullNameOverride: homer-config

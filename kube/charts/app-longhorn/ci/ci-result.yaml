@@ -1,14 +1,6 @@
 ---
 # Source: app-longhorn/templates/loader.yaml
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: longhorn-system
-  namespace: longhorn-system
-spec: {}
----
-# Source: app-longhorn/templates/loader.yaml
-apiVersion: v1
 data:
   PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/run/wrappers/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin
 kind: ConfigMap
@@ -155,10 +147,10 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: default
+        namespace: bcl
   dependsOn:
   - name: app-external-snapshotter
-    namespace: default
+    namespace: bcl
   - name: longhorn
   install:
     crds: CreateReplace

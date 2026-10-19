@@ -5,10 +5,6 @@ defaults:
     namespace: secret-generator
 
 resources:
-  namespaces:
-    secret-generator:
-      fullNameOverride: secret-generator
-
   fluxHelmRepositories:
     secret-generator:
       fullNameOverride: secret-generator

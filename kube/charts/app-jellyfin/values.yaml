@@ -12,10 +12,6 @@ defaults:
     namespace: jellyfin
 
 resources:
-  namespaces:
-    jellyfin:
-      fullNameOverride: jellyfin
-
   configMaps:
     jellyfin-config:
       fullNameOverride: jellyfin-config

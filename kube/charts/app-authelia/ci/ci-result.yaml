@@ -1,13 +1,5 @@
 ---
 # Source: app-authelia/templates/loader.yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: authelia
-  namespace: authelia
-spec: {}
----
-# Source: app-authelia/templates/loader.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -416,7 +408,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: default
+        namespace: bcl
   install:
     crds: CreateReplace
     remediation:

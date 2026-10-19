@@ -8,10 +8,6 @@ defaults:
     namespace: lldap
 
 resources:
-  namespaces:
-    lldap:
-      fullNameOverride: lldap
-
   stringSecrets:
     lldap-generated:
       fullNameOverride: lldap-generated
@@ -236,7 +232,7 @@ resources:
           sourceRef:
             kind: GitRepository
             name: bcl
-            namespace: "{{ .Release.Namespace }}"
+            namespace: bcl
       values:
         clientCertAuth: true
         postgresql:

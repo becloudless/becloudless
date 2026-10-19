@@ -1,14 +1,6 @@
 ---
 # Source: app-immich/templates/loader.yaml
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: immich
-  namespace: immich
-spec: {}
----
-# Source: app-immich/templates/loader.yaml
-apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: immich-data
@@ -133,7 +125,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: default
+        namespace: bcl
   install:
     crds: CreateReplace
     remediation:

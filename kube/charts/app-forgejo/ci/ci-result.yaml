@@ -1,13 +1,5 @@
 ---
 # Source: app-forgejo/templates/loader.yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: forgejo
-  namespace: forgejo
-spec: {}
----
-# Source: app-forgejo/templates/loader.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -122,7 +114,7 @@ spec:
     persistence:
       claimName: forgejo-shared-storage
       enabled: true
-      size: 20Gi
+      size: 10Gi
       storageClass: longhorn
     replicaCount: 1
     test:
@@ -142,7 +134,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: default
+        namespace: bcl
   install:
     crds: CreateReplace
     remediation:
