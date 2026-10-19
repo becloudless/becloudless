@@ -369,6 +369,8 @@ spec:
           - accept
           - cookie
           - proxy-authorization
+          - x-forwarded-for
+          - x-forwarded-proto
           path: /api/authz/ext-authz/
         protocol: HTTP
       type: ExternalAuth

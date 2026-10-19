@@ -5,7 +5,11 @@ config:
 apps:
   something:
     namespace: something
-
+    values:
+      resources:
+        fluxHelmReleases:
+          something-config:
+            enabled: true
 
 resources:
   fluxGitRepositories:

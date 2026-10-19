@@ -1,3 +1,17 @@
+{{- /*
+Prepare one Flux HelmRelease `app-<name>` per enabled app, in the namespace of the app, installing the chart of the app as
+the `flux-<name>` service account (see the namespaces feature).
+
+Per app:
+  - `namespace`: namespace of the app, `<name>` by default
+  - `appChart.name`: chart of the app, `app-<name>` by default, from `./kube/charts/<appChart.name>`
+  - `dependsOn`: `<app>: true` makes the app wait for the HelmRelease of the enabled app `<app>`; `<app>: false` removes a dependency.
+    A dependency on an app that is not enabled is ignored.
+  - `values`: the values of the chart of the app (`spec.values` of the HelmRelease), deep merged over the values of the chart
+    ex: `apps.cilium.values.resources.fluxHelmReleases.cilium-config.values.resources.gateways.shared`
+
+Any other key set next to these (ex: `interval`) is merged over the HelmRelease defaults.
+*/}}
 {{- define "app-apps.features.appsHelmReleases" }}
 {{- $rootContext := .rootContext }}
 

@@ -391,6 +391,8 @@ resources:
                     cookie: cookie
                     accept: accept
                     proxy-authorization: proxy-authorization
+                    x-forwarded-proto: x-forwarded-proto
+                    x-forwarded-for: x-forwarded-for
           backendRefs:
             homer:
               name: homer

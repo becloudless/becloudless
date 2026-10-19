@@ -415,6 +415,11 @@ spec:
   upgrade:
     remediation:
       retries: 3
+  values:
+    resources:
+      fluxHelmReleases:
+        something-config:
+          enabled: true
   valuesFrom:
   - kind: ConfigMap
     name: global-values
