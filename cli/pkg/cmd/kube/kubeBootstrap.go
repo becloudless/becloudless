@@ -508,7 +508,8 @@ func findDocInNamespace(docs []map[string]any, kind string, name string, namespa
 	return nil
 }
 
-// applyRenderedApps applies the namespaces, then the helm releases coming from helm repositories, then the flux kustomizations coming from oci repositories.
+// applyRenderedApps applies the namespaces, then the kustomizations coming from git repositories (ex: the Gateway API CRDs, which cilium needs
+// when it starts), then the helm releases coming from helm repositories, then the flux kustomizations coming from oci repositories.
 // Other resources, like helm releases built from the bcl git repository, are left to flux.
 func applyRenderedApps(ctx kube.Context, apps []renderedApp, adoptResources bool) error {
 	tmpDir, err := os.MkdirTemp("", "bcl-bootstrap-remote-")
@@ -525,7 +526,13 @@ func applyRenderedApps(ctx kube.Context, apps []renderedApp, adoptResources bool
 		folder string
 		ref    flux.NamespacedObjectKindReference
 	}
+	type gitKustomization struct {
+		app        string
+		kustomize  map[string]any
+		repository map[string]any
+	}
 	var namespaces []map[string]any
+	var gitKustomizations []gitKustomization
 	var helmReleases []fluxResource
 	var kustomizations []fluxResource
 
@@ -546,6 +553,18 @@ func applyRenderedApps(ctx kube.Context, apps []renderedApp, adoptResources bool
 			switch {
 			case kind == "Namespace":
 				namespaces = append(namespaces, doc)
+				continue
+			case kind == "Kustomization" && sourceKind == "GitRepository":
+				sourceName, _ := nestedValue(doc, "spec", "sourceRef", "name").(string)
+				sourceNamespace, _ := nestedValue(doc, "spec", "sourceRef", "namespace").(string)
+				if sourceNamespace == "" {
+					sourceNamespace = namespace
+				}
+				repository := findDocInNamespace(app.docs, "GitRepository", sourceName, sourceNamespace)
+				if repository == nil {
+					return errs.WithF(data.WithField("app", app.name).WithField("kustomization", name).WithField("repository", sourceName), "GitRepository of the kustomization not found in the app resources")
+				}
+				gitKustomizations = append(gitKustomizations, gitKustomization{app: app.name, kustomize: doc, repository: repository})
 				continue
 			case kind == "HelmRepository" || kind == "OCIRepository":
 			case kind == "HelmRelease" && chartSourceKind == "HelmRepository":
@@ -572,6 +591,13 @@ func applyRenderedApps(ctx kube.Context, apps []renderedApp, adoptResources bool
 		return errs.WithE(err, "Failed to apply namespaces")
 	}
 
+	// before the helm releases: cilium detects the Gateway API CRDs only when its operator starts
+	for _, ks := range gitKustomizations {
+		if err := applyGitKustomization(ctx, ks.kustomize, ks.repository); err != nil {
+			return errs.WithEF(err, data.WithField("app", ks.app).WithField("name", nestedValue(ks.kustomize, "metadata", "name")), "Failed to apply kustomization")
+		}
+	}
+
 	for _, hr := range helmReleases {
 		if err := applyFluxHelmReleaseWithHelm(ctx, hr.folder, hr.ref, nil, adoptResources); err != nil {
 			return errs.WithEF(err, data.WithField("name", hr.ref.Name), "Failed to apply helm release")
@@ -585,6 +611,62 @@ func applyRenderedApps(ctx kube.Context, apps []renderedApp, adoptResources bool
 	}
 
 	return nil
+}
+
+// applyGitKustomization applies the path of a git repository like a flux Kustomization would, with a remote kustomize, then waits for the CRDs it
+// created. The server side apply is required by the size of the CRDs, flux takes the fields over afterward.
+func applyGitKustomization(ctx kube.Context, ks map[string]any, repository map[string]any) error {
+	url, _ := nestedValue(repository, "spec", "url").(string)
+	if url == "" {
+		return errs.With("The GitRepository has no url")
+	}
+	ref, _ := nestedValue(repository, "spec", "ref", "tag").(string)
+	if ref == "" {
+		ref, _ = nestedValue(repository, "spec", "ref", "branch").(string)
+	}
+
+	target := strings.TrimSuffix(url, "/")
+	if path := strings.Trim(strings.TrimPrefix(fmt.Sprint(nestedValueOr(ks, "", "spec", "path")), "./"), "/"); path != "" && path != "." {
+		target += "//" + path
+	}
+	if ref != "" {
+		target += "?ref=" + ref
+	}
+
+	logs.WithField("target", target).Info("Applying kustomization from git repository")
+	apply := exec.Command("kubectl", "apply", "--server-side", "--force-conflicts", "-o", "name", "-k", target)
+	apply.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
+	var stderr bytes.Buffer
+	apply.Stderr = &stderr
+	output, err := apply.Output()
+	if err != nil {
+		return errs.WithEF(err, data.WithField("output", string(output)+stderr.String()).WithField("target", target), "Failed to apply the kustomization")
+	}
+
+	var crds []string
+	for _, line := range strings.Split(string(output), "\n") {
+		if strings.HasPrefix(line, "customresourcedefinition") {
+			crds = append(crds, strings.TrimSpace(line))
+		}
+	}
+	if len(crds) == 0 {
+		return nil
+	}
+
+	logs.WithField("count", len(crds)).Info("Waiting for the CRDs to be established")
+	wait := exec.Command("kubectl", append([]string{"wait", "--for=condition=Established", "--timeout=120s"}, crds...)...)
+	wait.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
+	if waitOutput, err := wait.CombinedOutput(); err != nil {
+		return errs.WithEF(err, data.WithField("output", string(waitOutput)), "CRDs are not established")
+	}
+	return nil
+}
+
+func nestedValueOr(doc map[string]any, fallback any, keys ...string) any {
+	if value := nestedValue(doc, keys...); value != nil {
+		return value
+	}
+	return fallback
 }
 
 func applyNamespaces(ctx kube.Context, namespaces []map[string]any) error {

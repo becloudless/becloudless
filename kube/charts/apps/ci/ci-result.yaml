@@ -5,15 +5,6 @@ kind: Namespace
 metadata:
   annotations:
     helm.sh/resource-policy: keep
-  name: bcl
-spec: {}
----
-# Source: apps/templates/loader.yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  annotations:
-    helm.sh/resource-policy: keep
   name: flux-system
 spec: {}
 ---
@@ -267,7 +258,7 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:
   name: bcl
-  namespace: bcl
+  namespace: default
 spec:
   interval: 10m
   ref:
@@ -288,7 +279,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: bcl
+        namespace: default
   driftDetection:
     mode: enabled
   install:
@@ -321,7 +312,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: bcl
+        namespace: default
   driftDetection:
     mode: enabled
   install:
@@ -354,7 +345,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: bcl
+        namespace: default
   driftDetection:
     mode: enabled
   install:
@@ -387,7 +378,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: bcl
+        namespace: default
   driftDetection:
     mode: enabled
   install:
@@ -420,7 +411,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: bcl
+        namespace: default
   driftDetection:
     mode: enabled
   install:
@@ -453,7 +444,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: bcl
+        namespace: default
   driftDetection:
     mode: enabled
   install:
@@ -486,7 +477,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: bcl
+        namespace: default
   driftDetection:
     mode: enabled
   install:

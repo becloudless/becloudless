@@ -16,6 +16,11 @@ resources:
 
   fluxHelmReleases:
     cilium:
+      dependsOn:
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+
       uninstall:
         deletionPropagation: orphan
 

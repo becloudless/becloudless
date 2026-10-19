@@ -3,6 +3,10 @@
 
 {{- $apps := $rootContext.Values.apps | default dict }}
 
+{{- /* The charts come from the `bcl` git repository of this chart, in the namespace of the release unless the cluster sets one. */}}
+{{- $bclRepository := (($rootContext.Values.resources | default dict).fluxGitRepositories | default dict).bcl | default dict }}
+{{- $bclNamespace := $bclRepository.namespace | default $rootContext.Release.Namespace }}
+
 {{- $helmReleases := dict }}
 {{- range $name, $app := $apps }}
   {{- $app = $app | default dict }}
@@ -32,7 +36,7 @@
           "chart" (dict "spec" (dict
             "chart" (printf "./kube/charts/%s" $chartName)
             "reconcileStrategy" "Revision"
-            "sourceRef" (dict "kind" "GitRepository" "name" "bcl" "namespace" "bcl")))
+            "sourceRef" (dict "kind" "GitRepository" "name" "bcl" "namespace" $bclNamespace)))
           "valuesFrom" (dict "global" (dict "kind" "ConfigMap" "name" "global-values"))
     }}
     {{- if $dependsOn }}
