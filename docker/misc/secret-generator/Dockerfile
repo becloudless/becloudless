@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.25.3 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27.2 AS builder
 
 # upstream only publishes amd64 images: its Dockerfile hardcodes GOARCH=amd64
 ARG TARGETOS
