@@ -12,6 +12,9 @@ defaults:
     fluxOCIRepositories:
       interval: 10m
 
+    fluxGitRepositories:
+      interval: 10m
+
     fluxHelmRepositories:
       interval: 10m
 

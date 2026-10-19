@@ -7,7 +7,6 @@ resources:
   fluxGitRepositories:
     bcl:
       url: https://github.com/becloudless/becloudless.git
-      interval: 10m
       ref:
         branch: main
 
