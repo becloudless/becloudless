@@ -26,14 +26,13 @@ import (
 )
 
 const (
-	bclChartsFolder     = "assets/kube/charts" // embedded in the binary, extracted under bcl.BCL.EmbeddedPath
-	bclAppChartName     = "app-bcl"
-	bclAppChartPrefix   = "app-"
-	clusterAppBclHrFile = "bcl/app-bcl.hr.yaml"
-	bclGitRepoFile      = "bcl/bcl.gitrepo.yaml"
-	defaultBclNamespace = "bcl"
-	remoteKubeconfig    = "/etc/kubernetes/admin.conf"
-	apiServerPort       = "8443"
+	bclChartsFolder      = "assets/kube/charts" // embedded in the binary, extracted under bcl.BCL.EmbeddedPath
+	appsChartName        = "apps"
+	appChartPrefix       = "app-"
+	clusterAppsHrFile    = "apps/apps.hr.yaml"
+	defaultAppsNamespace = "apps"
+	remoteKubeconfig     = "/etc/kubernetes/admin.conf"
+	apiServerPort        = "8443"
 )
 
 type bootstrapRemoteOptions struct {
@@ -48,8 +47,8 @@ func kubeBootstrapCmd() *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "bootstrap",
 		Short: "Fetch the cluster credentials from a server and apply the minimal apps resources extracted from the app charts",
-		Long: `Fetch the kubeconfig of the cluster from a server through ssh, then render the app-bcl chart with the values of the cluster
-(bcl/app-bcl.hr.yaml) restricted to the apps of the minimal group, render each of these app charts, and apply the resources
+		Long: `Fetch the kubeconfig of the cluster from a server through ssh, then render the apps chart with the values of the cluster
+(apps/apps.hr.yaml) restricted to the apps of the minimal group, render each of these app charts, and apply the resources
 flux needs to start: namespaces, helm releases coming from helm repositories (ex: cilium, coredns) and the flux installation.
 Everything else is left to flux once it runs. This command is re-entrant.`,
 		Args: cobra.ExactArgs(0),
@@ -78,7 +77,7 @@ func BootstrapRemote(opts bootstrapRemoteOptions) error {
 		return errs.WithE(err, "Failed to fetch the kubeconfig")
 	}
 
-	apps, err := renderGroupApps(ctx, opts)
+	apps, gitRepositories, err := renderGroupApps(ctx, opts)
 	if err != nil {
 		return errs.WithE(err, "Failed to render the apps of the group")
 	}
@@ -87,24 +86,43 @@ func BootstrapRemote(opts bootstrapRemoteOptions) error {
 		return err
 	}
 
-	return applyBcl(ctx)
+	return applyBcl(ctx, gitRepositories)
 }
 
-// applyBcl hands over to flux: the bcl namespace, the bcl git repository and the app-bcl helm release of the cluster.
-func applyBcl(ctx kube.Context) error {
+// applyBcl hands over to flux: the git repositories of the apps chart with their namespaces, and the apps helm release of the cluster.
+func applyBcl(ctx kube.Context, gitRepositories []map[string]any) error {
 	if err := waitFluxCRDs(ctx); err != nil {
 		return errs.WithE(err, "Failed to wait for the flux CRDs")
 	}
 
-	if err := applyBclNamespace(ctx); err != nil {
-		return errs.WithE(err, "Failed to apply the bcl namespace")
+	appsHr, err := readAppsHelmRelease(ctx)
+	if err != nil {
+		return err
 	}
 
-	for _, file := range []string{bclGitRepoFile, clusterAppBclHrFile} {
-		logs.WithField("file", file).Info("Applying bcl resources")
-		if err := applyResourcesFile(ctx, filepath.Join(ctx.ClusterPath, file)); err != nil {
-			return errs.WithEF(err, data.WithField("file", file), "Failed to apply bcl resources")
+	namespaces := []map[string]any{{
+		"apiVersion": "v1",
+		"kind":       "Namespace",
+		"metadata":   map[string]any{"name": appsHr.Metadata.Namespace},
+	}}
+	var repositories []map[string]any
+	for _, doc := range gitRepositories {
+		if doc["kind"] == "Namespace" {
+			namespaces = append(namespaces, doc)
+		} else {
+			repositories = append(repositories, doc)
 		}
+	}
+	if err := applyNamespaces(ctx, namespaces); err != nil {
+		return errs.WithE(err, "Failed to apply the namespaces of the apps helm release and of the git repositories")
+	}
+	if err := applyDocs(ctx, repositories, "git repositories"); err != nil {
+		return errs.WithE(err, "Failed to apply the git repositories")
+	}
+
+	logs.WithField("file", clusterAppsHrFile).Info("Applying the apps helm release")
+	if err := applyResourcesFile(ctx, filepath.Join(ctx.ClusterPath, clusterAppsHrFile)); err != nil {
+		return errs.WithEF(err, data.WithField("file", clusterAppsHrFile), "Failed to apply the apps helm release")
 	}
 	return nil
 }
@@ -178,49 +196,64 @@ type renderedApp struct {
 	docs []map[string]any
 }
 
-// renderGroupApps renders app-bcl with the values of the cluster, restricted to the group, then renders the app chart of each app of the group.
-func renderGroupApps(ctx kube.Context, opts bootstrapRemoteOptions) ([]renderedApp, error) {
+// appsHelmRelease is the apps helm release of the cluster.
+type appsHelmRelease struct {
+	Metadata flux.Metadata `yaml:"metadata"`
+	Spec     struct {
+		Values map[string]any `yaml:"values"`
+	} `yaml:"spec"`
+}
+
+// readAppsHelmRelease reads the apps helm release of the cluster, name and namespace are defaulted.
+func readAppsHelmRelease(ctx kube.Context) (appsHelmRelease, error) {
+	var appsHr appsHelmRelease
+	hrPath := filepath.Join(ctx.ClusterPath, clusterAppsHrFile)
+	hrContent, err := os.ReadFile(hrPath)
+	if err != nil {
+		return appsHr, errs.WithEF(err, data.WithField("path", hrPath), "Failed to read the apps helm release of the cluster")
+	}
+	if err := yaml.Unmarshal(hrContent, &appsHr); err != nil {
+		return appsHr, errs.WithEF(err, data.WithField("path", hrPath), "Failed to parse the apps helm release of the cluster")
+	}
+	if appsHr.Metadata.Name == "" {
+		appsHr.Metadata.Name = appsChartName
+	}
+	if appsHr.Metadata.Namespace == "" {
+		appsHr.Metadata.Namespace = defaultAppsNamespace
+	}
+	return appsHr, nil
+}
+
+// renderGroupApps renders apps with the values of the cluster, restricted to the group, then renders the app chart of each app of the group.
+// It also returns the git repositories of the apps chart, with their namespaces, adopted by the apps helm release: flux needs them to fetch the charts.
+func renderGroupApps(ctx kube.Context, opts bootstrapRemoteOptions) ([]renderedApp, []map[string]any, error) {
 	if bcl.BCL.EmbeddedPath == "" {
-		return nil, errs.With("The charts are not embedded in this build")
+		return nil, nil, errs.With("The charts are not embedded in this build")
 	}
 	chartsPath := filepath.Join(bcl.BCL.EmbeddedPath, bclChartsFolder)
 
-	hrPath := filepath.Join(ctx.ClusterPath, clusterAppBclHrFile)
-	hrContent, err := os.ReadFile(hrPath)
+	appsHr, err := readAppsHelmRelease(ctx)
 	if err != nil {
-		return nil, errs.WithEF(err, data.WithField("path", hrPath), "Failed to read the app-bcl helm release of the cluster")
-	}
-	var appBclHr struct {
-		Metadata flux.Metadata `yaml:"metadata"`
-		Spec     struct {
-			Values map[string]any `yaml:"values"`
-		} `yaml:"spec"`
-	}
-	if err := yaml.Unmarshal(hrContent, &appBclHr); err != nil {
-		return nil, errs.WithEF(err, data.WithField("path", hrPath), "Failed to parse the app-bcl helm release of the cluster")
-	}
-	if appBclHr.Metadata.Name == "" {
-		appBclHr.Metadata.Name = bclAppChartName
-	}
-	if appBclHr.Metadata.Namespace == "" {
-		appBclHr.Metadata.Namespace = defaultBclNamespace
+		return nil, nil, err
 	}
 
-	appBclChart, err := bclhelm.LoadChartWithLocalDependencies(filepath.Join(chartsPath, bclAppChartName))
+	appsChart, err := bclhelm.LoadChartWithLocalDependencies(filepath.Join(chartsPath, appsChartName))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	groupApps := appsOfGroup(appBclChart.Values, opts.group)
-	if len(groupApps) == 0 {
-		return nil, errs.WithF(data.WithField("group", opts.group), "No app belongs to the group")
-	}
-
-	// only the group is enabled, every other group the cluster may enable is disabled
-	values := appBclHr.Spec.Values
+	values := appsHr.Spec.Values
 	if values == nil {
 		values = map[string]any{}
 	}
+
+	// the apps of the group, from the default values of the chart overridden by the values of the cluster
+	groupApps := appsOfGroup(mergeValues(deepCopyMap(appsChart.Values), deepCopyMap(values)), opts.group)
+	if len(groupApps) == 0 {
+		return nil, nil, errs.WithF(data.WithField("group", opts.group), "No app belongs to the group")
+	}
+
+	// only the group is enabled, every other group the cluster may enable is disabled
 	groups := map[string]any{}
 	if existing, ok := values["appsGroups"].(map[string]any); ok {
 		for name := range existing {
@@ -230,87 +263,159 @@ func renderGroupApps(ctx kube.Context, opts bootstrapRemoteOptions) ([]renderedA
 	groups[opts.group] = map[string]any{"enabled": true}
 	values["appsGroups"] = groups
 
-	manifest, err := bclhelm.RenderChart(appBclChart, values, appBclHr.Metadata.Name, appBclHr.Metadata.Namespace, opts.kubeVersion)
+	manifest, err := bclhelm.RenderChart(appsChart, values, appsHr.Metadata.Name, appsHr.Metadata.Namespace, opts.kubeVersion)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	appBclDocs, err := splitManifest(manifest)
+	appsDocs, err := splitManifest(manifest)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var apps []renderedApp
 	for _, name := range groupApps {
-		hrName := bclAppChartPrefix + name
-		hr := findDoc(appBclDocs, "HelmRelease", hrName)
+		hrName := appChartPrefix + name
+		hr := findDoc(appsDocs, "HelmRelease", hrName)
 		if hr == nil {
 			logs.WithField("app", name).Info("App is disabled by the cluster values, skipping")
 			continue
 		}
 
+		// the app lives in its own namespace, flux installs the release there under the name of the helm release
 		hrNamespace, _ := nestedValue(hr, "metadata", "namespace").(string)
-		if hrNamespace == "" {
-			hrNamespace = appBclHr.Metadata.Namespace
+		releaseName := hrName
+		if override, _ := nestedValue(hr, "spec", "releaseName").(string); override != "" {
+			releaseName = override
 		}
-
-		// flux installs the release in the target namespace, and creates it when asked to
 		releaseNamespace := hrNamespace
-		targetNamespace, _ := nestedValue(hr, "spec", "targetNamespace").(string)
-		if targetNamespace != "" {
+		if targetNamespace, _ := nestedValue(hr, "spec", "targetNamespace").(string); targetNamespace != "" {
 			releaseNamespace = targetNamespace
 		}
 
-		appValues, err := helmReleaseValues(hr, appBclDocs)
+		appValues, err := helmReleaseValues(hr, appsDocs)
 		if err != nil {
-			return nil, errs.WithEF(err, data.WithField("app", name), "Failed to compute the values of the app")
+			return nil, nil, errs.WithEF(err, data.WithField("app", name), "Failed to compute the values of the app")
 		}
 
-		appChart, err := bclhelm.LoadChartWithLocalDependencies(filepath.Join(chartsPath, hrName))
+		// the chart of the app is the chart of the helm release: ./kube/charts/<name>
+		chartPath, _ := nestedValue(hr, "spec", "chart", "spec", "chart").(string)
+		appChart, err := bclhelm.LoadChartWithLocalDependencies(filepath.Join(chartsPath, filepath.Base(chartPath)))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		appManifest, err := bclhelm.RenderChart(appChart, appValues, hrName, releaseNamespace, opts.kubeVersion)
+		appManifest, err := bclhelm.RenderChart(appChart, appValues, releaseName, releaseNamespace, opts.kubeVersion)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		docs, err := splitManifest(appManifest)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		if createNamespace, _ := nestedValue(hr, "spec", "install", "createNamespace").(bool); createNamespace && targetNamespace != "" {
-			docs = append([]map[string]any{{
-				"apiVersion": "v1",
-				"kind":       "Namespace",
-				"metadata":   map[string]any{"name": targetNamespace},
-			}}, docs...)
+
+		// the namespace of the app is created by apps, the system namespaces are not
+		if ns := findNamespace(appsDocs, releaseNamespace); ns != nil {
+			docs = append([]map[string]any{ns}, docs...)
 		}
 		apps = append(apps, renderedApp{name: name, docs: docs})
 	}
 
-	return apps, nil
+	return apps, gitRepositoryDocs(appsDocs, appsHr.Metadata.Name, appsHr.Metadata.Namespace), nil
 }
 
-// appsOfGroup returns the sorted names of the apps declaring the group in `apps.<name>.groups` of the chart values.
-func appsOfGroup(chartValues map[string]any, group string) []string {
+// gitRepositoryDocs returns the GitRepository resources of the docs, and the Namespace resources they are in.
+// They are marked as owned by the helm release, so it adopts them when flux installs the chart that renders them.
+func gitRepositoryDocs(docs []map[string]any, releaseName string, releaseNamespace string) []map[string]any {
+	var repositories []map[string]any
+	namespaces := map[string]bool{}
+	for _, doc := range docs {
+		if doc["kind"] != "GitRepository" {
+			continue
+		}
+		repositories = append(repositories, doc)
+		if namespace, _ := nestedValue(doc, "metadata", "namespace").(string); namespace != "" {
+			namespaces[namespace] = true
+		}
+	}
+
+	var result []map[string]any
+	for _, doc := range docs {
+		if name, _ := nestedValue(doc, "metadata", "name").(string); doc["kind"] == "Namespace" && namespaces[name] {
+			result = append(result, doc)
+		}
+	}
+	result = append(result, repositories...)
+
+	for _, doc := range result {
+		metadata, _ := doc["metadata"].(map[string]any)
+		if metadata == nil {
+			metadata = map[string]any{}
+			doc["metadata"] = metadata
+		}
+		labels, _ := metadata["labels"].(map[string]any)
+		if labels == nil {
+			labels = map[string]any{}
+			metadata["labels"] = labels
+		}
+		labels["app.kubernetes.io/managed-by"] = "Helm"
+		annotations, _ := metadata["annotations"].(map[string]any)
+		if annotations == nil {
+			annotations = map[string]any{}
+			metadata["annotations"] = annotations
+		}
+		annotations["meta.helm.sh/release-name"] = releaseName
+		annotations["meta.helm.sh/release-namespace"] = releaseNamespace
+	}
+	return result
+}
+
+// appsOfGroup returns the sorted names of the apps declaring the group in `apps.<name>.groups.<group>: true` of the values.
+func appsOfGroup(values map[string]any, group string) []string {
 	var names []string
-	apps, _ := chartValues["apps"].(map[string]any)
+	apps, _ := values["apps"].(map[string]any)
 	for name, app := range apps {
 		appMap, _ := app.(map[string]any)
-		groups, _ := appMap["groups"].([]any)
-		for _, g := range groups {
-			if g == group {
-				names = append(names, name)
-				break
-			}
+		groups, _ := appMap["groups"].(map[string]any)
+		if member, _ := groups[group].(bool); member {
+			names = append(names, name)
 		}
 	}
 	sort.Strings(names)
 	return names
 }
 
+// findNamespace returns the Namespace resource named name, nil when there is none.
+func findNamespace(docs []map[string]any, name string) map[string]any {
+	return findDoc(docs, "Namespace", name)
+}
+
+// deepCopyMap copies the maps and the slices of values, so merging into the copy does not alter the original.
+func deepCopyMap(values map[string]any) map[string]any {
+	result := make(map[string]any, len(values))
+	for k, v := range values {
+		result[k] = deepCopyValue(v)
+	}
+	return result
+}
+
+func deepCopyValue(value any) any {
+	switch v := value.(type) {
+	case map[string]any:
+		return deepCopyMap(v)
+	case []any:
+		result := make([]any, len(v))
+		for i, item := range v {
+			result[i] = deepCopyValue(item)
+		}
+		return result
+	default:
+		return v
+	}
+}
+
 // helmReleaseValues computes the values flux gives to the chart: the valuesFrom config maps in order, then the inline values.
 func helmReleaseValues(hr map[string]any, docs []map[string]any) (map[string]any, error) {
 	result := map[string]any{}
+	hrNamespace, _ := nestedValue(hr, "metadata", "namespace").(string)
 
 	valuesFrom, _ := nestedValue(hr, "spec", "valuesFrom").([]any)
 	for _, from := range valuesFrom {
@@ -325,9 +430,9 @@ func helmReleaseValues(hr map[string]any, docs []map[string]any) (map[string]any
 			key = "values.yaml"
 		}
 
-		configMap := findDoc(docs, kind, name)
+		configMap := findDocInNamespace(docs, kind, name, hrNamespace)
 		if configMap == nil {
-			return nil, errs.WithF(data.WithField("name", name), "ConfigMap of valuesFrom not found in the rendered app-bcl")
+			return nil, errs.WithF(data.WithField("name", name).WithField("namespace", hrNamespace), "ConfigMap of valuesFrom not found in the rendered apps")
 		}
 		content, _ := nestedValue(configMap, "data", key).(string)
 		var fromValues map[string]any
@@ -387,6 +492,16 @@ func nestedValue(doc map[string]any, keys ...string) any {
 func findDoc(docs []map[string]any, kind string, name string) map[string]any {
 	for _, doc := range docs {
 		if doc["kind"] == kind && nestedValue(doc, "metadata", "name") == name {
+			return doc
+		}
+	}
+	return nil
+}
+
+// findDocInNamespace is findDoc for a namespaced resource, the same name exists in several namespaces.
+func findDocInNamespace(docs []map[string]any, kind string, name string, namespace string) map[string]any {
+	for _, doc := range docs {
+		if doc["kind"] == kind && nestedValue(doc, "metadata", "name") == name && nestedValue(doc, "metadata", "namespace") == namespace {
 			return doc
 		}
 	}
@@ -473,27 +588,32 @@ func applyRenderedApps(ctx kube.Context, apps []renderedApp, adoptResources bool
 }
 
 func applyNamespaces(ctx kube.Context, namespaces []map[string]any) error {
-	if len(namespaces) == 0 {
+	return applyDocs(ctx, namespaces, "namespaces")
+}
+
+// applyDocs applies the resources with kubectl, what is only used in logs and errors.
+func applyDocs(ctx kube.Context, docs []map[string]any, what string) error {
+	if len(docs) == 0 {
 		return nil
 	}
 
 	var content bytes.Buffer
-	for _, ns := range namespaces {
-		out, err := yaml.Marshal(ns)
+	for _, doc := range docs {
+		out, err := yaml.Marshal(doc)
 		if err != nil {
-			return errs.WithE(err, "Failed to marshal namespace")
+			return errs.WithE(err, "Failed to marshal "+what)
 		}
 		content.WriteString("---\n")
 		content.Write(out)
 	}
 
-	logs.Info("Applying namespaces")
+	logs.Info("Applying " + what)
 	cmd := exec.Command("kubectl", "apply", "-f", "-")
 	cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
 	cmd.Stdin = &content
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return errs.WithEF(err, data.WithField("output", string(output)), "Failed to apply namespaces")
+		return errs.WithEF(err, data.WithField("output", string(output)), "Failed to apply "+what)
 	}
 	return nil
 }

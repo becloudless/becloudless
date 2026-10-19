@@ -1,5 +1,14 @@
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: bcl
+spec: {}
+---
+# Source: apps/templates/loader.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -8,7 +17,7 @@ metadata:
   name: flux-system
 spec: {}
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -17,7 +26,7 @@ metadata:
   name: gateway-api
 spec: {}
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -26,7 +35,7 @@ metadata:
   name: longhorn-system
 spec: {}
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -35,56 +44,56 @@ metadata:
   name: something
 spec: {}
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: flux-cilium
   namespace: kube-system
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: flux-coredns
   namespace: kube-system
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: flux-flux
   namespace: flux-system
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: flux-gateway-api
   namespace: gateway-api
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: flux-kube
   namespace: kube-system
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: flux-longhorn
   namespace: longhorn-system
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: flux-something
   namespace: something
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: v1
 data:
   values.yaml: |-
@@ -97,7 +106,7 @@ metadata:
   name: global-values
   namespace: flux-system
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: v1
 data:
   values.yaml: |-
@@ -110,7 +119,7 @@ metadata:
   name: global-values
   namespace: gateway-api
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: v1
 data:
   values.yaml: |-
@@ -123,7 +132,7 @@ metadata:
   name: global-values
   namespace: kube-system
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: v1
 data:
   values.yaml: |-
@@ -136,7 +145,7 @@ metadata:
   name: global-values
   namespace: longhorn-system
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: v1
 data:
   values.yaml: |-
@@ -149,7 +158,7 @@ metadata:
   name: global-values
   namespace: something
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -163,7 +172,7 @@ subjects:
   name: flux-longhorn
   namespace: longhorn-system
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -178,7 +187,7 @@ subjects:
   name: flux-cilium
   namespace: kube-system
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -193,7 +202,7 @@ subjects:
   name: flux-coredns
   namespace: kube-system
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -208,7 +217,7 @@ subjects:
   name: flux-flux
   namespace: flux-system
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -223,7 +232,7 @@ subjects:
   name: flux-gateway-api
   namespace: gateway-api
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -238,7 +247,7 @@ subjects:
   name: flux-kube
   namespace: kube-system
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -253,7 +262,19 @@ subjects:
   name: flux-something
   namespace: something
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: bcl
+  namespace: bcl
+spec:
+  interval: 10m
+  ref:
+    branch: main
+  url: https://github.com/becloudless/becloudless.git
+---
+# Source: apps/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -267,7 +288,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: default
+        namespace: bcl
   driftDetection:
     mode: enabled
   install:
@@ -286,7 +307,7 @@ spec:
   - kind: ConfigMap
     name: global-values
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -300,7 +321,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: default
+        namespace: bcl
   driftDetection:
     mode: enabled
   install:
@@ -319,7 +340,7 @@ spec:
   - kind: ConfigMap
     name: global-values
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -333,7 +354,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: default
+        namespace: bcl
   driftDetection:
     mode: enabled
   install:
@@ -352,7 +373,7 @@ spec:
   - kind: ConfigMap
     name: global-values
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -366,7 +387,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: default
+        namespace: bcl
   driftDetection:
     mode: enabled
   install:
@@ -385,7 +406,7 @@ spec:
   - kind: ConfigMap
     name: global-values
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -399,7 +420,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: default
+        namespace: bcl
   driftDetection:
     mode: enabled
   install:
@@ -418,7 +439,7 @@ spec:
   - kind: ConfigMap
     name: global-values
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -432,7 +453,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: default
+        namespace: bcl
   driftDetection:
     mode: enabled
   install:
@@ -451,7 +472,7 @@ spec:
   - kind: ConfigMap
     name: global-values
 ---
-# Source: app-apps/templates/loader.yaml
+# Source: apps/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -465,7 +486,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: default
+        namespace: bcl
   driftDetection:
     mode: enabled
   install:

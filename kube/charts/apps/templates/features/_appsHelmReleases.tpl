@@ -32,7 +32,7 @@
           "chart" (dict "spec" (dict
             "chart" (printf "./kube/charts/%s" $chartName)
             "reconcileStrategy" "Revision"
-            "sourceRef" (dict "kind" "GitRepository" "name" "bcl" "namespace" $rootContext.Release.Namespace)))
+            "sourceRef" (dict "kind" "GitRepository" "name" "bcl" "namespace" "bcl")))
           "valuesFrom" (dict "global" (dict "kind" "ConfigMap" "name" "global-values"))
     }}
     {{- if $dependsOn }}

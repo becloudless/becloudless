@@ -3,6 +3,22 @@
 # resources are named by their id, without the release name prefix
 prefixNamesWithRelease: false
 
+resources:
+  namespaces:
+    bcl:
+      annotations:
+        helm.sh/resource-policy: keep
+
+  # The source of the charts of the apps. Flux needs it to fetch the chart of every app, so it is applied by the bootstrap
+  # before the release of this chart, which then adopts it. A cluster selects what it follows with `ref`, ex: `ref.tag`.
+  fluxGitRepositories:
+    bcl:
+      namespace: bcl
+      url: https://github.com/becloudless/becloudless.git
+      interval: 10m
+      ref:
+        branch: main
+
 config:
   domain:
   # name: # deduced from domain by default
