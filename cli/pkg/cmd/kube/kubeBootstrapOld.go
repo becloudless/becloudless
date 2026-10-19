@@ -436,6 +436,8 @@ func prepareAndApplyFluxHelmRelease(ctx kube.Context, hr flux.HelmRelease, resou
 	upgrade.Version = hr.Spec.Chart.Spec.Version
 	// do not wait for the resources to be ready: cilium and coredns cannot be ready before the whole bootstrap is done
 	upgrade.WaitStrategy = helmkube.HookOnlyStrategy
+	// the release may already be managed by the helm-controller of flux: the bootstrap takes over the fields it conflicts on
+	upgrade.ForceConflicts = true
 	if adoptResources {
 		upgrade.TakeOwnership = true
 	}
@@ -486,6 +488,7 @@ func prepareAndApplyFluxHelmRelease(ctx kube.Context, hr flux.HelmRelease, resou
 			inst.Namespace = hr.Metadata.Namespace
 			inst.Version = hr.Spec.Chart.Spec.Version
 			inst.WaitStrategy = helmkube.HookOnlyStrategy
+			inst.ForceConflicts = true
 			if adoptResources {
 				inst.TakeOwnership = true
 			}
