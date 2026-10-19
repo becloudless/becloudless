@@ -63,6 +63,8 @@ apps:
       name: app-cert-manager
 
   longhorn:
+    groups:
+      cluster: true
     clusterAdmin: true
     namespace: longhorn-system
     appChart:
@@ -70,6 +72,6 @@ apps:
 
   kyverno:
     groups:
-      all: true
+      cluster: true
     appChart:
       name: app-kyverno
