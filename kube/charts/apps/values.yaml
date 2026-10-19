@@ -44,6 +44,7 @@ apps:
   kube:
     groups:
       minimal: true
+    clusterAdmin: true # creates a ClusterRole and a ClusterRoleBinding
     namespace: kube-system
     appChart:
       name: app-kube
