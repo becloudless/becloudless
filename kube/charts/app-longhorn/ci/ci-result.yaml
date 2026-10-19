@@ -1,98 +1,5 @@
 ---
 # Source: app-longhorn/templates/loader.yaml
-apiVersion: v1
-data:
-  PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/run/wrappers/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin
-kind: ConfigMap
-metadata:
-  name: longhorn-nixos-path
-  namespace: longhorn-system
----
-# Source: app-longhorn/templates/loader.yaml
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: longhorn-ui
-  namespace: longhorn-system
-spec:
-  dnsNames:
-  - longhorn.test.com
-  issuerRef:
-    kind: ClusterIssuer
-    name: letsencrypt-prod
-  secretName: tls-longhorn
----
-# Source: app-longhorn/templates/loader.yaml
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
-metadata:
-  annotations:
-    policies.kyverno.io/category: Other
-    policies.kyverno.io/description: Longhorn invokes executables on the host system,
-      and needs to be aware of the host systems PATH. This modifies all deployments
-      such that the PATH is explicitly set to support NixOS based systems.
-    policies.kyverno.io/subject: Pod
-    policies.kyverno.io/title: Add Environment Variables from ConfigMap
-  name: longhorn-add-nixos-path
-spec:
-  failurePolicy: Fail
-  rules:
-  - match:
-      resources:
-        kinds:
-        - Pod
-        namespaces:
-        - longhorn-system
-    mutate:
-      patchStrategicMerge:
-        spec:
-          containers:
-          - (name): '*'
-            envFrom:
-            - configMapRef:
-                name: longhorn-nixos-path
-          initContainers:
-          - (name): '*'
-            envFrom:
-            - configMapRef:
-                name: longhorn-nixos-path
-    name: add-env-vars
----
-# Source: app-longhorn/templates/loader.yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: longhorn
-  namespace: longhorn-system
-spec:
-  hostnames:
-  - longhorn.test.com
-  parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: ListenerSet
-    name: longhorn
-  rules:
-  - backendRefs:
-    - name: longhorn-frontend
-      port: 80
-    filters:
-    - externalAuth:
-        backendRef:
-          name: authelia
-          namespace: authelia
-          port: 80
-        http:
-          allowedHeaders:
-          - accept
-          - cookie
-          - proxy-authorization
-          - x-forwarded-for
-          - x-forwarded-proto
-          path: /api/authz/ext-authz/
-        protocol: HTTP
-      type: ExternalAuth
----
-# Source: app-longhorn/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -106,6 +13,8 @@ spec:
         kind: HelmRepository
         name: longhorn
       version: 1.13.0
+  dependsOn:
+  - name: longhorn-pre
   driftDetection:
     mode: enabled
   install:
@@ -115,7 +24,7 @@ spec:
   interval: 10m
   rollback:
     cleanupOnFail: true
-  timeout: 2m
+  timeout: 15m
   upgrade:
     remediation:
       retries: 3
@@ -148,10 +57,10 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: bcl
+        namespace: apps
   dependsOn:
   - name: app-external-snapshotter
-    namespace: bcl
+    namespace: external-snapshotter
   - name: longhorn
   driftDetection:
     mode: enabled
@@ -167,9 +76,67 @@ spec:
     remediation:
       retries: 3
   values:
-    defaults:
-      metadata:
-        namespace: longhorn-system
+    certManagerCertificates:
+      longhorn-ui:
+        dnsNames:
+          ui: longhorn.test.com
+        issuerRef:
+          kind: ClusterIssuer
+          name: letsencrypt-prod
+        secretName: tls-longhorn
+    httpRoutes:
+      longhorn:
+        hostnames:
+          ui: longhorn.test.com
+        parentRefs:
+          longhorn:
+            group: gateway.networking.k8s.io
+            kind: ListenerSet
+            name: longhorn
+        rules:
+          ui:
+            backendRefs:
+              frontend:
+                name: longhorn-frontend
+                port: 80
+            filters:
+              authelia:
+                externalAuth:
+                  backendRef:
+                    name: authelia
+                    namespace: authelia
+                    port: 80
+                  http:
+                    allowedHeaders:
+                      accept: accept
+                      cookie: cookie
+                      proxy-authorization: proxy-authorization
+                      x-forwarded-for: x-forwarded-for
+                      x-forwarded-proto: x-forwarded-proto
+                    path: /api/authz/ext-authz/
+                  protocol: HTTP
+                type: ExternalAuth
+    listenerSets:
+      longhorn:
+        listeners:
+          https:
+            allowedRoutes:
+              namespaces:
+                from: Same
+            hostname: longhorn.test.com
+            name: https
+            port: 443
+            protocol: HTTPS
+            tls:
+              certificateRefs:
+                tls:
+                  name: tls-longhorn
+              mode: Terminate
+        parentRef:
+          group: gateway.networking.k8s.io
+          kind: Gateway
+          name: shared
+          namespace: kube-system
     prefixNamesWithRelease: false
     resources:
       longhornRecurringJobs:
@@ -228,6 +195,78 @@ spec:
             type: snap
 ---
 # Source: app-longhorn/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: longhorn-pre
+  namespace: longhorn-system
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-kyverno
+    namespace: kyverno
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    prefixNamesWithRelease: false
+    resources:
+      configMaps:
+        longhorn-nixos-path:
+          data:
+            PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/run/wrappers/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin
+      kyvernoClusterPolicies:
+        longhorn-add-nixos-path:
+          annotations:
+            policies.kyverno.io/category: Other
+            policies.kyverno.io/description: Longhorn invokes executables on the host
+              system, and needs to be aware of the host systems PATH. This modifies
+              all deployments such that the PATH is explicitly set to support NixOS
+              based systems.
+            policies.kyverno.io/subject: Pod
+            policies.kyverno.io/title: Add Environment Variables from ConfigMap
+          failurePolicy: Fail
+          rules:
+            add-env-vars:
+              match:
+                resources:
+                  kinds:
+                  - Pod
+                  namespaces:
+                  - longhorn-system
+              mutate:
+                patchStrategicMerge:
+                  spec:
+                    containers:
+                    - (name): '*'
+                      envFrom:
+                      - configMapRef:
+                          name: longhorn-nixos-path
+                    initContainers:
+                    - (name): '*'
+                      envFrom:
+                      - configMapRef:
+                          name: longhorn-nixos-path
+              name: add-env-vars
+---
+# Source: app-longhorn/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
@@ -236,28 +275,3 @@ metadata:
 spec:
   interval: 10m
   url: https://charts.longhorn.io
----
-# Source: app-longhorn/templates/loader.yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: ListenerSet
-metadata:
-  name: longhorn
-  namespace: longhorn-system
-spec:
-  listeners:
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    hostname: longhorn.test.com
-    name: https
-    port: 443
-    protocol: HTTPS
-    tls:
-      certificateRefs:
-      - name: tls-longhorn
-      mode: Terminate
-  parentRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: shared
-    namespace: kube-system

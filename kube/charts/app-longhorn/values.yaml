@@ -81,6 +81,9 @@ resources:
           sourceRef:
             kind: HelmRepository
             name: longhorn
+      # the first install takes more than the default 2m. A timeout makes Flux remediate by uninstalling, which Longhorn refuses
+      # (deleting-confirmation-flag is false on purpose) and leaves the Helm release stuck in `uninstalling`
+      timeout: 15m
       dependsOn:
         longhorn-pre:
           name: longhorn-pre
