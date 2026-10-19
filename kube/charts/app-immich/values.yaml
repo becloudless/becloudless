@@ -106,7 +106,11 @@ resources:
           sourceRef:
             kind: GitRepository
             name: bcl
-            namespace: bcl
+            namespace: apps
+      dependsOn:
+        cnpg:
+          name: app-cnpg
+          namespace: cnpg-system
       values:
         storageSize: 5Gi
         postgresql:

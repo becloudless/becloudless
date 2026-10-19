@@ -146,6 +146,10 @@ resources:
             kind: GitRepository
             name: bcl
             namespace: apps
+      dependsOn:
+        cnpg:
+          name: app-cnpg
+          namespace: cnpg-system
 
     authelia-valkey:
       chart:
