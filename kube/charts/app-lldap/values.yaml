@@ -11,15 +11,6 @@ defaults:
     namespace: lldap
 
 resources:
-  stringSecrets:
-    lldap-generated:
-      fields:
-        jwt-secret:
-          fieldName: LLDAP_JWT_SECRET
-        user-dn:
-          fieldName: LLDAP_LDAP_USER_DN
-        user-pass:
-          fieldName: LLDAP_LDAP_USER_PASS
 
   configMaps:
     lldap-config:
@@ -38,25 +29,6 @@ resources:
           enabled=true
           key_file="/cert/tls.key"
           cert_file="/cert/tls.crt"
-
-  certManagerCertificates:
-    # certificate of the web UI, terminated by the Gateway
-    lldap-gateway:
-      secretName: tls-lldap-gateway
-      dnsNames:
-        lldap: lldap.{{ .Values.global.domain }}
-      issuerRef:
-        name: letsencrypt-prod
-        kind: ClusterIssuer
-
-    # certificate of ldaps, used by the lldap pod
-    tls-lldaps:
-      secretName: tls-lldaps
-      dnsNames:
-        lldaps: lldaps.{{ .Values.global.domain }}
-      issuerRef:
-        name: letsencrypt-prod
-        kind: ClusterIssuer
 
   deployments:
     lldap:
@@ -144,76 +116,6 @@ resources:
         ldaps:
           port: 6360
 
-  # Exposed by the Cilium Gateway `shared` (kube-system), both on port 443 and routed by SNI:
-  #  - lldap.<domain>: web UI, TLS terminated by the Gateway
-  #  - lldaps.<domain>: ldaps served by lldap itself (tls-lldaps certificate), the TLS stream is forwarded as is (passthrough)
-  # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
-  listenerSets:
-    lldap:
-      parentRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: shared
-        namespace: kube-system
-      listeners:
-        https:
-          name: https
-          hostname: lldap.{{ .Values.global.domain }}
-          port: 443
-          protocol: HTTPS
-          tls:
-            mode: Terminate
-            certificateRefs:
-              tls:
-                name: tls-lldap-gateway
-          allowedRoutes:
-            namespaces:
-              from: Same
-        ldaps:
-          name: ldaps
-          hostname: lldaps.{{ .Values.global.domain }}
-          port: 443
-          protocol: TLS
-          tls:
-            mode: Passthrough
-          allowedRoutes:
-            namespaces:
-              from: Same
-
-  httpRoutes:
-    lldap:
-      parentRefs:
-        lldap:
-          group: gateway.networking.k8s.io
-          kind: ListenerSet
-          name: lldap
-          sectionName: https
-      hostnames:
-        lldap: lldap.{{ .Values.global.domain }}
-      rules:
-        root:
-          backendRefs:
-            lldap:
-              name: lldap
-              port: 17170
-
-  tlsRoutes:
-    lldap-ldaps:
-      parentRefs:
-        lldap:
-          group: gateway.networking.k8s.io
-          kind: ListenerSet
-          name: lldap
-          sectionName: ldaps
-      hostnames:
-        lldaps: lldaps.{{ .Values.global.domain }}
-      rules:
-        ldaps:
-          backendRefs:
-            lldap:
-              name: lldap
-              port: 6360
-
   fluxHelmReleases:
     # the database is prepared by the postgresql-cluster chart (certificates, issuer, cluster and backups)
     # the cluster is named after the release, which is the name of this HelmRelease
@@ -226,12 +128,139 @@ resources:
             kind: GitRepository
             name: bcl
             namespace: apps
-      dependsOn:
+      dependsOn: # the certificates, the cluster and the volume snapshots
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
         cnpg:
           name: app-cnpg
           namespace: cnpg-system
+        longhorn:
+          name: app-longhorn
+          namespace: longhorn-system
       values:
         clientCertAuth: true
         postgresql:
           parameters:
             max_slot_wal_keep_size: 500MB
+
+    # the certificates, secrets and Gateway resources need the CRDs of these apps, so they are installed once they are ready
+    lldap-config:
+      dependsOn:
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+        secret-generator:
+          name: app-secret-generator
+          namespace: secret-generator
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        prefixNamesWithRelease: false
+        resources:
+          stringSecrets:
+            lldap-generated:
+              fields:
+                jwt-secret:
+                  fieldName: LLDAP_JWT_SECRET
+                user-dn:
+                  fieldName: LLDAP_LDAP_USER_DN
+                user-pass:
+                  fieldName: LLDAP_LDAP_USER_PASS
+
+          certManagerCertificates:
+            # certificate of the web UI, terminated by the Gateway
+            lldap-gateway:
+              secretName: tls-lldap-gateway
+              dnsNames:
+                lldap: lldap.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+            # certificate of ldaps, used by the lldap pod
+            tls-lldaps:
+              secretName: tls-lldaps
+              dnsNames:
+                lldaps: lldaps.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+          # Exposed by the Cilium Gateway `shared` (kube-system), both on port 443 and routed by SNI:
+          #  - lldap.<domain>: web UI, TLS terminated by the Gateway
+          #  - lldaps.<domain>: ldaps served by lldap itself (tls-lldaps certificate), the TLS stream is forwarded as is (passthrough)
+          listenerSets:
+            lldap:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: lldap.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-lldap-gateway
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+                ldaps:
+                  name: ldaps
+                  hostname: lldaps.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: TLS
+                  tls:
+                    mode: Passthrough
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            lldap:
+              parentRefs:
+                lldap:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: lldap
+                  sectionName: https
+              hostnames:
+                lldap: lldap.{{ .Values.global.domain }}
+              rules:
+                root:
+                  backendRefs:
+                    lldap:
+                      name: lldap
+                      port: 17170
+
+          tlsRoutes:
+            lldap-ldaps:
+              parentRefs:
+                lldap:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: lldap
+                  sectionName: ldaps
+              hostnames:
+                lldaps: lldaps.{{ .Values.global.domain }}
+              rules:
+                ldaps:
+                  backendRefs:
+                    lldap:
+                      name: lldap
+                      port: 6360

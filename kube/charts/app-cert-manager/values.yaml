@@ -30,7 +30,7 @@ resources:
       values:
         crds:
           enabled: true
-        # needed by the `gatewayHTTPRoute` http-01 solver of the issuers. Gateway API CRDs must exist when cert-manager starts: app-bcl makes this app depend on app-gateway-api
+        # needed by the `gatewayHTTPRoute` http-01 solver of the issuers. Gateway API CRDs must exist when cert-manager starts, see dependsOn
         config:
           gatewayAPI:
             enabled: true

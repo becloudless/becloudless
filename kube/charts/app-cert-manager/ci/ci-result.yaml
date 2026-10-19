@@ -13,6 +13,9 @@ spec:
         kind: HelmRepository
         name: cert-manager
       version: v1.21.2
+  dependsOn:
+  - name: app-gateway-api
+    namespace: gateway-api
   driftDetection:
     mode: enabled
   install:
@@ -52,7 +55,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: bcl
+        namespace: apps
   dependsOn:
   - name: cert-manager
   driftDetection:

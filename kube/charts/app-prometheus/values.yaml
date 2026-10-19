@@ -18,216 +18,6 @@ defaults:
     namespace: prometheus
 
 resources:
-  certManagerCertificates:
-    prometheus-gateway:
-      secretName: tls-prometheus-gateway
-      dnsNames:
-        prometheus: prometheus.{{ .Values.global.domain }}
-      issuerRef:
-        name: letsencrypt-prod
-        kind: ClusterIssuer
-    alertmanager-gateway:
-      secretName: tls-alertmanager-gateway
-      dnsNames:
-        alertmanager: alertmanager.{{ .Values.global.domain }}
-      issuerRef:
-        name: letsencrypt-prod
-        kind: ClusterIssuer
-    grafana-gateway:
-      secretName: tls-grafana-gateway
-      dnsNames:
-        grafana: grafana.{{ .Values.global.domain }}
-      issuerRef:
-        name: letsencrypt-prod
-        kind: ClusterIssuer
-    pushprox-gateway:
-      secretName: tls-pushprox-gateway
-      dnsNames:
-        pushprox: pushprox.{{ .Values.global.domain }}
-      issuerRef:
-        name: letsencrypt-prod
-        kind: ClusterIssuer
-
-  # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway, one hostname per listener.
-  # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
-  listenerSets:
-    prometheus:
-      parentRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: shared
-        namespace: kube-system
-      listeners:
-        prometheus:
-          name: prometheus
-          hostname: prometheus.{{ .Values.global.domain }}
-          port: 443
-          protocol: HTTPS
-          tls:
-            mode: Terminate
-            certificateRefs:
-              tls:
-                name: tls-prometheus-gateway
-          allowedRoutes:
-            namespaces:
-              from: Same
-        alertmanager:
-          name: alertmanager
-          hostname: alertmanager.{{ .Values.global.domain }}
-          port: 443
-          protocol: HTTPS
-          tls:
-            mode: Terminate
-            certificateRefs:
-              tls:
-                name: tls-alertmanager-gateway
-          allowedRoutes:
-            namespaces:
-              from: Same
-        grafana:
-          name: grafana
-          hostname: grafana.{{ .Values.global.domain }}
-          port: 443
-          protocol: HTTPS
-          tls:
-            mode: Terminate
-            certificateRefs:
-              tls:
-                name: tls-grafana-gateway
-          allowedRoutes:
-            namespaces:
-              from: Same
-        pushprox:
-          name: pushprox
-          hostname: pushprox.{{ .Values.global.domain }}
-          port: 443
-          protocol: HTTPS
-          tls:
-            mode: Terminate
-            certificateRefs:
-              tls:
-                name: tls-pushprox-gateway
-          allowedRoutes:
-            namespaces:
-              from: Same
-
-  # Forward auth: the `ExternalAuth` filter calls the authelia service, the ReferenceGrant is in app-authelia.
-  # Grafana is not behind it, it has its own login.
-  httpRoutes:
-    prometheus:
-      parentRefs:
-        prometheus:
-          group: gateway.networking.k8s.io
-          kind: ListenerSet
-          name: prometheus
-          sectionName: prometheus
-      hostnames:
-        prometheus: prometheus.{{ .Values.global.domain }}
-      rules:
-        ui:
-          filters:
-            authelia:
-              type: ExternalAuth
-              externalAuth:
-                protocol: HTTP
-                backendRef:
-                  name: authelia
-                  namespace: authelia
-                  port: 80
-                http:
-                  path: /api/authz/ext-authz/
-                  allowedHeaders:
-                    cookie: cookie
-                    accept: accept
-                    proxy-authorization: proxy-authorization
-                    x-forwarded-proto: x-forwarded-proto
-                    x-forwarded-for: x-forwarded-for
-          backendRefs:
-            prometheus:
-              name: prometheus-kube-prometheus-prometheus
-              port: 9090
-
-    alertmanager:
-      parentRefs:
-        alertmanager:
-          group: gateway.networking.k8s.io
-          kind: ListenerSet
-          name: prometheus
-          sectionName: alertmanager
-      hostnames:
-        alertmanager: alertmanager.{{ .Values.global.domain }}
-      rules:
-        ui:
-          filters:
-            authelia:
-              type: ExternalAuth
-              externalAuth:
-                protocol: HTTP
-                backendRef:
-                  name: authelia
-                  namespace: authelia
-                  port: 80
-                http:
-                  path: /api/authz/ext-authz/
-                  allowedHeaders:
-                    cookie: cookie
-                    accept: accept
-                    proxy-authorization: proxy-authorization
-                    x-forwarded-proto: x-forwarded-proto
-                    x-forwarded-for: x-forwarded-for
-          backendRefs:
-            alertmanager:
-              name: prometheus-kube-prometheus-alertmanager
-              port: 9093
-
-    grafana:
-      parentRefs:
-        grafana:
-          group: gateway.networking.k8s.io
-          kind: ListenerSet
-          name: prometheus
-          sectionName: grafana
-      hostnames:
-        grafana: grafana.{{ .Values.global.domain }}
-      rules:
-        ui:
-          backendRefs:
-            grafana:
-              name: prometheus-grafana
-              port: 80
-
-    pushprox:
-      parentRefs:
-        pushprox:
-          group: gateway.networking.k8s.io
-          kind: ListenerSet
-          name: prometheus
-          sectionName: pushprox
-      hostnames:
-        pushprox: pushprox.{{ .Values.global.domain }}
-      rules:
-        proxy:
-          filters:
-            authelia:
-              type: ExternalAuth
-              externalAuth:
-                protocol: HTTP
-                backendRef:
-                  name: authelia
-                  namespace: authelia
-                  port: 80
-                http:
-                  path: /api/authz/ext-authz/
-                  allowedHeaders:
-                    cookie: cookie
-                    accept: accept
-                    proxy-authorization: proxy-authorization
-                    x-forwarded-proto: x-forwarded-proto
-                    x-forwarded-for: x-forwarded-for
-          backendRefs:
-            pushprox:
-              name: pushprox
-              port: 8080
 
   # https://github.com/prometheus-community/PushProx: scrapes the targets that cannot be reached (behind a nat)
   deployments:
@@ -281,6 +71,10 @@ resources:
     # the release is named `prometheus`, which gives the service names used by the httpRoutes
     prometheus:
       timeout: 10m # the chart is large and the CRDs are big
+      dependsOn: # the volumes
+        longhorn:
+          name: app-longhorn
+          namespace: longhorn-system
       chart:
         spec:
           chart: kube-prometheus-stack
@@ -520,3 +314,236 @@ resources:
         prometheusOperator:
           kubeletService:
             enabled: false
+
+    # the certificates and Gateway resources need the CRDs of these apps, so they are installed once they are ready, and the ReferenceGrant to authelia
+    prometheus-config:
+      dependsOn:
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+        authelia-config:
+          name: authelia-config
+          namespace: authelia
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        prefixNamesWithRelease: false
+        resources:
+          certManagerCertificates:
+            prometheus-gateway:
+              secretName: tls-prometheus-gateway
+              dnsNames:
+                prometheus: prometheus.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+            alertmanager-gateway:
+              secretName: tls-alertmanager-gateway
+              dnsNames:
+                alertmanager: alertmanager.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+            grafana-gateway:
+              secretName: tls-grafana-gateway
+              dnsNames:
+                grafana: grafana.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+            pushprox-gateway:
+              secretName: tls-pushprox-gateway
+              dnsNames:
+                pushprox: pushprox.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway, one hostname per listener.
+          listenerSets:
+            prometheus:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                prometheus:
+                  name: prometheus
+                  hostname: prometheus.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-prometheus-gateway
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+                alertmanager:
+                  name: alertmanager
+                  hostname: alertmanager.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-alertmanager-gateway
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+                grafana:
+                  name: grafana
+                  hostname: grafana.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-grafana-gateway
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+                pushprox:
+                  name: pushprox
+                  hostname: pushprox.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-pushprox-gateway
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          # Forward auth: the `ExternalAuth` filter calls the authelia service, the ReferenceGrant is in app-authelia.
+          # Grafana is not behind it, it has its own login.
+          httpRoutes:
+            prometheus:
+              parentRefs:
+                prometheus:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: prometheus
+                  sectionName: prometheus
+              hostnames:
+                prometheus: prometheus.{{ .Values.global.domain }}
+              rules:
+                ui:
+                  filters:
+                    authelia:
+                      type: ExternalAuth
+                      externalAuth:
+                        protocol: HTTP
+                        backendRef:
+                          name: authelia
+                          namespace: authelia
+                          port: 80
+                        http:
+                          path: /api/authz/ext-authz/
+                          allowedHeaders:
+                            cookie: cookie
+                            accept: accept
+                            proxy-authorization: proxy-authorization
+                            x-forwarded-proto: x-forwarded-proto
+                            x-forwarded-for: x-forwarded-for
+                  backendRefs:
+                    prometheus:
+                      name: prometheus-kube-prometheus-prometheus
+                      port: 9090
+
+            alertmanager:
+              parentRefs:
+                alertmanager:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: prometheus
+                  sectionName: alertmanager
+              hostnames:
+                alertmanager: alertmanager.{{ .Values.global.domain }}
+              rules:
+                ui:
+                  filters:
+                    authelia:
+                      type: ExternalAuth
+                      externalAuth:
+                        protocol: HTTP
+                        backendRef:
+                          name: authelia
+                          namespace: authelia
+                          port: 80
+                        http:
+                          path: /api/authz/ext-authz/
+                          allowedHeaders:
+                            cookie: cookie
+                            accept: accept
+                            proxy-authorization: proxy-authorization
+                            x-forwarded-proto: x-forwarded-proto
+                            x-forwarded-for: x-forwarded-for
+                  backendRefs:
+                    alertmanager:
+                      name: prometheus-kube-prometheus-alertmanager
+                      port: 9093
+
+            grafana:
+              parentRefs:
+                grafana:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: prometheus
+                  sectionName: grafana
+              hostnames:
+                grafana: grafana.{{ .Values.global.domain }}
+              rules:
+                ui:
+                  backendRefs:
+                    grafana:
+                      name: prometheus-grafana
+                      port: 80
+
+            pushprox:
+              parentRefs:
+                pushprox:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: prometheus
+                  sectionName: pushprox
+              hostnames:
+                pushprox: pushprox.{{ .Values.global.domain }}
+              rules:
+                proxy:
+                  filters:
+                    authelia:
+                      type: ExternalAuth
+                      externalAuth:
+                        protocol: HTTP
+                        backendRef:
+                          name: authelia
+                          namespace: authelia
+                          port: 80
+                        http:
+                          path: /api/authz/ext-authz/
+                          allowedHeaders:
+                            cookie: cookie
+                            accept: accept
+                            proxy-authorization: proxy-authorization
+                            x-forwarded-proto: x-forwarded-proto
+                            x-forwarded-for: x-forwarded-for
+                  backendRefs:
+                    pushprox:
+                      name: pushprox
+                      port: 8080

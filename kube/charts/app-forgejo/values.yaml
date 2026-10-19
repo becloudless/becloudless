@@ -18,58 +18,6 @@ defaults:
     namespace: forgejo
 
 resources:
-  certManagerCertificates:
-    # certificate of the web UI, terminated by the Gateway
-    forgejo-gateway:
-      secretName: tls-forgejo-gateway
-      dnsNames:
-        forgejo: forgejo.{{ .Values.global.domain }}
-      issuerRef:
-        name: letsencrypt-prod
-        kind: ClusterIssuer
-
-  # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
-  # It is not protected by forward auth: git clients cannot follow the login redirect of authelia.
-  # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
-  listenerSets:
-    forgejo:
-      parentRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: shared
-        namespace: kube-system
-      listeners:
-        https:
-          name: https
-          hostname: forgejo.{{ .Values.global.domain }}
-          port: 443
-          protocol: HTTPS
-          tls:
-            mode: Terminate
-            certificateRefs:
-              tls:
-                name: tls-forgejo-gateway
-          allowedRoutes:
-            namespaces:
-              from: Same
-
-  httpRoutes:
-    forgejo:
-      parentRefs:
-        forgejo:
-          group: gateway.networking.k8s.io
-          kind: ListenerSet
-          name: forgejo
-      hostnames:
-        forgejo: forgejo.{{ .Values.global.domain }}
-      rules:
-        root:
-          backendRefs:
-            forgejo:
-              name: forgejo-http
-              port: 3000
-          timeouts:
-            request: 0s # pushes and lfs uploads can be long
 
   fluxHelmRepositories:
     forgejo:
@@ -80,6 +28,16 @@ resources:
     # the database is prepared by the postgresql-cluster chart (certificates, issuer, cluster and backups)
     # the cluster is named after the release, which is the name of this HelmRelease
     forgejo-postgresql:
+      dependsOn: # the certificates, the cluster and the volume snapshots
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        cnpg:
+          name: app-cnpg
+          namespace: cnpg-system
+        longhorn:
+          name: app-longhorn
+          namespace: longhorn-system
       chart:
         spec:
           chart: ./kube/charts/postgresql-cluster
@@ -87,7 +45,7 @@ resources:
           sourceRef:
             kind: GitRepository
             name: bcl
-            namespace: bcl
+            namespace: apps
 
     forgejo:
       timeout: 10m # the pod waits for the database
@@ -170,3 +128,75 @@ resources:
             enabled: true
             serviceMonitor:
               enabled: false # the prometheus CRDs are not installed by the bcl apps
+
+    # the certificates and Gateway resources need the CRDs of these apps, so they are installed once they are ready
+    forgejo-config:
+      dependsOn:
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        prefixNamesWithRelease: false
+        resources:
+          certManagerCertificates:
+            # certificate of the web UI, terminated by the Gateway
+            forgejo-gateway:
+              secretName: tls-forgejo-gateway
+              dnsNames:
+                forgejo: forgejo.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
+          # It is not protected by forward auth: git clients cannot follow the login redirect of authelia.
+          listenerSets:
+            forgejo:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: forgejo.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-forgejo-gateway
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            forgejo:
+              parentRefs:
+                forgejo:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: forgejo
+              hostnames:
+                forgejo: forgejo.{{ .Values.global.domain }}
+              rules:
+                root:
+                  backendRefs:
+                    forgejo:
+                      name: forgejo-http
+                      port: 3000
+                  timeouts:
+                    request: 0s # pushes and lfs uploads can be long

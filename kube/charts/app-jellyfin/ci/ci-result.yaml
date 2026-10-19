@@ -131,60 +131,84 @@ spec:
         name: network
 ---
 # Source: app-jellyfin/templates/loader.yaml
-apiVersion: cert-manager.io/v1
-kind: Certificate
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
 metadata:
-  name: jellyfin-gateway
+  name: jellyfin-config
   namespace: jellyfin
 spec:
-  dnsNames:
-  - jellyfin.test.com
-  issuerRef:
-    kind: ClusterIssuer
-    name: letsencrypt-prod
-  secretName: tls-jellyfin-gateway
----
-# Source: app-jellyfin/templates/loader.yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: jellyfin
-  namespace: jellyfin
-spec:
-  hostnames:
-  - jellyfin.test.com
-  parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: ListenerSet
-    name: jellyfin
-  rules:
-  - backendRefs:
-    - name: jellyfin
-      port: 8096
-    timeouts:
-      request: 0s
----
-# Source: app-jellyfin/templates/loader.yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: ListenerSet
-metadata:
-  name: jellyfin
-  namespace: jellyfin
-spec:
-  listeners:
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    hostname: jellyfin.test.com
-    name: https
-    port: 443
-    protocol: HTTPS
-    tls:
-      certificateRefs:
-      - name: tls-jellyfin-gateway
-      mode: Terminate
-  parentRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: shared
-    namespace: kube-system
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    prefixNamesWithRelease: false
+    resources:
+      certManagerCertificates:
+        jellyfin-gateway:
+          dnsNames:
+            jellyfin: jellyfin.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-jellyfin-gateway
+      httpRoutes:
+        jellyfin:
+          hostnames:
+            jellyfin: jellyfin.test.com
+          parentRefs:
+            jellyfin:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: jellyfin
+          rules:
+            root:
+              backendRefs:
+                jellyfin:
+                  name: jellyfin
+                  port: 8096
+              timeouts:
+                request: 0s
+      listenerSets:
+        jellyfin:
+          listeners:
+            https:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: jellyfin.test.com
+              name: https
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: tls-jellyfin-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system

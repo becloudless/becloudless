@@ -106,51 +106,72 @@ resources:
           port: 80
           targetPort: 8080
 
-  # Exposed on the apex of the domain by the Cilium Gateway `shared` (kube-system).
-  # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
-  certManagerCertificates:
-    landing:
-      secretName: tls-landing
-      dnsNames:
-        apex: "{{ .Values.global.domain }}"
-      issuerRef:
-        name: letsencrypt-prod
-        kind: ClusterIssuer
+  fluxHelmReleases:
+    # the certificates and Gateway resources need the CRDs of these apps, so they are installed once they are ready
+    landing-config:
+      dependsOn:
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        prefixNamesWithRelease: false
+        resources:
 
-  listenerSets:
-    landing:
-      parentRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: shared
-        namespace: kube-system
-      listeners:
-        https:
-          name: https
-          hostname: "{{ .Values.global.domain }}"
-          port: 443
-          protocol: HTTPS
-          tls:
-            mode: Terminate
-            certificateRefs:
-              tls:
-                name: tls-landing
-          allowedRoutes:
-            namespaces:
-              from: Same
-
-  httpRoutes:
-    landing:
-      parentRefs:
-        landing:
-          group: gateway.networking.k8s.io
-          kind: ListenerSet
-          name: landing
-      hostnames:
-        apex: "{{ .Values.global.domain }}"
-      rules:
-        root:
-          backendRefs:
+          # Exposed on the apex of the domain by the Cilium Gateway `shared` (kube-system).
+          certManagerCertificates:
             landing:
-              name: landing
-              port: 80
+              secretName: tls-landing
+              dnsNames:
+                apex: "{{ .Values.global.domain }}"
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+          listenerSets:
+            landing:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: "{{ .Values.global.domain }}"
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-landing
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            landing:
+              parentRefs:
+                landing:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: landing
+              hostnames:
+                apex: "{{ .Values.global.domain }}"
+              rules:
+                root:
+                  backendRefs:
+                    landing:
+                      name: landing
+                      port: 80

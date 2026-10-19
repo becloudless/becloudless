@@ -114,51 +114,130 @@ spec:
           secretName: lldap-postgresql-app-tls
 ---
 # Source: app-lldap/templates/loader.yaml
-apiVersion: cert-manager.io/v1
-kind: Certificate
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
 metadata:
-  name: lldap-gateway
+  name: lldap-config
   namespace: lldap
 spec:
-  dnsNames:
-  - lldap.test.com
-  issuerRef:
-    kind: ClusterIssuer
-    name: letsencrypt-prod
-  secretName: tls-lldap-gateway
----
-# Source: app-lldap/templates/loader.yaml
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: tls-lldaps
-  namespace: lldap
-spec:
-  dnsNames:
-  - lldaps.test.com
-  issuerRef:
-    kind: ClusterIssuer
-    name: letsencrypt-prod
-  secretName: tls-lldaps
----
-# Source: app-lldap/templates/loader.yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: lldap
-  namespace: lldap
-spec:
-  hostnames:
-  - lldap.test.com
-  parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: ListenerSet
-    name: lldap
-    sectionName: https
-  rules:
-  - backendRefs:
-    - name: lldap
-      port: 17170
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  - name: app-secret-generator
+    namespace: secret-generator
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    prefixNamesWithRelease: false
+    resources:
+      certManagerCertificates:
+        lldap-gateway:
+          dnsNames:
+            lldap: lldap.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-lldap-gateway
+        tls-lldaps:
+          dnsNames:
+            lldaps: lldaps.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-lldaps
+      httpRoutes:
+        lldap:
+          hostnames:
+            lldap: lldap.test.com
+          parentRefs:
+            lldap:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: lldap
+              sectionName: https
+          rules:
+            root:
+              backendRefs:
+                lldap:
+                  name: lldap
+                  port: 17170
+      listenerSets:
+        lldap:
+          listeners:
+            https:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: lldap.test.com
+              name: https
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: tls-lldap-gateway
+                mode: Terminate
+            ldaps:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: lldaps.test.com
+              name: ldaps
+              port: 443
+              protocol: TLS
+              tls:
+                mode: Passthrough
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+      stringSecrets:
+        lldap-generated:
+          fields:
+            jwt-secret:
+              fieldName: LLDAP_JWT_SECRET
+            user-dn:
+              fieldName: LLDAP_LDAP_USER_DN
+            user-pass:
+              fieldName: LLDAP_LDAP_USER_PASS
+      tlsRoutes:
+        lldap-ldaps:
+          hostnames:
+            lldaps: lldaps.test.com
+          parentRefs:
+            lldap:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: lldap
+              sectionName: ldaps
+          rules:
+            ldaps:
+              backendRefs:
+                lldap:
+                  name: lldap
+                  port: 6360
 ---
 # Source: app-lldap/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -174,7 +253,14 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-cnpg
+    namespace: cnpg-system
+  - name: app-longhorn
+    namespace: longhorn-system
   driftDetection:
     mode: enabled
   install:
@@ -193,68 +279,3 @@ spec:
     postgresql:
       parameters:
         max_slot_wal_keep_size: 500MB
----
-# Source: app-lldap/templates/loader.yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: ListenerSet
-metadata:
-  name: lldap
-  namespace: lldap
-spec:
-  listeners:
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    hostname: lldap.test.com
-    name: https
-    port: 443
-    protocol: HTTPS
-    tls:
-      certificateRefs:
-      - name: tls-lldap-gateway
-      mode: Terminate
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    hostname: lldaps.test.com
-    name: ldaps
-    port: 443
-    protocol: TLS
-    tls:
-      mode: Passthrough
-  parentRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: shared
-    namespace: kube-system
----
-# Source: app-lldap/templates/loader.yaml
-apiVersion: secretgenerator.mittwald.de/v1alpha1
-kind: StringSecret
-metadata:
-  name: lldap-generated
-  namespace: lldap
-spec:
-  fields:
-  - fieldName: LLDAP_JWT_SECRET
-  - fieldName: LLDAP_LDAP_USER_DN
-  - fieldName: LLDAP_LDAP_USER_PASS
----
-# Source: app-lldap/templates/loader.yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: TLSRoute
-metadata:
-  name: lldap-ldaps
-  namespace: lldap
-spec:
-  hostnames:
-  - lldaps.test.com
-  parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: ListenerSet
-    name: lldap
-    sectionName: ldaps
-  rules:
-  - backendRefs:
-    - name: lldap
-      port: 6360

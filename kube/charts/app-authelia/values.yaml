@@ -21,112 +21,6 @@ defaults:
     namespace: authelia
 
 resources:
-  stringSecrets:
-    authelia-generated:
-      fields:
-        oidc-hmac:
-          fieldName: identity_providers.oidc.hmac.key
-        reset-password-hmac:
-          fieldName: identity_validation.reset_password.jwt.hmac.key
-        session-encryption:
-          fieldName: session.encryption.key
-
-    # password of the `admin` user of the file backend
-    authelia-admin:
-      fields:
-        password:
-          fieldName: password
-          encoding: hex
-          length: "32"
-
-    # users of valkey, the key is the name of the user
-    authelia-valkey:
-      fields:
-        default:
-          fieldName: default
-        authelia:
-          fieldName: authelia
-
-  # key pair signing the OIDC tokens, mounted from /secrets/authelia-jwks
-  certManagerCertificates:
-    # certificate of the portal, terminated by the Gateway
-    authelia-gateway:
-      secretName: tls-authelia-gateway
-      dnsNames:
-        authelia: authelia.{{ .Values.global.domain }}
-      issuerRef:
-        name: letsencrypt-prod
-        kind: ClusterIssuer
-
-    authelia-jwks:
-      secretName: authelia-jwks
-      commonName: authelia-jwks
-      issuerRef:
-        name: self-signed
-        kind: ClusterIssuer
-
-  # Forward auth for the apps behind the Cilium Gateway: the `ExternalAuth` filter of their HTTPRoute calls the authelia service.
-  # An HTTPRoute can only reference a service of another namespace when it is granted here: add the namespace of each app.
-  referenceGrants:
-    ext-authz:
-      from:
-        longhorn:
-          group: gateway.networking.k8s.io
-          kind: HTTPRoute
-          namespace: longhorn-system
-        homer:
-          group: gateway.networking.k8s.io
-          kind: HTTPRoute
-          namespace: homer
-        prometheus:
-          group: gateway.networking.k8s.io
-          kind: HTTPRoute
-          namespace: prometheus
-      to:
-        authelia:
-          group: ""
-          kind: Service
-          name: authelia
-
-  # Portal exposed by the Cilium Gateway `shared` (kube-system). It is not protected by forward auth itself.
-  # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
-  listenerSets:
-    authelia:
-      parentRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: shared
-        namespace: kube-system
-      listeners:
-        https:
-          name: https
-          hostname: authelia.{{ .Values.global.domain }}
-          port: 443
-          protocol: HTTPS
-          tls:
-            mode: Terminate
-            certificateRefs:
-              tls:
-                name: tls-authelia-gateway
-          allowedRoutes:
-            namespaces:
-              from: Same
-
-  httpRoutes:
-    authelia:
-      parentRefs:
-        authelia:
-          group: gateway.networking.k8s.io
-          kind: ListenerSet
-          name: authelia
-      hostnames:
-        authelia: authelia.{{ .Values.global.domain }}
-      rules:
-        root:
-          backendRefs:
-            authelia:
-              name: authelia
-              port: 80
 
   fluxHelmRepositories:
     authelia:
@@ -146,12 +40,21 @@ resources:
             kind: GitRepository
             name: bcl
             namespace: apps
-      dependsOn:
+      dependsOn: # the certificates, the cluster and the volume snapshots
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
         cnpg:
           name: app-cnpg
           namespace: cnpg-system
+        longhorn:
+          name: app-longhorn
+          namespace: longhorn-system
 
     authelia-valkey:
+      dependsOn: # the generated secrets
+        authelia-config:
+          name: authelia-config
       chart:
         spec:
           chart: valkey
@@ -177,10 +80,15 @@ resources:
     authelia:
       timeout: 10m # the pods wait for the database
       dependsOn:
+        authelia-config: # the generated secrets
+          name: authelia-config
         authelia-postgresql:
           name: authelia-postgresql
         authelia-valkey:
           name: authelia-valkey
+        lldap: # the ldap backend
+          name: app-lldap
+          namespace: lldap
       chart:
         spec:
           chart: authelia
@@ -534,3 +442,132 @@ resources:
                   access_token_signed_response_alg: 'RS256'
                   userinfo_signed_response_alg: 'RS256'
                   token_endpoint_auth_method: 'client_secret_post'
+
+    # the certificates, secrets and Gateway resources need the CRDs of these apps, so they are installed once they are ready
+    authelia-config:
+      dependsOn:
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+        secret-generator:
+          name: app-secret-generator
+          namespace: secret-generator
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        prefixNamesWithRelease: false
+        resources:
+          stringSecrets:
+            authelia-generated:
+              fields:
+                oidc-hmac:
+                  fieldName: identity_providers.oidc.hmac.key
+                reset-password-hmac:
+                  fieldName: identity_validation.reset_password.jwt.hmac.key
+                session-encryption:
+                  fieldName: session.encryption.key
+
+            # password of the `admin` user of the file backend
+            authelia-admin:
+              fields:
+                password:
+                  fieldName: password
+                  encoding: hex
+                  length: "32"
+
+            # users of valkey, the key is the name of the user
+            authelia-valkey:
+              fields:
+                default:
+                  fieldName: default
+                authelia:
+                  fieldName: authelia
+
+          # key pair signing the OIDC tokens, mounted from /secrets/authelia-jwks
+          certManagerCertificates:
+            # certificate of the portal, terminated by the Gateway
+            authelia-gateway:
+              secretName: tls-authelia-gateway
+              dnsNames:
+                authelia: authelia.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+            authelia-jwks:
+              secretName: authelia-jwks
+              commonName: authelia-jwks
+              issuerRef:
+                name: self-signed
+                kind: ClusterIssuer
+
+          # Forward auth for the apps behind the Cilium Gateway: the `ExternalAuth` filter of their HTTPRoute calls the authelia service.
+          # An HTTPRoute can only reference a service of another namespace when it is granted here: add the namespace of each app.
+          referenceGrants:
+            ext-authz:
+              from:
+                longhorn:
+                  group: gateway.networking.k8s.io
+                  kind: HTTPRoute
+                  namespace: longhorn-system
+                homer:
+                  group: gateway.networking.k8s.io
+                  kind: HTTPRoute
+                  namespace: homer
+                prometheus:
+                  group: gateway.networking.k8s.io
+                  kind: HTTPRoute
+                  namespace: prometheus
+              to:
+                authelia:
+                  group: ""
+                  kind: Service
+                  name: authelia
+
+          # Portal exposed by the Cilium Gateway `shared` (kube-system). It is not protected by forward auth itself.
+          listenerSets:
+            authelia:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: authelia.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-authelia-gateway
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            authelia:
+              parentRefs:
+                authelia:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: authelia
+              hostnames:
+                authelia: authelia.{{ .Values.global.domain }}
+              rules:
+                root:
+                  backendRefs:
+                    authelia:
+                      name: authelia
+                      port: 80

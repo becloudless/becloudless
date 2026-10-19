@@ -104,58 +104,82 @@ spec:
         name: tmp
 ---
 # Source: app-landing/templates/loader.yaml
-apiVersion: cert-manager.io/v1
-kind: Certificate
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
 metadata:
-  name: landing
+  name: landing-config
   namespace: landing
 spec:
-  dnsNames:
-  - test.com
-  issuerRef:
-    kind: ClusterIssuer
-    name: letsencrypt-prod
-  secretName: tls-landing
----
-# Source: app-landing/templates/loader.yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: landing
-  namespace: landing
-spec:
-  hostnames:
-  - test.com
-  parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: ListenerSet
-    name: landing
-  rules:
-  - backendRefs:
-    - name: landing
-      port: 80
----
-# Source: app-landing/templates/loader.yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: ListenerSet
-metadata:
-  name: landing
-  namespace: landing
-spec:
-  listeners:
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    hostname: test.com
-    name: https
-    port: 443
-    protocol: HTTPS
-    tls:
-      certificateRefs:
-      - name: tls-landing
-      mode: Terminate
-  parentRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: shared
-    namespace: kube-system
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    prefixNamesWithRelease: false
+    resources:
+      certManagerCertificates:
+        landing:
+          dnsNames:
+            apex: test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-landing
+      httpRoutes:
+        landing:
+          hostnames:
+            apex: test.com
+          parentRefs:
+            landing:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: landing
+          rules:
+            root:
+              backendRefs:
+                landing:
+                  name: landing
+                  port: 80
+      listenerSets:
+        landing:
+          listeners:
+            https:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: test.com
+              name: https
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: tls-landing
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system

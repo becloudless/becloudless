@@ -37,10 +37,10 @@ resources:
       dependsOn:
         cert-manager:
           name: app-cert-manager
-          namespace: bcl
+          namespace: cert-manager
         gateway-api:
           name: app-gateway-api
-          namespace: bcl
+          namespace: gateway-api
       chart:
         spec:
           chart: ./kube/charts/base-loader
@@ -48,7 +48,7 @@ resources:
           sourceRef:
             kind: GitRepository
             name: bcl
-            namespace: bcl
+            namespace: apps
       values:
         prefixNamesWithRelease: false
         resources:

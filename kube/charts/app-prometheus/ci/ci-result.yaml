@@ -52,186 +52,6 @@ spec:
         runAsUser: 65534
 ---
 # Source: app-prometheus/templates/loader.yaml
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: alertmanager-gateway
-  namespace: prometheus
-spec:
-  dnsNames:
-  - alertmanager.test.com
-  issuerRef:
-    kind: ClusterIssuer
-    name: letsencrypt-prod
-  secretName: tls-alertmanager-gateway
----
-# Source: app-prometheus/templates/loader.yaml
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: grafana-gateway
-  namespace: prometheus
-spec:
-  dnsNames:
-  - grafana.test.com
-  issuerRef:
-    kind: ClusterIssuer
-    name: letsencrypt-prod
-  secretName: tls-grafana-gateway
----
-# Source: app-prometheus/templates/loader.yaml
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: prometheus-gateway
-  namespace: prometheus
-spec:
-  dnsNames:
-  - prometheus.test.com
-  issuerRef:
-    kind: ClusterIssuer
-    name: letsencrypt-prod
-  secretName: tls-prometheus-gateway
----
-# Source: app-prometheus/templates/loader.yaml
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: pushprox-gateway
-  namespace: prometheus
-spec:
-  dnsNames:
-  - pushprox.test.com
-  issuerRef:
-    kind: ClusterIssuer
-    name: letsencrypt-prod
-  secretName: tls-pushprox-gateway
----
-# Source: app-prometheus/templates/loader.yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: alertmanager
-  namespace: prometheus
-spec:
-  hostnames:
-  - alertmanager.test.com
-  parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: ListenerSet
-    name: prometheus
-    sectionName: alertmanager
-  rules:
-  - backendRefs:
-    - name: prometheus-kube-prometheus-alertmanager
-      port: 9093
-    filters:
-    - externalAuth:
-        backendRef:
-          name: authelia
-          namespace: authelia
-          port: 80
-        http:
-          allowedHeaders:
-          - accept
-          - cookie
-          - proxy-authorization
-          - x-forwarded-for
-          - x-forwarded-proto
-          path: /api/authz/ext-authz/
-        protocol: HTTP
-      type: ExternalAuth
----
-# Source: app-prometheus/templates/loader.yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: grafana
-  namespace: prometheus
-spec:
-  hostnames:
-  - grafana.test.com
-  parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: ListenerSet
-    name: prometheus
-    sectionName: grafana
-  rules:
-  - backendRefs:
-    - name: prometheus-grafana
-      port: 80
----
-# Source: app-prometheus/templates/loader.yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: prometheus
-  namespace: prometheus
-spec:
-  hostnames:
-  - prometheus.test.com
-  parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: ListenerSet
-    name: prometheus
-    sectionName: prometheus
-  rules:
-  - backendRefs:
-    - name: prometheus-kube-prometheus-prometheus
-      port: 9090
-    filters:
-    - externalAuth:
-        backendRef:
-          name: authelia
-          namespace: authelia
-          port: 80
-        http:
-          allowedHeaders:
-          - accept
-          - cookie
-          - proxy-authorization
-          - x-forwarded-for
-          - x-forwarded-proto
-          path: /api/authz/ext-authz/
-        protocol: HTTP
-      type: ExternalAuth
----
-# Source: app-prometheus/templates/loader.yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: pushprox
-  namespace: prometheus
-spec:
-  hostnames:
-  - pushprox.test.com
-  parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: ListenerSet
-    name: prometheus
-    sectionName: pushprox
-  rules:
-  - backendRefs:
-    - name: pushprox
-      port: 8080
-    filters:
-    - externalAuth:
-        backendRef:
-          name: authelia
-          namespace: authelia
-          port: 80
-        http:
-          allowedHeaders:
-          - accept
-          - cookie
-          - proxy-authorization
-          - x-forwarded-for
-          - x-forwarded-proto
-          path: /api/authz/ext-authz/
-        protocol: HTTP
-      type: ExternalAuth
----
-# Source: app-prometheus/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -245,6 +65,9 @@ spec:
         kind: HelmRepository
         name: prometheus-community
       version: 92.3.1
+  dependsOn:
+  - name: app-longhorn
+    namespace: longhorn-system
   driftDetection:
     mode: enabled
   install:
@@ -469,6 +292,246 @@ spec:
         enabled: false
 ---
 # Source: app-prometheus/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: prometheus-config
+  namespace: prometheus
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: authelia-config
+    namespace: authelia
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    prefixNamesWithRelease: false
+    resources:
+      certManagerCertificates:
+        alertmanager-gateway:
+          dnsNames:
+            alertmanager: alertmanager.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-alertmanager-gateway
+        grafana-gateway:
+          dnsNames:
+            grafana: grafana.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-grafana-gateway
+        prometheus-gateway:
+          dnsNames:
+            prometheus: prometheus.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-prometheus-gateway
+        pushprox-gateway:
+          dnsNames:
+            pushprox: pushprox.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-pushprox-gateway
+      httpRoutes:
+        alertmanager:
+          hostnames:
+            alertmanager: alertmanager.test.com
+          parentRefs:
+            alertmanager:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: prometheus
+              sectionName: alertmanager
+          rules:
+            ui:
+              backendRefs:
+                alertmanager:
+                  name: prometheus-kube-prometheus-alertmanager
+                  port: 9093
+              filters:
+                authelia:
+                  externalAuth:
+                    backendRef:
+                      name: authelia
+                      namespace: authelia
+                      port: 80
+                    http:
+                      allowedHeaders:
+                        accept: accept
+                        cookie: cookie
+                        proxy-authorization: proxy-authorization
+                        x-forwarded-for: x-forwarded-for
+                        x-forwarded-proto: x-forwarded-proto
+                      path: /api/authz/ext-authz/
+                    protocol: HTTP
+                  type: ExternalAuth
+        grafana:
+          hostnames:
+            grafana: grafana.test.com
+          parentRefs:
+            grafana:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: prometheus
+              sectionName: grafana
+          rules:
+            ui:
+              backendRefs:
+                grafana:
+                  name: prometheus-grafana
+                  port: 80
+        prometheus:
+          hostnames:
+            prometheus: prometheus.test.com
+          parentRefs:
+            prometheus:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: prometheus
+              sectionName: prometheus
+          rules:
+            ui:
+              backendRefs:
+                prometheus:
+                  name: prometheus-kube-prometheus-prometheus
+                  port: 9090
+              filters:
+                authelia:
+                  externalAuth:
+                    backendRef:
+                      name: authelia
+                      namespace: authelia
+                      port: 80
+                    http:
+                      allowedHeaders:
+                        accept: accept
+                        cookie: cookie
+                        proxy-authorization: proxy-authorization
+                        x-forwarded-for: x-forwarded-for
+                        x-forwarded-proto: x-forwarded-proto
+                      path: /api/authz/ext-authz/
+                    protocol: HTTP
+                  type: ExternalAuth
+        pushprox:
+          hostnames:
+            pushprox: pushprox.test.com
+          parentRefs:
+            pushprox:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: prometheus
+              sectionName: pushprox
+          rules:
+            proxy:
+              backendRefs:
+                pushprox:
+                  name: pushprox
+                  port: 8080
+              filters:
+                authelia:
+                  externalAuth:
+                    backendRef:
+                      name: authelia
+                      namespace: authelia
+                      port: 80
+                    http:
+                      allowedHeaders:
+                        accept: accept
+                        cookie: cookie
+                        proxy-authorization: proxy-authorization
+                        x-forwarded-for: x-forwarded-for
+                        x-forwarded-proto: x-forwarded-proto
+                      path: /api/authz/ext-authz/
+                    protocol: HTTP
+                  type: ExternalAuth
+      listenerSets:
+        prometheus:
+          listeners:
+            alertmanager:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: alertmanager.test.com
+              name: alertmanager
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: tls-alertmanager-gateway
+                mode: Terminate
+            grafana:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: grafana.test.com
+              name: grafana
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: tls-grafana-gateway
+                mode: Terminate
+            prometheus:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: prometheus.test.com
+              name: prometheus
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: tls-prometheus-gateway
+                mode: Terminate
+            pushprox:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: pushprox.test.com
+              name: pushprox
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: tls-pushprox-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+---
+# Source: app-prometheus/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
@@ -477,61 +540,3 @@ metadata:
 spec:
   interval: 10m
   url: https://prometheus-community.github.io/helm-charts
----
-# Source: app-prometheus/templates/loader.yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: ListenerSet
-metadata:
-  name: prometheus
-  namespace: prometheus
-spec:
-  listeners:
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    hostname: alertmanager.test.com
-    name: alertmanager
-    port: 443
-    protocol: HTTPS
-    tls:
-      certificateRefs:
-      - name: tls-alertmanager-gateway
-      mode: Terminate
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    hostname: grafana.test.com
-    name: grafana
-    port: 443
-    protocol: HTTPS
-    tls:
-      certificateRefs:
-      - name: tls-grafana-gateway
-      mode: Terminate
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    hostname: prometheus.test.com
-    name: prometheus
-    port: 443
-    protocol: HTTPS
-    tls:
-      certificateRefs:
-      - name: tls-prometheus-gateway
-      mode: Terminate
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    hostname: pushprox.test.com
-    name: pushprox
-    port: 443
-    protocol: HTTPS
-    tls:
-      certificateRefs:
-      - name: tls-pushprox-gateway
-      mode: Terminate
-  parentRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: shared
-    namespace: kube-system

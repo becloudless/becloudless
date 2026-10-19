@@ -17,67 +17,6 @@ defaults:
     namespace: immich
 
 resources:
-  stringSecrets:
-    # users of valkey, the key is the name of the user
-    immich-valkey:
-      fields:
-        default:
-          fieldName: default
-        app:
-          fieldName: app
-
-  certManagerCertificates:
-    # certificate of the web UI, terminated by the Gateway
-    immich-gateway:
-      secretName: tls-immich-gateway
-      dnsNames:
-        immich: immich.{{ .Values.global.domain }}
-      issuerRef:
-        name: letsencrypt-prod
-        kind: ClusterIssuer
-
-  # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
-  # It is not protected by forward auth: the mobile apps cannot follow the login redirect of authelia, immich has its own login.
-  # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
-  listenerSets:
-    immich:
-      parentRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: shared
-        namespace: kube-system
-      listeners:
-        https:
-          name: https
-          hostname: immich.{{ .Values.global.domain }}
-          port: 443
-          protocol: HTTPS
-          tls:
-            mode: Terminate
-            certificateRefs:
-              tls:
-                name: tls-immich-gateway
-          allowedRoutes:
-            namespaces:
-              from: Same
-
-  httpRoutes:
-    immich:
-      parentRefs:
-        immich:
-          group: gateway.networking.k8s.io
-          kind: ListenerSet
-          name: immich
-      hostnames:
-        immich: immich.{{ .Values.global.domain }}
-      rules:
-        root:
-          backendRefs:
-            immich:
-              name: immich-server
-              port: 2283
-          timeouts:
-            request: 0s # uploads and downloads of videos can be long
 
   # the photos and videos, shared by the pods of the server
   persistentVolumeClaims:
@@ -107,10 +46,16 @@ resources:
             kind: GitRepository
             name: bcl
             namespace: apps
-      dependsOn:
+      dependsOn: # the certificates, the cluster and the volume snapshots
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
         cnpg:
           name: app-cnpg
           namespace: cnpg-system
+        longhorn:
+          name: app-longhorn
+          namespace: longhorn-system
       values:
         storageSize: 5Gi
         postgresql:
@@ -131,6 +76,9 @@ resources:
                     - CREATE EXTENSION IF NOT EXISTS earthdistance CASCADE;
 
     immich-valkey:
+      dependsOn: # the generated secret
+        immich-config:
+          name: immich-config
       chart:
         spec:
           chart: valkey
@@ -156,6 +104,8 @@ resources:
     immich:
       timeout: 10m # the pods wait for the database
       dependsOn:
+        immich-config:
+          name: immich-config
         immich-postgresql:
           name: immich-postgresql
         immich-valkey:
@@ -208,3 +158,87 @@ resources:
               type: persistentVolumeClaim
               accessMode: ReadWriteMany
               storageClass: longhorn
+
+    # the certificates, secrets and Gateway resources need the CRDs of these apps, so they are installed once they are ready
+    immich-config:
+      dependsOn:
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+        secret-generator:
+          name: app-secret-generator
+          namespace: secret-generator
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        prefixNamesWithRelease: false
+        resources:
+          stringSecrets:
+            # users of valkey, the key is the name of the user
+            immich-valkey:
+              fields:
+                default:
+                  fieldName: default
+                app:
+                  fieldName: app
+
+          certManagerCertificates:
+            # certificate of the web UI, terminated by the Gateway
+            immich-gateway:
+              secretName: tls-immich-gateway
+              dnsNames:
+                immich: immich.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
+          # It is not protected by forward auth: the mobile apps cannot follow the login redirect of authelia, immich has its own login.
+          listenerSets:
+            immich:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: immich.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-immich-gateway
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            immich:
+              parentRefs:
+                immich:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: immich
+              hostnames:
+                immich: immich.{{ .Values.global.domain }}
+              rules:
+                root:
+                  backendRefs:
+                    immich:
+                      name: immich-server
+                      port: 2283
+                  timeouts:
+                    request: 0s # uploads and downloads of videos can be long

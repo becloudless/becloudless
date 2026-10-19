@@ -134,55 +134,76 @@ resources:
         http:
           port: 8096
 
-  certManagerCertificates:
-    # certificate of the web UI, terminated by the Gateway
-    jellyfin-gateway:
-      secretName: tls-jellyfin-gateway
-      dnsNames:
-        jellyfin: jellyfin.{{ .Values.global.domain }}
-      issuerRef:
-        name: letsencrypt-prod
-        kind: ClusterIssuer
+  fluxHelmReleases:
+    # the certificates and Gateway resources need the CRDs of these apps, so they are installed once they are ready
+    jellyfin-config:
+      dependsOn:
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        prefixNamesWithRelease: false
+        resources:
 
-  # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
-  # It is not protected by forward auth: the TV and mobile apps cannot follow the login redirect of authelia, jellyfin has its own login.
-  # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
-  listenerSets:
-    jellyfin:
-      parentRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: shared
-        namespace: kube-system
-      listeners:
-        https:
-          name: https
-          hostname: jellyfin.{{ .Values.global.domain }}
-          port: 443
-          protocol: HTTPS
-          tls:
-            mode: Terminate
-            certificateRefs:
-              tls:
-                name: tls-jellyfin-gateway
-          allowedRoutes:
-            namespaces:
-              from: Same
+          certManagerCertificates:
+            # certificate of the web UI, terminated by the Gateway
+            jellyfin-gateway:
+              secretName: tls-jellyfin-gateway
+              dnsNames:
+                jellyfin: jellyfin.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
 
-  httpRoutes:
-    jellyfin:
-      parentRefs:
-        jellyfin:
-          group: gateway.networking.k8s.io
-          kind: ListenerSet
-          name: jellyfin
-      hostnames:
-        jellyfin: jellyfin.{{ .Values.global.domain }}
-      rules:
-        root:
-          backendRefs:
+          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
+          # It is not protected by forward auth: the TV and mobile apps cannot follow the login redirect of authelia, jellyfin has its own login.
+          listenerSets:
             jellyfin:
-              name: jellyfin
-              port: 8096
-          timeouts:
-            request: 0s # streams can be long
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: jellyfin.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-jellyfin-gateway
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            jellyfin:
+              parentRefs:
+                jellyfin:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: jellyfin
+              hostnames:
+                jellyfin: jellyfin.{{ .Values.global.domain }}
+              rules:
+                root:
+                  backendRefs:
+                    jellyfin:
+                      name: jellyfin
+                      port: 8096
+                  timeouts:
+                    request: 0s # streams can be long

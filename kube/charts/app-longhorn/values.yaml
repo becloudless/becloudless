@@ -113,6 +113,12 @@ resources:
       dependsOn:
         longhorn:
           name: longhorn
+        cert-manager: # the certificate of the UI
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api: # the Gateway of the UI
+          name: app-gateway-api
+          namespace: gateway-api
         external-snapshotter:
           name: app-external-snapshotter
           namespace: external-snapshotter
@@ -128,75 +134,74 @@ resources:
         prefixNamesWithRelease: false
 
         # UI behind the Cilium Gateway `shared` (kube-system) with Authelia forward auth.
-        # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
         # The certificate is issued by the http-01 solver of the ClusterIssuer (gatewayHTTPRoute), which only needs the host to be
         # reachable on port 80 through the http listener of the Gateway.
-        certManagerCertificates:
-          longhorn-ui:
-            secretName: tls-longhorn
-            dnsNames:
-              ui: longhorn.{{ .Values.global.domain }}
-            issuerRef:
-              name: letsencrypt-prod
-              kind: ClusterIssuer
-
-        listenerSets:
-          longhorn:
-            parentRef:
-              group: gateway.networking.k8s.io
-              kind: Gateway
-              name: shared
-              namespace: kube-system
-            listeners:
-              https:
-                name: https
-                hostname: longhorn.{{ .Values.global.domain }}
-                port: 443
-                protocol: HTTPS
-                tls:
-                  mode: Terminate
-                  certificateRefs:
-                    tls:
-                      name: tls-longhorn
-                allowedRoutes:
-                  namespaces:
-                    from: Same
-
-        httpRoutes:
-          longhorn:
-            parentRefs:
-              longhorn:
-                group: gateway.networking.k8s.io
-                kind: ListenerSet
-                name: longhorn
-            hostnames:
-              ui: longhorn.{{ .Values.global.domain }}
-            rules:
-              ui:
-                filters:
-                  authelia:
-                    type: ExternalAuth
-                    externalAuth:
-                      protocol: HTTP
-                      backendRef:
-                        name: authelia
-                        namespace: authelia
-                        port: 80
-                      http:
-                        path: /api/authz/ext-authz/
-                        allowedHeaders: # what authelia needs to find the session and to redirect to the login page
-                          cookie: cookie
-                          accept: accept
-                          proxy-authorization: proxy-authorization
-                          x-forwarded-proto: x-forwarded-proto
-                          x-forwarded-for: x-forwarded-for
-                backendRefs:
-                  frontend:
-                    name: longhorn-frontend
-                    port: 80
-
-
         resources:
+          certManagerCertificates:
+            longhorn-ui:
+              secretName: tls-longhorn
+              dnsNames:
+                ui: longhorn.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+          listenerSets:
+            longhorn:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: longhorn.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-longhorn
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            longhorn:
+              parentRefs:
+                longhorn:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: longhorn
+              hostnames:
+                ui: longhorn.{{ .Values.global.domain }}
+              rules:
+                ui:
+                  filters:
+                    authelia:
+                      type: ExternalAuth
+                      externalAuth:
+                        protocol: HTTP
+                        backendRef:
+                          name: authelia
+                          namespace: authelia
+                          port: 80
+                        http:
+                          path: /api/authz/ext-authz/
+                          allowedHeaders: # what authelia needs to find the session and to redirect to the login page
+                            cookie: cookie
+                            accept: accept
+                            proxy-authorization: proxy-authorization
+                            x-forwarded-proto: x-forwarded-proto
+                            x-forwarded-for: x-forwarded-for
+                  backendRefs:
+                    frontend:
+                      name: longhorn-frontend
+                      port: 80
+
+
           longhornRecurringJobs:
             daily-backups:
               cron: 0 4 * * * # Daily at 4am

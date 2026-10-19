@@ -59,8 +59,12 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
   - name: app-external-snapshotter
     namespace: external-snapshotter
+  - name: app-gateway-api
+    namespace: gateway-api
   - name: longhorn
   driftDetection:
     mode: enabled
@@ -76,69 +80,69 @@ spec:
     remediation:
       retries: 3
   values:
-    certManagerCertificates:
-      longhorn-ui:
-        dnsNames:
-          ui: longhorn.test.com
-        issuerRef:
-          kind: ClusterIssuer
-          name: letsencrypt-prod
-        secretName: tls-longhorn
-    httpRoutes:
-      longhorn:
-        hostnames:
-          ui: longhorn.test.com
-        parentRefs:
-          longhorn:
-            group: gateway.networking.k8s.io
-            kind: ListenerSet
-            name: longhorn
-        rules:
-          ui:
-            backendRefs:
-              frontend:
-                name: longhorn-frontend
-                port: 80
-            filters:
-              authelia:
-                externalAuth:
-                  backendRef:
-                    name: authelia
-                    namespace: authelia
-                    port: 80
-                  http:
-                    allowedHeaders:
-                      accept: accept
-                      cookie: cookie
-                      proxy-authorization: proxy-authorization
-                      x-forwarded-for: x-forwarded-for
-                      x-forwarded-proto: x-forwarded-proto
-                    path: /api/authz/ext-authz/
-                  protocol: HTTP
-                type: ExternalAuth
-    listenerSets:
-      longhorn:
-        listeners:
-          https:
-            allowedRoutes:
-              namespaces:
-                from: Same
-            hostname: longhorn.test.com
-            name: https
-            port: 443
-            protocol: HTTPS
-            tls:
-              certificateRefs:
-                tls:
-                  name: tls-longhorn
-              mode: Terminate
-        parentRef:
-          group: gateway.networking.k8s.io
-          kind: Gateway
-          name: shared
-          namespace: kube-system
     prefixNamesWithRelease: false
     resources:
+      certManagerCertificates:
+        longhorn-ui:
+          dnsNames:
+            ui: longhorn.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-longhorn
+      httpRoutes:
+        longhorn:
+          hostnames:
+            ui: longhorn.test.com
+          parentRefs:
+            longhorn:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: longhorn
+          rules:
+            ui:
+              backendRefs:
+                frontend:
+                  name: longhorn-frontend
+                  port: 80
+              filters:
+                authelia:
+                  externalAuth:
+                    backendRef:
+                      name: authelia
+                      namespace: authelia
+                      port: 80
+                    http:
+                      allowedHeaders:
+                        accept: accept
+                        cookie: cookie
+                        proxy-authorization: proxy-authorization
+                        x-forwarded-for: x-forwarded-for
+                        x-forwarded-proto: x-forwarded-proto
+                      path: /api/authz/ext-authz/
+                    protocol: HTTP
+                  type: ExternalAuth
+      listenerSets:
+        longhorn:
+          listeners:
+            https:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: longhorn.test.com
+              name: https
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: tls-longhorn
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
       longhornRecurringJobs:
         daily-backups:
           concurrency: 1

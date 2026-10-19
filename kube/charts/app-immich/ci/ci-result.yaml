@@ -14,40 +14,6 @@ spec:
   storageClassName: longhorn
 ---
 # Source: app-immich/templates/loader.yaml
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: immich-gateway
-  namespace: immich
-spec:
-  dnsNames:
-  - immich.test.com
-  issuerRef:
-    kind: ClusterIssuer
-    name: letsencrypt-prod
-  secretName: tls-immich-gateway
----
-# Source: app-immich/templates/loader.yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: immich
-  namespace: immich
-spec:
-  hostnames:
-  - immich.test.com
-  parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: ListenerSet
-    name: immich
-  rules:
-  - backendRefs:
-    - name: immich-server
-      port: 2283
-    timeouts:
-      request: 0s
----
-# Source: app-immich/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -62,6 +28,7 @@ spec:
         name: immich
       version: 0.12.0
   dependsOn:
+  - name: immich-config
   - name: immich-postgresql
   - name: immich-valkey
   driftDetection:
@@ -117,6 +84,98 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
+  name: immich-config
+  namespace: immich
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  - name: app-secret-generator
+    namespace: secret-generator
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    prefixNamesWithRelease: false
+    resources:
+      certManagerCertificates:
+        immich-gateway:
+          dnsNames:
+            immich: immich.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-immich-gateway
+      httpRoutes:
+        immich:
+          hostnames:
+            immich: immich.test.com
+          parentRefs:
+            immich:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: immich
+          rules:
+            root:
+              backendRefs:
+                immich:
+                  name: immich-server
+                  port: 2283
+              timeouts:
+                request: 0s
+      listenerSets:
+        immich:
+          listeners:
+            https:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: immich.test.com
+              name: https
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: tls-immich-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+      stringSecrets:
+        immich-valkey:
+          fields:
+            app:
+              fieldName: app
+            default:
+              fieldName: default
+---
+# Source: app-immich/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
   name: immich-postgresql
   namespace: immich
 spec:
@@ -127,7 +186,14 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-cnpg
+    namespace: cnpg-system
+  - name: app-longhorn
+    namespace: longhorn-system
   driftDetection:
     mode: enabled
   install:
@@ -173,6 +239,8 @@ spec:
         kind: HelmRepository
         name: immich-valkey
       version: 0.12.0
+  dependsOn:
+  - name: immich-config
   driftDetection:
     mode: enabled
   install:
@@ -219,39 +287,3 @@ metadata:
 spec:
   interval: 10m
   url: https://valkey.io/valkey-helm/
----
-# Source: app-immich/templates/loader.yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: ListenerSet
-metadata:
-  name: immich
-  namespace: immich
-spec:
-  listeners:
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    hostname: immich.test.com
-    name: https
-    port: 443
-    protocol: HTTPS
-    tls:
-      certificateRefs:
-      - name: tls-immich-gateway
-      mode: Terminate
-  parentRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: shared
-    namespace: kube-system
----
-# Source: app-immich/templates/loader.yaml
-apiVersion: secretgenerator.mittwald.de/v1alpha1
-kind: StringSecret
-metadata:
-  name: immich-valkey
-  namespace: immich
-spec:
-  fields:
-  - fieldName: app
-  - fieldName: default
