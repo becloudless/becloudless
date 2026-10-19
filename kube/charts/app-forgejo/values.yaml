@@ -10,6 +10,9 @@ global:
 # Git over ssh is only available in the cluster (service `forgejo-ssh`), use https from outside.
 # Not configured: SSO (authelia OIDC is disabled), mails.
 
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 defaults:
   metadata:
     namespace: forgejo
@@ -18,7 +21,6 @@ resources:
   certManagerCertificates:
     # certificate of the web UI, terminated by the Gateway
     forgejo-gateway:
-      fullNameOverride: forgejo-gateway
       secretName: tls-forgejo-gateway
       dnsNames:
         forgejo: forgejo.{{ .Values.global.domain }}
@@ -31,7 +33,6 @@ resources:
   # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
   listenerSets:
     forgejo:
-      fullNameOverride: forgejo
       parentRef:
         group: gateway.networking.k8s.io
         kind: Gateway
@@ -54,7 +55,6 @@ resources:
 
   httpRoutes:
     forgejo:
-      fullNameOverride: forgejo
       parentRefs:
         forgejo:
           group: gateway.networking.k8s.io
@@ -73,7 +73,6 @@ resources:
 
   fluxHelmRepositories:
     forgejo:
-      fullNameOverride: forgejo
       type: oci
       url: oci://code.forgejo.org/forgejo-helm
 
@@ -81,7 +80,6 @@ resources:
     # the database is prepared by the postgresql-cluster chart (certificates, issuer, cluster and backups)
     # the cluster is named after the release, which is the name of this HelmRelease
     forgejo-postgresql:
-      fullNameOverride: forgejo-postgresql
       chart:
         spec:
           chart: ./kube/charts/postgresql-cluster
@@ -92,7 +90,6 @@ resources:
             namespace: bcl
 
     forgejo:
-      fullNameOverride: forgejo
       timeout: 10m # the pod waits for the database
       dependsOn:
         forgejo-postgresql:

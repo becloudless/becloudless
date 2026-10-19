@@ -240,6 +240,10 @@
     "global": {
       "type": "object"
     },
+    "prefixNamesWithRelease": {
+      "description": "Whether the name of the resources is prefixed with the release name (\u003crelease\u003e-\u003cid\u003e). When false, the name is the id (or nameOverride). Defaults to true.",
+      "type": "boolean"
+    },
     "resources": {
       "additionalProperties": false,
       "properties": {

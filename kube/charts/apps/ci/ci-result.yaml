@@ -1,0 +1,485 @@
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-system
+spec: {}
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: gateway-api
+spec: {}
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: longhorn-system
+spec: {}
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: something
+spec: {}
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: flux-cilium
+  namespace: kube-system
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: flux-coredns
+  namespace: kube-system
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: flux-flux
+  namespace: flux-system
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: flux-gateway-api
+  namespace: gateway-api
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: flux-kube
+  namespace: kube-system
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: flux-longhorn
+  namespace: longhorn-system
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: flux-something
+  namespace: something
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    global:
+      domain: test.com
+      ldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: flux-system
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    global:
+      domain: test.com
+      ldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: gateway-api
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    global:
+      domain: test.com
+      ldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: kube-system
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    global:
+      domain: test.com
+      ldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: longhorn-system
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    global:
+      domain: test.com
+      ldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: something
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: flux-longhorn
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-longhorn
+  namespace: longhorn-system
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: flux-cilium
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-cilium
+  namespace: kube-system
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: flux-coredns
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-coredns
+  namespace: kube-system
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: flux-flux
+  namespace: flux-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-flux
+  namespace: flux-system
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: flux-gateway-api
+  namespace: gateway-api
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-gateway-api
+  namespace: gateway-api
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: flux-kube
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-kube
+  namespace: kube-system
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: flux-something
+  namespace: something
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-something
+  namespace: something
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-cilium
+  namespace: kube-system
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-cilium
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-cilium
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-coredns
+  namespace: kube-system
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-coredns
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-coredns
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-flux
+  namespace: flux-system
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-flux
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-flux
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-gateway-api
+  namespace: gateway-api
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-gateway-api
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-gateway-api
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-kube
+  namespace: kube-system
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-kube
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-kube
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-longhorn
+  namespace: longhorn-system
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-longhorn
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-longhorn
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: app-apps/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-something
+  namespace: something
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-something
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-something
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values

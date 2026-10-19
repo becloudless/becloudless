@@ -2,10 +2,12 @@
 
 # Gateway API CRDs, required by the Cilium Gateway API controller.
 # Cilium detects the CRDs when the operator starts: restart the cilium-operator once after the CRDs are first installed.
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 resources:
   fluxGitRepositories:
     gateway-api:
-      fullNameOverride: gateway-api
       url: https://github.com/kubernetes-sigs/gateway-api
       interval: 24h
       ref:
@@ -14,7 +16,6 @@ resources:
   fluxKustomizations:
     # the experimental channel is required for the HTTPRoute ExternalAuth filter (forward auth)
     gateway-api-crds:
-      fullNameOverride: gateway-api-crds
       interval: 24h
       timeout: 1m
       path: ./config/crd/experimental

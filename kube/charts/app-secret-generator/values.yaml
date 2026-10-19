@@ -1,5 +1,8 @@
 # yaml-language-server: $schema=../base/schema/values.schema.json
 
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 defaults:
   metadata:
     namespace: secret-generator
@@ -7,12 +10,10 @@ defaults:
 resources:
   fluxHelmRepositories:
     secret-generator:
-      fullNameOverride: secret-generator
       url: https://helm.mittwald.de
 
   fluxHelmReleases:
     secret-generator:
-      fullNameOverride: secret-generator
       interval: 60m
       timeout: 1m
       chart:

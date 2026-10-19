@@ -2,6 +2,9 @@
 global:
   domain:
 
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 defaults:
   metadata:
     namespace: longhorn-system
@@ -9,14 +12,12 @@ defaults:
 resources:
   configMaps:
     longhorn-nixos-path:
-      fullNameOverride: longhorn-nixos-path
       data:
         PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/run/wrappers/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin
 
   # requires the kyverno CRDs: app-bcl makes this app depend on app-kyverno
   kyvernoClusterPolicies:
     longhorn-add-nixos-path:
-      fullNameOverride: longhorn-add-nixos-path
       annotations:
         policies.kyverno.io/title: Add Environment Variables from ConfigMap
         policies.kyverno.io/subject: Pod
@@ -56,7 +57,6 @@ resources:
   # reachable on port 80 through the http listener of the Gateway.
   certManagerCertificates:
     longhorn-ui:
-      fullNameOverride: longhorn-ui
       secretName: tls-longhorn
       dnsNames:
         ui: longhorn.{{ .Values.global.domain }}
@@ -66,7 +66,6 @@ resources:
 
   listenerSets:
     longhorn:
-      fullNameOverride: longhorn
       parentRef:
         group: gateway.networking.k8s.io
         kind: Gateway
@@ -89,7 +88,6 @@ resources:
 
   httpRoutes:
     longhorn:
-      fullNameOverride: longhorn
       parentRefs:
         longhorn:
           group: gateway.networking.k8s.io
@@ -123,12 +121,10 @@ resources:
 
   fluxHelmRepositories:
     longhorn:
-      fullNameOverride: longhorn
       url: https://charts.longhorn.io
 
   fluxHelmReleases:
     longhorn:
-      fullNameOverride: longhorn
       chart:
         spec:
           chart: longhorn
@@ -162,7 +158,6 @@ resources:
     # settings, recurring jobs, storage and snapshot classes need the Longhorn CRDs, so they are installed once longhorn is ready
     # the VolumeSnapshotClasses also need the snapshot CRDs from app-external-snapshotter
     longhorn-config:
-      fullNameOverride: longhorn-config
       dependsOn:
         longhorn:
           name: longhorn
@@ -178,6 +173,7 @@ resources:
             name: bcl
             namespace: bcl
       values:
+        prefixNamesWithRelease: false
         defaults:
           metadata:
             namespace: longhorn-system
@@ -185,7 +181,6 @@ resources:
         resources:
           longhornRecurringJobs:
             daily-backups:
-              fullNameOverride: daily-backups
               cron: 0 4 * * * # Daily at 4am
               task: backup
               groups:
@@ -196,19 +191,16 @@ resources:
           # Longhorn refuses to delete its settings, which makes a helm uninstall fail, so helm must never delete them
           longhornSettings:
             concurrent-automatic-engine-upgrade-per-node-limit:
-              fullNameOverride: concurrent-automatic-engine-upgrade-per-node-limit
               annotations:
                 helm.sh/resource-policy: keep
               value: "1"
             default-backup-block-size:
-              fullNameOverride: default-backup-block-size
               annotations:
                 helm.sh/resource-policy: keep
               value: "16"
 
           storageClasses:
             longhorn-single-local-replica:
-              fullNameOverride: longhorn-single-local-replica
               annotations:
                 storageclass.kubernetes.io/is-default-class: "false"
               provisioner: driver.longhorn.io
@@ -225,26 +217,22 @@ resources:
           # needs the snapshot CRDs from external-snapshotter
           volumeSnapshotClasses:
             longhorn-snapshot:
-              fullNameOverride: longhorn-snapshot
               driver: driver.longhorn.io
               deletionPolicy: Delete
               parameters:
                 type: snap
             longhorn-backing-image:
-              fullNameOverride: longhorn-backing-image
               driver: driver.longhorn.io
               deletionPolicy: Delete
               parameters:
                 type: bi
                 export-type: qcow2 # default is raw
             longhorn-backup-incremental:
-              fullNameOverride: longhorn-backup-incremental
               driver: driver.longhorn.io
               deletionPolicy: Delete
               parameters:
                 type: bak
             longhorn-backup-full:
-              fullNameOverride: longhorn-backup-full
               driver: driver.longhorn.io
               deletionPolicy: Delete
               parameters:

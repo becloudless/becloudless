@@ -1,9 +1,11 @@
 # yaml-language-server: $schema=../base/schema/values.schema.json
 
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 resources:
   fluxGitRepositories:
     external-snapshotter:
-      fullNameOverride: external-snapshotter
       url: https://github.com/kubernetes-csi/external-snapshotter
       interval: 24h
       ref:
@@ -11,7 +13,6 @@ resources:
 
   fluxKustomizations:
     external-snapshotter-crds:
-      fullNameOverride: external-snapshotter-crds
       interval: 24h
       timeout: 1m
       path: ./client/config/crd
@@ -23,7 +24,6 @@ resources:
 
     # the controller (deployed in kube-system by upstream manifests) needs the CRDs
     external-snapshotter:
-      fullNameOverride: external-snapshotter
       interval: 24h
       timeout: 1m
       path: ./deploy/kubernetes/snapshot-controller

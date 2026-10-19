@@ -1,5 +1,8 @@
 # yaml-language-server: $schema=../base/schema/values.schema.json
 
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 defaults:
   metadata:
     namespace: cnpg-system
@@ -7,12 +10,10 @@ defaults:
 resources:
   fluxHelmRepositories:
     cnpg:
-      fullNameOverride: cnpg
       url: https://cloudnative-pg.github.io/charts
 
   fluxHelmReleases:
     cnpg:
-      fullNameOverride: cnpg
       chart:
         spec:
           chart: cloudnative-pg

@@ -1,5 +1,8 @@
 # yaml-language-server: $schema=../base/schema/values.schema.json
 
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 defaults:
   metadata:
     namespace: kyverno
@@ -7,12 +10,10 @@ defaults:
 resources:
   fluxHelmRepositories:
     kyverno:
-      fullNameOverride: kyverno
       url: https://kyverno.github.io/kyverno
 
   fluxHelmReleases:
     kyverno:
-      fullNameOverride: kyverno
       chart:
         spec:
           chart: kyverno
@@ -29,7 +30,6 @@ resources:
 
     # ClusterPolicies need the Kyverno CRDs, so they are installed once kyverno is ready
     kyverno-config:
-      fullNameOverride: kyverno-config
       dependsOn:
         kyverno:
           name: kyverno
@@ -42,10 +42,10 @@ resources:
             name: bcl
             namespace: bcl
       values:
+        prefixNamesWithRelease: false
         resources:
           kyvernoClusterPolicies:
             set-image-pull-policy:
-              fullNameOverride: set-image-pull-policy
               rules:
                 set-image-pull-policy:
                   name: set-image-pull-policy

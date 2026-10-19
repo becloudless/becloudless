@@ -5,6 +5,9 @@ global:
 
 # Kubernetes own objects that the cluster needs and that nothing else installs.
 
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 resources:
   # Standard kubeadm-bootstrapped RBAC objects that authorize the API server (identified by its apiserver-kubelet-client
   # cert, CN=kube-apiserver-kubelet-client) to call kubelet endpoints. Required for `kubectl logs`, `exec`, `port-forward`,
@@ -14,7 +17,6 @@ resources:
   # policy, so if they are ever missing they won't come back on their own.
   clusterRoles:
     kube-apiserver-to-kubelet:
-      fullNameOverride: kube-apiserver-to-kubelet
       labels:
         kubernetes.io/bootstrapping: rbac-defaults
       rules:
@@ -31,8 +33,7 @@ resources:
             all: "*"
 
   clusterRoleBindings:
-    kube-apiserver:
-      fullNameOverride: kube-apiserver-kubelet-client
+    kube-apiserver-kubelet-client:
       labels:
         kubernetes.io/bootstrapping: rbac-defaults
       roleRef:
@@ -53,7 +54,6 @@ resources:
     # It is a separate release because this app is installed before the Gateway API CRDs exist.
     kube-apiserver:
       namespace: default
-      fullNameOverride: kube-apiserver
       dependsOn:
         gateway-api:
           name: app-gateway-api
@@ -67,10 +67,10 @@ resources:
             name: bcl
             namespace: "{{ .Release.Namespace }}"
       values:
+        prefixNamesWithRelease: false
         resources:
           listenerSets:
             kube:
-              fullNameOverride: kube
               parentRef:
                 group: gateway.networking.k8s.io
                 kind: Gateway
@@ -90,7 +90,6 @@ resources:
 
           tlsRoutes:
             kube:
-              fullNameOverride: kube
               parentRefs:
                 kube:
                   group: gateway.networking.k8s.io

@@ -1,5 +1,8 @@
 # yaml-language-server: $schema=../base/schema/values.schema.json
 
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 defaults:
   metadata:
     namespace: kube-system
@@ -7,12 +10,10 @@ defaults:
 resources:
   fluxHelmRepositories:
     metrics-server:
-      fullNameOverride: metrics-server
       url: https://kubernetes-sigs.github.io/metrics-server
 
   fluxHelmReleases:
     metrics-server:
-      fullNameOverride: metrics-server
       chart:
         spec:
           chart: metrics-server

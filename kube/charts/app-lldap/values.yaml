@@ -3,6 +3,9 @@ global:
   domain:
   ldapdn:
 
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 defaults:
   metadata:
     namespace: lldap
@@ -10,7 +13,6 @@ defaults:
 resources:
   stringSecrets:
     lldap-generated:
-      fullNameOverride: lldap-generated
       fields:
         jwt-secret:
           fieldName: LLDAP_JWT_SECRET
@@ -21,7 +23,6 @@ resources:
 
   configMaps:
     lldap-config:
-      fullNameOverride: lldap-config
       data:
         # https://github.com/lldap/lldap/blob/main/lldap_config.docker_template.toml
         lldap_config.toml: |
@@ -41,7 +42,6 @@ resources:
   certManagerCertificates:
     # certificate of the web UI, terminated by the Gateway
     lldap-gateway:
-      fullNameOverride: lldap-gateway
       secretName: tls-lldap-gateway
       dnsNames:
         lldap: lldap.{{ .Values.global.domain }}
@@ -51,7 +51,6 @@ resources:
 
     # certificate of ldaps, used by the lldap pod
     tls-lldaps:
-      fullNameOverride: tls-lldaps
       secretName: tls-lldaps
       dnsNames:
         lldaps: lldaps.{{ .Values.global.domain }}
@@ -61,7 +60,6 @@ resources:
 
   deployments:
     lldap:
-      fullNameOverride: lldap
       selector:
         matchLabels:
           app.kubernetes.io/name: lldap
@@ -138,7 +136,6 @@ resources:
 
   services:
     lldap:
-      fullNameOverride: lldap
       selector:
         app.kubernetes.io/name: lldap
       ports:
@@ -153,7 +150,6 @@ resources:
   # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
   listenerSets:
     lldap:
-      fullNameOverride: lldap
       parentRef:
         group: gateway.networking.k8s.io
         kind: Gateway
@@ -186,7 +182,6 @@ resources:
 
   httpRoutes:
     lldap:
-      fullNameOverride: lldap
       parentRefs:
         lldap:
           group: gateway.networking.k8s.io
@@ -204,7 +199,6 @@ resources:
 
   tlsRoutes:
     lldap-ldaps:
-      fullNameOverride: lldap-ldaps
       parentRefs:
         lldap:
           group: gateway.networking.k8s.io
@@ -224,7 +218,6 @@ resources:
     # the database is prepared by the postgresql-cluster chart (certificates, issuer, cluster and backups)
     # the cluster is named after the release, which is the name of this HelmRelease
     lldap-postgresql:
-      fullNameOverride: lldap-postgresql
       chart:
         spec:
           chart: ./kube/charts/postgresql-cluster

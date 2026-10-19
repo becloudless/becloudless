@@ -13,6 +13,8 @@ spec:
         kind: HelmRepository
         name: kyverno
       version: 3.9.1
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -45,6 +47,8 @@ spec:
         namespace: bcl
   dependsOn:
   - name: kyverno
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -57,10 +61,10 @@ spec:
     remediation:
       retries: 3
   values:
+    prefixNamesWithRelease: false
     resources:
       kyvernoClusterPolicies:
         set-image-pull-policy:
-          fullNameOverride: set-image-pull-policy
           rules:
             set-image-pull-policy:
               match:

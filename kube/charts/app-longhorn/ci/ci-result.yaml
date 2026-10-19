@@ -34,7 +34,6 @@ metadata:
     policies.kyverno.io/subject: Pod
     policies.kyverno.io/title: Add Environment Variables from ConfigMap
   name: longhorn-add-nixos-path
-  namespace: longhorn-system
 spec:
   failurePolicy: Fail
   rules:
@@ -107,6 +106,8 @@ spec:
         kind: HelmRepository
         name: longhorn
       version: 1.13.0
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -152,6 +153,8 @@ spec:
   - name: app-external-snapshotter
     namespace: bcl
   - name: longhorn
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -167,12 +170,12 @@ spec:
     defaults:
       metadata:
         namespace: longhorn-system
+    prefixNamesWithRelease: false
     resources:
       longhornRecurringJobs:
         daily-backups:
           concurrency: 1
           cron: 0 4 * * *
-          fullNameOverride: daily-backups
           groups:
           - default
           retain: 2
@@ -181,19 +184,16 @@ spec:
         concurrent-automatic-engine-upgrade-per-node-limit:
           annotations:
             helm.sh/resource-policy: keep
-          fullNameOverride: concurrent-automatic-engine-upgrade-per-node-limit
           value: "1"
         default-backup-block-size:
           annotations:
             helm.sh/resource-policy: keep
-          fullNameOverride: default-backup-block-size
           value: "16"
       storageClasses:
         longhorn-single-local-replica:
           allowVolumeExpansion: true
           annotations:
             storageclass.kubernetes.io/is-default-class: "false"
-          fullNameOverride: longhorn-single-local-replica
           parameters:
             dataLocality: strict-local
             fsType: ext4
@@ -207,27 +207,23 @@ spec:
         longhorn-backing-image:
           deletionPolicy: Delete
           driver: driver.longhorn.io
-          fullNameOverride: longhorn-backing-image
           parameters:
             export-type: qcow2
             type: bi
         longhorn-backup-full:
           deletionPolicy: Delete
           driver: driver.longhorn.io
-          fullNameOverride: longhorn-backup-full
           parameters:
             backupMode: full
             type: bak
         longhorn-backup-incremental:
           deletionPolicy: Delete
           driver: driver.longhorn.io
-          fullNameOverride: longhorn-backup-incremental
           parameters:
             type: bak
         longhorn-snapshot:
           deletionPolicy: Delete
           driver: driver.longhorn.io
-          fullNameOverride: longhorn-snapshot
           parameters:
             type: snap
 ---

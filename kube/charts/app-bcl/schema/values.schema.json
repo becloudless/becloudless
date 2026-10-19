@@ -5,6 +5,9 @@
     "checkRequiredValues": {
       "$ref": "../../base/schema/values.schema.json#/properties/checkRequiredValues"
     },
+    "prefixNamesWithRelease": {
+      "$ref": "../../base/schema/values.schema.json#/properties/prefixNamesWithRelease"
+    },
     "defaults": {
       "$ref": "../../base/schema/values.schema.json#/properties/defaults"
     },

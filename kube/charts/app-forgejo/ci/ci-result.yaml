@@ -49,6 +49,8 @@ spec:
       version: 17.3.1
   dependsOn:
   - name: forgejo-postgresql
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -135,6 +137,8 @@ spec:
         kind: GitRepository
         name: bcl
         namespace: bcl
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:

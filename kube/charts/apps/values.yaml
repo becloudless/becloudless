@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=./schema/values.schema.json
+
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
+config:
+  domain:
+  # name: # deduced from domain by default
+  # ldapdn: # deduced from domain by default (dc=example,dc=com)
+
+appsGroups:
+  minimal:
+    enabled: true
+
+apps:
+  # minimal
+  gateway-api:
+    groups:
+      minimal: true
+    appChart:
+      name: app-gateway-api
+
+  cilium:
+    groups:
+      minimal: true
+    namespace: kube-system
+    appChart:
+      name: app-cilium
+
+  flux:
+    groups:
+      minimal: true
+    namespace: flux-system
+    appChart:
+      name: app-flux
+
+  kube:
+    groups:
+      minimal: true
+    namespace: kube-system
+    appChart:
+      name: app-kube
+
+  coredns:
+    groups:
+      minimal: true
+    namespace: kube-system
+    appChart:
+      name: app-coredns
+
+  # server
+  cert-manager:
+    groups:
+      cluster: true
+    appChart:
+      name: app-cert-manager
+
+  longhorn:
+    clusterAdmin: true
+    namespace: longhorn-system
+    appChart:
+      name: app-longhorn
+
+  kyverno:
+    groups:
+      all: true
+    appChart:
+      name: app-kyverno

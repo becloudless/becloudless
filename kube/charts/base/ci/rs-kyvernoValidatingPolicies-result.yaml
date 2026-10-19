@@ -4,7 +4,6 @@ apiVersion: policies.kyverno.io/v1
 kind: ValidatingPolicy
 metadata:
   name: test-release
-  namespace: default
 spec:
   matchConstraints:
     resourceRules:

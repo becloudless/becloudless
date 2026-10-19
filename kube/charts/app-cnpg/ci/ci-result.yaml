@@ -13,6 +13,8 @@ spec:
         kind: HelmRepository
         name: cnpg
       version: 0.29.1
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:

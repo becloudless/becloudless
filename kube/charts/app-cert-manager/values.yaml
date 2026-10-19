@@ -2,6 +2,9 @@
 global:
   domain:
 
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 defaults:
   metadata:
     namespace: cert-manager
@@ -9,12 +12,10 @@ defaults:
 resources:
   fluxHelmRepositories:
     cert-manager:
-      fullNameOverride: cert-manager
       url: https://charts.jetstack.io
 
   fluxHelmReleases:
     cert-manager:
-      fullNameOverride: cert-manager
       chart:
         spec:
           chart: cert-manager
@@ -40,7 +41,6 @@ resources:
 
     # ClusterIssuers need the cert-manager CRDs, so they are installed once cert-manager is ready
     cert-manager-config:
-      fullNameOverride: cert-manager-config
       dependsOn:
         cert-manager:
           name: cert-manager
@@ -53,10 +53,10 @@ resources:
             name: bcl
             namespace: bcl
       values:
+        prefixNamesWithRelease: false
         resources:
           certManagerClusterIssuers:
             letsencrypt-prod:
-              fullNameOverride: letsencrypt-prod
               acme:
                 email: admin@{{ .Values.global.domain }}
                 server: https://acme-v02.api.letsencrypt.org/directory
@@ -73,7 +73,6 @@ resources:
                             sectionName: http
 
             letsencrypt-staging:
-              fullNameOverride: letsencrypt-staging
               acme:
                 email: admin@{{ .Values.global.domain }}
                 server: https://acme-staging-v02.api.letsencrypt.org/directory
@@ -90,5 +89,4 @@ resources:
                             sectionName: http
 
             self-signed:
-              fullNameOverride: self-signed
               selfSigned: {}

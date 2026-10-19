@@ -175,6 +175,8 @@ spec:
         kind: GitRepository
         name: bcl
         namespace: bcl
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:

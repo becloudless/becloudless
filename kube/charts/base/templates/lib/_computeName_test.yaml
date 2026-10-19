@@ -83,6 +83,46 @@ tests:
           path: metadata.name
           value: test-release-normal
 
+  - it: names the resource "<id>" without the release name when prefixNamesWithRelease is false
+    set:
+      prefixNamesWithRelease: false
+      resources:
+        secrets:
+          plain:
+            stringData:
+              a: b
+    asserts:
+      - equal:
+          path: metadata.name
+          value: plain
+
+  - it: names the resource "<nameOverride>" without the release name when prefixNamesWithRelease is false
+    set:
+      prefixNamesWithRelease: false
+      resources:
+        secrets:
+          customId:
+            nameOverride: my-custom-id
+            stringData:
+              a: b
+    asserts:
+      - equal:
+          path: metadata.name
+          value: my-custom-id
+
+  - it: keeps naming the "main" id after the release when prefixNamesWithRelease is false
+    set:
+      prefixNamesWithRelease: false
+      resources:
+        secrets:
+          main:
+            stringData:
+              a: b
+    asserts:
+      - equal:
+          path: metadata.name
+          value: test-release
+
   - it: fails when the computed resource name exceeds the Kubernetes 63 character limit
     set:
       resources:

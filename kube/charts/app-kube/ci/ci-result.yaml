@@ -6,7 +6,6 @@ metadata:
   labels:
     kubernetes.io/bootstrapping: rbac-defaults
   name: kube-apiserver-to-kubelet
-  namespace: default
 rules:
 - apiGroups:
   - ""
@@ -26,7 +25,6 @@ metadata:
   labels:
     kubernetes.io/bootstrapping: rbac-defaults
   name: kube-apiserver-kubelet-client
-  namespace: default
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -54,6 +52,8 @@ spec:
   dependsOn:
   - name: app-gateway-api
     namespace: default
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -66,10 +66,10 @@ spec:
     remediation:
       retries: 3
   values:
+    prefixNamesWithRelease: false
     resources:
       listenerSets:
         kube:
-          fullNameOverride: kube
           listeners:
             apiserver:
               allowedRoutes:
@@ -88,7 +88,6 @@ spec:
             namespace: kube-system
       tlsRoutes:
         kube:
-          fullNameOverride: kube
           hostnames:
             kube: kube.test.com
           parentRefs:

@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "checkRequiredValues": {
+      "$ref": "../../base/schema/values.schema.json#/properties/checkRequiredValues"
+    },
+    "prefixNamesWithRelease": {
+      "$ref": "../../base/schema/values.schema.json#/properties/prefixNamesWithRelease"
+    },
+    "defaults": {
+      "$ref": "../../base/schema/values.schema.json#/properties/defaults"
+    },
+    "resources": {
+      "$ref": "../../base/schema/values.schema.json#/properties/resources"
+    },
+    "config": {
+      "additionalProperties": false,
+      "description": "Cluster configuration of app-apps. Used to compute the global values ConfigMap shared with every installed app.",
+      "properties": {
+        "domain": {
+          "description": "Base domain of the cluster. Required.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "description": "Name of the cluster. Defaults to the first label of the domain.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ldapdn": {
+          "description": "Base LDAP DN. Defaults to the domain converted to dc= components (ex: dc=example,dc=com).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "appsGroups": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "description": "A group of apps, enabling every app that is a member of it.",
+        "properties": {
+          "enabled": {
+            "description": "Whether the apps of this group are installed.",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "description": "Groups of apps to install, keyed by group name.",
+      "type": "object"
+    },
+    "apps": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "description": "An app, installed as a Flux HelmRelease named app-<name> in its namespace. Any HelmRelease field can be set to override the defaults.",
+        "properties": {
+          "annotations": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/annotations"
+          },
+          "appChart": {
+            "additionalProperties": false,
+            "description": "The chart installed for the app, from ./kube/charts/<name>.",
+            "properties": {
+              "name": {
+                "description": "Name of the chart. Defaults to app-<app name>.",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "chart": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/chart"
+          },
+          "chartRef": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/chartRef"
+          },
+          "clusterAdmin": {
+            "description": "Bind the flux-<name> service account to cluster-admin on the whole cluster (ClusterRoleBinding) instead of the namespace of the app only (RoleBinding). Needed by apps creating cluster-scoped resources (CRDs, ClusterRoles, webhooks...).",
+            "type": "boolean"
+          },
+          "commonMetadata": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/commonMetadata"
+          },
+          "dependsOn": {
+            "description": "Apps to wait for, keyed by app name. `true` waits for the HelmRelease of the app (ignored when the app is not enabled), `false` removes the dependency.",
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object"
+          },
+          "driftDetection": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/driftDetection"
+          },
+          "enabled": {
+            "description": "Install the app. When set, takes precedence over the groups.",
+            "type": "boolean"
+          },
+          "fullNameOverride": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/fullNameOverride"
+          },
+          "groups": {
+            "description": "Groups this app is a member of (`<group>: true`). The app is installed when one of them is enabled in appsGroups.",
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object"
+          },
+          "healthCheckExprs": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/healthCheckExprs"
+          },
+          "install": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/install"
+          },
+          "interval": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/interval"
+          },
+          "kubeConfig": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/kubeConfig"
+          },
+          "labels": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/labels"
+          },
+          "maxHistory": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/maxHistory"
+          },
+          "nameOverride": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/nameOverride"
+          },
+          "namespace": {
+            "description": "Namespace of the app, where its HelmRelease, service account and global values are created. Defaults to the name of the app.",
+            "type": "string"
+          },
+          "persistentClient": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/persistentClient"
+          },
+          "postRenderStrategy": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/postRenderStrategy"
+          },
+          "postRenderers": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/postRenderers"
+          },
+          "releaseName": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/releaseName"
+          },
+          "rollback": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/rollback"
+          },
+          "serviceAccountName": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/serviceAccountName"
+          },
+          "storageNamespace": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/storageNamespace"
+          },
+          "suspend": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/suspend"
+          },
+          "test": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/test"
+          },
+          "timeout": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/timeout"
+          },
+          "uninstall": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/uninstall"
+          },
+          "upgrade": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/upgrade"
+          },
+          "values": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/values"
+          },
+          "valuesFrom": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/valuesFrom"
+          },
+          "waitStrategy": {
+            "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/waitStrategy"
+          }
+        },
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "description": "Apps, keyed by name.",
+      "type": "object"
+    }
+  },
+  "type": "object"
+}

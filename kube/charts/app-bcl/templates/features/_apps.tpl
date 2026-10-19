@@ -16,7 +16,6 @@ Any key set next to `enabled` and `groups` (ex: `values`, `interval`) is merged 
   {{- if $app.enabled }}
     {{- $hrName := printf "app-%s" $name }}
     {{- $hr := dict
-          "fullNameOverride" $hrName
           "interval" "10m"
           "timeout" "10m"
           "rollback" (dict "cleanupOnFail" true)
@@ -25,7 +24,7 @@ Any key set next to `enabled` and `groups` (ex: `values`, `interval`) is merged 
             "chart" (printf "./kube/charts/%s" $hrName)
             "reconcileStrategy" "Revision"
             "sourceRef" (dict "kind" "GitRepository" "name" "bcl")))
-          "valuesFrom" (dict "global" (dict "kind" "ConfigMap" "name" (printf "%s-global-values" $rootContext.Release.Name)))
+          "valuesFrom" (dict "global" (dict "kind" "ConfigMap" "name" "global-values"))
     }}
     {{- /* An app owning a namespace gets it created by Helm: the namespace is not part of the release, so it survives an uninstall
            of the release. The release keeps its name and its storage in the namespace of the HelmRelease. */}}
@@ -34,7 +33,7 @@ Any key set next to `enabled` and `groups` (ex: `values`, `interval`) is merged 
       {{- $_ := set $hr "storageNamespace" $rootContext.Release.Namespace }}
       {{- $_ := set $hr "install" (dict "createNamespace" true) }}
     {{- end }}
-    {{- $_ := set $helmReleases $name (mustMergeOverwrite $hr (omit $app "enabled" "groups")) }}
+    {{- $_ := set $helmReleases $hrName (mustMergeOverwrite $hr (omit $app "enabled" "groups")) }}
   {{- end }}
 {{- end }}
 

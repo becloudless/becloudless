@@ -3,6 +3,9 @@
 global:
   domain:
 
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 defaults:
   metadata:
     namespace: kube-system
@@ -10,12 +13,10 @@ defaults:
 resources:
   fluxHelmRepositories:
     coredns:
-      fullNameOverride: coredns
       url: https://coredns.github.io/helm
 
   fluxHelmReleases:
     coredns:
-      fullNameOverride: coredns
       interval: 10m
       chart:
         spec:

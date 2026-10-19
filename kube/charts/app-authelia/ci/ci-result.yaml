@@ -61,6 +61,8 @@ spec:
   dependsOn:
   - name: authelia-postgresql
   - name: authelia-valkey
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -409,6 +411,8 @@ spec:
         kind: GitRepository
         name: bcl
         namespace: bcl
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -435,6 +439,8 @@ spec:
         kind: HelmRepository
         name: authelia-valkey
       version: 0.12.0
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:

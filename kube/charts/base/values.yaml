@@ -2,6 +2,8 @@
 
 checkRequiredValues: true
 
+prefixNamesWithRelease: true
+
 defaults:
   metadata:
     namespace: "{{ .Release.Namespace }}"
@@ -25,6 +27,8 @@ defaults:
       upgrade:
         remediation:
           retries: 3
+      driftDetection:
+        mode: enabled
 
     fluxKustomizations:
       interval: 10m

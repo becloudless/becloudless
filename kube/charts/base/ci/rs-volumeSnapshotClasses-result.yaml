@@ -6,6 +6,5 @@ driver: driver.longhorn.io
 kind: VolumeSnapshotClass
 metadata:
   name: test-release
-  namespace: default
 parameters:
   type: snap

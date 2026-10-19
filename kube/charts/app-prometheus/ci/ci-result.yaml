@@ -245,6 +245,8 @@ spec:
         kind: HelmRepository
         name: prometheus-community
       version: 92.3.1
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:

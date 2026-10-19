@@ -12,6 +12,8 @@
     {{- end }}
     {{- if eq $resourceName "main" }}
       {{- $name = $rootContext.Release.Name }}
+    {{- else if eq (toString $rootContext.Values.prefixNamesWithRelease) "false" }}
+      {{- $name = $resourceName }}
     {{- else }}
       {{- $name = printf "%s-%s" $rootContext.Release.Name $resourceName }}
     {{- end }}

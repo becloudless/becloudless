@@ -10,6 +10,9 @@ global:
 # Not configured (needs secrets): the alertmanager receivers (pagerduty, healthchecks.io) and the Grafana SSO with Authelia (OIDC).
 # The alertmanager sends everything to the `null` receiver until a receiver is added in `configMap.alertmanager.config`.
 
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 defaults:
   metadata:
     namespace: prometheus
@@ -17,7 +20,6 @@ defaults:
 resources:
   certManagerCertificates:
     prometheus-gateway:
-      fullNameOverride: prometheus-gateway
       secretName: tls-prometheus-gateway
       dnsNames:
         prometheus: prometheus.{{ .Values.global.domain }}
@@ -25,7 +27,6 @@ resources:
         name: letsencrypt-prod
         kind: ClusterIssuer
     alertmanager-gateway:
-      fullNameOverride: alertmanager-gateway
       secretName: tls-alertmanager-gateway
       dnsNames:
         alertmanager: alertmanager.{{ .Values.global.domain }}
@@ -33,7 +34,6 @@ resources:
         name: letsencrypt-prod
         kind: ClusterIssuer
     grafana-gateway:
-      fullNameOverride: grafana-gateway
       secretName: tls-grafana-gateway
       dnsNames:
         grafana: grafana.{{ .Values.global.domain }}
@@ -41,7 +41,6 @@ resources:
         name: letsencrypt-prod
         kind: ClusterIssuer
     pushprox-gateway:
-      fullNameOverride: pushprox-gateway
       secretName: tls-pushprox-gateway
       dnsNames:
         pushprox: pushprox.{{ .Values.global.domain }}
@@ -53,7 +52,6 @@ resources:
   # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
   listenerSets:
     prometheus:
-      fullNameOverride: prometheus
       parentRef:
         group: gateway.networking.k8s.io
         kind: Gateway
@@ -117,7 +115,6 @@ resources:
   # Grafana is not behind it, it has its own login.
   httpRoutes:
     prometheus:
-      fullNameOverride: prometheus
       parentRefs:
         prometheus:
           group: gateway.networking.k8s.io
@@ -151,7 +148,6 @@ resources:
               port: 9090
 
     alertmanager:
-      fullNameOverride: alertmanager
       parentRefs:
         alertmanager:
           group: gateway.networking.k8s.io
@@ -185,7 +181,6 @@ resources:
               port: 9093
 
     grafana:
-      fullNameOverride: grafana
       parentRefs:
         grafana:
           group: gateway.networking.k8s.io
@@ -202,7 +197,6 @@ resources:
               port: 80
 
     pushprox:
-      fullNameOverride: pushprox
       parentRefs:
         pushprox:
           group: gateway.networking.k8s.io
@@ -238,7 +232,6 @@ resources:
   # https://github.com/prometheus-community/PushProx: scrapes the targets that cannot be reached (behind a nat)
   deployments:
     pushprox:
-      fullNameOverride: pushprox
       replicas: 1 # multiple pushprox pods makes connection lost in proxy
       selector:
         matchLabels:
@@ -274,7 +267,6 @@ resources:
 
   services:
     pushprox:
-      fullNameOverride: pushprox
       selector:
         app.kubernetes.io/name: pushprox
       ports:
@@ -283,13 +275,11 @@ resources:
 
   fluxHelmRepositories:
     prometheus-community:
-      fullNameOverride: prometheus-community
       url: https://prometheus-community.github.io/helm-charts
 
   fluxHelmReleases:
     # the release is named `prometheus`, which gives the service names used by the httpRoutes
     prometheus:
-      fullNameOverride: prometheus
       timeout: 10m # the chart is large and the CRDs are big
       chart:
         spec:

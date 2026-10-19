@@ -13,6 +13,8 @@ spec:
         kind: HelmRepository
         name: cert-manager
       version: v1.21.2
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -53,6 +55,8 @@ spec:
         namespace: bcl
   dependsOn:
   - name: cert-manager
+  driftDetection:
+    mode: enabled
   install:
     crds: CreateReplace
     remediation:
@@ -65,6 +69,7 @@ spec:
     remediation:
       retries: 3
   values:
+    prefixNamesWithRelease: false
     resources:
       certManagerClusterIssuers:
         letsencrypt-prod:
@@ -82,7 +87,6 @@ spec:
                     name: shared
                     namespace: kube-system
                     sectionName: http
-          fullNameOverride: letsencrypt-prod
         letsencrypt-staging:
           acme:
             email: admin@test.com
@@ -98,9 +102,7 @@ spec:
                     name: shared
                     namespace: kube-system
                     sectionName: http
-          fullNameOverride: letsencrypt-staging
         self-signed:
-          fullNameOverride: self-signed
           selfSigned: {}
 ---
 # Source: app-cert-manager/templates/loader.yaml

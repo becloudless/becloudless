@@ -10,6 +10,10 @@
       "description": "Whether to check and fail if some values are null. Defaults to true.",
       "type": "boolean"
     },
+    "prefixNamesWithRelease": {
+      "description": "Whether the name of the resources is prefixed with the release name (<release>-<id>). When false, the name is the id (or nameOverride). Defaults to true.",
+      "type": "boolean"
+    },
     "resources": {
       "type": "object",
       "additionalProperties": false,

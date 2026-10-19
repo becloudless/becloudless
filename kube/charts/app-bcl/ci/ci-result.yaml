@@ -4,9 +4,9 @@ apiVersion: v1
 data:
   values.yaml: |-
     global:
-      domain: awired.net
-      ldapdn: dc=awired,dc=net
-      name: awired
+      domain: test.com
+      ldapdn: dc=test,dc=com
+      name: test
 kind: ConfigMap
 metadata:
   name: test-release-global-values
@@ -16,7 +16,7 @@ metadata:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-authelia
+  name: test-release-app-authelia
   namespace: default
 spec:
   chart:
@@ -37,28 +37,24 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
-    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
-  releaseName: app-authelia
   rollback:
     cleanupOnFail: true
-  storageNamespace: default
-  targetNamespace: authelia
   timeout: 10m
   upgrade:
     remediation:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values
 ---
 # Source: app-bcl/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-cert-manager
+  name: test-release-app-cert-manager
   namespace: default
 spec:
   chart:
@@ -74,28 +70,24 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
-    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
-  releaseName: app-cert-manager
   rollback:
     cleanupOnFail: true
-  storageNamespace: default
-  targetNamespace: cert-manager
   timeout: 10m
   upgrade:
     remediation:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values
 ---
 # Source: app-bcl/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-cilium
+  name: test-release-app-cilium
   namespace: default
 spec:
   chart:
@@ -122,13 +114,13 @@ spec:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values
 ---
 # Source: app-bcl/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-cnpg
+  name: test-release-app-cnpg
   namespace: default
 spec:
   chart:
@@ -144,28 +136,24 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
-    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
-  releaseName: app-cnpg
   rollback:
     cleanupOnFail: true
-  storageNamespace: default
-  targetNamespace: cnpg-system
   timeout: 10m
   upgrade:
     remediation:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values
 ---
 # Source: app-bcl/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-coredns
+  name: test-release-app-coredns
   namespace: default
 spec:
   chart:
@@ -190,13 +178,13 @@ spec:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values
 ---
 # Source: app-bcl/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-descheduler
+  name: test-release-app-descheduler
   namespace: default
 spec:
   chart:
@@ -221,13 +209,13 @@ spec:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values
 ---
 # Source: app-bcl/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-external-snapshotter
+  name: test-release-app-external-snapshotter
   namespace: default
 spec:
   chart:
@@ -252,13 +240,13 @@ spec:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values
 ---
 # Source: app-bcl/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-flux
+  name: test-release-app-flux
   namespace: default
 spec:
   chart:
@@ -272,28 +260,60 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
-    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
-  releaseName: app-flux
   rollback:
     cleanupOnFail: true
-  storageNamespace: default
-  targetNamespace: flux-system
   timeout: 10m
   upgrade:
     remediation:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values
 ---
 # Source: app-bcl/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-gateway-api
+  name: test-release-app-forgejo
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-forgejo
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+  dependsOn:
+  - name: app-cert-manager
+  - name: app-cnpg
+  - name: app-gateway-api
+  - name: app-longhorn
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: test-release-app-gateway-api
   namespace: default
 spec:
   chart:
@@ -318,13 +338,13 @@ spec:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values
 ---
 # Source: app-bcl/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-homer
+  name: test-release-app-homer
   namespace: default
 spec:
   chart:
@@ -342,28 +362,24 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
-    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
-  releaseName: app-homer
   rollback:
     cleanupOnFail: true
-  storageNamespace: default
-  targetNamespace: homer
   timeout: 10m
   upgrade:
     remediation:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values
 ---
 # Source: app-bcl/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-kube
+  name: test-release-app-kube
   namespace: default
 spec:
   chart:
@@ -388,13 +404,13 @@ spec:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values
 ---
 # Source: app-bcl/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-kyverno
+  name: test-release-app-kyverno
   namespace: default
 spec:
   chart:
@@ -408,28 +424,24 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
-    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
-  releaseName: app-kyverno
   rollback:
     cleanupOnFail: true
-  storageNamespace: default
-  targetNamespace: kyverno
   timeout: 10m
   upgrade:
     remediation:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values
 ---
 # Source: app-bcl/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-landing
+  name: test-release-app-landing
   namespace: default
 spec:
   chart:
@@ -446,28 +458,24 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
-    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
-  releaseName: app-landing
   rollback:
     cleanupOnFail: true
-  storageNamespace: default
-  targetNamespace: landing
   timeout: 10m
   upgrade:
     remediation:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values
 ---
 # Source: app-bcl/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-lldap
+  name: test-release-app-lldap
   namespace: default
 spec:
   chart:
@@ -487,28 +495,24 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
-    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
-  releaseName: app-lldap
   rollback:
     cleanupOnFail: true
-  storageNamespace: default
-  targetNamespace: lldap
   timeout: 10m
   upgrade:
     remediation:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values
 ---
 # Source: app-bcl/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-longhorn
+  name: test-release-app-longhorn
   namespace: default
 spec:
   chart:
@@ -526,28 +530,24 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
-    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
-  releaseName: app-longhorn
   rollback:
     cleanupOnFail: true
-  storageNamespace: default
-  targetNamespace: longhorn-system
   timeout: 10m
   upgrade:
     remediation:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values
 ---
 # Source: app-bcl/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-metrics-server
+  name: test-release-app-metrics-server
   namespace: default
 spec:
   chart:
@@ -572,13 +572,13 @@ spec:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values
 ---
 # Source: app-bcl/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: app-secret-generator
+  name: test-release-app-secret-generator
   namespace: default
 spec:
   chart:
@@ -592,19 +592,15 @@ spec:
     mode: enabled
   install:
     crds: CreateReplace
-    createNamespace: true
     remediation:
       retries: -1
   interval: 10m
-  releaseName: app-secret-generator
   rollback:
     cleanupOnFail: true
-  storageNamespace: default
-  targetNamespace: secret-generator
   timeout: 10m
   upgrade:
     remediation:
       retries: 3
   valuesFrom:
   - kind: ConfigMap
-    name: test-release-global-values
+    name: global-values

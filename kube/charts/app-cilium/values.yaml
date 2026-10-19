@@ -2,6 +2,9 @@
 global:
   domain:
 
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 defaults:
   metadata:
     namespace: kube-system
@@ -9,12 +12,10 @@ defaults:
 resources:
   fluxHelmRepositories:
     cilium:
-      fullNameOverride: cilium
       url: https://helm.cilium.io
 
   fluxHelmReleases:
     cilium:
-      fullNameOverride: cilium     
       uninstall:
         deletionPropagation: orphan
 
@@ -62,7 +63,6 @@ resources:
     # LoadBalancer pool and BGP need the Cilium CRDs, so they are installed once cilium is ready.
     # The cluster sets its pool and BGP cluster config through `resources.fluxHelmReleases.cilium-config.values.resources`.
     cilium-config:
-      fullNameOverride: cilium-config
       dependsOn:
         cilium:
           name: cilium
@@ -78,11 +78,11 @@ resources:
             name: bcl
             namespace: "{{ .Release.Namespace }}"
       values:
+        prefixNamesWithRelease: false
         resources:
           # Advertise the LoadBalancer IPs of every service over BGP
           ciliumBGPAdvertisements:
             bgp-advertisement:
-              fullNameOverride: bgp-advertisement
               labels:
                 advertise: bgp
               advertisements:
@@ -101,7 +101,6 @@ resources:
 
           ciliumBGPPeerConfigs:
             bgp-peer-config:
-              fullNameOverride: bgp-peer-config
               families:
                 ipv4-unicast:
                   afi: ipv4
@@ -115,7 +114,6 @@ resources:
           # Apps needing authentication use the `ExternalAuth` filter of their HTTPRoute to call authelia.
           gateways:
             shared:
-              fullNameOverride: shared
               gatewayClassName: cilium
               allowedListeners:
                 namespaces:

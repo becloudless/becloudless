@@ -3,6 +3,9 @@ global:
   domain:
   name:
 
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 defaults:
   metadata:
     namespace: homer
@@ -10,7 +13,6 @@ defaults:
 resources:
   configMaps:
     homer-config:
-      fullNameOverride: homer-config
       data:
         custom.css: |
             @charset "UTF-8";
@@ -272,7 +274,6 @@ resources:
 
   deployments:
     homer:
-      fullNameOverride: homer
       replicas: 2
       selector:
         matchLabels:
@@ -325,7 +326,6 @@ resources:
 
   services:
     homer:
-      fullNameOverride: homer
       selector:
         app.kubernetes.io/name: homer
       ports:
@@ -336,7 +336,6 @@ resources:
   # Requires the Gateway API CRDs, cert-manager and the ReferenceGrant of app-authelia: app-bcl makes this app depend on them.
   certManagerCertificates:
     homer:
-      fullNameOverride: homer
       secretName: tls-homer
       dnsNames:
         homer: homer.{{ .Values.global.domain }}
@@ -346,7 +345,6 @@ resources:
 
   listenerSets:
     homer:
-      fullNameOverride: homer
       parentRef:
         group: gateway.networking.k8s.io
         kind: Gateway
@@ -369,7 +367,6 @@ resources:
 
   httpRoutes:
     homer:
-      fullNameOverride: homer
       parentRefs:
         homer:
           group: gateway.networking.k8s.io

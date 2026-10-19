@@ -2,6 +2,9 @@
 global:
   domain:
 
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 defaults:
   metadata:
     namespace: landing
@@ -10,7 +13,6 @@ resources:
   # The static page served on the apex of the domain, replace `index.html` to change it.
   configMaps:
     landing-html:
-      fullNameOverride: landing-html
       data:
         index.html: |
           <!DOCTYPE html>
@@ -44,7 +46,6 @@ resources:
 
   deployments:
     landing:
-      fullNameOverride: landing
       replicas: 2
       selector:
         matchLabels:
@@ -98,7 +99,6 @@ resources:
 
   services:
     landing:
-      fullNameOverride: landing
       selector:
         app.kubernetes.io/name: landing
       ports:
@@ -110,7 +110,6 @@ resources:
   # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
   certManagerCertificates:
     landing:
-      fullNameOverride: landing
       secretName: tls-landing
       dnsNames:
         apex: "{{ .Values.global.domain }}"
@@ -120,7 +119,6 @@ resources:
 
   listenerSets:
     landing:
-      fullNameOverride: landing
       parentRef:
         group: gateway.networking.k8s.io
         kind: Gateway
@@ -143,7 +141,6 @@ resources:
 
   httpRoutes:
     landing:
-      fullNameOverride: landing
       parentRefs:
         landing:
           group: gateway.networking.k8s.io

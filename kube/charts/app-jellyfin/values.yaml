@@ -7,6 +7,9 @@ global:
 # The media library is the `/data/Media` directory of the node running the pod (read only), add it as a library in the UI (`/media`).
 # Not configured: SSO (needs the SSO plugin and the authelia OIDC client, which is disabled) and the remote transcoding with ffmpeg-over-ip.
 
+# resources are named by their id, without the release name prefix
+prefixNamesWithRelease: false
+
 defaults:
   metadata:
     namespace: jellyfin
@@ -14,7 +17,6 @@ defaults:
 resources:
   configMaps:
     jellyfin-config:
-      fullNameOverride: jellyfin-config
       data:
         # https://jellyfin.org/docs/general/networking/
         network.xml: |
@@ -49,7 +51,6 @@ resources:
   # database, metadata and cache of jellyfin
   persistentVolumeClaims:
     jellyfin-config:
-      fullNameOverride: jellyfin-config
       accessModes:
         - ReadWriteOnce
       storageClassName: longhorn
@@ -59,7 +60,6 @@ resources:
 
   deployments:
     jellyfin:
-      fullNameOverride: jellyfin
       replicas: 1 # jellyfin is not HA ready
       strategy:
         type: Recreate # the volume is ReadWriteOnce
@@ -128,7 +128,6 @@ resources:
 
   services:
     jellyfin:
-      fullNameOverride: jellyfin
       selector:
         app.kubernetes.io/name: jellyfin
       ports:
@@ -138,7 +137,6 @@ resources:
   certManagerCertificates:
     # certificate of the web UI, terminated by the Gateway
     jellyfin-gateway:
-      fullNameOverride: jellyfin-gateway
       secretName: tls-jellyfin-gateway
       dnsNames:
         jellyfin: jellyfin.{{ .Values.global.domain }}
@@ -151,7 +149,6 @@ resources:
   # Requires the Gateway API CRDs and cert-manager: app-bcl makes this app depend on them.
   listenerSets:
     jellyfin:
-      fullNameOverride: jellyfin
       parentRef:
         group: gateway.networking.k8s.io
         kind: Gateway
@@ -174,7 +171,6 @@ resources:
 
   httpRoutes:
     jellyfin:
-      fullNameOverride: jellyfin
       parentRefs:
         jellyfin:
           group: gateway.networking.k8s.io
