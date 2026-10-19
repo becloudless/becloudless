@@ -333,7 +333,7 @@ resources:
           port: 8080
 
   fluxHelmReleases:
-    # the certificates and Gateway resources need the CRDs of these apps, so they are installed once they are ready, and the ReferenceGrant to authelia
+    # the certificates and Gateway resources need the CRDs of these apps, so they are installed once they are ready
     homer-config:
       dependsOn:
         cert-manager:
@@ -342,9 +342,6 @@ resources:
         gateway-api:
           name: app-gateway-api
           namespace: gateway-api
-        authelia-config:
-          name: authelia-config
-          namespace: authelia
       chart:
         spec:
           chart: ./kube/charts/base-loader

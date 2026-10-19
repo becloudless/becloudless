@@ -343,8 +343,6 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
-  - name: authelia-config
-    namespace: authelia
   - name: app-cert-manager
     namespace: cert-manager
   - name: app-gateway-api
