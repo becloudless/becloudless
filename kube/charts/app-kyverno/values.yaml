@@ -40,7 +40,7 @@ resources:
           sourceRef:
             kind: GitRepository
             name: bcl
-            namespace: bcl
+            namespace: apps
       values:
         prefixNamesWithRelease: false
         resources:
