@@ -151,7 +151,7 @@ resources:
           patch: |
             - op: add
               path: /spec/template/spec/containers/0/args/-
-              value: --concurrent=10
+              value: --concurrent=20
 
         # a resource without serviceAccountName would be reconciled as the controller itself (cluster-admin): it runs as the
         # unprivileged `default` service account of its namespace instead, so an app cannot escape its service account by omitting it
