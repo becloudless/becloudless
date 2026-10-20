@@ -3,10 +3,6 @@
 global:
   domain:
 
-defaults:
-  metadata:
-    namespace: flux-system
-
 resources:
   fluxOCIRepositories:
     flux-manifests:

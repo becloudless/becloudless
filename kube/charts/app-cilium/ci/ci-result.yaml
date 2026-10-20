@@ -4,7 +4,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: cilium
-  namespace: kube-system
+  namespace: default
 spec:
   chart:
     spec:
@@ -61,7 +61,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: cilium-config
-  namespace: kube-system
+  namespace: default
 spec:
   chart:
     spec:
@@ -136,7 +136,7 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
   name: cilium
-  namespace: kube-system
+  namespace: default
 spec:
   interval: 10m
   url: https://helm.cilium.io

@@ -2,10 +2,6 @@
 global:
   domain:
 
-defaults:
-  metadata:
-    namespace: landing
-
 resources:
   # The static page served on the apex of the domain, replace `index.html` to change it.
   configMaps:

@@ -34,14 +34,14 @@ data:
 kind: ConfigMap
 metadata:
   name: landing-html
-  namespace: landing
+  namespace: default
 ---
 # Source: app-landing/templates/loader.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: landing
-  namespace: landing
+  namespace: default
 spec:
   ports:
   - name: http
@@ -55,7 +55,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: landing
-  namespace: landing
+  namespace: default
 spec:
   replicas: 2
   selector:
@@ -108,7 +108,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: landing-config
-  namespace: landing
+  namespace: default
 spec:
   chart:
     spec:

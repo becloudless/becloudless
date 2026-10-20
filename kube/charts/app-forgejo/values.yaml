@@ -10,10 +10,6 @@ global:
 # Git over ssh is only available in the cluster (service `forgejo-ssh`), use https from outside.
 # Not configured: SSO (authelia OIDC is disabled), mails.
 
-defaults:
-  metadata:
-    namespace: forgejo
-
 resources:
 
   fluxHelmRepositories:

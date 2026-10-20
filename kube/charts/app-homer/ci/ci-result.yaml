@@ -259,14 +259,14 @@ data:
 kind: ConfigMap
 metadata:
   name: homer-config
-  namespace: homer
+  namespace: default
 ---
 # Source: app-homer/templates/loader.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: homer
-  namespace: homer
+  namespace: default
 spec:
   ports:
   - name: http
@@ -279,7 +279,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: homer
-  namespace: homer
+  namespace: default
 spec:
   replicas: 2
   selector:
@@ -332,7 +332,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: homer-config
-  namespace: homer
+  namespace: default
 spec:
   chart:
     spec:

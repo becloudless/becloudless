@@ -2,10 +2,6 @@
 global:
   domain:
 
-defaults:
-  metadata:
-    namespace: longhorn-system
-
 resources:
 
   fluxHelmRepositories:

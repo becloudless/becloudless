@@ -3,10 +3,6 @@
 global:
   domain:
 
-defaults:
-  metadata:
-    namespace: kube-system
-
 resources:
   fluxHelmRepositories:
     coredns:

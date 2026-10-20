@@ -4,7 +4,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-cert-manager-http-solver
-  namespace: flux-system
+  namespace: default
 spec:
   ingress:
   - {}
@@ -19,7 +19,7 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: flux
-  namespace: flux-system
+  namespace: default
 spec:
   interval: 10m
   patches:
@@ -100,7 +100,7 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
   name: flux-manifests
-  namespace: flux-system
+  namespace: default
 spec:
   interval: 10m
   ref:

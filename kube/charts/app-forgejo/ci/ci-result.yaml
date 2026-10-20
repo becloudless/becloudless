@@ -4,7 +4,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: forgejo
-  namespace: forgejo
+  namespace: default
 spec:
   chart:
     spec:
@@ -93,7 +93,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: forgejo-config
-  namespace: forgejo
+  namespace: default
 spec:
   chart:
     spec:
@@ -175,7 +175,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: forgejo-postgresql
-  namespace: forgejo
+  namespace: default
 spec:
   chart:
     spec:
@@ -211,7 +211,7 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
   name: forgejo
-  namespace: forgejo
+  namespace: default
 spec:
   interval: 10m
   type: oci

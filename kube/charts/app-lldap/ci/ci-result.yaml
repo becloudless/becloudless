@@ -18,14 +18,14 @@ data:
 kind: ConfigMap
 metadata:
   name: lldap-config
-  namespace: lldap
+  namespace: default
 ---
 # Source: app-lldap/templates/loader.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: lldap
-  namespace: lldap
+  namespace: default
 spec:
   ports:
   - name: http
@@ -40,7 +40,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: lldap
-  namespace: lldap
+  namespace: default
 spec:
   selector:
     matchLabels:
@@ -118,7 +118,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: lldap-config
-  namespace: lldap
+  namespace: default
 spec:
   chart:
     spec:
@@ -243,7 +243,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: lldap-postgresql
-  namespace: lldap
+  namespace: default
 spec:
   chart:
     spec:

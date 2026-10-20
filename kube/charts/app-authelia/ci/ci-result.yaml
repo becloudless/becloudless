@@ -4,7 +4,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: authelia
-  namespace: authelia
+  namespace: default
 spec:
   chart:
     spec:
@@ -359,7 +359,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: authelia-config
-  namespace: authelia
+  namespace: default
 spec:
   chart:
     spec:
@@ -492,7 +492,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: authelia-postgresql
-  namespace: authelia
+  namespace: default
 spec:
   chart:
     spec:
@@ -528,7 +528,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: authelia-valkey
-  namespace: authelia
+  namespace: default
 spec:
   chart:
     spec:
@@ -571,7 +571,7 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
   name: authelia
-  namespace: authelia
+  namespace: default
 spec:
   interval: 10m
   url: https://charts.authelia.com
@@ -581,7 +581,7 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
   name: authelia-valkey
-  namespace: authelia
+  namespace: default
 spec:
   interval: 10m
   url: https://valkey.io/valkey-helm/

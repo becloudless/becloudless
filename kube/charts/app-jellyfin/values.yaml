@@ -7,10 +7,6 @@ global:
 # The media library is the `/data/Media` directory of the node running the pod (read only), add it as a library in the UI (`/media`).
 # Not configured: SSO (needs the SSO plugin and the authelia OIDC client, which is disabled) and the remote transcoding with ffmpeg-over-ip.
 
-defaults:
-  metadata:
-    namespace: jellyfin
-
 resources:
   configMaps:
     jellyfin-config:

@@ -3,10 +3,6 @@ global:
   domain:
   ldapdn:
 
-defaults:
-  metadata:
-    namespace: lldap
-
 resources:
 
   configMaps:

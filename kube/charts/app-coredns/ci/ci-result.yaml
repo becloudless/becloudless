@@ -4,7 +4,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: coredns
-  namespace: kube-system
+  namespace: default
 spec:
   chart:
     spec:
@@ -91,7 +91,7 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
   name: coredns
-  namespace: kube-system
+  namespace: default
 spec:
   interval: 10m
   url: https://coredns.github.io/helm

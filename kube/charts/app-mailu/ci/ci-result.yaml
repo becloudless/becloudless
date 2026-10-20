@@ -4,7 +4,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: mailu
-  namespace: mailu
+  namespace: default
 spec:
   chart:
     spec:
@@ -233,7 +233,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: mailu-config
-  namespace: mailu
+  namespace: default
 spec:
   chart:
     spec:
@@ -343,7 +343,7 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
   name: mailu
-  namespace: mailu
+  namespace: default
 spec:
   interval: 10m
   url: https://mailu.github.io/helm-charts

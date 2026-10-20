@@ -4,7 +4,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: longhorn
-  namespace: longhorn-system
+  namespace: default
 spec:
   chart:
     spec:
@@ -48,7 +48,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: longhorn-config
-  namespace: longhorn-system
+  namespace: default
 spec:
   chart:
     spec:
@@ -202,7 +202,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: longhorn-pre
-  namespace: longhorn-system
+  namespace: default
 spec:
   chart:
     spec:
@@ -273,7 +273,7 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
   name: longhorn
-  namespace: longhorn-system
+  namespace: default
 spec:
   interval: 10m
   url: https://charts.longhorn.io

@@ -14,10 +14,6 @@ global:
 # Not configured: Authelia (the web UI has its own login: the authentication of mailu cannot rely on a forward auth while the mail
 # is the fallback of the factors enrollment), the external relay.
 
-defaults:
-  metadata:
-    namespace: mailu
-
 resources:
   fluxHelmRepositories:
     mailu:

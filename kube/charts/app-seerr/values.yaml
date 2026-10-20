@@ -6,10 +6,6 @@ global:
 # Nothing has to be created by hand: the setup wizard of the web UI configures the media server (jellyfin) and the users at the first
 # visit. The web UI is protected by Authelia forward auth.
 
-defaults:
-  metadata:
-    namespace: seerr
-
 resources:
   # settings and database of seerr
   persistentVolumeClaims:

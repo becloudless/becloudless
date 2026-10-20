@@ -1,9 +1,5 @@
 # yaml-language-server: $schema=../base/schema/values.schema.json
 
-defaults:
-  metadata:
-    namespace: kube-system
-
 resources:
   fluxHelmRepositories:
     metrics-server:

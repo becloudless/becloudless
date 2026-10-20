@@ -117,6 +117,14 @@ apps:
     appChart:
       name: app-descheduler
 
+  metrics-server:
+    groups:
+      cluster: true
+    clusterAdmin: true # creates ClusterRoles and an APIService
+    namespace: kube-system
+    appChart:
+      name: app-metrics-server
+
   external-snapshotter:
     groups:
       cluster: true

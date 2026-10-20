@@ -10,10 +10,6 @@ global:
 # Not configured (needs secrets): the alertmanager receivers (pagerduty, healthchecks.io) and the Grafana SSO with Authelia (OIDC).
 # The alertmanager sends everything to the `null` receiver until a receiver is added in `configMap.alertmanager.config`.
 
-defaults:
-  metadata:
-    namespace: prometheus
-
 resources:
 
   # https://github.com/prometheus-community/PushProx: scrapes the targets that cannot be reached (behind a nat)

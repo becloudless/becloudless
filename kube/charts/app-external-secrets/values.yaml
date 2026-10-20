@@ -2,10 +2,6 @@
 
 # Installs the operator and its CRDs (ExternalSecret, SecretStore, ClusterSecretStore...). The apps declare their own stores and secrets.
 
-defaults:
-  metadata:
-    namespace: external-secrets
-
 resources:
   fluxHelmRepositories:
     external-secrets:

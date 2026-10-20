@@ -9,10 +9,6 @@ global:
 #  - the first user to register in the web UI becomes the admin of immich
 # Not configured: SSO (authelia OIDC is disabled), mails, the immich configuration file (everything can be set in the UI).
 
-defaults:
-  metadata:
-    namespace: immich
-
 resources:
 
   # the photos and videos, shared by the pods of the server
