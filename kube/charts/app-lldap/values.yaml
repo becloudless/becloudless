@@ -3,9 +3,6 @@ global:
   domain:
   ldapdn:
 
-# resources are named by their id, without the release name prefix
-prefixNamesWithRelease: false
-
 defaults:
   metadata:
     namespace: lldap
@@ -165,7 +162,6 @@ resources:
             name: bcl
             namespace: apps
       values:
-        prefixNamesWithRelease: false
         resources:
           stringSecrets:
             lldap-generated:

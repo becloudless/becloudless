@@ -11,7 +11,7 @@
       "type": "boolean"
     },
     "prefixNamesWithRelease": {
-      "description": "Whether the name of the resources is prefixed with the release name (<release>-<id>). When false, the name is the id (or nameOverride). Defaults to true.",
+      "description": "Whether the name of the resources is prefixed with the release name (<release>-<id>). When false, the name is the id (or nameOverride). Defaults to false.",
       "type": "boolean"
     },
     "resources": {

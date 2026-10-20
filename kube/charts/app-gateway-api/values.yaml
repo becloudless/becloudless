@@ -2,9 +2,6 @@
 
 # Gateway API CRDs, required by the Cilium Gateway API controller.
 # Cilium detects the CRDs when the operator starts: restart the cilium-operator once after the CRDs are first installed.
-# resources are named by their id, without the release name prefix
-prefixNamesWithRelease: false
-
 resources:
   fluxGitRepositories:
     gateway-api:

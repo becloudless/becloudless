@@ -1,8 +1,5 @@
 # yaml-language-server: $schema=../base/schema/values.schema.json
 
-# resources are named by their id, without the release name prefix
-prefixNamesWithRelease: false
-
 defaults:
   metadata:
     namespace: kyverno
@@ -42,7 +39,6 @@ resources:
             name: bcl
             namespace: apps
       values:
-        prefixNamesWithRelease: false
         resources:
           kyvernoClusterPolicies:
             set-image-pull-policy:

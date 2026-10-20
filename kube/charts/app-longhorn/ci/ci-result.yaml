@@ -80,7 +80,6 @@ spec:
     remediation:
       retries: 3
   values:
-    prefixNamesWithRelease: false
     resources:
       certManagerCertificates:
         longhorn-ui:
@@ -230,7 +229,6 @@ spec:
     remediation:
       retries: 3
   values:
-    prefixNamesWithRelease: false
     resources:
       configMaps:
         longhorn-nixos-path:

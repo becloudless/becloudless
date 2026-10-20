@@ -12,10 +12,10 @@
     {{- end }}
     {{- if eq $resourceName "main" }}
       {{- $name = $rootContext.Release.Name }}
-    {{- else if eq (toString $rootContext.Values.prefixNamesWithRelease) "false" }}
-      {{- $name = $resourceName }}
-    {{- else }}
+    {{- else if eq (toString $rootContext.Values.prefixNamesWithRelease) "true" }}
       {{- $name = printf "%s-%s" $rootContext.Release.Name $resourceName }}
+    {{- else }}
+      {{- $name = $resourceName }}
     {{- end }}
   {{- end }}
   {{- if gt (len $name) 63 }}

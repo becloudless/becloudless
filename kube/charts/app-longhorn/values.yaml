@@ -2,9 +2,6 @@
 global:
   domain:
 
-# resources are named by their id, without the release name prefix
-prefixNamesWithRelease: false
-
 defaults:
   metadata:
     namespace: longhorn-system
@@ -30,7 +27,6 @@ resources:
           name: app-kyverno
           namespace: kyverno
       values:
-        prefixNamesWithRelease: false
 
         resources:
           configMaps:
@@ -131,7 +127,6 @@ resources:
             name: bcl
             namespace: apps
       values:
-        prefixNamesWithRelease: false
 
         # UI behind the Cilium Gateway `shared` (kube-system) with Authelia forward auth.
         # The certificate is issued by the http-01 solver of the ClusterIssuer (gatewayHTTPRoute), which only needs the host to be

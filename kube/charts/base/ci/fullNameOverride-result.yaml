@@ -14,5 +14,5 @@ data:
   a: b
 kind: ConfigMap
 metadata:
-  name: test-release-normal
+  name: normal
   namespace: default

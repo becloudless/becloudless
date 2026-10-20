@@ -13,6 +13,9 @@ spec:
         kind: HelmRepository
         name: cnpg
       version: 0.29.1
+  dependsOn:
+  - name: app-external-snapshotter
+    namespace: external-snapshotter
   driftDetection:
     mode: enabled
   install:

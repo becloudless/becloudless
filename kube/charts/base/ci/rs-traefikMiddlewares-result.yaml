@@ -3,7 +3,7 @@
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: test-release-body-limit-10g
+  name: body-limit-10g
   namespace: default
 spec:
   buffering:
@@ -13,7 +13,7 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: test-release-https-redirect
+  name: https-redirect
   namespace: default
 spec:
   redirectScheme:

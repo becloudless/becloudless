@@ -2,9 +2,6 @@
 global:
   domain:
 
-# resources are named by their id, without the release name prefix
-prefixNamesWithRelease: false
-
 defaults:
   metadata:
     namespace: landing
@@ -125,7 +122,6 @@ resources:
             name: bcl
             namespace: apps
       values:
-        prefixNamesWithRelease: false
         resources:
 
           # Exposed on the apex of the domain by the Cilium Gateway `shared` (kube-system).

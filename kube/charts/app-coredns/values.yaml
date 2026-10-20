@@ -3,9 +3,6 @@
 global:
   domain:
 
-# resources are named by their id, without the release name prefix
-prefixNamesWithRelease: false
-
 defaults:
   metadata:
     namespace: kube-system

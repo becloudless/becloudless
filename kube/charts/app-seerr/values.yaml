@@ -6,9 +6,6 @@ global:
 # Nothing has to be created by hand: the setup wizard of the web UI configures the media server (jellyfin) and the users at the first
 # visit. The web UI is protected by Authelia forward auth.
 
-# resources are named by their id, without the release name prefix
-prefixNamesWithRelease: false
-
 defaults:
   metadata:
     namespace: seerr
@@ -114,7 +111,6 @@ resources:
             name: bcl
             namespace: apps
       values:
-        prefixNamesWithRelease: false
         resources:
           certManagerCertificates:
             # certificate of the web UI, terminated by the Gateway

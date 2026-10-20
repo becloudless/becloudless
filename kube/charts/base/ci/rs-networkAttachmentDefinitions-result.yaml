@@ -3,7 +3,7 @@
 apiVersion: k8s.cni.cncf.io/v1
 kind: NetworkAttachmentDefinition
 metadata:
-  name: test-release-br0-dhcp
+  name: br0-dhcp
   namespace: default
 spec:
   config: |-

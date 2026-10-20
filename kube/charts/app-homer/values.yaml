@@ -3,9 +3,6 @@ global:
   domain:
   name:
 
-# resources are named by their id, without the release name prefix
-prefixNamesWithRelease: false
-
 defaults:
   metadata:
     namespace: homer
@@ -351,7 +348,6 @@ resources:
             name: bcl
             namespace: apps
       values:
-        prefixNamesWithRelease: false
         resources:
 
           # Exposed by the Cilium Gateway `shared` (kube-system), protected by Authelia forward auth.

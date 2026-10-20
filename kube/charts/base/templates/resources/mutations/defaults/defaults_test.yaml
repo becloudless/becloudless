@@ -5,6 +5,8 @@ templates:
 release:
   name: test-release
   namespace: default
+set:
+  prefixNamesWithRelease: true # the assertions use the "<release>-<id>" names
 tests:
   - it: applies defaults.resources.<kind> when the resource does not set the field itself
     set:

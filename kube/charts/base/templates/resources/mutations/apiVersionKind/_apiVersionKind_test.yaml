@@ -5,6 +5,8 @@ templates:
 release:
   name: test-release
   namespace: default
+set:
+  prefixNamesWithRelease: true # the assertions use the "<release>-<id>" names
 tests:
   - it: renders a configMap with data and binaryData
     set:

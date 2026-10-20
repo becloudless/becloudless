@@ -1,13 +1,39 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
-suite: resource naming (nameOverride, fullNameOverride, "main" id)
+suite: resource naming (prefixNamesWithRelease, nameOverride, fullNameOverride, "main" id)
 templates:
   - loader.yaml
 release:
   name: test-release
   namespace: default
 tests:
-  - it: names the resource "<release>-<id>" when no override is given
+  - it: names the resource "<id>" without the release name by default
     set:
+      resources:
+        secrets:
+          plain:
+            stringData:
+              a: b
+    asserts:
+      - equal:
+          path: metadata.name
+          value: plain
+
+  - it: names the resource "<nameOverride>" without the release name by default
+    set:
+      resources:
+        secrets:
+          customId:
+            nameOverride: my-custom-id
+            stringData:
+              a: b
+    asserts:
+      - equal:
+          path: metadata.name
+          value: my-custom-id
+
+  - it: names the resource "<release>-<id>" when prefixNamesWithRelease is true
+    set:
+      prefixNamesWithRelease: true
       resources:
         secrets:
           plain:
@@ -18,8 +44,9 @@ tests:
           path: metadata.name
           value: test-release-plain
 
-  - it: names the resource "<release>-<nameOverride>" when nameOverride is set
+  - it: names the resource "<release>-<nameOverride>" when prefixNamesWithRelease is true
     set:
+      prefixNamesWithRelease: true
       resources:
         secrets:
           customId:
@@ -56,8 +83,22 @@ tests:
           path: metadata.name
           value: test-release
 
+  - it: keeps naming the "main" id after the release when prefixNamesWithRelease is true
+    set:
+      prefixNamesWithRelease: true
+      resources:
+        secrets:
+          main:
+            stringData:
+              a: b
+    asserts:
+      - equal:
+          path: metadata.name
+          value: test-release
+
   - it: uses fullNameOverride verbatim, ignoring the release name entirely
     set:
+      prefixNamesWithRelease: true
       resources:
         secrets:
           normal:
@@ -82,46 +123,6 @@ tests:
         documentSelector:
           path: metadata.name
           value: test-release-normal
-
-  - it: names the resource "<id>" without the release name when prefixNamesWithRelease is false
-    set:
-      prefixNamesWithRelease: false
-      resources:
-        secrets:
-          plain:
-            stringData:
-              a: b
-    asserts:
-      - equal:
-          path: metadata.name
-          value: plain
-
-  - it: names the resource "<nameOverride>" without the release name when prefixNamesWithRelease is false
-    set:
-      prefixNamesWithRelease: false
-      resources:
-        secrets:
-          customId:
-            nameOverride: my-custom-id
-            stringData:
-              a: b
-    asserts:
-      - equal:
-          path: metadata.name
-          value: my-custom-id
-
-  - it: keeps naming the "main" id after the release when prefixNamesWithRelease is false
-    set:
-      prefixNamesWithRelease: false
-      resources:
-        secrets:
-          main:
-            stringData:
-              a: b
-    asserts:
-      - equal:
-          path: metadata.name
-          value: test-release
 
   - it: fails when the computed resource name exceeds the Kubernetes 63 character limit
     set:

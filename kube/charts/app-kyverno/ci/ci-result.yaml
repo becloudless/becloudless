@@ -61,7 +61,6 @@ spec:
     remediation:
       retries: 3
   values:
-    prefixNamesWithRelease: false
     resources:
       kyvernoClusterPolicies:
         require-flux-service-account:

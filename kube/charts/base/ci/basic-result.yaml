@@ -6,7 +6,7 @@ metadata:
   labels:
     app: genre2
     truc: bidule2
-  name: test-release-titi
+  name: titi
   namespace: default
 stringData:
   something: interesting
@@ -31,7 +31,7 @@ metadata:
   labels:
     app: genre
     truc: bidule
-  name: test-release-toto
+  name: toto
   namespace: default
 ---
 # Source: base-test/templates/loader.yaml
@@ -52,7 +52,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: test-release-myapp
+  name: myapp
   namespace: default
 spec:
   replicas: 2
@@ -72,7 +72,7 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: test-release-override
+  name: override
   namespace: default
 spec:
   maxReplicas: 3

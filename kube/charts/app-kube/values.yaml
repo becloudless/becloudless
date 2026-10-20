@@ -5,9 +5,6 @@ global:
 
 # Kubernetes own objects that the cluster needs and that nothing else installs.
 
-# resources are named by their id, without the release name prefix
-prefixNamesWithRelease: false
-
 resources:
   # Standard kubeadm-bootstrapped RBAC objects that authorize the API server (identified by its apiserver-kubelet-client
   # cert, CN=kube-apiserver-kubelet-client) to call kubelet endpoints. Required for `kubectl logs`, `exec`, `port-forward`,
@@ -70,7 +67,6 @@ resources:
             name: bcl
             namespace: apps
       values:
-        prefixNamesWithRelease: false
         resources:
           listenerSets:
             kube:

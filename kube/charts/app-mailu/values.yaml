@@ -14,9 +14,6 @@ global:
 # Not configured: Authelia (the web UI has its own login: the authentication of mailu cannot rely on a forward auth while the mail
 # is the fallback of the factors enrollment), the external relay.
 
-# resources are named by their id, without the release name prefix
-prefixNamesWithRelease: false
-
 defaults:
   metadata:
     namespace: mailu
@@ -48,7 +45,6 @@ resources:
             name: bcl
             namespace: apps
       values:
-        prefixNamesWithRelease: false
         resources:
           stringSecrets:
             mailu:

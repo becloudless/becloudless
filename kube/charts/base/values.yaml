@@ -2,7 +2,7 @@
 
 checkRequiredValues: true
 
-prefixNamesWithRelease: true
+prefixNamesWithRelease: false
 
 defaults:
   metadata:

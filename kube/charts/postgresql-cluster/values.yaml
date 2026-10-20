@@ -1,5 +1,7 @@
 # The cluster is named after the release and lives in the release namespace (or `defaults.metadata.namespace`).
 
+prefixNamesWithRelease: true
+
 instances: 2
 storageSize: 1Gi
 

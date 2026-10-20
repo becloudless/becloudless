@@ -13,6 +13,9 @@ spec:
         kind: HelmRepository
         name: cilium
       version: 1.20.2
+  dependsOn:
+  - name: app-gateway-api
+    namespace: gateway-api
   driftDetection:
     mode: enabled
   install:
@@ -67,11 +70,11 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: default
+        namespace: apps
   dependsOn:
   - name: cilium
   - name: app-gateway-api
-    namespace: default
+    namespace: gateway-api
   driftDetection:
     mode: enabled
   install:
@@ -86,7 +89,6 @@ spec:
     remediation:
       retries: 3
   values:
-    prefixNamesWithRelease: false
     resources:
       ciliumBGPAdvertisements:
         bgp-advertisement:

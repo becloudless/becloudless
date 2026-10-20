@@ -390,7 +390,6 @@ spec:
     remediation:
       retries: 3
   values:
-    prefixNamesWithRelease: false
     resources:
       certManagerCertificates:
         authelia-gateway:
