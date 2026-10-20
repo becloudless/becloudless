@@ -60,6 +60,10 @@ resources:
                   fieldName: LLDAP_LDAP_USER_DN
                 user-pass:
                   fieldName: LLDAP_LDAP_USER_PASS
+            lldap: # TODO to backup
+              fields:
+                key-seed:
+                  fieldName: LLDAP_KEY_SEED
 
           certManagerCertificates:
             # certificate of ldaps, used by the lldap pod
@@ -126,9 +130,9 @@ resources:
                         generated:
                           secretRef:
                             name: lldap-generated
-                        # lldap:
-                        #   secretRef:
-                        #     name: lldap
+                        lldap:
+                          secretRef:
+                            name: lldap
                       env:
                         TZ: europe/paris
                         PGUSER: app
@@ -155,6 +159,8 @@ resources:
                         httpGet:
                           path: /
                           port: 17170
+                        periodSeconds: 5
+                        failureThreshold: 60 # the first start creates the schema of the database, killing it leaves it half done
                       volumeMounts:
                         cert:
                           name: cert

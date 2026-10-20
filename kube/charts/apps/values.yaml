@@ -7,6 +7,12 @@ resources:
       ref:
         branch: main
 
+defaults:
+  resources:
+    fluxHelmReleases:
+      install:
+        timeout: 20m # install all resources for an app takes time. A new DB with 2 nodes can take 10min alone
+
 config:
   domain:
   # name: # deduced from domain by default

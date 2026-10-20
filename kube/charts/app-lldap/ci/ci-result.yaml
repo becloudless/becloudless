@@ -24,10 +24,9 @@ spec:
     remediation:
       retries: -1
   interval: 10m
-  rollback:
-    cleanupOnFail: true
-  timeout: 2m
+  timeout: 10m
   upgrade:
+    cleanupOnFail: true
     remediation:
       retries: 3
   values:
@@ -89,9 +88,11 @@ spec:
                       path: /
                       port: 17170
                   startupProbe:
+                    failureThreshold: 60
                     httpGet:
                       path: /
                       port: 17170
+                    periodSeconds: 5
                   volumeMounts:
                     cert:
                       mountPath: /cert
@@ -159,10 +160,9 @@ spec:
     remediation:
       retries: -1
   interval: 10m
-  rollback:
-    cleanupOnFail: true
-  timeout: 2m
+  timeout: 10m
   upgrade:
+    cleanupOnFail: true
     disableWait: true
     remediation:
       retries: 3
@@ -269,10 +269,9 @@ spec:
     remediation:
       retries: -1
   interval: 10m
-  rollback:
-    cleanupOnFail: true
-  timeout: 2m
+  timeout: 10m
   upgrade:
+    cleanupOnFail: true
     remediation:
       retries: 3
   values:
@@ -308,10 +307,9 @@ spec:
     remediation:
       retries: -1
   interval: 10m
-  rollback:
-    cleanupOnFail: true
-  timeout: 2m
+  timeout: 10m
   upgrade:
+    cleanupOnFail: true
     remediation:
       retries: 3
   values:
@@ -329,6 +327,8 @@ spec:
           fields:
             jwt-secret:
               fieldName: LLDAP_JWT_SECRET
+            key-seed:
+              fieldName: LLDAP_KEY_SEED
             user-dn:
               fieldName: LLDAP_LDAP_USER_DN
             user-pass:
