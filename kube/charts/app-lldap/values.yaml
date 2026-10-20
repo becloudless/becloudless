@@ -100,6 +100,7 @@ resources:
                   http_url = "https://lldap.{{ .Values.global.domain }}"
                   database_url = "postgres://"
                   ldap_base_dn = "{{ .Values.global.ldapdn }}"
+                  key_file = ""
 
                   [ldap_options]
                   enable_samba = true
