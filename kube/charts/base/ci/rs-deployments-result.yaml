@@ -18,3 +18,4 @@ spec:
       containers:
       - image: myimage:latest
         name: myapp
+      enableServiceLinks: false

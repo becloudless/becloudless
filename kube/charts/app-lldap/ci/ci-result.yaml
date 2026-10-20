@@ -72,6 +72,9 @@ spec:
                     generated:
                       secretRef:
                         name: lldap-generated
+                    lldap:
+                      secretRef:
+                        name: lldap
                   image: lldap/lldap:2026-09-22-debian-rootless
                   livenessProbe:
                     httpGet:
@@ -323,12 +326,14 @@ spec:
             name: letsencrypt-prod
           secretName: tls-lldaps
       stringSecrets:
+        lldap:
+          fields:
+            key-seed:
+              fieldName: LLDAP_KEY_SEED
         lldap-generated:
           fields:
             jwt-secret:
               fieldName: LLDAP_JWT_SECRET
-            key-seed:
-              fieldName: LLDAP_KEY_SEED
             user-dn:
               fieldName: LLDAP_LDAP_USER_DN
             user-pass:

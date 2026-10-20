@@ -61,11 +61,10 @@ spec:
       retries: -1
   interval: 10m
   releaseName: kube-apiserver
-  rollback:
-    cleanupOnFail: true
   targetNamespace: default
-  timeout: 2m
+  timeout: 10m
   upgrade:
+    cleanupOnFail: true
     disableWait: true
     remediation:
       retries: 3

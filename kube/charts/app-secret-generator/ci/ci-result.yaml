@@ -20,10 +20,9 @@ spec:
     remediation:
       retries: -1
   interval: 60m
-  rollback:
-    cleanupOnFail: true
   timeout: 1m
   upgrade:
+    cleanupOnFail: true
     remediation:
       retries: 3
   values:

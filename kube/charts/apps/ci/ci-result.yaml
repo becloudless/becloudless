@@ -309,12 +309,14 @@ spec:
     crds: CreateReplace
     remediation:
       retries: -1
+    timeout: 20m
   interval: 10m
   rollback:
     cleanupOnFail: true
   serviceAccountName: flux-cilium
   timeout: 10m
   upgrade:
+    cleanupOnFail: true
     remediation:
       retries: 3
   values:
@@ -349,12 +351,14 @@ spec:
     crds: CreateReplace
     remediation:
       retries: -1
+    timeout: 20m
   interval: 10m
   rollback:
     cleanupOnFail: true
   serviceAccountName: flux-coredns
   timeout: 10m
   upgrade:
+    cleanupOnFail: true
     remediation:
       retries: 3
   values:
@@ -389,12 +393,14 @@ spec:
     crds: CreateReplace
     remediation:
       retries: -1
+    timeout: 20m
   interval: 10m
   rollback:
     cleanupOnFail: true
   serviceAccountName: flux-flux
   timeout: 10m
   upgrade:
+    cleanupOnFail: true
     remediation:
       retries: 3
   values:
@@ -429,12 +435,14 @@ spec:
     crds: CreateReplace
     remediation:
       retries: -1
+    timeout: 20m
   interval: 10m
   rollback:
     cleanupOnFail: true
   serviceAccountName: flux-gateway-api
   timeout: 10m
   upgrade:
+    cleanupOnFail: true
     remediation:
       retries: 3
   values:
@@ -469,12 +477,14 @@ spec:
     crds: CreateReplace
     remediation:
       retries: -1
+    timeout: 20m
   interval: 10m
   rollback:
     cleanupOnFail: true
   serviceAccountName: flux-kube
   timeout: 10m
   upgrade:
+    cleanupOnFail: true
     remediation:
       retries: 3
   values:
@@ -509,12 +519,14 @@ spec:
     crds: CreateReplace
     remediation:
       retries: -1
+    timeout: 20m
   interval: 10m
   rollback:
     cleanupOnFail: true
   serviceAccountName: flux-something
   timeout: 10m
   upgrade:
+    cleanupOnFail: true
     remediation:
       retries: 3
   values:

@@ -67,6 +67,7 @@ spec:
       containers:
       - image: myimage:latest
         name: myapp
+      enableServiceLinks: false
 ---
 # Source: base-test/templates/loader.yaml
 apiVersion: autoscaling/v2

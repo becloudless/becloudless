@@ -79,7 +79,7 @@ tests:
       - failedTemplate:
           errorMessage: 'resources.deployments.myapp: "selector" is required'
 
-  - it: fails with a clear error when a required field is missing (template)
+  - it: fails on the nested field when the parent object is only created by defaults.resources (template.spec.containers)
     set:
       resources:
         deployments:
@@ -89,7 +89,7 @@ tests:
                 app: myapp
     asserts:
       - failedTemplate:
-          errorMessage: 'resources.deployments.myapp: "template" is required'
+          errorMessage: 'resources.deployments.myapp.template.spec: "containers" is required'
 
   - it: passes when all required fields are present (deployments)
     set:
@@ -117,5 +117,174 @@ tests:
           plain:
             data:
               key: value
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: fails with the path of the object when a nested required field is missing (template.spec.containers)
+    set:
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                hostname: myapp
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.deployments.myapp.template.spec: "containers" is required'
+
+  - it: fails with the id of the entry when a required field is missing in an entry of a map (containers.<id>.name)
+    set:
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                containers:
+                  web:
+                    image: myimage:latest
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.deployments.myapp.template.spec.containers.web: "name" is required'
+
+  - it: fails with the index of the entry when a required field is missing in an entry of a list
+    set:
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                containers:
+                  - image: myimage:latest
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.deployments.myapp.template.spec.containers[0]: "name" is required'
+
+  - it: fails when a field required by the entries of a dependsOn is missing
+    set:
+      resources:
+        fluxHelmReleases:
+          myrelease:
+            chart:
+              spec:
+                chart: mychart
+                sourceRef:
+                  kind: HelmRepository
+                  name: myrepository
+            dependsOn:
+              mydependency:
+                namespace: default
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.fluxHelmReleases.myrelease.dependsOn.mydependency: "name" is required'
+
+  - it: validates the objects under the values of a map with a scalar or an object value (env)
+    set:
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                containers:
+                  myapp:
+                    name: myapp
+                    image: myimage:latest
+                    env:
+                      TZ: europe/paris
+                      PASSWORD:
+                        secretKeyRef:
+                          name: mysecret
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.deployments.myapp.template.spec.containers.myapp.env.PASSWORD.secretKeyRef: "key" is required'
+
+  - it: is satisfied by nested fields coming only from defaults.resources (merged before validation)
+    set:
+      defaults:
+        resources:
+          deployments:
+            template:
+              spec:
+                containers:
+                  myapp:
+                    name: myapp
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                containers:
+                  myapp:
+                    image: myimage:latest
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: accepts partial defaults, the nested required fields are only validated on the resources
+    set:
+      defaults:
+        resources:
+          deployments:
+            template:
+              spec:
+                enableServiceLinks: false
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                containers:
+                  myapp:
+                    name: myapp
+                    image: myimage:latest
+    asserts:
+      - notFailedTemplate: {}
+      - equal:
+          path: spec.template.spec.enableServiceLinks
+          value: false
+
+  - it: does not validate the nested required fields of a disabled resource
+    set:
+      resources:
+        deployments:
+          myapp:
+            enabled: false
+            template:
+              spec:
+                hostname: myapp
     asserts:
       - notFailedTemplate: {}

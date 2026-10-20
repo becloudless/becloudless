@@ -13,5 +13,6 @@ spec:
           containers:
           - image: myimage:latest
             name: myapp
+          enableServiceLinks: false
           restartPolicy: Never
   schedule: '*/5 * * * *'

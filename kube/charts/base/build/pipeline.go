@@ -29,12 +29,12 @@ func Pipeline(extractContent content.ExtractContent, arrays *arraysToMaps.Arrays
 		extractContent,
 		flattenAllOf.FlattenAllOf{},
 		normalizeIntOrString.NormalizeIntOrString{},
-		required.Required{},
 		metadata.Metadata{},
 		enabled.Enabled{},
 		envMaps.EnvMaps{},   // before arraysToMaps, which would otherwise convert env to an id-keyed map
 		portMaps.PortMaps{}, // before arraysToMaps, same reason as envMaps
 		*arrays,
+		required.Required{}, // after the mutations reshaping the nodes (env, ports and arrays), it moves the nested required out of the schema
 		*stringify,
 		templatedStrings.TemplatedStrings{}, // last of the schema relaxations: wraps the validation the other mutations left on the strings
 		additionalPropertiesFalse.AdditionalPropertiesFalse{},
