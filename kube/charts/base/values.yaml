@@ -47,15 +47,15 @@ defaults:
       interval: 10m
 
     fluxHelmReleases:
-      interval: 10m
-      timeout: 2m
-      rollback:
-        cleanupOnFail: true
+      interval: 10m        
       install:
+        timeout: 15m
         crds: CreateReplace
         remediation:
           retries: -1 # unlimited, the failed install is uninstalled between each attempt
       upgrade:
+        timeout: 5m
+        cleanupOnFail: true
         remediation:
           retries: 3
       driftDetection:
