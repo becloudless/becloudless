@@ -1,123 +1,9 @@
 ---
 # Source: app-lldap/templates/loader.yaml
-apiVersion: v1
-data:
-  lldap_config.toml: |-
-    # verbose = false
-    http_url = "https://lldap.test.com"
-    database_url = "postgres://"
-    ldap_base_dn = "dc=test,dc=com"
-
-    [ldap_options]
-    enable_samba = true
-
-    [ldaps_options]
-    enabled=true
-    key_file="/cert/tls.key"
-    cert_file="/cert/tls.crt"
-kind: ConfigMap
-metadata:
-  name: lldap-config
-  namespace: default
----
-# Source: app-lldap/templates/loader.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: lldap
-  namespace: default
-spec:
-  ports:
-  - name: http
-    port: 17170
-  - name: ldaps
-    port: 6360
-  selector:
-    app.kubernetes.io/name: lldap
----
-# Source: app-lldap/templates/loader.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: lldap
-  namespace: default
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: lldap
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: lldap
-    spec:
-      containers:
-      - env:
-        - name: PGDATABASE
-          value: app
-        - name: PGHOST
-          value: lldap-postgresql-rw
-        - name: PGSSLCERT
-          value: /dbcert/tls.crt
-        - name: PGSSLKEY
-          value: /dbcert/tls.key
-        - name: PGSSLMODE
-          value: verify-full
-        - name: PGSSLROOTCERT
-          value: /dbcert/ca.crt
-        - name: PGUSER
-          value: app
-        - name: TZ
-          value: europe/paris
-        envFrom:
-        - secretRef:
-            name: lldap-generated
-        image: lldap/lldap:2026-09-22-debian-rootless
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 17170
-        name: lldap
-        ports:
-        - containerPort: 17170
-          name: http
-        - containerPort: 6360
-          name: ldaps
-        readinessProbe:
-          httpGet:
-            path: /
-            port: 17170
-        startupProbe:
-          httpGet:
-            path: /
-            port: 17170
-        volumeMounts:
-        - mountPath: /cert
-          name: cert
-          readOnly: true
-        - mountPath: /data
-          name: data
-        - mountPath: /dbcert
-          name: dbcert
-          readOnly: true
-      securityContext:
-        runAsGroup: 1000
-        runAsUser: 1000
-      volumes:
-      - name: cert
-        secret:
-          secretName: tls-lldaps
-      - configMap:
-          name: lldap-config
-        name: data
-      - name: dbcert
-        secret:
-          secretName: lldap-postgresql-app-tls
----
-# Source: app-lldap/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: lldap-config
+  name: lldap
   namespace: default
 spec:
   chart:
@@ -129,12 +15,8 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
-  - name: app-cert-manager
-    namespace: cert-manager
-  - name: app-gateway-api
-    namespace: gateway-api
-  - name: app-secret-generator
-    namespace: secret-generator
+  - name: lldap-postgresql
+  - name: lldap-pre
   driftDetection:
     mode: enabled
   install:
@@ -150,6 +32,142 @@ spec:
       retries: 3
   values:
     resources:
+      configMaps:
+        lldap-config:
+          data:
+            lldap_config.toml: |-
+              # verbose = false
+              http_url = "https://lldap.test.com"
+              database_url = "postgres://"
+              ldap_base_dn = "dc=test,dc=com"
+
+              [ldap_options]
+              enable_samba = true
+
+              [ldaps_options]
+              enabled=true
+              key_file="/cert/tls.key"
+              cert_file="/cert/tls.crt"
+      deployments:
+        lldap:
+          selector:
+            matchLabels:
+              app.kubernetes.io/name: lldap
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/name: lldap
+            spec:
+              containers:
+                lldap:
+                  env:
+                    PGDATABASE: app
+                    PGHOST: lldap-postgresql-rw
+                    PGSSLCERT: /dbcert/tls.crt
+                    PGSSLKEY: /dbcert/tls.key
+                    PGSSLMODE: verify-full
+                    PGSSLROOTCERT: /dbcert/ca.crt
+                    PGUSER: app
+                    TZ: europe/paris
+                  envFrom:
+                    generated:
+                      secretRef:
+                        name: lldap-generated
+                  image: lldap/lldap:2026-09-22-debian-rootless
+                  livenessProbe:
+                    httpGet:
+                      path: /
+                      port: 17170
+                  name: lldap
+                  ports:
+                    http:
+                      containerPort: 17170
+                    ldaps:
+                      containerPort: 6360
+                  readinessProbe:
+                    httpGet:
+                      path: /
+                      port: 17170
+                  startupProbe:
+                    httpGet:
+                      path: /
+                      port: 17170
+                  volumeMounts:
+                    cert:
+                      mountPath: /cert
+                      name: cert
+                      readOnly: true
+                    data:
+                      mountPath: /data
+                      name: data
+                    dbcert:
+                      mountPath: /dbcert
+                      name: dbcert
+                      readOnly: true
+              securityContext:
+                runAsGroup: 1000
+                runAsUser: 1000
+              volumes:
+                cert:
+                  name: cert
+                  secret:
+                    secretName: tls-lldaps
+                data:
+                  configMap:
+                    name: lldap-config
+                  name: data
+                dbcert:
+                  name: dbcert
+                  secret:
+                    secretName: lldap-postgresql-app-tls
+      services:
+        lldap:
+          ports:
+            http:
+              port: 17170
+            ldaps:
+              port: 6360
+          selector:
+            app.kubernetes.io/name: lldap
+---
+# Source: app-lldap/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: lldap-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  - name: lldap
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    disableWait: true
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    disableWait: true
+    remediation:
+      retries: 3
+  values:
+    resources:
       certManagerCertificates:
         lldap-gateway:
           dnsNames:
@@ -158,13 +176,6 @@ spec:
             kind: ClusterIssuer
             name: letsencrypt-prod
           secretName: tls-lldap-gateway
-        tls-lldaps:
-          dnsNames:
-            lldaps: lldaps.test.com
-          issuerRef:
-            kind: ClusterIssuer
-            name: letsencrypt-prod
-          secretName: tls-lldaps
       httpRoutes:
         lldap:
           hostnames:
@@ -212,15 +223,6 @@ spec:
             kind: Gateway
             name: shared
             namespace: kube-system
-      stringSecrets:
-        lldap-generated:
-          fields:
-            jwt-secret:
-              fieldName: LLDAP_JWT_SECRET
-            user-dn:
-              fieldName: LLDAP_LDAP_USER_DN
-            user-pass:
-              fieldName: LLDAP_LDAP_USER_PASS
       tlsRoutes:
         lldap-ldaps:
           hostnames:
@@ -278,3 +280,56 @@ spec:
     postgresql:
       parameters:
         max_slot_wal_keep_size: 500MB
+---
+# Source: app-lldap/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: lldap-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-secret-generator
+    namespace: secret-generator
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    resources:
+      certManagerCertificates:
+        tls-lldaps:
+          dnsNames:
+            lldaps: lldaps.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-lldaps
+      stringSecrets:
+        lldap-generated:
+          fields:
+            jwt-secret:
+              fieldName: LLDAP_JWT_SECRET
+            user-dn:
+              fieldName: LLDAP_LDAP_USER_DN
+            user-pass:
+              fieldName: LLDAP_LDAP_USER_PASS

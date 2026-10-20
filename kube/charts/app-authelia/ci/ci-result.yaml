@@ -14,8 +14,8 @@ spec:
         name: authelia
       version: 0.11.22
   dependsOn:
-  - name: authelia-config
   - name: authelia-postgresql
+  - name: authelia-pre
   - name: authelia-valkey
   - name: app-lldap
     namespace: lldap
@@ -358,7 +358,7 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: authelia-config
+  name: authelia-integration
   namespace: default
 spec:
   chart:
@@ -370,16 +370,16 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: authelia
   - name: app-cert-manager
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
-  - name: app-secret-generator
-    namespace: secret-generator
   driftDetection:
     mode: enabled
   install:
     crds: CreateReplace
+    disableWait: true
     remediation:
       retries: -1
   interval: 10m
@@ -387,6 +387,7 @@ spec:
     cleanupOnFail: true
   timeout: 2m
   upgrade:
+    disableWait: true
     remediation:
       retries: 3
   values:
@@ -399,12 +400,6 @@ spec:
             kind: ClusterIssuer
             name: letsencrypt-prod
           secretName: tls-authelia-gateway
-        authelia-jwks:
-          commonName: authelia-jwks
-          issuerRef:
-            kind: ClusterIssuer
-            name: self-signed
-          secretName: authelia-jwks
       httpRoutes:
         authelia:
           hostnames:
@@ -465,27 +460,6 @@ spec:
               group: ""
               kind: Service
               name: authelia
-      stringSecrets:
-        authelia-admin:
-          fields:
-            password:
-              encoding: hex
-              fieldName: password
-              length: "32"
-        authelia-generated:
-          fields:
-            oidc-hmac:
-              fieldName: identity_providers.oidc.hmac.key
-            reset-password-hmac:
-              fieldName: identity_validation.reset_password.jwt.hmac.key
-            session-encryption:
-              fieldName: session.encryption.key
-        authelia-valkey:
-          fields:
-            authelia:
-              fieldName: authelia
-            default:
-              fieldName: default
 ---
 # Source: app-authelia/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -527,6 +501,70 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
+  name: authelia-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-secret-generator
+    namespace: secret-generator
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    resources:
+      certManagerCertificates:
+        authelia-jwks:
+          commonName: authelia-jwks
+          issuerRef:
+            kind: ClusterIssuer
+            name: self-signed
+          secretName: authelia-jwks
+      stringSecrets:
+        authelia-admin:
+          fields:
+            password:
+              encoding: hex
+              fieldName: password
+              length: "32"
+        authelia-generated:
+          fields:
+            oidc-hmac:
+              fieldName: identity_providers.oidc.hmac.key
+            reset-password-hmac:
+              fieldName: identity_validation.reset_password.jwt.hmac.key
+            session-encryption:
+              fieldName: session.encryption.key
+        authelia-valkey:
+          fields:
+            authelia:
+              fieldName: authelia
+            default:
+              fieldName: default
+---
+# Source: app-authelia/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
   name: authelia-valkey
   namespace: default
 spec:
@@ -538,7 +576,7 @@ spec:
         name: authelia-valkey
       version: 0.12.0
   dependsOn:
-  - name: authelia-config
+  - name: authelia-pre
   driftDetection:
     mode: enabled
   install:

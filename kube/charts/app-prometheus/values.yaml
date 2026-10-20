@@ -308,9 +308,15 @@ resources:
           kubeletService:
             enabled: false
 
-    # the certificates and Gateway resources need the CRDs of these apps, so they are installed once they are ready
-    prometheus-config:
+    # the public exposure, applied once prometheus is deployed and not waited for
+    prometheus-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
       dependsOn:
+        prometheus:
+          name: prometheus
         cert-manager:
           name: app-cert-manager
           namespace: cert-manager

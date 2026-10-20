@@ -3,106 +3,124 @@ global:
   domain:
 
 resources:
-  # The static page served on the apex of the domain, replace `index.html` to change it.
-  configMaps:
-    landing-html:
-      data:
-        index.html: |
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>{{ .Values.global.domain }}</title>
-            <style>
-              html, body { height: 100%; margin: 0; }
-              body {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: #111827;
-                color: #e5e7eb;
-                font-family: system-ui, sans-serif;
-              }
-              main { text-align: center; }
-              h1 { font-size: 2.5rem; font-weight: 600; margin: 0 0 .5rem; }
-              p { color: #9ca3af; margin: 0; }
-            </style>
-          </head>
-          <body>
-            <main>
-              <h1>{{ .Values.global.domain }}</h1>
-              <p>Nothing to see here.</p>
-            </main>
-          </body>
-          </html>
-
-  deployments:
-    landing:
-      replicas: 2
-      selector:
-        matchLabels:
-          app.kubernetes.io/name: landing
-      template:
-        metadata:
-          labels:
-            app.kubernetes.io/name: landing
-        spec:
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 101
-            runAsGroup: 101
-          containers:
-            nginx:
-              name: nginx
-              image: nginxinc/nginx-unprivileged:1.29.3-alpine # renovate: versioning=loose
-              ports:
-                http:
-                  containerPort: 8080
-              readinessProbe:
-                httpGet:
-                  path: /
-                  port: 8080
-              livenessProbe:
-                httpGet:
-                  path: /
-                  port: 8080
-              securityContext:
-                allowPrivilegeEscalation: false
-                readOnlyRootFilesystem: true
-                capabilities:
-                  drop:
-                    all: ALL
-              volumeMounts:
-                html:
-                  name: html
-                  mountPath: /usr/share/nginx/html
-                  readOnly: true
-                tmp:
-                  name: tmp
-                  mountPath: /tmp
-          volumes:
-            html:
-              name: html
-              configMap:
-                name: landing-html
-            tmp:
-              name: tmp
-              emptyDir: {}
-
-  services:
-    landing:
-      selector:
-        app.kubernetes.io/name: landing
-      ports:
-        http:
-          port: 80
-          targetPort: 8080
 
   fluxHelmReleases:
-    # the certificates and Gateway resources need the CRDs of these apps, so they are installed once they are ready
-    landing-config:
+    landing:
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          # The static page served on the apex of the domain, replace `index.html` to change it.
+          configMaps:
+            landing-html:
+              data:
+                index.html: |
+                  <!DOCTYPE html>
+                  <html lang="en">
+                  <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <title>{{ .Values.global.domain }}</title>
+                    <style>
+                      html, body { height: 100%; margin: 0; }
+                      body {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: #111827;
+                        color: #e5e7eb;
+                        font-family: system-ui, sans-serif;
+                      }
+                      main { text-align: center; }
+                      h1 { font-size: 2.5rem; font-weight: 600; margin: 0 0 .5rem; }
+                      p { color: #9ca3af; margin: 0; }
+                    </style>
+                  </head>
+                  <body>
+                    <main>
+                      <h1>{{ .Values.global.domain }}</h1>
+                      <p>Nothing to see here.</p>
+                    </main>
+                  </body>
+                  </html>
+
+          deployments:
+            landing:
+              replicas: 2
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: landing
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: landing
+                spec:
+                  securityContext:
+                    runAsNonRoot: true
+                    runAsUser: 101
+                    runAsGroup: 101
+                  containers:
+                    nginx:
+                      name: nginx
+                      image: nginxinc/nginx-unprivileged:1.29.3-alpine # renovate: versioning=loose
+                      ports:
+                        http:
+                          containerPort: 8080
+                      readinessProbe:
+                        httpGet:
+                          path: /
+                          port: 8080
+                      livenessProbe:
+                        httpGet:
+                          path: /
+                          port: 8080
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        readOnlyRootFilesystem: true
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        html:
+                          name: html
+                          mountPath: /usr/share/nginx/html
+                          readOnly: true
+                        tmp:
+                          name: tmp
+                          mountPath: /tmp
+                  volumes:
+                    html:
+                      name: html
+                      configMap:
+                        name: landing-html
+                    tmp:
+                      name: tmp
+                      emptyDir: {}
+
+          services:
+            landing:
+              selector:
+                app.kubernetes.io/name: landing
+              ports:
+                http:
+                  port: 80
+                  targetPort: 8080
+
+    # the public exposure, applied once landing is deployed and not waited for
+    landing-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
       dependsOn:
+        landing:
+          name: landing
         cert-manager:
           name: app-cert-manager
           namespace: cert-manager

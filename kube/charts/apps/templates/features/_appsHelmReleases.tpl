@@ -14,7 +14,7 @@ Per app:
   - `dependsOn`: `<app>: true` makes the app wait for the HelmRelease of the enabled app `<app>`; `<app>: false` removes a dependency.
     A dependency on an app that is not enabled is ignored.
   - `values`: the values of the chart of the app (`spec.values` of the HelmRelease), deep merged over the values of the chart
-    ex: `apps.cilium.values.resources.fluxHelmReleases.cilium-config.values.resources.gateways.shared`
+    ex: `apps.cilium.values.resources.fluxHelmReleases.cilium-post.values.resources.gateways.shared`
 
 Any other key set next to these (ex: `interval`) is merged over the HelmRelease defaults.
 */}}

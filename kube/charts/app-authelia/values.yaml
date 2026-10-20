@@ -44,10 +44,64 @@ resources:
           name: app-longhorn
           namespace: longhorn-system
 
+    # the secrets of the services, created before they start
+    authelia-pre:
+      dependsOn:
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        secret-generator:
+          name: app-secret-generator
+          namespace: secret-generator
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          stringSecrets:
+            authelia-generated:
+              fields:
+                oidc-hmac:
+                  fieldName: identity_providers.oidc.hmac.key
+                reset-password-hmac:
+                  fieldName: identity_validation.reset_password.jwt.hmac.key
+                session-encryption:
+                  fieldName: session.encryption.key
+
+            # password of the `admin` user of the file backend
+            authelia-admin:
+              fields:
+                password:
+                  fieldName: password
+                  encoding: hex
+                  length: "32"
+
+            # users of valkey, the key is the name of the user
+            authelia-valkey:
+              fields:
+                default:
+                  fieldName: default
+                authelia:
+                  fieldName: authelia
+
+          # key pair signing the OIDC tokens, mounted from /secrets/authelia-jwks
+          certManagerCertificates:
+            authelia-jwks:
+              secretName: authelia-jwks
+              commonName: authelia-jwks
+              issuerRef:
+                name: self-signed
+                kind: ClusterIssuer
+
     authelia-valkey:
       dependsOn: # the generated secrets
-        authelia-config:
-          name: authelia-config
+        authelia-pre:
+          name: authelia-pre
       chart:
         spec:
           chart: valkey
@@ -73,8 +127,8 @@ resources:
     authelia:
       timeout: 10m # the pods wait for the database
       dependsOn:
-        authelia-config: # the generated secrets
-          name: authelia-config
+        authelia-pre: # the generated secrets
+          name: authelia-pre
         authelia-postgresql:
           name: authelia-postgresql
         authelia-valkey:
@@ -436,18 +490,21 @@ resources:
                   userinfo_signed_response_alg: 'RS256'
                   token_endpoint_auth_method: 'client_secret_post'
 
-    # the certificates, secrets and Gateway resources need the CRDs of these apps, so they are installed once they are ready
-    authelia-config:
+    # the public exposure, applied once authelia is deployed and not waited for
+    authelia-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
       dependsOn:
+        authelia:
+          name: authelia
         cert-manager:
           name: app-cert-manager
           namespace: cert-manager
         gateway-api:
           name: app-gateway-api
           namespace: gateway-api
-        secret-generator:
-          name: app-secret-generator
-          namespace: secret-generator
       chart:
         spec:
           chart: ./kube/charts/base-loader
@@ -458,33 +515,6 @@ resources:
             namespace: apps
       values:
         resources:
-          stringSecrets:
-            authelia-generated:
-              fields:
-                oidc-hmac:
-                  fieldName: identity_providers.oidc.hmac.key
-                reset-password-hmac:
-                  fieldName: identity_validation.reset_password.jwt.hmac.key
-                session-encryption:
-                  fieldName: session.encryption.key
-
-            # password of the `admin` user of the file backend
-            authelia-admin:
-              fields:
-                password:
-                  fieldName: password
-                  encoding: hex
-                  length: "32"
-
-            # users of valkey, the key is the name of the user
-            authelia-valkey:
-              fields:
-                default:
-                  fieldName: default
-                authelia:
-                  fieldName: authelia
-
-          # key pair signing the OIDC tokens, mounted from /secrets/authelia-jwks
           certManagerCertificates:
             # certificate of the portal, terminated by the Gateway
             authelia-gateway:
@@ -493,13 +523,6 @@ resources:
                 authelia: authelia.{{ .Values.global.domain }}
               issuerRef:
                 name: letsencrypt-prod
-                kind: ClusterIssuer
-
-            authelia-jwks:
-              secretName: authelia-jwks
-              commonName: authelia-jwks
-              issuerRef:
-                name: self-signed
                 kind: ClusterIssuer
 
           # Forward auth for the apps behind the Cilium Gateway: the `ExternalAuth` filter of their HTTPRoute calls the authelia service.

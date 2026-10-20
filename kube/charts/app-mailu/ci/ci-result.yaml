@@ -16,7 +16,7 @@ spec:
   dependsOn:
   - name: app-longhorn
     namespace: longhorn-system
-  - name: mailu-config
+  - name: mailu-pre
   driftDetection:
     mode: enabled
   install:
@@ -232,7 +232,7 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: mailu-config
+  name: mailu-integration
   namespace: default
 spec:
   chart:
@@ -248,12 +248,12 @@ spec:
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
-  - name: app-secret-generator
-    namespace: secret-generator
+  - name: mailu
   driftDetection:
     mode: enabled
   install:
     crds: CreateReplace
+    disableWait: true
     remediation:
       retries: -1
   interval: 10m
@@ -261,19 +261,11 @@ spec:
     cleanupOnFail: true
   timeout: 2m
   upgrade:
+    disableWait: true
     remediation:
       retries: 3
   values:
     resources:
-      certManagerCertificates:
-        mailu:
-          dnsNames:
-            imap: imap.test.com
-            mail: mail.test.com
-          issuerRef:
-            kind: ClusterIssuer
-            name: letsencrypt-prod
-          secretName: tls-mailu
       httpRoutes:
         mailu:
           hostnames:
@@ -310,6 +302,51 @@ spec:
             kind: Gateway
             name: shared
             namespace: kube-system
+---
+# Source: app-mailu/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: mailu-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-secret-generator
+    namespace: secret-generator
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: -1
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  timeout: 2m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    resources:
+      certManagerCertificates:
+        mailu:
+          dnsNames:
+            imap: imap.test.com
+            mail: mail.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-mailu
       stringSecrets:
         mailu:
           fields:

@@ -34,7 +34,7 @@ resources:
           enabled: true
 
     # ClusterIssuers need the cert-manager CRDs, so they are installed once cert-manager is ready
-    cert-manager-config:
+    cert-manager-post:
       dependsOn:
         cert-manager:
           name: cert-manager

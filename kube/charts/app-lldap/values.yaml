@@ -5,113 +5,8 @@ global:
 
 resources:
 
-  configMaps:
-    lldap-config:
-      data:
-        # https://github.com/lldap/lldap/blob/main/lldap_config.docker_template.toml
-        lldap_config.toml: |
-          # verbose = false
-          http_url = "https://lldap.{{ .Values.global.domain }}"
-          database_url = "postgres://"
-          ldap_base_dn = "{{ .Values.global.ldapdn }}"
-
-          [ldap_options]
-          enable_samba = true
-
-          [ldaps_options]
-          enabled=true
-          key_file="/cert/tls.key"
-          cert_file="/cert/tls.crt"
-
-  deployments:
-    lldap:
-      selector:
-        matchLabels:
-          app.kubernetes.io/name: lldap
-      template:
-        metadata:
-          labels:
-            app.kubernetes.io/name: lldap
-        spec:
-          securityContext:
-            runAsUser: 1000
-            runAsGroup: 1000
-          containers:
-            lldap:
-              name: lldap
-              image: lldap/lldap:2026-09-22-debian-rootless # renovate: versioning=loose
-              envFrom:
-                generated:
-                  secretRef:
-                    name: lldap-generated
-                # lldap:
-                #   secretRef:
-                #     name: lldap
-              env:
-                TZ: europe/paris
-                PGUSER: app
-                PGDATABASE: app
-                PGHOST: lldap-postgresql-rw
-                PGSSLKEY: /dbcert/tls.key
-                PGSSLCERT: /dbcert/tls.crt
-                PGSSLROOTCERT: /dbcert/ca.crt
-                PGSSLMODE: verify-full
-              ports:
-                http:
-                  containerPort: 17170
-                ldaps:
-                  containerPort: 6360
-              readinessProbe:
-                httpGet:
-                  path: /
-                  port: 17170
-              livenessProbe:
-                httpGet:
-                  path: /
-                  port: 17170
-              startupProbe:
-                httpGet:
-                  path: /
-                  port: 17170
-              volumeMounts:
-                cert:
-                  name: cert
-                  mountPath: /cert
-                  readOnly: true
-                data:
-                  name: data
-                  mountPath: /data
-                dbcert:
-                  name: dbcert
-                  mountPath: /dbcert
-                  readOnly: true
-          volumes:
-            cert:
-              name: cert
-              secret:
-                secretName: tls-lldaps
-            data:
-              name: data
-              configMap:
-                name: lldap-config
-            dbcert:
-              name: dbcert
-              secret:
-                secretName: lldap-postgresql-app-tls
-
-  services:
-    lldap:
-      selector:
-        app.kubernetes.io/name: lldap
-      ports:
-        http:
-          port: 17170
-        ldaps:
-          port: 6360
-
   fluxHelmReleases:
-    # the database is prepared by the postgresql-cluster chart (certificates, issuer, cluster and backups)
-    # the cluster is named after the release, which is the name of this HelmRelease
+
     lldap-postgresql:
       chart:
         spec:
@@ -137,15 +32,12 @@ resources:
           parameters:
             max_slot_wal_keep_size: 500MB
 
-    # the certificates, secrets and Gateway resources need the CRDs of these apps, so they are installed once they are ready
-    lldap-config:
+    # the secrets and the certificate of the pod, created before it starts
+    lldap-pre:
       dependsOn:
         cert-manager:
           name: app-cert-manager
           namespace: cert-manager
-        gateway-api:
-          name: app-gateway-api
-          namespace: gateway-api
         secret-generator:
           name: app-secret-generator
           namespace: secret-generator
@@ -170,20 +62,166 @@ resources:
                   fieldName: LLDAP_LDAP_USER_PASS
 
           certManagerCertificates:
-            # certificate of the web UI, terminated by the Gateway
-            lldap-gateway:
-              secretName: tls-lldap-gateway
-              dnsNames:
-                lldap: lldap.{{ .Values.global.domain }}
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
-
             # certificate of ldaps, used by the lldap pod
             tls-lldaps:
               secretName: tls-lldaps
               dnsNames:
                 lldaps: lldaps.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+    lldap:
+      dependsOn:
+        lldap-pre:
+          name: lldap-pre
+        lldap-postgresql:
+          name: lldap-postgresql
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          configMaps:
+            lldap-config:
+              data:
+                # https://github.com/lldap/lldap/blob/main/lldap_config.docker_template.toml
+                lldap_config.toml: |
+                  # verbose = false
+                  http_url = "https://lldap.{{ .Values.global.domain }}"
+                  database_url = "postgres://"
+                  ldap_base_dn = "{{ .Values.global.ldapdn }}"
+
+                  [ldap_options]
+                  enable_samba = true
+
+                  [ldaps_options]
+                  enabled=true
+                  key_file="/cert/tls.key"
+                  cert_file="/cert/tls.crt"
+
+          deployments:
+            lldap:
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: lldap
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: lldap
+                spec:
+                  securityContext:
+                    runAsUser: 1000
+                    runAsGroup: 1000
+                  containers:
+                    lldap:
+                      name: lldap
+                      image: lldap/lldap:2026-09-22-debian-rootless # renovate: versioning=loose
+                      envFrom:
+                        generated:
+                          secretRef:
+                            name: lldap-generated
+                        # lldap:
+                        #   secretRef:
+                        #     name: lldap
+                      env:
+                        TZ: europe/paris
+                        PGUSER: app
+                        PGDATABASE: app
+                        PGHOST: lldap-postgresql-rw
+                        PGSSLKEY: /dbcert/tls.key
+                        PGSSLCERT: /dbcert/tls.crt
+                        PGSSLROOTCERT: /dbcert/ca.crt
+                        PGSSLMODE: verify-full
+                      ports:
+                        http:
+                          containerPort: 17170
+                        ldaps:
+                          containerPort: 6360
+                      readinessProbe:
+                        httpGet:
+                          path: /
+                          port: 17170
+                      livenessProbe:
+                        httpGet:
+                          path: /
+                          port: 17170
+                      startupProbe:
+                        httpGet:
+                          path: /
+                          port: 17170
+                      volumeMounts:
+                        cert:
+                          name: cert
+                          mountPath: /cert
+                          readOnly: true
+                        data:
+                          name: data
+                          mountPath: /data
+                        dbcert:
+                          name: dbcert
+                          mountPath: /dbcert
+                          readOnly: true
+                  volumes:
+                    cert:
+                      name: cert
+                      secret:
+                        secretName: tls-lldaps
+                    data:
+                      name: data
+                      configMap:
+                        name: lldap-config
+                    dbcert:
+                      name: dbcert
+                      secret:
+                        secretName: lldap-postgresql-app-tls
+
+          services:
+            lldap:
+              selector:
+                app.kubernetes.io/name: lldap
+              ports:
+                http:
+                  port: 17170
+                ldaps:
+                  port: 6360
+
+    # the public exposure, applied once lldap is deployed and not waited for
+    lldap-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        lldap:
+          name: lldap
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          certManagerCertificates:
+            # certificate of the web UI, terminated by the Gateway
+            lldap-gateway:
+              secretName: tls-lldap-gateway
+              dnsNames:
+                lldap: lldap.{{ .Values.global.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer

@@ -20,15 +20,12 @@ resources:
       url: https://mailu.github.io/helm-charts
 
   fluxHelmReleases:
-    # the secrets, the certificate and the Gateway resources need the CRDs of these apps, so they are installed once they are ready
-    mailu-config:
+    # the secrets and the certificate of the services, created before they start
+    mailu-pre:
       dependsOn:
         cert-manager:
           name: app-cert-manager
           namespace: cert-manager
-        gateway-api:
-          name: app-gateway-api
-          namespace: gateway-api
         secret-generator:
           name: app-secret-generator
           namespace: secret-generator
@@ -83,52 +80,11 @@ resources:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
 
-          # Web UI exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
-          # It is not protected by forward auth: mailu has its own login.
-          # The mail protocols are not exposed by the Gateway, they come through the vpn sidecars of the front and postfix pods.
-          listenerSets:
-            mailu:
-              parentRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: shared
-                namespace: kube-system
-              listeners:
-                https:
-                  name: https
-                  hostname: mail.{{ .Values.global.domain }}
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: tls-mailu
-                  allowedRoutes:
-                    namespaces:
-                      from: Same
-
-          httpRoutes:
-            mailu:
-              parentRefs:
-                mailu:
-                  group: gateway.networking.k8s.io
-                  kind: ListenerSet
-                  name: mailu
-              hostnames:
-                mail: mail.{{ .Values.global.domain }}
-              rules:
-                root:
-                  backendRefs:
-                    front:
-                      name: mailu-front
-                      port: 80
-
     mailu:
       timeout: 15m # the first start of the databases and of clamav is slow
       dependsOn:
-        mailu-config: # the secrets and the certificate
-          name: mailu-config
+        mailu-pre: # the secrets and the certificate
+          name: mailu-pre
         longhorn: # the volumes
           name: app-longhorn
           namespace: longhorn-system
@@ -246,7 +202,7 @@ resources:
         persistence:
           single_pvc: false
 
-        # the web UI is exposed by the Gateway, see the `mailu-config` release
+        # the web UI is exposed by the Gateway, see the `mailu-integration` release
         ingress:
           enabled: false
           existingSecret: tls-mailu # the certificate of the mail protocols
@@ -365,3 +321,69 @@ resources:
           enabled: true
           updateStrategy:
             type: Recreate
+
+    # the public exposure, applied once mailu is deployed and not waited for
+    mailu-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        mailu:
+          name: mailu
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          # Web UI exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
+          # It is not protected by forward auth: mailu has its own login.
+          # The mail protocols are not exposed by the Gateway, they come through the vpn sidecars of the front and postfix pods.
+          listenerSets:
+            mailu:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: mail.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-mailu
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            mailu:
+              parentRefs:
+                mailu:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: mailu
+              hostnames:
+                mail: mail.{{ .Values.global.domain }}
+              rules:
+                root:
+                  backendRefs:
+                    front:
+                      name: mailu-front
+                      port: 80

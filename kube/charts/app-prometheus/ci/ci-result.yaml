@@ -295,7 +295,7 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: prometheus-config
+  name: prometheus-integration
   namespace: default
 spec:
   chart:
@@ -311,10 +311,12 @@ spec:
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
+  - name: prometheus
   driftDetection:
     mode: enabled
   install:
     crds: CreateReplace
+    disableWait: true
     remediation:
       retries: -1
   interval: 10m
@@ -322,6 +324,7 @@ spec:
     cleanupOnFail: true
   timeout: 2m
   upgrade:
+    disableWait: true
     remediation:
       retries: 3
   values:

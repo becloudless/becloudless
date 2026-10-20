@@ -9,6 +9,7 @@ resources:
       url: https://charts.longhorn.io
 
   fluxHelmReleases:
+    # the policy adding the PATH of NixOS to the pods, created before they start
     longhorn-pre:
       chart:
         spec:
@@ -99,18 +100,12 @@ resources:
         ingress:
           enabled: false
 
-    # settings, recurring jobs, storage and snapshot classes need the Longhorn CRDs, so they are installed once longhorn is ready
+    # settings, recurring jobs, storage and snapshot classes are Longhorn CRs, installed once longhorn is ready
     # the VolumeSnapshotClasses also need the snapshot CRDs from app-external-snapshotter
-    longhorn-config:
+    longhorn-post:
       dependsOn:
         longhorn:
           name: longhorn
-        cert-manager: # the certificate of the UI
-          name: app-cert-manager
-          namespace: cert-manager
-        gateway-api: # the Gateway of the UI
-          name: app-gateway-api
-          namespace: gateway-api
         external-snapshotter:
           name: app-external-snapshotter
           namespace: external-snapshotter
@@ -123,7 +118,91 @@ resources:
             name: bcl
             namespace: apps
       values:
+        resources:
+          longhornRecurringJobs:
+            daily-backups:
+              cron: 0 4 * * * # Daily at 4am
+              task: backup
+              groups:
+                - default
+              retain: 2
+              concurrency: 1
 
+          # Longhorn refuses to delete its settings, which makes a helm uninstall fail, so helm must never delete them
+          longhornSettings:
+            concurrent-automatic-engine-upgrade-per-node-limit:
+              annotations:
+                helm.sh/resource-policy: keep
+              value: "1"
+            default-backup-block-size:
+              annotations:
+                helm.sh/resource-policy: keep
+              value: "16"
+
+          storageClasses:
+            longhorn-single-local-replica:
+              annotations:
+                storageclass.kubernetes.io/is-default-class: "false"
+              provisioner: driver.longhorn.io
+              allowVolumeExpansion: true
+              volumeBindingMode: Immediate
+              reclaimPolicy: Delete
+              parameters:
+                numberOfReplicas: "2"
+                staleReplicaTimeout: "60" # 1h
+                fsType: ext4
+                dataLocality: strict-local
+                recurringJobSelector: '[{"name":"single-local-replica","isGroup":true}]'
+
+          # needs the snapshot CRDs from external-snapshotter
+          volumeSnapshotClasses:
+            longhorn-snapshot:
+              driver: driver.longhorn.io
+              deletionPolicy: Delete
+              parameters:
+                type: snap
+            longhorn-backing-image:
+              driver: driver.longhorn.io
+              deletionPolicy: Delete
+              parameters:
+                type: bi
+                export-type: qcow2 # default is raw
+            longhorn-backup-incremental:
+              driver: driver.longhorn.io
+              deletionPolicy: Delete
+              parameters:
+                type: bak
+            longhorn-backup-full:
+              driver: driver.longhorn.io
+              deletionPolicy: Delete
+              parameters:
+                type: bak
+                backupMode: full
+
+    # the public exposure, applied once longhorn-post is deployed and not waited for
+    longhorn-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        longhorn-post:
+          name: longhorn-post
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
         # UI behind the Cilium Gateway `shared` (kube-system) with Authelia forward auth.
         # The certificate is issued by the http-01 solver of the ClusterIssuer (gatewayHTTPRoute), which only needs the host to be
         # reachable on port 80 through the http listener of the Gateway.
@@ -192,63 +271,3 @@ resources:
                       name: longhorn-frontend
                       port: 80
 
-
-          longhornRecurringJobs:
-            daily-backups:
-              cron: 0 4 * * * # Daily at 4am
-              task: backup
-              groups:
-                - default
-              retain: 2
-              concurrency: 1
-
-          # Longhorn refuses to delete its settings, which makes a helm uninstall fail, so helm must never delete them
-          longhornSettings:
-            concurrent-automatic-engine-upgrade-per-node-limit:
-              annotations:
-                helm.sh/resource-policy: keep
-              value: "1"
-            default-backup-block-size:
-              annotations:
-                helm.sh/resource-policy: keep
-              value: "16"
-
-          storageClasses:
-            longhorn-single-local-replica:
-              annotations:
-                storageclass.kubernetes.io/is-default-class: "false"
-              provisioner: driver.longhorn.io
-              allowVolumeExpansion: true
-              volumeBindingMode: Immediate
-              reclaimPolicy: Delete
-              parameters:
-                numberOfReplicas: "2"
-                staleReplicaTimeout: "60" # 1h
-                fsType: ext4
-                dataLocality: strict-local
-                recurringJobSelector: '[{"name":"single-local-replica","isGroup":true}]'
-
-          # needs the snapshot CRDs from external-snapshotter
-          volumeSnapshotClasses:
-            longhorn-snapshot:
-              driver: driver.longhorn.io
-              deletionPolicy: Delete
-              parameters:
-                type: snap
-            longhorn-backing-image:
-              driver: driver.longhorn.io
-              deletionPolicy: Delete
-              parameters:
-                type: bi
-                export-type: qcow2 # default is raw
-            longhorn-backup-incremental:
-              driver: driver.longhorn.io
-              deletionPolicy: Delete
-              parameters:
-                type: bak
-            longhorn-backup-full:
-              driver: driver.longhorn.io
-              deletionPolicy: Delete
-              parameters:
-                type: bak
-                backupMode: full

@@ -49,7 +49,7 @@ resources:
         cni:
           exclusive: false # let multus install
 
-        # No ingress controller: every app is exposed by the shared Gateway (see `cilium-config`), which is the only entry point.
+        # No ingress controller: every app is exposed by the shared Gateway (see `cilium-post`), which is the only entry point.
         ingressController:
           enabled: false
         # Needs the CRDs of app-gateway-api at operator start, restart the cilium-operator once after they are first installed.
@@ -59,8 +59,8 @@ resources:
           streamIdleTimeoutDurationSeconds: 600 # required by immich for big files upload
 
     # LoadBalancer pool and BGP need the Cilium CRDs, so they are installed once cilium is ready.
-    # The cluster sets its pool and BGP cluster config through `resources.fluxHelmReleases.cilium-config.values.resources`.
-    cilium-config:
+    # The cluster sets its pool and BGP cluster config through `resources.fluxHelmReleases.cilium-post.values.resources`.
+    cilium-post:
       dependsOn:
         cilium:
           name: cilium

@@ -122,9 +122,15 @@ resources:
             serviceMonitor:
               enabled: false # the prometheus CRDs are not installed by the bcl apps
 
-    # the certificates and Gateway resources need the CRDs of these apps, so they are installed once they are ready
-    forgejo-config:
+    # the public exposure, applied once forgejo is deployed and not waited for
+    forgejo-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
       dependsOn:
+        forgejo:
+          name: forgejo
         cert-manager:
           name: app-cert-manager
           namespace: cert-manager

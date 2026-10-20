@@ -9,6 +9,34 @@ defaults:
     namespace: "{{ .Release.Namespace }}"
 
   resources:
+
+    statefulSets:
+      template:
+        spec:
+          enableServiceLinks: false
+  
+    cronJobs:
+      jobTemplate:
+        spec:
+          template:
+            spec:
+              enableServiceLinks: false
+
+    daemonSets:
+      template:
+        spec:
+          enableServiceLinks: false
+
+    deployments:
+      template:
+        spec:
+          enableServiceLinks: false
+
+    jobs:
+      template:
+        spec:
+          enableServiceLinks: false
+
     fluxOCIRepositories:
       interval: 10m
 

@@ -22,7 +22,7 @@ resources:
           replicas: 3
 
     # ClusterPolicies need the Kyverno CRDs, so they are installed once kyverno is ready
-    kyverno-config:
+    kyverno-post:
       dependsOn:
         kyverno:
           name: kyverno

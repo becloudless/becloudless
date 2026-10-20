@@ -8,129 +8,147 @@ global:
 # Not configured: SSO (needs the SSO plugin and the authelia OIDC client, which is disabled) and the remote transcoding with ffmpeg-over-ip.
 
 resources:
-  configMaps:
-    jellyfin-config:
-      data:
-        # https://jellyfin.org/docs/general/networking/
-        network.xml: |
-          <?xml version="1.0" encoding="utf-8"?>
-          <NetworkConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-            <BaseUrl />
-            <EnableHttps>false</EnableHttps>
-            <RequireHttps>false</RequireHttps>
-            <InternalHttpPort>8096</InternalHttpPort>
-            <InternalHttpsPort>8920</InternalHttpsPort>
-            <PublicHttpPort>8096</PublicHttpPort>
-            <PublicHttpsPort>8920</PublicHttpsPort>
-            <AutoDiscovery>true</AutoDiscovery>
-            <EnableIPv4>true</EnableIPv4>
-            <EnableIPv6>false</EnableIPv6>
-            <EnableRemoteAccess>true</EnableRemoteAccess>
-            <LocalNetworkSubnets />
-            <LocalNetworkAddresses />
-            <KnownProxies>
-              <string>10.42.0.0/16</string>
-            </KnownProxies>
-            <IgnoreVirtualInterfaces>true</IgnoreVirtualInterfaces>
-            <VirtualInterfaceNames>
-              <string>veth</string>
-            </VirtualInterfaceNames>
-            <EnablePublishedServerUriByRequest>false</EnablePublishedServerUriByRequest>
-            <PublishedServerUriBySubnet />
-            <RemoteIPFilter />
-            <IsRemoteIPFilterBlacklist>false</IsRemoteIPFilterBlacklist>
-          </NetworkConfiguration>
-
-  # database, metadata and cache of jellyfin
-  persistentVolumeClaims:
-    jellyfin-config:
-      accessModes:
-        - ReadWriteOnce
-      storageClassName: longhorn
-      resources:
-        requests:
-          storage: 10Gi
-
-  deployments:
-    jellyfin:
-      replicas: 1 # jellyfin is not HA ready
-      strategy:
-        type: Recreate # the volume is ReadWriteOnce
-      selector:
-        matchLabels:
-          app.kubernetes.io/name: jellyfin
-      template:
-        metadata:
-          labels:
-            app.kubernetes.io/name: jellyfin
-        spec:
-          containers:
-            jellyfin:
-              name: jellyfin
-              image: ghcr.io/jellyfin/jellyfin:10.11.11 # renovate: versioning=loose
-              ports:
-                http:
-                  containerPort: 8096
-              env:
-                TZ: Europe/Paris
-                JELLYFIN_PublishedServerUrl: https://jellyfin.{{ .Values.global.domain }}
-              startupProbe:
-                httpGet:
-                  path: /health
-                  port: 8096
-                periodSeconds: 10
-                failureThreshold: 60 # 10min, a huge library on low hardware can be slow to start
-              readinessProbe:
-                httpGet:
-                  path: /health
-                  port: 8096
-              livenessProbe:
-                httpGet:
-                  path: /health
-                  port: 8096
-              securityContext:
-                allowPrivilegeEscalation: false
-                capabilities:
-                  drop:
-                    all: ALL
-              volumeMounts:
-                config:
-                  name: config
-                  mountPath: /config
-                network:
-                  name: network
-                  mountPath: /config/config/network.xml
-                  subPath: network.xml
-                  readOnly: true
-                media:
-                  name: media
-                  mountPath: /media
-                  readOnly: true
-          volumes:
-            config:
-              name: config
-              persistentVolumeClaim:
-                claimName: jellyfin-config
-            network:
-              name: network
-              configMap:
-                name: jellyfin-config
-            media:
-              name: media
-              emptyDir: {} # TODO
-
-  services:
-    jellyfin:
-      selector:
-        app.kubernetes.io/name: jellyfin
-      ports:
-        http:
-          port: 8096
 
   fluxHelmReleases:
-    # the certificates and Gateway resources need the CRDs of these apps, so they are installed once they are ready
-    jellyfin-config:
+    jellyfin:
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          configMaps:
+            jellyfin-config:
+              data:
+                # https://jellyfin.org/docs/general/networking/
+                network.xml: |
+                  <?xml version="1.0" encoding="utf-8"?>
+                  <NetworkConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+                    <BaseUrl />
+                    <EnableHttps>false</EnableHttps>
+                    <RequireHttps>false</RequireHttps>
+                    <InternalHttpPort>8096</InternalHttpPort>
+                    <InternalHttpsPort>8920</InternalHttpsPort>
+                    <PublicHttpPort>8096</PublicHttpPort>
+                    <PublicHttpsPort>8920</PublicHttpsPort>
+                    <AutoDiscovery>true</AutoDiscovery>
+                    <EnableIPv4>true</EnableIPv4>
+                    <EnableIPv6>false</EnableIPv6>
+                    <EnableRemoteAccess>true</EnableRemoteAccess>
+                    <LocalNetworkSubnets />
+                    <LocalNetworkAddresses />
+                    <KnownProxies>
+                      <string>10.42.0.0/16</string>
+                    </KnownProxies>
+                    <IgnoreVirtualInterfaces>true</IgnoreVirtualInterfaces>
+                    <VirtualInterfaceNames>
+                      <string>veth</string>
+                    </VirtualInterfaceNames>
+                    <EnablePublishedServerUriByRequest>false</EnablePublishedServerUriByRequest>
+                    <PublishedServerUriBySubnet />
+                    <RemoteIPFilter />
+                    <IsRemoteIPFilterBlacklist>false</IsRemoteIPFilterBlacklist>
+                  </NetworkConfiguration>
+
+          # database, metadata and cache of jellyfin
+          persistentVolumeClaims:
+            jellyfin-config:
+              accessModes:
+                - ReadWriteOnce
+              storageClassName: longhorn
+              resources:
+                requests:
+                  storage: 10Gi
+
+          deployments:
+            jellyfin:
+              replicas: 1 # jellyfin is not HA ready
+              strategy:
+                type: Recreate # the volume is ReadWriteOnce
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: jellyfin
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: jellyfin
+                spec:
+                  containers:
+                    jellyfin:
+                      name: jellyfin
+                      image: ghcr.io/jellyfin/jellyfin:10.11.11 # renovate: versioning=loose
+                      ports:
+                        http:
+                          containerPort: 8096
+                      env:
+                        TZ: Europe/Paris
+                        JELLYFIN_PublishedServerUrl: https://jellyfin.{{ .Values.global.domain }}
+                      startupProbe:
+                        httpGet:
+                          path: /health
+                          port: 8096
+                        periodSeconds: 10
+                        failureThreshold: 60 # 10min, a huge library on low hardware can be slow to start
+                      readinessProbe:
+                        httpGet:
+                          path: /health
+                          port: 8096
+                      livenessProbe:
+                        httpGet:
+                          path: /health
+                          port: 8096
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        config:
+                          name: config
+                          mountPath: /config
+                        network:
+                          name: network
+                          mountPath: /config/config/network.xml
+                          subPath: network.xml
+                          readOnly: true
+                        media:
+                          name: media
+                          mountPath: /media
+                          readOnly: true
+                  volumes:
+                    config:
+                      name: config
+                      persistentVolumeClaim:
+                        claimName: jellyfin-config
+                    network:
+                      name: network
+                      configMap:
+                        name: jellyfin-config
+                    media:
+                      name: media
+                      emptyDir: {} # TODO
+
+          services:
+            jellyfin:
+              selector:
+                app.kubernetes.io/name: jellyfin
+              ports:
+                http:
+                  port: 8096
+
+    # the public exposure, applied once jellyfin is deployed and not waited for
+    jellyfin-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
       dependsOn:
+        jellyfin:
+          name: jellyfin
         cert-manager:
           name: app-cert-manager
           namespace: cert-manager

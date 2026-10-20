@@ -60,7 +60,7 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: cilium-config
+  name: cilium-post
   namespace: default
 spec:
   chart:
