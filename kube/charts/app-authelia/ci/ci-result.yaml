@@ -96,10 +96,9 @@ spec:
           policy: one_factor
       authentication_backend:
         file:
-          enabled: true
-          path: /config/users_database.yml
+          enabled: false
         ldap:
-          address: ldaps://lldaps.test.com:443
+          address: ldaps://lldap.lldap.svc.cluster.local:6360
           attributes:
             extra:
               immichquota:
@@ -111,11 +110,15 @@ spec:
                 name: immichrole
                 value_type: string
           base_dn: dc=test,dc=com
-          enabled: false
+          enabled: true
           implementation: lldap
-          password: {}
+          password:
+            path: password
+            secret_name: authelia-ldap
+            value: password
           tls:
             minimum_version: TLS1.2
+            server_name: lldaps.test.com
             skip_verify: false
           user: UID=authelia,OU=people,dc=test,dc=com
       identity_providers:
@@ -331,23 +334,15 @@ spec:
         - sh
         - -ec
         - |
-          hash=$(authelia crypto hash generate argon2 --password "$(cat /secrets/authelia-admin/password)" | sed 's/^Digest: //')
-          printf 'users:\n  admin:\n    displayname: Admin\n    email: admin@%s\n    password: "%s"\n    groups:\n      - role_admin\n' "$DOMAIN" "$hash" > /config/users_database.yml
           for client in forgejo grafana jellyfin immich; do
             hash=$(authelia crypto hash generate pbkdf2 --variant sha512 --password "$(cat /secrets/authelia-oidc/$client)" | sed 's/^Digest: //')
             printf '%s' "$hash" > /config/oidc-$client.hash
           done
-        env:
-        - name: DOMAIN
-          value: test.com
         image: ghcr.io/authelia/authelia:4.39.24
-        name: users-database
+        name: oidc-hashes
         volumeMounts:
         - mountPath: /config
           name: authelia
-        - mountPath: /secrets/authelia-admin
-          name: secret-authelia-admin
-          readOnly: true
         - mountPath: /secrets/authelia-oidc
           name: secret-authelia-oidc
           readOnly: true
@@ -355,9 +350,9 @@ spec:
       replicas: 1
     secret:
       additionalSecrets:
-        authelia-admin: {}
         authelia-generated: {}
         authelia-jwks: {}
+        authelia-ldap: {}
         authelia-oidc: {}
         authelia-postgresql-app: {}
         authelia-valkey: {}
@@ -521,6 +516,8 @@ spec:
   dependsOn:
   - name: app-cert-manager
     namespace: cert-manager
+  - name: app-external-secrets
+    namespace: external-secrets
   - name: app-secret-generator
     namespace: secret-generator
   driftDetection:
@@ -544,13 +541,35 @@ spec:
             kind: ClusterIssuer
             name: self-signed
           secretName: authelia-jwks
-      stringSecrets:
-        authelia-admin:
-          fields:
+      externalSecrets:
+        authelia-ldap:
+          data:
             password:
-              encoding: hex
-              fieldName: password
-              length: "32"
+              remoteRef:
+                key: lldap-authelia
+                property: password
+              secretKey: password
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: SecretStore
+            name: lldap
+      secretStores:
+        lldap:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: lldap-reader
+              remoteNamespace: lldap
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        lldap-reader:
+          automountServiceAccountToken: false
+      stringSecrets:
         authelia-generated:
           fields:
             oidc-hmac:

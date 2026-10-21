@@ -8,7 +8,7 @@ global:
 
   # setup applied to lldap by `lldap-post`
   lldapBootstrap:
-    revision: 2 # part of the name of the Job: bump it when the spec of the Job changes (immutable fields), see `lldap-post`
+    revision: 3 # part of the name of the Job: bump it when the spec of the Job changes (immutable fields), see `lldap-post`
     image: lldap/lldap:2026-09-22-debian-rootless # renovate: versioning=loose
     # the groups the apps authorize (see the access control of authelia and the roles of the apps)
     groups:
@@ -96,6 +96,37 @@ resources:
               fields:
                 key-seed:
                   fieldName: LLDAP_KEY_SEED
+
+            # password of the `authelia` user of lldap (created by `lldap-post`), authelia binds with it to read the users and to
+            # reset their password. Copied to the authelia namespace by external-secrets (see `authelia-pre`).
+            lldap-authelia:
+              fields:
+                password:
+                  fieldName: password
+
+          # lets the `lldap-reader` service account of the authelia namespace, used by the SecretStore of authelia, read the
+          # `lldap-authelia` secret of this namespace, and only this one. external-secrets reads a secret by its name (`get`), and
+          # its check of the store only looks for `get` on `secrets` in the rules of the account (not at the names).
+          roles:
+            authelia-secrets-reader:
+              rules:
+                secrets:
+                  apiGroups: [ "" ]
+                  resources: [ secrets ]
+                  resourceNames: [ lldap-authelia ]
+                  verbs: [ get ]
+
+          roleBindings:
+            authelia-secrets-reader:
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: Role
+                name: authelia-secrets-reader
+              subjects:
+                lldap-reader:
+                  kind: ServiceAccount
+                  name: lldap-reader
+                  namespace: authelia
 
           certManagerCertificates:
             # certificate of ldaps, used by the lldap pod
@@ -238,6 +269,8 @@ resources:
     #    `global.lldapBootstrap`, in the values of this chart
     #  - the users: declared by the cluster in `global.lldapUsers` (`apps.lldap.values.global.lldapUsers` in the cluster),
     #    their groups must be declared in `global.lldapBootstrap.groups`
+    #  - the `authelia` user, always declared here: the account authelia binds with (members of `lldap_password_manager` and
+    #    `lldap_strict_readonly`), its password is the generated `lldap-authelia` secret
     # The groups and users that are not declared are deleted (`DO_CLEANUP`), the `admin` user is kept.
     #
     # global.lldapUsers: the key is the user id. The attributes are the ones of the bootstrap script, see
@@ -276,6 +309,7 @@ resources:
                   {{ toJson (dict "name" $name) }}
                   {{- end }}
                 users.json: | # one JSON object per user
+                  {{ toJson (dict "id" "authelia" "displayName" "Authelia" "email" (printf "authelia@%s" .Values.global.domain) "password_file" "/secrets/authelia/password" "groups" (list "lldap_password_manager" "lldap_strict_readonly")) }}
                   {{- range $id, $user := (.Values.global.lldapUsers | default dict) }}
                   {{ toJson (merge (dict "id" $id) ($user | default dict)) }}
                   {{- end }}
@@ -324,11 +358,19 @@ resources:
                           name: setup
                           mountPath: /setup
                           readOnly: true
+                        authelia:
+                          name: authelia
+                          mountPath: /secrets/authelia
+                          readOnly: true
                   volumes:
                     setup:
                       name: setup
                       configMap:
                         name: lldap-bootstrap
+                    authelia:
+                      name: authelia
+                      secret:
+                        secretName: lldap-authelia
 
     # the public exposure, applied once lldap is deployed and not waited for
     lldap-integration:

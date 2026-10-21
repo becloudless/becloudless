@@ -316,6 +316,10 @@ resources:
     sourceCRD:
       url: https://raw.githubusercontent.com/external-secrets/external-secrets/main/config/crds/bases/external-secrets.io_secretstores.yaml
       crdVersion: v1
+  - name: externalSecrets
+    sourceCRD:
+      url: https://raw.githubusercontent.com/external-secrets/external-secrets/main/config/crds/bases/external-secrets.io_externalsecrets.yaml
+      crdVersion: v1
   - name: fluxAlerts
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_alerts.yaml

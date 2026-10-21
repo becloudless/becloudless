@@ -42,6 +42,9 @@ resources:
         cert-manager:
           name: app-cert-manager
           namespace: cert-manager
+        external-secrets:
+          name: app-external-secrets
+          namespace: external-secrets
         secret-generator:
           name: app-secret-generator
           namespace: secret-generator
@@ -64,14 +67,6 @@ resources:
                   fieldName: identity_validation.reset_password.jwt.hmac.key
                 session-encryption:
                   fieldName: session.encryption.key
-
-            # password of the `admin` user of the file backend
-            authelia-admin:
-              fields:
-                password:
-                  fieldName: password
-                  encoding: hex
-                  length: "32"
 
             # secrets of the OIDC clients, the key is the `client_id`
             authelia-oidc:
@@ -101,6 +96,40 @@ resources:
               issuerRef:
                 name: self-signed
                 kind: ClusterIssuer
+
+          # The password authelia binds to lldap with is generated in the lldap namespace (`lldap-authelia` secret, the account is
+          # created by `lldap-post`). The `lldap` SecretStore reads it there as the `lldap-reader` service account, which the Role of
+          # `lldap-pre` allows, and the ExternalSecret copies it to the `authelia-ldap` secret.
+          serviceAccounts:
+            lldap-reader:
+              automountServiceAccountToken: false # only used by external-secrets to get a token
+
+          secretStores:
+            lldap:
+              provider:
+                kubernetes:
+                  remoteNamespace: lldap
+                  server:
+                    caProvider:
+                      type: ConfigMap
+                      name: kube-root-ca.crt
+                      key: ca.crt
+                  auth:
+                    serviceAccount:
+                      name: lldap-reader
+
+          externalSecrets:
+            authelia-ldap:
+              refreshInterval: 1h
+              secretStoreRef:
+                kind: SecretStore
+                name: lldap
+              data:
+                password:
+                  secretKey: password
+                  remoteRef:
+                    key: lldap-authelia
+                    property: password
 
     authelia-valkey:
       dependsOn: # the generated secrets
@@ -153,33 +182,25 @@ resources:
 
         pod:
           kind: Deployment
-          replicas: 1 # TODO the users database and the notifications are files of the pod
+          replicas: 1 # TODO the notifications are files of the pod
           env:
             - name: TZ
               value: Europe/Paris
-          # the users database and the hashes of the OIDC client secrets are built from the generated secrets, the hashes change at each start but the secrets do not
+          # the hashes of the OIDC client secrets are built from the generated secrets, the hashes change at each start but the secrets do not
           initContainers:
-            - name: users-database
+            - name: oidc-hashes
               image: ghcr.io/authelia/authelia:4.39.24
               command:
                 - sh
                 - -ec
                 - |
-                  hash=$(authelia crypto hash generate argon2 --password "$(cat /secrets/authelia-admin/password)" | sed 's/^Digest: //')
-                  printf 'users:\n  admin:\n    displayname: Admin\n    email: admin@%s\n    password: "%s"\n    groups:\n      - role_admin\n' "$DOMAIN" "$hash" > /config/users_database.yml
                   for client in forgejo grafana jellyfin immich; do
                     hash=$(authelia crypto hash generate pbkdf2 --variant sha512 --password "$(cat /secrets/authelia-oidc/$client)" | sed 's/^Digest: //')
                     printf '%s' "$hash" > /config/oidc-$client.hash
                   done
-              env:
-                - name: DOMAIN
-                  value: "{{ .Values.global.domain }}"
               volumeMounts:
                 - name: authelia
                   mountPath: /config
-                - name: secret-authelia-admin
-                  mountPath: /secrets/authelia-admin
-                  readOnly: true
                 - name: secret-authelia-oidc
                   mountPath: /secrets/authelia-oidc
                   readOnly: true
@@ -194,8 +215,8 @@ resources:
 
         secret:
           additionalSecrets:
-            authelia-admin: {}
             authelia-generated: {}
+            authelia-ldap: {}
             authelia-postgresql-app: {}
             authelia-valkey: {}
             authelia-oidc: {}
@@ -236,17 +257,21 @@ resources:
 
           authentication_backend:
             file:
-              enabled: true
-              path: /config/users_database.yml
+              enabled: false
             ldap:
-              enabled: false # to use lldap again: disable `file`, the init container and set the password of the `authelia` user
+              enabled: true
               implementation: lldap
-              # served by the lldap ldaps listener of the Gateway (tls passthrough) with a publicly trusted certificate
-              address: ldaps://lldaps.{{ .Values.global.domain }}:443
+              # the service of lldap, with the name of the publicly trusted certificate of its ldaps listener (`tls-lldaps`)
+              address: ldaps://lldap.lldap.svc.cluster.local:6360
               base_dn: "{{ .Values.global.ldapdn }}"
+              # created by `lldap-post`, its password is copied from the lldap namespace by the ExternalSecret `authelia-ldap`
               user: 'UID=authelia,OU=people,{{ .Values.global.ldapdn }}'
-              password: {}
+              password:
+                secret_name: authelia-ldap
+                value: password
+                path: password
               tls:
+                server_name: lldaps.{{ .Values.global.domain }}
                 skip_verify: false
                 minimum_version: TLS1.2
               attributes:

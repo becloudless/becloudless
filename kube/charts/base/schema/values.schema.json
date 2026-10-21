@@ -90,6 +90,9 @@
             "deployments": {
               "$ref": "./resources/deployments.json"
             },
+            "externalSecrets": {
+              "$ref": "./resources/externalSecrets.json"
+            },
             "fluxAlerts": {
               "$ref": "./resources/fluxAlerts.json"
             },
@@ -371,6 +374,13 @@
             "$ref": "./resources/deployments.json"
           },
           "description": "Deployment instances, keyed by id.",
+          "type": "object"
+        },
+        "externalSecrets": {
+          "additionalProperties": {
+            "$ref": "./resources/externalSecrets.json"
+          },
+          "description": "ExternalSecret instances, keyed by id.",
           "type": "object"
         },
         "fluxAlerts": {

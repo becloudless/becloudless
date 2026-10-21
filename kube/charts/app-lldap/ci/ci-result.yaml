@@ -291,13 +291,14 @@ spec:
               {"name":"app_seerr"}
             users-schema.json: '[{"attributeType":"INTEGER","isEditable":false,"isList":false,"isVisible":true,"name":"immichquota"},{"attributeType":"STRING","isEditable":false,"isList":false,"isVisible":true,"name":"immichrole"}]'
             users.json: |-
+              {"displayName":"Authelia","email":"authelia@test.com","groups":["lldap_password_manager","lldap_strict_readonly"],"id":"authelia","password_file":"/secrets/authelia/password"}
               {"email":"guest@test.com","id":"guest"}
               {"displayName":"n0rad","email":"n0rad@test.com","groups":["role_admin","role_user"],"id":"n0rad","immichquota":45,"immichrole":"admin"}
       jobs:
         lldap-bootstrap:
           activeDeadlineSeconds: 600
           backoffLimit: 0
-          fullNameOverride: lldap-bootstrap-fefea1e86a
+          fullNameOverride: lldap-bootstrap-e44a25760f
           template:
             spec:
               containers:
@@ -330,6 +331,10 @@ spec:
                   image: lldap/lldap:2026-09-22-debian-rootless
                   name: bootstrap
                   volumeMounts:
+                    authelia:
+                      mountPath: /secrets/authelia
+                      name: authelia
+                      readOnly: true
                     setup:
                       mountPath: /setup
                       name: setup
@@ -339,6 +344,10 @@ spec:
                 runAsGroup: 1000
                 runAsUser: 1000
               volumes:
+                authelia:
+                  name: authelia
+                  secret:
+                    secretName: lldap-authelia
                 setup:
                   configMap:
                     name: lldap-bootstrap
@@ -426,11 +435,38 @@ spec:
             kind: ClusterIssuer
             name: letsencrypt-prod
           secretName: tls-lldaps
+      roleBindings:
+        authelia-secrets-reader:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: authelia-secrets-reader
+          subjects:
+            lldap-reader:
+              kind: ServiceAccount
+              name: lldap-reader
+              namespace: authelia
+      roles:
+        authelia-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - lldap-authelia
+              resources:
+              - secrets
+              verbs:
+              - get
       stringSecrets:
         lldap:
           fields:
             key-seed:
               fieldName: LLDAP_KEY_SEED
+        lldap-authelia:
+          fields:
+            password:
+              fieldName: password
         lldap-generated:
           fields:
             jwt-secret:
