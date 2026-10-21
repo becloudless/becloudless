@@ -268,10 +268,10 @@ spec:
                 - name: "Applications"
                   icon: "fas fa-heartbeat"
                   items:
-                    - name: Gitea
+                    - name: Forgejo
                       subtitle: Source code management
-                      logo: https://gitea.${BCL_GLOBAL_DOMAIN}/assets/img/favicon.png
-                      url: https://gitea.${BCL_GLOBAL_DOMAIN}
+                      logo: https://forgejo.${BCL_GLOBAL_DOMAIN}/assets/img/favicon.png
+                      url: https://forgejo.${BCL_GLOBAL_DOMAIN}
                     - name: RuTorrent
                       subtitle: Torrent downloader
                       logo: https://rutorrent.${BCL_GLOBAL_DOMAIN}/images/favicon.ico
