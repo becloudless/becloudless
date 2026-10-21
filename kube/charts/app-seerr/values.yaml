@@ -182,6 +182,11 @@ resources:
                           port: 80
                         http:
                           path: /api/authz/ext-authz/
+                          allowedResponseHeaders: # only the identity headers, not the authz content-type/content-length (a GET with a content-length makes upstreams answer 400)
+                            remote-user: remote-user
+                            remote-groups: remote-groups
+                            remote-name: remote-name
+                            remote-email: remote-email
                           allowedHeaders: # what authelia needs to find the session and to redirect to the login page
                             cookie: cookie
                             accept: accept
