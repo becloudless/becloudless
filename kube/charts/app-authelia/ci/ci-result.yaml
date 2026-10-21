@@ -457,6 +457,10 @@ spec:
               group: gateway.networking.k8s.io
               kind: HTTPRoute
               namespace: seerr
+            whoami:
+              group: gateway.networking.k8s.io
+              kind: HTTPRoute
+              namespace: whoami
           to:
             authelia:
               group: ""
