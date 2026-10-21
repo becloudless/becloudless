@@ -150,7 +150,7 @@ spec:
             client_id: gitea
             client_name: Gitea
             client_secret:
-              path: /secrets/authelia-oidc/oidc.client.gitea.value
+              path: /config/oidc-gitea.hash
             grant_types:
             - authorization_code
             pkce_challenge_method: ""
@@ -173,7 +173,7 @@ spec:
             client_id: grafana
             client_name: Grafana
             client_secret:
-              path: /secrets/authelia-oidc/oidc.client.grafana.value
+              path: /config/oidc-grafana.hash
             grant_types:
             - authorization_code
             pkce_challenge_method: S256
@@ -196,7 +196,7 @@ spec:
             client_id: jellyfin
             client_name: Jellyfin
             client_secret:
-              path: /secrets/authelia-oidc/oidc.client.jellyfin.value
+              path: /config/oidc-jellyfin.hash
             grant_types:
             - authorization_code
             pkce_challenge_method: S256
@@ -219,7 +219,7 @@ spec:
             client_id: immich
             client_name: immich
             client_secret:
-              path: /secrets/authelia-oidc/oidc.client.immich.value
+              path: /config/oidc-immich.hash
             grant_types:
             - authorization_code
             pkce_challenge_method: ""
@@ -239,7 +239,7 @@ spec:
             - immich_scope
             token_endpoint_auth_method: client_secret_post
             userinfo_signed_response_alg: RS256
-          enabled: false
+          enabled: true
           hmac_secret:
             secret_name: authelia-generated
           jwks:
@@ -333,6 +333,10 @@ spec:
         - |
           hash=$(authelia crypto hash generate argon2 --password "$(cat /secrets/authelia-admin/password)" | sed 's/^Digest: //')
           printf 'users:\n  admin:\n    displayname: Admin\n    email: admin@%s\n    password: "%s"\n    groups:\n      - role_admin\n' "$DOMAIN" "$hash" > /config/users_database.yml
+          for client in gitea grafana jellyfin immich; do
+            hash=$(authelia crypto hash generate pbkdf2 --variant sha512 --password "$(cat /secrets/authelia-oidc/$client)" | sed 's/^Digest: //')
+            printf '%s' "$hash" > /config/oidc-$client.hash
+          done
         env:
         - name: DOMAIN
           value: test.com
@@ -344,12 +348,17 @@ spec:
         - mountPath: /secrets/authelia-admin
           name: secret-authelia-admin
           readOnly: true
+        - mountPath: /secrets/authelia-oidc
+          name: secret-authelia-oidc
+          readOnly: true
       kind: Deployment
       replicas: 1
     secret:
       additionalSecrets:
         authelia-admin: {}
         authelia-generated: {}
+        authelia-jwks: {}
+        authelia-oidc: {}
         authelia-postgresql-app: {}
         authelia-valkey: {}
 ---
@@ -550,6 +559,16 @@ spec:
               fieldName: identity_validation.reset_password.jwt.hmac.key
             session-encryption:
               fieldName: session.encryption.key
+        authelia-oidc:
+          fields:
+            gitea:
+              fieldName: gitea
+            grafana:
+              fieldName: grafana
+            immich:
+              fieldName: immich
+            jellyfin:
+              fieldName: jellyfin
         authelia-valkey:
           fields:
             authelia:
