@@ -289,14 +289,14 @@ spec:
               {"name":"app_jellyfin"}
               {"name":"app_pushprox"}
               {"name":"app_seerr"}
-            users-schema.json: '[{"attributeType":"INTEGER","isEditable":false,"isList":false,"isVisible":true,"name":"immich_quota"},{"attributeType":"STRING","isEditable":false,"isList":false,"isVisible":true,"name":"immich_role"}]'
+            users-schema.json: '[{"attributeType":"INTEGER","isEditable":false,"isList":false,"isVisible":true,"name":"immichquota"},{"attributeType":"STRING","isEditable":false,"isList":false,"isVisible":true,"name":"immichrole"}]'
             users.json: |-
               {"email":"guest@test.com","id":"guest"}
-              {"displayName":"n0rad","email":"n0rad@test.com","groups":["role_admin","role_user"],"id":"n0rad","immich_quota":45,"immich_role":"admin"}
+              {"displayName":"n0rad","email":"n0rad@test.com","groups":["role_admin","role_user"],"id":"n0rad","immichquota":45,"immichrole":"admin"}
       jobs:
         lldap-bootstrap:
           backoffLimit: 6
-          fullNameOverride: lldap-bootstrap-8ce8e485fb
+          fullNameOverride: lldap-bootstrap-7a12dd998d
           template:
             spec:
               containers:

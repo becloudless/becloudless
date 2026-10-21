@@ -8,7 +8,7 @@ global:
       groups:
         - role_admin
         - role_user
-      immich_role: admin
-      immich_quota: 45
+      immichrole: admin
+      immichquota: 45
     guest:
       email: guest@test.com

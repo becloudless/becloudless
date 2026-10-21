@@ -252,11 +252,11 @@ resources:
               attributes:
                 extra:
                   immichquota: # The attribute name from LDAP
-                    name: 'immich_quota'
+                    name: 'immichquota'
                     multi_valued: false
                     value_type: 'integer'
                   immichrole:
-                    name: 'immich_role'
+                    name: 'immichrole'
                     multi_valued: false
                     value_type: 'string'
 
@@ -386,9 +386,9 @@ resources:
                 immich_policy:
                   custom_claims:
                     immich_quota:
-                      attribute: 'immich_quota'
+                      attribute: 'immichquota'
                     immich_role:
-                      attribute: 'immich_role'
+                      attribute: 'immichrole'
               scopes:
                 immich_scope:
                   claims:

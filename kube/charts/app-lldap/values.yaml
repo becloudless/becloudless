@@ -23,12 +23,12 @@ global:
       - app_seerr
     # the custom attributes of the users, used by the OIDC claims of authelia
     userSchema:
-      - name: immich_quota
+      - name: immichquota
         attributeType: INTEGER
         isEditable: false
         isList: false
         isVisible: true
-      - name: immich_role
+      - name: immichrole
         attributeType: STRING
         isEditable: false
         isList: false
@@ -247,8 +247,8 @@ resources:
     #       displayName: n0rad
     #       email: n0rad@example.com
     #       groups: [ role_admin, role_user ]
-    #       immich_role: admin
-    #       immich_quota: 45
+    #       immichrole: admin
+    #       immichquota: 45
     # No password is set, a user gets one from the lldap web UI (admin).
     #
     # The hash covers the users, the groups, the schema and the image. Changing anything else in the Job (the script, the
