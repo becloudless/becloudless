@@ -198,6 +198,111 @@ resources:
                 ldaps:
                   port: 6360
 
+    # the setup of the apps, applied every 5 minutes by the `bootstrap.sh` of lldap through its API:
+    #  - the groups the apps authorize (see the access control of authelia) and the custom attributes of the users: declared here
+    #  - the users: declared by the cluster in `global.lldapUsers` (see below), their groups must be declared here
+    # The groups and users that are not declared are deleted (`DO_CLEANUP`), the `admin` user is kept.
+    #
+    # global.lldapUsers: the users of the cluster, the key is the user id (`apps.lldap.values.global.lldapUsers` in the cluster).
+    # The attributes are the ones of the bootstrap script, see
+    # https://github.com/lldap/lldap/blob/main/example_configs/bootstrap/bootstrap.md, and the custom attributes declared below.
+    #   lldapUsers:
+    #     n0rad:
+    #       displayName: n0rad
+    #       email: n0rad@example.com
+    #       groups: [ role_admin, role_user ]
+    #       immich_role: admin
+    #       immich_quota: 45
+    # No password is set, a user gets one from the lldap web UI (admin).
+    lldap-post:
+      dependsOn:
+        lldap:
+          name: lldap
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          configMaps:
+            lldap-bootstrap:
+              data:
+                groups.json: |
+                  {"name": "role_admin"}
+                  {"name": "role_user"}
+                  {"name": "role_editor"}
+                  {"name": "app_forgejo"}
+                  {"name": "app_gitea"}
+                  {"name": "app_immich"}
+                  {"name": "app_immich_one_factor"}
+                  {"name": "app_jellyfin"}
+                  {"name": "app_pushprox"}
+                  {"name": "app_seerr"}
+                users.json: | # one JSON object per user, as the script reads the top-level values
+                  {{- range $id, $user := (.Values.global.lldapUsers | default dict) }}
+                  {{ toJson (merge (dict "id" $id) ($user | default dict)) }}
+                  {{- end }}
+                users-schema.json: |
+                  [
+                    {"name": "immich_quota", "attributeType": "INTEGER", "isEditable": false, "isList": false, "isVisible": true},
+                    {"name": "immich_role", "attributeType": "STRING", "isEditable": false, "isList": false, "isVisible": true}
+                  ]
+
+          cronJobs:
+            lldap-bootstrap:
+              schedule: "*/5 * * * *"
+              concurrencyPolicy: Forbid
+              jobTemplate:
+                spec:
+                  backoffLimit: 0
+                  template:
+                    spec:
+                      restartPolicy: Never
+                      securityContext:
+                        runAsUser: 1000
+                        runAsGroup: 1000
+                      containers:
+                        bootstrap:
+                          name: bootstrap
+                          image: lldap/lldap:2026-09-22-debian-rootless # renovate: versioning=loose
+                          command: [ /usr/bin/env, bash ]
+                          args:
+                            - -c
+                            - |
+                              mkdir /tmp/{groups,users,users-schema}
+                              cp /setup/groups.json /tmp/groups
+                              cp /setup/users-schema.json /tmp/users-schema
+                              cp /setup/users.json /tmp/users
+                              export USER_CONFIGS_DIR=/tmp/users
+                              export USER_SCHEMAS_DIR=/tmp/users-schema
+                              export GROUP_CONFIGS_DIR=/tmp/groups
+                              /app/bootstrap.sh
+                          env:
+                            LLDAP_URL: http://lldap:17170
+                            LLDAP_ADMIN_USERNAME:
+                              secretKeyRef:
+                                name: lldap-generated
+                                key: LLDAP_LDAP_USER_DN
+                            LLDAP_ADMIN_PASSWORD:
+                              secretKeyRef:
+                                name: lldap-generated
+                                key: LLDAP_LDAP_USER_PASS
+                            DO_CLEANUP: "true"
+                          volumeMounts:
+                            setup:
+                              name: setup
+                              mountPath: /setup
+                              readOnly: true
+                      volumes:
+                        setup:
+                          name: setup
+                          configMap:
+                            name: lldap-bootstrap
+
     # the public exposure, applied once lldap is deployed and not waited for
     lldap-integration:
       install:
@@ -205,8 +310,8 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        lldap:
-          name: lldap
+        lldap-post:
+          name: lldap-post
         cert-manager:
           name: app-cert-manager
           namespace: cert-manager
