@@ -52,6 +52,10 @@ func InstallAnywhere(sshConfig *runner.SshConnectionConfig, diskPassword string,
 	}
 
 	logs.Info("Looking for matching system")
+	// nix flakes only see tracked files, so new systems must be added to git first
+	if err := infra.Git.AddAll(); err != nil {
+		return errs.WithE(err, "Failed to add new files to git repository")
+	}
 	localRunner := runner.NewLocalRunner()
 	systemName, err := findSystem(infra, localRunner, info)
 	if err != nil {
