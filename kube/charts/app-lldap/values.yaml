@@ -8,6 +8,7 @@ global:
 
   # setup applied to lldap by `lldap-post`
   lldapBootstrap:
+    revision: 2 # part of the name of the Job: bump it when the spec of the Job changes (immutable fields), see `lldap-post`
     image: lldap/lldap:2026-09-22-debian-rootless # renovate: versioning=loose
     # the groups the apps authorize (see the access control of authelia and the roles of the apps)
     groups:
@@ -251,8 +252,8 @@ resources:
     #       immichquota: 45
     # No password is set, a user gets one from the lldap web UI (admin).
     #
-    # The hash covers the users, the groups, the schema and the image. Changing anything else in the Job (the script, the
-    # env...) is a change of an immutable field of the existing Job: change the image or the setup, or delete the Job.
+    # The hash covers the users, the groups, the schema, the image and `lldapBootstrap.revision`. Changing anything else in the Job
+    # (the script, the env...) is a change of an immutable field of the existing Job: bump `revision`, or delete the Job.
     lldap-post:
       dependsOn:
         lldap:
@@ -283,7 +284,8 @@ resources:
           jobs:
             lldap-bootstrap:
               fullNameOverride: 'lldap-bootstrap-{{ list .Values.global.lldapBootstrap (.Values.global.lldapUsers | default dict) | toJson | sha256sum | trunc 10 }}'
-              backoffLimit: 6 # the script waits for lldap to answer, a failure is retried
+              backoffLimit: 0 # no retry: the script waits for lldap itself, and a Job of an old setup retrying would apply it again over the new one
+              activeDeadlineSeconds: 600
               template:
                 spec:
                   restartPolicy: Never

@@ -295,8 +295,9 @@ spec:
               {"displayName":"n0rad","email":"n0rad@test.com","groups":["role_admin","role_user"],"id":"n0rad","immichquota":45,"immichrole":"admin"}
       jobs:
         lldap-bootstrap:
-          backoffLimit: 6
-          fullNameOverride: lldap-bootstrap-7a12dd998d
+          activeDeadlineSeconds: 600
+          backoffLimit: 0
+          fullNameOverride: lldap-bootstrap-fefea1e86a
           template:
             spec:
               containers:
