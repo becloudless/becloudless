@@ -3,6 +3,37 @@ global:
   domain:
   ldapdn:
 
+  # users of the cluster, see `lldap-post`
+  lldapUsers: {}
+
+  # setup applied to lldap by `lldap-post`
+  lldapBootstrap:
+    image: lldap/lldap:2026-09-22-debian-rootless # renovate: versioning=loose
+    # the groups the apps authorize (see the access control of authelia and the roles of the apps)
+    groups:
+      - role_admin
+      - role_user
+      - role_editor
+      - app_forgejo
+      - app_gitea
+      - app_immich
+      - app_immich_one_factor
+      - app_jellyfin
+      - app_pushprox
+      - app_seerr
+    # the custom attributes of the users, used by the OIDC claims of authelia
+    userSchema:
+      - name: immich_quota
+        attributeType: INTEGER
+        isEditable: false
+        isList: false
+        isVisible: true
+      - name: immich_role
+        attributeType: STRING
+        isEditable: false
+        isList: false
+        isVisible: true
+
 resources:
 
   fluxHelmReleases:
@@ -198,14 +229,19 @@ resources:
                 ldaps:
                   port: 6360
 
-    # the setup of the apps, applied every 5 minutes by the `bootstrap.sh` of lldap through its API:
-    #  - the groups the apps authorize (see the access control of authelia) and the custom attributes of the users: declared here
-    #  - the users: declared by the cluster in `global.lldapUsers` (see below), their groups must be declared here
+    # the setup of the apps, applied through the API of lldap by its `bootstrap.sh`, once for each change of the setup:
+    # the Job is named after the hash of the setup (`lldap-bootstrap-<hash>`), so a change creates a new Job, which runs the
+    # script, and Helm deletes the previous one. The release waits for the Job: a failing script fails `lldap-post` (and
+    # blocks `lldap-integration`). To run it again, delete the Job: it is recreated by the next reconciliation.
+    #  - the groups the apps authorize (see the access control of authelia) and the custom attributes of the users:
+    #    `global.lldapBootstrap`, in the values of this chart
+    #  - the users: declared by the cluster in `global.lldapUsers` (`apps.lldap.values.global.lldapUsers` in the cluster),
+    #    their groups must be declared in `global.lldapBootstrap.groups`
     # The groups and users that are not declared are deleted (`DO_CLEANUP`), the `admin` user is kept.
     #
-    # global.lldapUsers: the users of the cluster, the key is the user id (`apps.lldap.values.global.lldapUsers` in the cluster).
-    # The attributes are the ones of the bootstrap script, see
-    # https://github.com/lldap/lldap/blob/main/example_configs/bootstrap/bootstrap.md, and the custom attributes declared below.
+    # global.lldapUsers: the key is the user id. The attributes are the ones of the bootstrap script, see
+    # https://github.com/lldap/lldap/blob/main/example_configs/bootstrap/bootstrap.md, and the custom attributes declared in
+    # `global.lldapBootstrap.userSchema`.
     #   lldapUsers:
     #     n0rad:
     #       displayName: n0rad
@@ -214,6 +250,9 @@ resources:
     #       immich_role: admin
     #       immich_quota: 45
     # No password is set, a user gets one from the lldap web UI (admin).
+    #
+    # The hash covers the users, the groups, the schema and the image. Changing anything else in the Job (the script, the
+    # env...) is a change of an immutable field of the existing Job: change the image or the setup, or delete the Job.
     lldap-post:
       dependsOn:
         lldap:
@@ -231,77 +270,63 @@ resources:
           configMaps:
             lldap-bootstrap:
               data:
-                groups.json: |
-                  {"name": "role_admin"}
-                  {"name": "role_user"}
-                  {"name": "role_editor"}
-                  {"name": "app_forgejo"}
-                  {"name": "app_gitea"}
-                  {"name": "app_immich"}
-                  {"name": "app_immich_one_factor"}
-                  {"name": "app_jellyfin"}
-                  {"name": "app_pushprox"}
-                  {"name": "app_seerr"}
-                users.json: | # one JSON object per user, as the script reads the top-level values
+                groups.json: | # one JSON object per group, as the script reads the top-level values
+                  {{- range $name := .Values.global.lldapBootstrap.groups }}
+                  {{ toJson (dict "name" $name) }}
+                  {{- end }}
+                users.json: | # one JSON object per user
                   {{- range $id, $user := (.Values.global.lldapUsers | default dict) }}
                   {{ toJson (merge (dict "id" $id) ($user | default dict)) }}
                   {{- end }}
-                users-schema.json: |
-                  [
-                    {"name": "immich_quota", "attributeType": "INTEGER", "isEditable": false, "isList": false, "isVisible": true},
-                    {"name": "immich_role", "attributeType": "STRING", "isEditable": false, "isList": false, "isVisible": true}
-                  ]
+                users-schema.json: '{{ toJson .Values.global.lldapBootstrap.userSchema }}'
 
-          cronJobs:
+          jobs:
             lldap-bootstrap:
-              schedule: "*/5 * * * *"
-              concurrencyPolicy: Forbid
-              jobTemplate:
+              fullNameOverride: 'lldap-bootstrap-{{ list .Values.global.lldapBootstrap (.Values.global.lldapUsers | default dict) | toJson | sha256sum | trunc 10 }}'
+              backoffLimit: 6 # the script waits for lldap to answer, a failure is retried
+              template:
                 spec:
-                  backoffLimit: 0
-                  template:
-                    spec:
-                      restartPolicy: Never
-                      securityContext:
-                        runAsUser: 1000
-                        runAsGroup: 1000
-                      containers:
-                        bootstrap:
-                          name: bootstrap
-                          image: lldap/lldap:2026-09-22-debian-rootless # renovate: versioning=loose
-                          command: [ /usr/bin/env, bash ]
-                          args:
-                            - -c
-                            - |
-                              mkdir /tmp/{groups,users,users-schema}
-                              cp /setup/groups.json /tmp/groups
-                              cp /setup/users-schema.json /tmp/users-schema
-                              cp /setup/users.json /tmp/users
-                              export USER_CONFIGS_DIR=/tmp/users
-                              export USER_SCHEMAS_DIR=/tmp/users-schema
-                              export GROUP_CONFIGS_DIR=/tmp/groups
-                              /app/bootstrap.sh
-                          env:
-                            LLDAP_URL: http://lldap:17170
-                            LLDAP_ADMIN_USERNAME:
-                              secretKeyRef:
-                                name: lldap-generated
-                                key: LLDAP_LDAP_USER_DN
-                            LLDAP_ADMIN_PASSWORD:
-                              secretKeyRef:
-                                name: lldap-generated
-                                key: LLDAP_LDAP_USER_PASS
-                            DO_CLEANUP: "true"
-                          volumeMounts:
-                            setup:
-                              name: setup
-                              mountPath: /setup
-                              readOnly: true
-                      volumes:
+                  restartPolicy: Never
+                  securityContext:
+                    runAsUser: 1000
+                    runAsGroup: 1000
+                  containers:
+                    bootstrap:
+                      name: bootstrap
+                      image: '{{ .Values.global.lldapBootstrap.image }}'
+                      command: [ /usr/bin/env, bash ]
+                      args:
+                        - -c
+                        - |
+                          mkdir /tmp/{groups,users,users-schema}
+                          cp /setup/groups.json /tmp/groups
+                          cp /setup/users-schema.json /tmp/users-schema
+                          cp /setup/users.json /tmp/users
+                          export USER_CONFIGS_DIR=/tmp/users
+                          export USER_SCHEMAS_DIR=/tmp/users-schema
+                          export GROUP_CONFIGS_DIR=/tmp/groups
+                          /app/bootstrap.sh
+                      env:
+                        LLDAP_URL: http://lldap:17170
+                        LLDAP_ADMIN_USERNAME:
+                          secretKeyRef:
+                            name: lldap-generated
+                            key: LLDAP_LDAP_USER_DN
+                        LLDAP_ADMIN_PASSWORD:
+                          secretKeyRef:
+                            name: lldap-generated
+                            key: LLDAP_LDAP_USER_PASS
+                        DO_CLEANUP: "true"
+                      volumeMounts:
                         setup:
                           name: setup
-                          configMap:
-                            name: lldap-bootstrap
+                          mountPath: /setup
+                          readOnly: true
+                  volumes:
+                    setup:
+                      name: setup
+                      configMap:
+                        name: lldap-bootstrap
 
     # the public exposure, applied once lldap is deployed and not waited for
     lldap-integration:

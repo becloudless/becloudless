@@ -279,76 +279,69 @@ spec:
         lldap-bootstrap:
           data:
             groups.json: |-
-              {"name": "role_admin"}
-              {"name": "role_user"}
-              {"name": "role_editor"}
-              {"name": "app_forgejo"}
-              {"name": "app_gitea"}
-              {"name": "app_immich"}
-              {"name": "app_immich_one_factor"}
-              {"name": "app_jellyfin"}
-              {"name": "app_pushprox"}
-              {"name": "app_seerr"}
-            users-schema.json: |-
-              [
-                {"name": "immich_quota", "attributeType": "INTEGER", "isEditable": false, "isList": false, "isVisible": true},
-                {"name": "immich_role", "attributeType": "STRING", "isEditable": false, "isList": false, "isVisible": true}
-              ]
+              {"name":"role_admin"}
+              {"name":"role_user"}
+              {"name":"role_editor"}
+              {"name":"app_forgejo"}
+              {"name":"app_gitea"}
+              {"name":"app_immich"}
+              {"name":"app_immich_one_factor"}
+              {"name":"app_jellyfin"}
+              {"name":"app_pushprox"}
+              {"name":"app_seerr"}
+            users-schema.json: '[{"attributeType":"INTEGER","isEditable":false,"isList":false,"isVisible":true,"name":"immich_quota"},{"attributeType":"STRING","isEditable":false,"isList":false,"isVisible":true,"name":"immich_role"}]'
             users.json: |-
               {"email":"guest@test.com","id":"guest"}
               {"displayName":"n0rad","email":"n0rad@test.com","groups":["role_admin","role_user"],"id":"n0rad","immich_quota":45,"immich_role":"admin"}
-      cronJobs:
+      jobs:
         lldap-bootstrap:
-          concurrencyPolicy: Forbid
-          jobTemplate:
+          backoffLimit: 6
+          fullNameOverride: lldap-bootstrap-8ce8e485fb
+          template:
             spec:
-              backoffLimit: 0
-              template:
-                spec:
-                  containers:
-                    bootstrap:
-                      args:
-                      - -c
-                      - |-
-                        mkdir /tmp/{groups,users,users-schema}
-                        cp /setup/groups.json /tmp/groups
-                        cp /setup/users-schema.json /tmp/users-schema
-                        cp /setup/users.json /tmp/users
-                        export USER_CONFIGS_DIR=/tmp/users
-                        export USER_SCHEMAS_DIR=/tmp/users-schema
-                        export GROUP_CONFIGS_DIR=/tmp/groups
-                        /app/bootstrap.sh
-                      command:
-                      - /usr/bin/env
-                      - bash
-                      env:
-                        DO_CLEANUP: "true"
-                        LLDAP_ADMIN_PASSWORD:
-                          secretKeyRef:
-                            key: LLDAP_LDAP_USER_PASS
-                            name: lldap-generated
-                        LLDAP_ADMIN_USERNAME:
-                          secretKeyRef:
-                            key: LLDAP_LDAP_USER_DN
-                            name: lldap-generated
-                        LLDAP_URL: http://lldap:17170
-                      image: lldap/lldap:2026-09-22-debian-rootless
-                      name: bootstrap
-                      volumeMounts:
-                        setup:
-                          mountPath: /setup
-                          name: setup
-                          readOnly: true
-                  restartPolicy: Never
-                  securityContext:
-                    runAsGroup: 1000
-                    runAsUser: 1000
-                  volumes:
+              containers:
+                bootstrap:
+                  args:
+                  - -c
+                  - |-
+                    mkdir /tmp/{groups,users,users-schema}
+                    cp /setup/groups.json /tmp/groups
+                    cp /setup/users-schema.json /tmp/users-schema
+                    cp /setup/users.json /tmp/users
+                    export USER_CONFIGS_DIR=/tmp/users
+                    export USER_SCHEMAS_DIR=/tmp/users-schema
+                    export GROUP_CONFIGS_DIR=/tmp/groups
+                    /app/bootstrap.sh
+                  command:
+                  - /usr/bin/env
+                  - bash
+                  env:
+                    DO_CLEANUP: "true"
+                    LLDAP_ADMIN_PASSWORD:
+                      secretKeyRef:
+                        key: LLDAP_LDAP_USER_PASS
+                        name: lldap-generated
+                    LLDAP_ADMIN_USERNAME:
+                      secretKeyRef:
+                        key: LLDAP_LDAP_USER_DN
+                        name: lldap-generated
+                    LLDAP_URL: http://lldap:17170
+                  image: lldap/lldap:2026-09-22-debian-rootless
+                  name: bootstrap
+                  volumeMounts:
                     setup:
-                      configMap:
-                        name: lldap-bootstrap
+                      mountPath: /setup
                       name: setup
-          schedule: '*/5 * * * *'
+                      readOnly: true
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 1000
+                runAsUser: 1000
+              volumes:
+                setup:
+                  configMap:
+                    name: lldap-bootstrap
+                  name: setup
 ---
 # Source: app-lldap/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
