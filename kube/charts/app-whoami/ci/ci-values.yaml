@@ -1,0 +1,4 @@
+global:
+  domain: test.com
+  name: test
+  ldapdn: dc=test,dc=com

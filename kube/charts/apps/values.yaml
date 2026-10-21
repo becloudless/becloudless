@@ -162,6 +162,12 @@ apps:
     appChart:
       name: app-homer
 
+  whoami:
+    groups:
+      cluster: true
+    appChart:
+      name: app-whoami
+
   # extra
   prometheus:
     groups:

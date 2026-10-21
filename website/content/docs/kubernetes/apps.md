@@ -41,6 +41,7 @@ All applications are defined under `kube/apps/`, one directory per app.
 | `terraform` | Platform | Terraform runner for cloud resources |
 | `traefik` | Networking | Ingress controller and reverse proxy |
 | `traefik-config` | Networking | Traefik middlewares and IngressRoute defaults |
+| `whoami` | Networking | Request echo server to check the Gateway, TLS and the Authelia forward auth headers |
 
 ## App Directory Layout
 
