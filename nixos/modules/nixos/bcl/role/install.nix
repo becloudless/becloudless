@@ -14,6 +14,9 @@ in {
         nixos-facter
       ];
 
+      # Support console. aarch64 gets its console from ACPI SPCR, nothing to set.
+      boot.kernelParams = lib.optionals pkgs.stdenv.hostPlatform.isx86_64 [ "console=tty0" "console=ttyS0,115200" ];
+
       # Workaround https://github.com/nix-community/nixos-anywhere/issues/613, adding keys to root user
       users.users.root.openssh.authorizedKeys.keys =
           lib.attrValues (lib.mapAttrs (_name: userCfg: userCfg.sshPublicKey)
