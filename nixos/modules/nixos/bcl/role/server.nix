@@ -72,10 +72,11 @@ in
           linkConfig.RequiredForOnline = false;
         }) cfg.vlans))
         # Attaches these VLANs to the trunk interface's own .network file
-        # (see bcl.network's "net" key); `vlan` is a listOf str NixOS
+        # (`bcl.network.trunk`: the physical NIC's "net" key, or "bond0" with
+        # bcl.network.bond), `vlan` is a listOf str NixOS
         # option, so this merges additively with bcl.network's own
-        # definition of the same "net" key instead of conflicting.
-        { net.vlan = map vlanName cfg.vlans; }
+        # definition of the same key instead of conflicting.
+        { ${config.bcl.network.trunk}.vlan = map vlanName cfg.vlans; }
       ];
     })
   ];
