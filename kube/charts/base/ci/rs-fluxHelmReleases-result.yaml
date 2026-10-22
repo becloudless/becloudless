@@ -16,15 +16,21 @@ spec:
       version: 6.x
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1
+    kind: Cluster
   install:
     crds: CreateReplace
-    remediation:
-      retries: -1
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
   interval: 5m
   timeout: 10m
   upgrade:
     cleanupOnFail: true
-    remediation:
-      retries: 3
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
   values:
     replicaCount: 2

@@ -16,6 +16,3 @@ resources:
           sourceRef:
             kind: HelmRepository
             name: external-secrets
-      upgrade:
-        remediation:
-          retries: 3

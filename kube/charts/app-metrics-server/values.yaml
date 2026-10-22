@@ -14,9 +14,6 @@ resources:
           sourceRef:
             kind: HelmRepository
             name: metrics-server
-      upgrade:
-        remediation:
-          retries: 3
       values:
         args:
           - --kubelet-insecure-tls

@@ -15,16 +15,22 @@ spec:
       version: 2.12.0
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1
+    kind: Cluster
   install:
     crds: CreateReplace
-    remediation:
-      retries: -1
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
   interval: 10m
   timeout: 10m
   upgrade:
     cleanupOnFail: true
-    remediation:
-      retries: 3
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
 ---
 # Source: app-external-secrets/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

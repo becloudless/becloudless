@@ -17,16 +17,22 @@ spec:
   - name: longhorn-pre
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1
+    kind: Cluster
   install:
     crds: CreateReplace
-    remediation:
-      retries: -1
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
   interval: 10m
   timeout: 15m
   upgrade:
     cleanupOnFail: true
-    remediation:
-      retries: 3
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
   values:
     csi:
       kubeletRootDir: /var/lib/kubelet
@@ -65,18 +71,24 @@ spec:
   - name: longhorn-post
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1
+    kind: Cluster
   install:
     crds: CreateReplace
     disableWait: true
-    remediation:
-      retries: -1
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
   interval: 10m
   timeout: 10m
   upgrade:
     cleanupOnFail: true
     disableWait: true
-    remediation:
-      retries: 3
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
   values:
     resources:
       certManagerCertificates:
@@ -167,16 +179,22 @@ spec:
   - name: longhorn
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1
+    kind: Cluster
   install:
     crds: CreateReplace
-    remediation:
-      retries: -1
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
   interval: 10m
   timeout: 10m
   upgrade:
     cleanupOnFail: true
-    remediation:
-      retries: 3
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
   values:
     resources:
       longhornRecurringJobs:
@@ -254,16 +272,22 @@ spec:
     namespace: kyverno
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1
+    kind: Cluster
   install:
     crds: CreateReplace
-    remediation:
-      retries: -1
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
   interval: 10m
   timeout: 10m
   upgrade:
     cleanupOnFail: true
-    remediation:
-      retries: 3
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
   values:
     resources:
       configMaps:

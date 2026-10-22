@@ -49,16 +49,28 @@ defaults:
     fluxHelmReleases:
       interval: 10m        
       timeout: 10m
+      # failed install/upgrade are retried forever, in place and without rollback/uninstall:
+      # - the rollback remediation stalls the release (MissingRollbackTarget) once no good revision is left
+      #   in the history, and never retries until a manual `flux reconcile hr --reset`
+      # - the uninstall remediation would delete stateful resources (databases, volumes)
       install:
         crds: CreateReplace
-        remediation:
-          retries: -1 # unlimited, the failed install is uninstalled between each attempt
+        strategy:
+          name: RetryOnFailure
+          retryInterval: 5m
       upgrade:
         cleanupOnFail: true
-        remediation:
-          retries: 3
+        strategy:
+          name: RetryOnFailure
+          retryInterval: 5m
       driftDetection:
         mode: enabled
+      # TODO a degraded CNPG cluster (e.g. a replica being rebuilt) must not fail the release: the primary is enough
+      # healthCheckExprs:
+      #   cnpg-cluster:
+      #     apiVersion: postgresql.cnpg.io/v1
+      #     kind: Cluster
+      #     current: has(status.readyInstances) && status.readyInstances >= 1
 
     fluxKustomizations:
       interval: 10m

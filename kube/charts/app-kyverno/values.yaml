@@ -14,9 +14,6 @@ resources:
           sourceRef:
             kind: HelmRepository
             name: kyverno
-      upgrade:
-        remediation:
-          retries: 3
       values:
         admissionController:
           replicas: 3
