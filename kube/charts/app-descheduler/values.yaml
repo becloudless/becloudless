@@ -16,7 +16,7 @@ resources:
             name: descheduler
       values:
         # Helm replaces lists instead of merging them, so the whole default profile is repeated here; only the
-        # LowNodeUtilization args differ from the chart defaults.
+        # DefaultEvictor podProtections and the LowNodeUtilization args differ from the chart defaults.
         deschedulerPolicy:
           profiles:
             - name: default
@@ -26,8 +26,8 @@ resources:
                     podProtections:
                       defaultDisabled:
                         - PodsWithLocalStorage
-                      extraEnabled:
-                        - PodsWithPVC
+                      # PodsWithPVC is NOT in extraEnabled: that would protect pods using PVCs from eviction.
+                      # Longhorn volumes can be detached/reattached on another node, so they may be rebalanced.
                 - name: RemoveDuplicates
                 - name: RemovePodsHavingTooManyRestarts
                   args:

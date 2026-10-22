@@ -34,8 +34,6 @@ spec:
             podProtections:
               defaultDisabled:
               - PodsWithLocalStorage
-              extraEnabled:
-              - PodsWithPVC
           name: DefaultEvictor
         - name: RemoveDuplicates
         - args:
