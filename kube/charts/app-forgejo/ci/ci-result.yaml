@@ -15,12 +15,9 @@ spec:
       version: 17.3.1
   dependsOn:
   - name: forgejo-postgresql
+  - name: forgejo-pre
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -59,6 +56,9 @@ spec:
           NAME: app
           SSL_MODE: require
           USER: app
+        oauth2_client:
+          ENABLE_AUTO_REGISTRATION: true
+          USERNAME: preferred_username
         queue:
           TYPE: level
         server:
@@ -82,6 +82,12 @@ spec:
         enabled: true
         serviceMonitor:
           enabled: false
+      oauth:
+      - autoDiscoverUrl: https://authelia.test.com/.well-known/openid-configuration
+        existingSecret: forgejo-oidc
+        name: authelia
+        provider: openidConnect
+        scopes: openid email profile
     ingress:
       enabled: false
     persistence:
@@ -116,10 +122,6 @@ spec:
     namespace: gateway-api
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     disableWait: true
@@ -207,10 +209,6 @@ spec:
     namespace: longhorn-system
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -223,6 +221,76 @@ spec:
     strategy:
       name: RetryOnFailure
       retryInterval: 5m
+---
+# Source: app-forgejo/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: forgejo-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: authelia-pre
+    namespace: authelia
+  - name: app-external-secrets
+    namespace: external-secrets
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      externalSecrets:
+        forgejo-oidc:
+          data:
+            secret:
+              remoteRef:
+                key: authelia-oidc
+                property: forgejo
+              secretKey: secret
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: SecretStore
+            name: authelia
+          target:
+            template:
+              data:
+                key: forgejo
+              mergePolicy: Merge
+      secretStores:
+        authelia:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: authelia-reader
+              remoteNamespace: authelia
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        authelia-reader:
+          automountServiceAccountToken: false
 ---
 # Source: app-forgejo/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

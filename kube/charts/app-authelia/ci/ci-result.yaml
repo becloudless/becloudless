@@ -21,10 +21,6 @@ spec:
     namespace: lldap
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -386,10 +382,6 @@ spec:
     namespace: gateway-api
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     disableWait: true
@@ -503,10 +495,6 @@ spec:
     namespace: longhorn-system
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -544,10 +532,6 @@ spec:
     namespace: secret-generator
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -581,6 +565,29 @@ spec:
           secretStoreRef:
             kind: SecretStore
             name: lldap
+      roleBindings:
+        forgejo-secrets-reader:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: forgejo-secrets-reader
+          subjects:
+            authelia-reader:
+              kind: ServiceAccount
+              name: authelia-reader
+              namespace: forgejo
+      roles:
+        forgejo-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - authelia-oidc
+              resources:
+              - secrets
+              verbs:
+              - get
       secretStores:
         lldap:
           provider:
@@ -641,10 +648,6 @@ spec:
   - name: authelia-pre
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:

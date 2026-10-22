@@ -118,6 +118,29 @@ resources:
                     serviceAccount:
                       name: lldap-reader
 
+          # lets the `authelia-reader` service account of the forgejo namespace, used by the SecretStore of forgejo, read the
+          # `authelia-oidc` secret of this namespace (the secrets of the OIDC clients), and only this one.
+          roles:
+            forgejo-secrets-reader:
+              rules:
+                secrets:
+                  apiGroups: [ "" ]
+                  resources: [ secrets ]
+                  resourceNames: [ authelia-oidc ]
+                  verbs: [ get ]
+
+          roleBindings:
+            forgejo-secrets-reader:
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: Role
+                name: forgejo-secrets-reader
+              subjects:
+                authelia-reader:
+                  kind: ServiceAccount
+                  name: authelia-reader
+                  namespace: forgejo
+
           externalSecrets:
             authelia-ldap:
               refreshInterval: 1h
