@@ -25,6 +25,53 @@ spec:
     cleanupOnFail: true
     remediation:
       retries: 3
+  values:
+    deschedulerPolicy:
+      profiles:
+      - name: default
+        pluginConfig:
+        - args:
+            podProtections:
+              defaultDisabled:
+              - PodsWithLocalStorage
+              extraEnabled:
+              - PodsWithPVC
+          name: DefaultEvictor
+        - name: RemoveDuplicates
+        - args:
+            includingInitContainers: true
+            podRestartThreshold: 100
+          name: RemovePodsHavingTooManyRestarts
+        - args:
+            nodeAffinityType:
+            - requiredDuringSchedulingIgnoredDuringExecution
+          name: RemovePodsViolatingNodeAffinity
+        - name: RemovePodsViolatingNodeTaints
+        - name: RemovePodsViolatingInterPodAntiAffinity
+        - name: RemovePodsViolatingTopologySpreadConstraint
+        - args:
+            targetThresholds:
+              cpu: 10
+              memory: 5
+              pods: 5
+            thresholds:
+              cpu: 10
+              memory: 5
+              pods: 5
+            useDeviationThresholds: true
+          name: LowNodeUtilization
+        plugins:
+          balance:
+            enabled:
+            - RemoveDuplicates
+            - RemovePodsViolatingTopologySpreadConstraint
+            - LowNodeUtilization
+          deschedule:
+            enabled:
+            - RemovePodsHavingTooManyRestarts
+            - RemovePodsViolatingNodeTaints
+            - RemovePodsViolatingNodeAffinity
+            - RemovePodsViolatingInterPodAntiAffinity
 ---
 # Source: app-descheduler/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

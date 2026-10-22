@@ -14,3 +14,56 @@ resources:
           sourceRef:
             kind: HelmRepository
             name: descheduler
+      values:
+        # Helm replaces lists instead of merging them, so the whole default profile is repeated here; only the
+        # LowNodeUtilization args differ from the chart defaults.
+        deschedulerPolicy:
+          profiles:
+            - name: default
+              pluginConfig:
+                - name: DefaultEvictor
+                  args:
+                    podProtections:
+                      defaultDisabled:
+                        - PodsWithLocalStorage
+                      extraEnabled:
+                        - PodsWithPVC
+                - name: RemoveDuplicates
+                - name: RemovePodsHavingTooManyRestarts
+                  args:
+                    podRestartThreshold: 100
+                    includingInitContainers: true
+                - name: RemovePodsViolatingNodeAffinity
+                  args:
+                    nodeAffinityType:
+                      - requiredDuringSchedulingIgnoredDuringExecution
+                - name: RemovePodsViolatingNodeTaints
+                - name: RemovePodsViolatingInterPodAntiAffinity
+                - name: RemovePodsViolatingTopologySpreadConstraint
+                - name: LowNodeUtilization
+                  args:
+                    # Thresholds are relative to the cluster average (in percentage points) instead of absolute:
+                    # a node is underutilized when ALL metrics are below `average - thresholds` and overutilized
+                    # when ANY metric is above `average + targetThresholds`. Adapts to nodes of different sizes
+                    # and to nodes carrying only daemonsets.
+                    useDeviationThresholds: true
+                    thresholds:
+                      cpu: 10
+                      memory: 5
+                      pods: 5
+                    targetThresholds:
+                      cpu: 10
+                      memory: 5
+                      pods: 5
+              plugins:
+                balance:
+                  enabled:
+                    - RemoveDuplicates
+                    - RemovePodsViolatingTopologySpreadConstraint
+                    - LowNodeUtilization
+                deschedule:
+                  enabled:
+                    - RemovePodsHavingTooManyRestarts
+                    - RemovePodsViolatingNodeTaints
+                    - RemovePodsViolatingNodeAffinity
+                    - RemovePodsViolatingInterPodAntiAffinity
