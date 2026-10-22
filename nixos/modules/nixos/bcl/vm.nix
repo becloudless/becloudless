@@ -219,6 +219,16 @@ in
           base // {
             os = base.os // {
               boot = [ { dev = "hd"; } { dev = "cdrom"; } ];
+            } // lib.optionalAttrs (!pkgs.stdenv.hostPlatform.isAarch64 && vm.template == "linux") {
+              # NixVirt's linux template sets no firmware, so x86_64 guests boot SeaBIOS. The guests are installed
+              # with a GPT + ESP + systemd-boot layout (bcl.boot.loader = "efi", the default), which SeaBIOS
+              # cannot boot (nothing in the MBR), and the installer cannot write the EFI boot entry from a BIOS
+              # boot either. Use OVMF like the aarch64 guests do.
+              loader = { readonly = true; type = "pflash"; path = pkgs.OVMF.fd.firmware; };
+              nvram = {
+                template = pkgs.OVMF.fd.variables;
+                path = "/var/lib/libvirt/qemu/nvram/${name}_VARS.fd";
+              };
             } // lib.optionalAttrs pkgs.stdenv.hostPlatform.isAarch64 {
               # NixVirt's own templates (templates/domain/base.nix) hardcode
               # `os.type.arch = "x86_64"`, `machine = "q35"|"pc"`, and
