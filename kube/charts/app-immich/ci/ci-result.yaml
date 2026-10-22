@@ -33,10 +33,6 @@ spec:
   - name: immich-valkey
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -75,6 +71,8 @@ spec:
             image:
               tag: v2.5.6
     immich:
+      configurationKind: Secret
+      existingConfiguration: immich-config
       persistence:
         library:
           existingClaim: immich-data
@@ -108,10 +106,6 @@ spec:
   - name: immich
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     disableWait: true
@@ -199,10 +193,6 @@ spec:
     namespace: longhorn-system
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -249,14 +239,14 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: authelia-pre
+    namespace: authelia
+  - name: app-external-secrets
+    namespace: external-secrets
   - name: app-secret-generator
     namespace: secret-generator
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -271,6 +261,53 @@ spec:
       retryInterval: 5m
   values:
     resources:
+      externalSecrets:
+        immich-config:
+          data:
+            secret:
+              remoteRef:
+                key: authelia-oidc-immich
+                property: secret
+              secretKey: secret
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: SecretStore
+            name: authelia
+          target:
+            template:
+              data:
+                immich-config.yaml: |-
+                  oauth:
+                    enabled: true
+                    issuerUrl: https://authelia.test.com
+                    clientId: immich
+                    clientSecret: {{ "{{ .secret }}" }}
+                    scope: openid profile email immich_scope
+                    buttonText: Login with Authelia
+                    tokenEndpointAuthMethod: client_secret_post
+                    signingAlgorithm: RS256
+                    profileSigningAlgorithm: RS256
+                    storageLabelClaim: preferred_username
+                    storageQuotaClaim: immich_quota
+                    roleClaim: immich_role
+                    autoRegister: true
+                    autoLaunch: false
+      secretStores:
+        authelia:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: authelia-reader
+              remoteNamespace: authelia
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        authelia-reader:
+          automountServiceAccountToken: false
       stringSecrets:
         immich-valkey:
           fields:
@@ -297,10 +334,6 @@ spec:
   - name: immich-pre
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:

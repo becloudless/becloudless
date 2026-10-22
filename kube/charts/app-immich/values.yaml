@@ -6,7 +6,10 @@ global:
 #  - the database is a CloudNativePG cluster (with the vectorchord extension), the password of its `app` user is created by CNPG (`immich-postgresql-app`)
 #  - the valkey users are generated in the `immich-valkey` secret
 #  - the first user to register in the web UI becomes the admin of immich
-# Not configured: SSO (authelia OIDC is disabled), mails, the immich configuration file (everything can be set in the UI).
+# SSO: the OAuth login with authelia (OIDC client `immich`, see its access control in authelia), the users are created at their first
+# login. The configuration file of immich holds only the OAuth settings, so these settings are read only in the web UI: the secret
+# of the client is generated in the authelia namespace and copied by external-secrets (see `immich-pre`).
+# Not configured: mails, the other settings of the immich configuration file (everything else can be set in the UI).
 
 resources:
 
@@ -73,6 +76,12 @@ resources:
         secret-generator:
           name: app-secret-generator
           namespace: secret-generator
+        external-secrets:
+          name: app-external-secrets
+          namespace: external-secrets
+        authelia-pre: # the generated secret of the client and the right to read it
+          name: authelia-pre
+          namespace: authelia
       chart:
         spec:
           chart: ./kube/charts/base-loader
@@ -91,6 +100,58 @@ resources:
                   fieldName: default
                 app:
                   fieldName: app
+
+          serviceAccounts:
+            authelia-reader:
+              automountServiceAccountToken: false # only used by external-secrets to get a token
+
+          secretStores:
+            authelia:
+              provider:
+                kubernetes:
+                  remoteNamespace: authelia
+                  server:
+                    caProvider:
+                      type: ConfigMap
+                      name: kube-root-ca.crt
+                      key: ca.crt
+                  auth:
+                    serviceAccount:
+                      name: authelia-reader
+
+          # The configuration file of immich with the OAuth settings, the secret of the client is the only value read from authelia.
+          # The template of external-secrets is escaped twice: the values are rendered by the app chart, then by the base chart.
+          externalSecrets:
+            immich-config:
+              refreshInterval: 1h
+              secretStoreRef:
+                kind: SecretStore
+                name: authelia
+              target:
+                template:
+                  data:
+                    immich-config.yaml: |
+                      oauth:
+                        enabled: true
+                        issuerUrl: https://authelia.{{ .Values.global.domain }}
+                        clientId: immich
+                        clientSecret: {{ "{{ \"{{ .secret }}\" }}" }}
+                        scope: openid profile email immich_scope
+                        buttonText: Login with Authelia
+                        tokenEndpointAuthMethod: client_secret_post
+                        signingAlgorithm: RS256
+                        profileSigningAlgorithm: RS256
+                        storageLabelClaim: preferred_username
+                        storageQuotaClaim: immich_quota
+                        roleClaim: immich_role
+                        autoRegister: true
+                        autoLaunch: false
+              data:
+                secret:
+                  secretKey: secret
+                  remoteRef:
+                    key: authelia-oidc-immich
+                    property: secret
 
     immich-valkey:
       dependsOn: # the generated secret
@@ -138,6 +199,8 @@ resources:
         # https://github.com/immich-app/immich-charts/blob/main/charts/immich/values.yaml
         # exposed by the Cilium Gateway, see the `listenerSets` and `httpRoutes` resources
         immich:
+          configurationKind: Secret
+          existingConfiguration: immich-config # the OAuth settings, see `immich-pre`
           persistence:
             library:
               existingClaim: immich-data

@@ -595,6 +595,16 @@ spec:
               kind: ServiceAccount
               name: authelia-reader
               namespace: forgejo
+        immich-secrets-reader:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: immich-secrets-reader
+          subjects:
+            authelia-reader:
+              kind: ServiceAccount
+              name: authelia-reader
+              namespace: immich
       roles:
         forgejo-secrets-reader:
           rules:
@@ -603,6 +613,17 @@ spec:
               - ""
               resourceNames:
               - authelia-oidc-forgejo
+              resources:
+              - secrets
+              verbs:
+              - get
+        immich-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - authelia-oidc-immich
               resources:
               - secrets
               verbs:

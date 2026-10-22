@@ -128,6 +128,13 @@ resources:
           # lets the `authelia-reader` service account of the forgejo namespace, used by the SecretStore of forgejo, read the
           # `authelia-oidc-forgejo` secret of this namespace (the secret of its OIDC client), and only this one.
           roles:
+            immich-secrets-reader:
+              rules:
+                secrets:
+                  apiGroups: [ "" ]
+                  resources: [ secrets ]
+                  resourceNames: [ authelia-oidc-immich ]
+                  verbs: [ get ]
             forgejo-secrets-reader:
               rules:
                 secrets:
@@ -137,6 +144,16 @@ resources:
                   verbs: [ get ]
 
           roleBindings:
+            immich-secrets-reader:
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: Role
+                name: immich-secrets-reader
+              subjects:
+                authelia-reader:
+                  kind: ServiceAccount
+                  name: authelia-reader
+                  namespace: immich
             forgejo-secrets-reader:
               roleRef:
                 apiGroup: rbac.authorization.k8s.io
