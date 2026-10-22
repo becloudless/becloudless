@@ -68,6 +68,7 @@ spec:
           SSH_LISTEN_PORT: 2222
           SSH_PORT: 22
         service:
+          ALLOW_ONLY_EXTERNAL_REGISTRATION: true
           DEFAULT_KEEP_EMAIL_PRIVATE: true
           DEFAULT_USER_VISIBILITY: private
           DISABLE_REGISTRATION: true
@@ -263,8 +264,8 @@ spec:
           data:
             secret:
               remoteRef:
-                key: authelia-oidc
-                property: forgejo
+                key: authelia-oidc-forgejo
+                property: secret
               secretKey: secret
           refreshInterval: 1h
           secretStoreRef:

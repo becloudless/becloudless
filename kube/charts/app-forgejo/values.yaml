@@ -95,8 +95,8 @@ resources:
                 secret:
                   secretKey: secret
                   remoteRef:
-                    key: authelia-oidc
-                    property: forgejo
+                    key: authelia-oidc-forgejo
+                    property: secret
 
     forgejo:
       timeout: 10m # the pod waits for the database
@@ -169,6 +169,7 @@ resources:
               ENABLED: true
             service:
               DISABLE_REGISTRATION: true
+              ALLOW_ONLY_EXTERNAL_REGISTRATION: true # the accounts are created by the first login with authelia
               DEFAULT_KEEP_EMAIL_PRIVATE: true
               DEFAULT_USER_VISIBILITY: private
             ui:

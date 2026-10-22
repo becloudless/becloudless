@@ -126,6 +126,13 @@ spec:
       identity_providers:
         oidc:
           authorization_policies:
+            forgejo_authz:
+              default_policy: deny
+              rules:
+              - policy: two_factor
+                subject:
+                - group:role_admin
+                - group:app_forgejo
             immich_authz:
               default_policy: deny
               rules:
@@ -151,7 +158,7 @@ spec:
                   attribute: immichrole
           clients:
           - access_token_signed_response_alg: none
-            authorization_policy: two_factor
+            authorization_policy: forgejo_authz
             client_id: forgejo
             client_name: Forgejo
             client_secret:
@@ -337,7 +344,7 @@ spec:
         - -ec
         - |
           for client in forgejo grafana jellyfin immich; do
-            hash=$(authelia crypto hash generate pbkdf2 --variant sha512 --password "$(cat /secrets/authelia-oidc/$client)" | sed 's/^Digest: //')
+            hash=$(authelia crypto hash generate pbkdf2 --variant sha512 --password "$(cat /secrets/authelia-oidc-$client/secret)" | sed 's/^Digest: //')
             printf '%s' "$hash" > /config/oidc-$client.hash
           done
         image: ghcr.io/authelia/authelia:4.39.24
@@ -345,8 +352,17 @@ spec:
         volumeMounts:
         - mountPath: /config
           name: authelia
-        - mountPath: /secrets/authelia-oidc
-          name: secret-authelia-oidc
+        - mountPath: /secrets/authelia-oidc-forgejo
+          name: secret-authelia-oidc-forgejo
+          readOnly: true
+        - mountPath: /secrets/authelia-oidc-grafana
+          name: secret-authelia-oidc-grafana
+          readOnly: true
+        - mountPath: /secrets/authelia-oidc-jellyfin
+          name: secret-authelia-oidc-jellyfin
+          readOnly: true
+        - mountPath: /secrets/authelia-oidc-immich
+          name: secret-authelia-oidc-immich
           readOnly: true
       kind: Deployment
       replicas: 1
@@ -355,7 +371,10 @@ spec:
         authelia-generated: {}
         authelia-jwks: {}
         authelia-ldap: {}
-        authelia-oidc: {}
+        authelia-oidc-forgejo: {}
+        authelia-oidc-grafana: {}
+        authelia-oidc-immich: {}
+        authelia-oidc-jellyfin: {}
         authelia-postgresql-app: {}
         authelia-valkey: {}
 ---
@@ -583,7 +602,7 @@ spec:
               apiGroups:
               - ""
               resourceNames:
-              - authelia-oidc
+              - authelia-oidc-forgejo
               resources:
               - secrets
               verbs:
@@ -613,16 +632,22 @@ spec:
               fieldName: identity_validation.reset_password.jwt.hmac.key
             session-encryption:
               fieldName: session.encryption.key
-        authelia-oidc:
+        authelia-oidc-forgejo:
           fields:
-            forgejo:
-              fieldName: forgejo
-            grafana:
-              fieldName: grafana
-            immich:
-              fieldName: immich
-            jellyfin:
-              fieldName: jellyfin
+            secret:
+              fieldName: secret
+        authelia-oidc-grafana:
+          fields:
+            secret:
+              fieldName: secret
+        authelia-oidc-immich:
+          fields:
+            secret:
+              fieldName: secret
+        authelia-oidc-jellyfin:
+          fields:
+            secret:
+              fieldName: secret
         authelia-valkey:
           fields:
             authelia:
