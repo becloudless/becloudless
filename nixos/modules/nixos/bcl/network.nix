@@ -39,6 +39,24 @@ in
       example = "192.168.1.0/24";
     };
 
+    bond = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Enslave every NIC matched by `interface` in an active-backup bond ("bond0") so the host keeps working on
+        whichever one has a link, whatever port the cable is plugged in. The bridge (`bridge`) and the VLANs
+        (`bcl.role.server.vlans`) are then stacked on the bond instead of on a physical NIC.
+      '';
+    };
+
+    # name of the .network file (and of the interface for the bond) the bridge and the VLANs are stacked on
+    trunk = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = if cfg.bond then "bond0" else "net";
+      description = "Key in systemd.network.networks of the interface carrying the bridge and the VLANs.";
+    };
+
     bridge = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -80,14 +98,32 @@ in
     systemd.network.enable = true;
     networking.nameservers = cfg.nameservers;
 
-    boot.initrd.kernelModules = lib.mkIf cfg.bridge [ "bridge" ];
+    boot.initrd.kernelModules = lib.mkMerge [
+      (lib.mkIf cfg.bridge [ "bridge" ])
+      (lib.mkIf cfg.bond [ "bonding" ])
+    ];
 
-    systemd.network.netdevs = lib.mkIf cfg.bridge {
-      br0.netdevConfig = {
-        Kind = "bridge";
-        Name = "br0";
-      };
-    };
+    systemd.network.netdevs = lib.mkMerge [
+      (lib.mkIf cfg.bridge {
+        br0.netdevConfig = {
+          Kind = "bridge";
+          Name = "br0";
+        };
+      })
+      (lib.mkIf cfg.bond {
+        bond0 = {
+          netdevConfig = {
+            Kind = "bond";
+            Name = "bond0";
+          };
+          bondConfig = {
+            Mode = "active-backup";
+            MIIMonitorSec = "100ms";
+            PrimaryReselectPolicy = "always";
+          };
+        };
+      })
+    ];
 
     # NOTE: keyed as "net" so this merges with any other module (e.g.
     # hardware-specific overrides, bcl.role.serverVirt's VLAN trunk config)
@@ -97,6 +133,21 @@ in
     # per interface).
     systemd.network.networks.net = {
       matchConfig.Name = cfg.interface;
+      networkConfig = {
+        IgnoreCarrierLoss = true;
+      } // (lib.optionalAttrs cfg.bond { Bond = "bond0"; })
+        // (lib.optionalAttrs (cfg.bridge && !cfg.bond) { Bridge = "br0"; })
+        // (lib.optionalAttrs (!cfg.bridge && !cfg.bond) { DNS = cfg.nameservers; });
+      address = lib.optionals (!cfg.bridge && !cfg.bond) (lib.optional (effectiveAddress != null) effectiveAddress);
+      routes = lib.optionals (!cfg.bridge && !cfg.bond) (lib.optional (cfg.gateway != null) {
+        Gateway = cfg.gateway;
+        GatewayOnLink = true;
+      });
+    };
+
+    # the bond: carries the bridge (or the host address directly) and the VLANs (see bcl.role.server.vlans)
+    systemd.network.networks.bond0 = lib.mkIf cfg.bond {
+      matchConfig.Name = "bond0";
       networkConfig = {
         IgnoreCarrierLoss = true;
       } // (lib.optionalAttrs cfg.bridge { Bridge = "br0"; })
