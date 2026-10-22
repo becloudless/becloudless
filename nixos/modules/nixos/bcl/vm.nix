@@ -304,6 +304,17 @@ in
                   rom = { bar = false; };
                 }
               ) vm.pciDevices;
+            } // lib.optionalAttrs (!pkgs.stdenv.hostPlatform.isAarch64) {
+              # x86_64 guests: ISA 16550 serial + its pty console, to get `virsh console <vm>` (the guest needs
+              # `console=ttyS0`, see hardware/devices/vm.nix). aarch64 gets the pl011 one below.
+              serial = {
+                type = "pty";
+                target = { type = "isa-serial"; port = 0; model = { name = "isa-serial"; }; };
+              };
+              console = {
+                type = "pty";
+                target = { type = "serial"; port = 0; };
+              };
             } // lib.optionalAttrs pkgs.stdenv.hostPlatform.isAarch64 {
               emulator = "${pkgs.qemu}/bin/qemu-system-aarch64";
               # Unlike q35/pc, the aarch64 "virt" machine type has no

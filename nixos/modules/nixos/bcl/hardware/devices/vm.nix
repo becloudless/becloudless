@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 
 {
   config = lib.mkMerge [
@@ -11,6 +11,10 @@
 
     boot.initrd.availableKernelModules = [ "xhci_pci" "virtio_pci" "virtio_scsi" "usbhid" "sr_mod" ];
     boot.initrd.kernelModules = [ "virtio" ];
+
+    # serial console for `virsh console` (see the serial/console devices in vm.nix). aarch64 uses the pl011 one
+    # advertised by ACPI SPCR, nothing to set there.
+    boot.kernelParams = lib.optionals pkgs.stdenv.hostPlatform.isx86_64 [ "console=tty0" "console=ttyS0,115200" ];
 
     bcl.system.devices = [ "/dev/vda" ];
   })

@@ -20,6 +20,14 @@ in
       default = 1;
       description = "Number of master nodes in the cluster";
     };
+    worker = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Run this node as a worker only (kubelet + cri-o + a local haproxy to the apiservers), without etcd nor control-plane
+        components. The node number (last digits of the hostname) must be greater than `masterNodeCount`.
+      '';
+    };
   };
 
   ####################
@@ -27,6 +35,13 @@ in
   config = lib.mkMerge [
     { bcl.role.knownRoles = [ "serverKube" ]; }
     (lib.mkIf (config.bcl.role.name == "serverKube") {
+
+    assertions = [
+      {
+        assertion = cfg.worker -> nodeNumber > cfg.masterNodeCount;
+        message = "bcl.role.serverKube.worker: node number ${toString nodeNumber} of ${config.networking.hostName} must be greater than masterNodeCount (${toString cfg.masterNodeCount}).";
+      }
+    ];
 
     bcl.role.setAdminPassword = true; # being able to log in to console
     security.sudo.wheelNeedsPassword = false;
@@ -78,7 +93,7 @@ in
     services.openiscsi.name = "iqn.2016-04.com.open-iscsi:543a6fbe2d4c"; # dummy name taken from archlinux
 
     #
-    systemd.services."kubeadm" = {
+    systemd.services."kubeadm" = lib.mkIf (!cfg.worker) {
       serviceConfig = {
         Type = "oneshot";
       };
@@ -191,8 +206,8 @@ in
         ConfigurationDirectory = "kubernetes";
         CPUAccounting = true;
         IPAccounting = true;
-        EnvironmentFile = "/var/lib/kubelet/kubeadm-flags.env";
-        ExecStart = "${pkgs.kubernetes}/bin/kubelet --config=/var/lib/kubelet/config.yaml --kubeconfig=/etc/kubernetes/kubelet.conf $KUBELET_KUBEADM_ARGS";
+        EnvironmentFile = lib.mkIf (!cfg.worker) "/var/lib/kubelet/kubeadm-flags.env";
+        ExecStart = lib.mkIf (!cfg.worker) "${pkgs.kubernetes}/bin/kubelet --config=/var/lib/kubelet/config.yaml --kubeconfig=/etc/kubernetes/kubelet.conf $KUBELET_KUBEADM_ARGS";
         KillMode = "process";
         MemoryAccounting = true;
         Restart = "on-failure";
@@ -232,6 +247,7 @@ in
     # crictl ps -q | xargs crictl stop
     # rm -Rf /var/lib/kubelet/* /var/lib/etcd/* /etc/kubernetes/pki/{apiserver*,front-proxy-client.*,etcd/server.*,etcd/peer.*,etcd/healthcheck-client.*} /etc/kubernetes/{admin.conf,controller-manager.conf,kubelet.conf,super-admin.conf,scheduler.conf,manifests/kube-*}
     # rm -Rf /var/lib/kubelet/* /var/lib/etcd/* /etc/kubernetes/pki/* /etc/kubernetes/{admin.conf,controller-manager.conf,kubelet.conf,super-admin.conf,scheduler.conf,manifests/kube-*}
+    environment.etc."kubernetes/kubeadm.yaml".enable = !cfg.worker;
     environment.etc."kubernetes/kubeadm.yaml".text = ''
         apiVersion: kubelet.config.k8s.io/v1beta1
         kind: KubeletConfiguration
@@ -322,8 +338,7 @@ in
       directories = [
         { directory = "/var/lib/kubelet"; mode = "u=rwx,g=,o="; }
         { directory = "/var/lib/longhorn"; mode = "u=rwx,g=,o="; }
-        { directory = "/var/lib/etcd"; mode = "u=rwx,g=,o="; }
-      ];
+      ] ++ lib.optional (!cfg.worker) { directory = "/var/lib/etcd"; mode = "u=rwx,g=,o="; };
     };
   })
   ];

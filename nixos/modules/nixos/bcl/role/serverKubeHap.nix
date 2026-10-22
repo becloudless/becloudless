@@ -5,6 +5,20 @@ let
 in
 {
   config = lib.mkIf (config.bcl.role.name == "serverKube") {
+    # on a worker, haproxy runs as a systemd service as there is no static pod path
+    systemd.services."haproxy-apiserver" = lib.mkIf cfg.worker {
+      serviceConfig = {
+        ExecStart = "${pkgs.haproxy}/bin/haproxy -db -f /etc/haproxy/haproxy.cfg";
+        Restart = "on-failure";
+        RestartSec = 5;
+      };
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      before = [ "kubelet.service" ];
+      wantedBy = [ "multi-user.target" ];
+    };
+
+    environment.etc."kubernetes/manifests/haproxy-apiserver.yaml".enable = !cfg.worker;
     environment.etc."kubernetes/manifests/haproxy-apiserver.yaml".text = ''
         apiVersion: v1
         kind: Pod
