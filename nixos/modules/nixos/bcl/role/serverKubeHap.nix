@@ -79,7 +79,7 @@ in
           stats enable
           stats uri /stats
 
-        frontend k8s-api
+        frontend k8s-api-in
           bind :8443
           mode tcp
           default_backend k8s-api
