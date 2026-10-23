@@ -185,18 +185,11 @@ spec:
                 }), token);
               }
 
-              (async () => {
-                for (;;) {
-                  try {
-                    await configure();
-                    console.log('jellyfin configured');
-                    await sleep(3600000);
-                  } catch (e) {
-                    console.log('jellyfin is not configured: ' + e.message);
-                    await sleep(30000);
-                  }
-                }
-              })();
+              // one pass, the container repeats it (the script is read again each time: a change of it applies without a restart)
+              configure().then(() => console.log('jellyfin configured')).catch((e) => {
+                console.log('jellyfin is not configured: ' + e.message);
+                process.exit(1);
+              });
       deployments:
         jellyfin:
           replicas: 1
@@ -213,8 +206,10 @@ spec:
               containers:
                 configure:
                   command:
-                  - node
-                  - /scripts/configure.js
+                  - sh
+                  - -c
+                  - while true; do if node /scripts/configure.js; then sleep 3600;
+                    else sleep 30; fi; done
                   env:
                     CLIENT_SECRET:
                       secretKeyRef:
