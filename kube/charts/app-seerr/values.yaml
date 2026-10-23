@@ -3,12 +3,26 @@ global:
   domain:
   name:
 
-# Nothing has to be created by hand: the setup wizard of the web UI configures the media server (jellyfin) and the users at the first
-# visit. The web UI is protected by Authelia forward auth.
+# The setup wizard of the web UI configures the media server (jellyfin) and the admin user at the first visit.
+#
+# SSO with Authelia (OIDC client `seerr`): the users are created at their first login from their email, with the default permissions
+# (an existing user with the same email has to link its account in its profile, `Linked Accounts`). The secret of the client is
+# generated in the authelia namespace and copied by external-secrets (see `seerr-pre`). Seerr has no way to give the OIDC provider
+# by environment, so the `oidc` init container writes it in `settings.json` at each start.
+# The OIDC support is not released yet: it is the preview image of the pull request https://github.com/seerr-team/seerr/pull/2715
+# (pinned by digest, the tag is moved by its authors). Go back to a release (and to the `oidc` settings of its UI) once it is released.
+#
+# `settings.json` is created by seerr at its first start, the `oidc` init container does nothing until then: restart the deployment once
+# after the first start (`kubectl -n seerr rollout restart deployment seerr`) to get the `Authelia` button on the login page.
+# The other login methods (jellyfin, local) are still available.
+#
+# The database is a CloudNativePG cluster (`seerr-postgresql`), the password of its `app` user is created by CNPG
+# (`seerr-postgresql-app`). The settings (`settings.json`) are still in the volume.
 
 resources:
 
   # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
+  # The database has its own policy, from the postgresql-cluster chart.
   ciliumNetworkPolicies:
     seerr:
       endpointSelector:
@@ -18,9 +32,129 @@ resources:
           fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
           toPorts:
             http: {ports: {p5055: {port: "5055", protocol: TCP}}}
+      egress:
+        postgresql:
+          toEndpoints:
+            postgresql:
+              matchLabels: {cnpg.io/cluster: seerr-postgresql}
+          toPorts:
+            postgresql: {ports: {p5432: {port: "5432", protocol: TCP}}}
+        authelia: # the OIDC issuer is the public address of authelia
+          toFQDNs:
+            authelia: {matchName: "authelia.{{ .Values.global.domain }}"}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+        gateway: # the public addresses of the cluster are the gateway for the pods (jellyfin by its public address)
+          toEntities: {ingress: ingress}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+        jellyfin: # jellyfin by its service (`jellyfin.jellyfin:8096`)
+          toEndpoints:
+            jellyfin:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": jellyfin, "k8s:app.kubernetes.io/name": jellyfin}
+          toPorts:
+            http: {ports: {p8096: {port: "8096", protocol: TCP}}}
+        tmdb: # the metadata (api) and the posters (images, when the image cache is enabled)
+          toFQDNs:
+            api: {matchName: api.themoviedb.org}
+            images: {matchName: image.tmdb.org}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+        tvdb: # the metadata of the series and the animes when the provider is TheTVDB
+          toFQDNs:
+            api: {matchName: api4.thetvdb.com}
+            artworks: {matchName: artworks.thetvdb.com}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+        github: # the check of the new versions
+          toFQDNs:
+            api: {matchName: api.github.com}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
 
   fluxHelmReleases:
+    # the database is prepared by the postgresql-cluster chart (certificates, issuer, cluster and backups)
+    # the cluster is named after the release, which is the name of this HelmRelease
+    seerr-postgresql:
+      values:
+        clients:
+          seerr:
+            matchLabels: {app.kubernetes.io/name: seerr}
+      dependsOn: # the certificates, the cluster and the volume snapshots
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        cnpg:
+          name: app-cnpg
+          namespace: cnpg-system
+        longhorn:
+          name: app-longhorn
+          namespace: longhorn-system
+      chart:
+        spec:
+          chart: ./kube/charts/postgresql-cluster
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+
+    # the secret of the OIDC client, copied from authelia before seerr starts
+    seerr-pre:
+      dependsOn:
+        external-secrets:
+          name: app-external-secrets
+          namespace: external-secrets
+        authelia-pre: # the generated secret of the client and the right to read it
+          name: authelia-pre
+          namespace: authelia
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          serviceAccounts:
+            authelia-reader:
+              automountServiceAccountToken: false # only used by external-secrets to get a token
+
+          secretStores:
+            authelia:
+              provider:
+                kubernetes:
+                  remoteNamespace: authelia
+                  server:
+                    caProvider:
+                      type: ConfigMap
+                      name: kube-root-ca.crt
+                      key: ca.crt
+                  auth:
+                    serviceAccount:
+                      name: authelia-reader
+
+          externalSecrets:
+            seerr-oidc:
+              refreshInterval: 1h
+              secretStoreRef:
+                kind: SecretStore
+                name: authelia
+              data:
+                secret:
+                  secretKey: secret
+                  remoteRef:
+                    key: authelia-oidc-seerr
+                    property: secret
+
     seerr:
+      dependsOn:
+        seerr-postgresql: # the database
+          name: seerr-postgresql
+        seerr-pre: # the secret of the OIDC client
+          name: seerr-pre
       chart:
         spec:
           chart: ./kube/charts/base-loader
@@ -57,15 +191,81 @@ resources:
                   securityContext:
                     fsGroup: 1000
                     fsGroupChangePolicy: OnRootMismatch
+                  # puts the OIDC provider of authelia in settings.json (the file only exists once seerr has started once)
+                  initContainers:
+                    oidc:
+                      name: oidc
+                      image: ghcr.io/seerr-team/seerr:preview-new-oidc@sha256:28744b1ced522beb7af8e5c966b73c6e46b1dc2c4c8cb497ad2f12d3139699a3
+                      command: [ node, -e ]
+                      args:
+                        - |
+                          const fs = require('fs');
+                          const file = '/app/config/settings.json';
+                          if (!fs.existsSync(file)) {
+                            console.log('no settings.json yet, restart the deployment once seerr has started');
+                            process.exit(0);
+                          }
+                          const settings = JSON.parse(fs.readFileSync(file, 'utf8'));
+                          settings.main = settings.main || {};
+                          settings.main.oidcLogin = true;
+                          settings.main.applicationUrl = process.env.APP_URL; // the redirect uri of the login
+                          settings.network = settings.network || {};
+                          settings.network.trustProxy = true; // behind the gateway
+                          settings.oidc = {
+                            providers: [{
+                              slug: 'authelia',
+                              name: 'Authelia',
+                              issuerUrl: process.env.ISSUER_URL,
+                              clientId: 'seerr',
+                              clientSecret: process.env.CLIENT_SECRET,
+                              scopes: 'openid profile email',
+                              newUserLogin: true,
+                            }],
+                          };
+                          fs.writeFileSync(file + '.tmp', JSON.stringify(settings, null, 1));
+                          fs.renameSync(file + '.tmp', file);
+                      env:
+                        APP_URL: https://seerr.{{ .Values.global.domain }}
+                        ISSUER_URL: https://authelia.{{ .Values.global.domain }}
+                        CLIENT_SECRET:
+                          secretKeyRef:
+                            name: seerr-oidc
+                            key: secret
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        readOnlyRootFilesystem: true
+                        runAsNonRoot: true
+                        runAsUser: 1000
+                        runAsGroup: 1000
+                        capabilities:
+                          drop:
+                            all: ALL
+                        seccompProfile:
+                          type: RuntimeDefault
+                      volumeMounts:
+                        config:
+                          name: config
+                          mountPath: /app/config
                   containers:
                     seerr:
                       name: seerr
-                      image: ghcr.io/seerr-team/seerr:v3.5.0 # renovate: versioning=loose
+                      image: ghcr.io/seerr-team/seerr:preview-new-oidc@sha256:28744b1ced522beb7af8e5c966b73c6e46b1dc2c4c8cb497ad2f12d3139699a3
                       ports:
                         http:
                           containerPort: 5055
                       env:
                         TZ: Europe/Paris
+                        DB_TYPE: postgres
+                        DB_HOST: seerr-postgresql-rw
+                        DB_PORT: "5432"
+                        DB_NAME: app
+                        DB_USER: app
+                        DB_PASS:
+                          secretKeyRef:
+                            name: seerr-postgresql-app
+                            key: password
+                        DB_USE_SSL: "true"
+                        DB_SSL_REJECT_UNAUTHORIZED: "false" # encrypted, the certificate is signed by the CA of the cluster (as `SSL_MODE: require` of forgejo)
                       startupProbe:
                         httpGet:
                           path: /api/v1/settings/public
@@ -147,8 +347,8 @@ resources:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
 
-          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway and protected by Authelia forward auth.
-          # The ReferenceGrant to the authelia service is in app-authelia.
+          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway. Not behind the Authelia forward auth: the
+          # login is the OIDC one of seerr (and the API has to be reachable by the apps and the other services).
           listenerSets:
             seerr:
               parentRef:
@@ -182,28 +382,6 @@ resources:
                 seerr: seerr.{{ .Values.global.domain }}
               rules:
                 root:
-                  filters:
-                    authelia:
-                      type: ExternalAuth
-                      externalAuth:
-                        protocol: HTTP
-                        backendRef:
-                          name: authelia
-                          namespace: authelia
-                          port: 80
-                        http:
-                          path: /api/authz/ext-authz/
-                          allowedResponseHeaders: # only the identity headers, not the authz content-type/content-length (a GET with a content-length makes upstreams answer 400)
-                            remote-user: remote-user
-                            remote-groups: remote-groups
-                            remote-name: remote-name
-                            remote-email: remote-email
-                          allowedHeaders: # what authelia needs to find the session and to redirect to the login page
-                            cookie: cookie
-                            accept: accept
-                            proxy-authorization: proxy-authorization
-                            x-forwarded-proto: x-forwarded-proto
-                            x-forwarded-for: x-forwarded-for
                   backendRefs:
                     seerr:
                       name: seerr

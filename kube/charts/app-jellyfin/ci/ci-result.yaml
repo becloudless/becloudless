@@ -18,6 +18,14 @@ spec:
     - ports:
       - port: "8096"
         protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/name: seerr
+        k8s:io.kubernetes.pod.namespace: seerr
+    toPorts:
+    - ports:
+      - port: "8096"
+        protocol: TCP
 ---
 # Source: app-jellyfin/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

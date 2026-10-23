@@ -6,6 +6,54 @@ metadata:
   name: seerr
   namespace: default
 spec:
+  egress:
+  - toFQDNs:
+    - matchName: authelia.test.com
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toEntities:
+    - ingress
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toFQDNs:
+    - matchName: api.github.com
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/name: jellyfin
+        k8s:io.kubernetes.pod.namespace: jellyfin
+    toPorts:
+    - ports:
+      - port: "8096"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        cnpg.io/cluster: seerr-postgresql
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+  - toFQDNs:
+    - matchName: api.themoviedb.org
+    - matchName: image.tmdb.org
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toFQDNs:
+    - matchName: api4.thetvdb.com
+    - matchName: artworks.thetvdb.com
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
   endpointSelector:
     matchLabels:
       app.kubernetes.io/name: seerr
@@ -34,6 +82,9 @@ spec:
         kind: GitRepository
         name: bcl
         namespace: apps
+  dependsOn:
+  - name: seerr-postgresql
+  - name: seerr-pre
   driftDetection:
     mode: enabled
   install:
@@ -66,8 +117,19 @@ spec:
               containers:
                 seerr:
                   env:
+                    DB_HOST: seerr-postgresql-rw
+                    DB_NAME: app
+                    DB_PASS:
+                      secretKeyRef:
+                        key: password
+                        name: seerr-postgresql-app
+                    DB_PORT: "5432"
+                    DB_SSL_REJECT_UNAUTHORIZED: "false"
+                    DB_TYPE: postgres
+                    DB_USE_SSL: "true"
+                    DB_USER: app
                     TZ: Europe/Paris
-                  image: ghcr.io/seerr-team/seerr:v3.5.0
+                  image: ghcr.io/seerr-team/seerr:preview-new-oidc@sha256:28744b1ced522beb7af8e5c966b73c6e46b1dc2c4c8cb497ad2f12d3139699a3
                   livenessProbe:
                     httpGet:
                       path: /api/v1/settings/public
@@ -100,6 +162,62 @@ spec:
                       path: /api/v1/settings/public
                       port: 5055
                     periodSeconds: 10
+                  volumeMounts:
+                    config:
+                      mountPath: /app/config
+                      name: config
+              initContainers:
+                oidc:
+                  args:
+                  - |-
+                    const fs = require('fs');
+                    const file = '/app/config/settings.json';
+                    if (!fs.existsSync(file)) {
+                      console.log('no settings.json yet, restart the deployment once seerr has started');
+                      process.exit(0);
+                    }
+                    const settings = JSON.parse(fs.readFileSync(file, 'utf8'));
+                    settings.main = settings.main || {};
+                    settings.main.oidcLogin = true;
+                    settings.main.applicationUrl = process.env.APP_URL; // the redirect uri of the login
+                    settings.network = settings.network || {};
+                    settings.network.trustProxy = true; // behind the gateway
+                    settings.oidc = {
+                      providers: [{
+                        slug: 'authelia',
+                        name: 'Authelia',
+                        issuerUrl: process.env.ISSUER_URL,
+                        clientId: 'seerr',
+                        clientSecret: process.env.CLIENT_SECRET,
+                        scopes: 'openid profile email',
+                        newUserLogin: true,
+                      }],
+                    };
+                    fs.writeFileSync(file + '.tmp', JSON.stringify(settings, null, 1));
+                    fs.renameSync(file + '.tmp', file);
+                  command:
+                  - node
+                  - -e
+                  env:
+                    APP_URL: https://seerr.test.com
+                    CLIENT_SECRET:
+                      secretKeyRef:
+                        key: secret
+                        name: seerr-oidc
+                    ISSUER_URL: https://authelia.test.com
+                  image: ghcr.io/seerr-team/seerr:preview-new-oidc@sha256:28744b1ced522beb7af8e5c966b73c6e46b1dc2c4c8cb497ad2f12d3139699a3
+                  name: oidc
+                  securityContext:
+                    allowPrivilegeEscalation: false
+                    capabilities:
+                      drop:
+                        all: ALL
+                    readOnlyRootFilesystem: true
+                    runAsGroup: 1000
+                    runAsNonRoot: true
+                    runAsUser: 1000
+                    seccompProfile:
+                      type: RuntimeDefault
                   volumeMounts:
                     config:
                       mountPath: /app/config
@@ -190,28 +308,6 @@ spec:
                 seerr:
                   name: seerr
                   port: 5055
-              filters:
-                authelia:
-                  externalAuth:
-                    backendRef:
-                      name: authelia
-                      namespace: authelia
-                      port: 80
-                    http:
-                      allowedHeaders:
-                        accept: accept
-                        cookie: cookie
-                        proxy-authorization: proxy-authorization
-                        x-forwarded-for: x-forwarded-for
-                        x-forwarded-proto: x-forwarded-proto
-                      allowedResponseHeaders:
-                        remote-email: remote-email
-                        remote-groups: remote-groups
-                        remote-name: remote-name
-                        remote-user: remote-user
-                      path: /api/authz/ext-authz/
-                    protocol: HTTP
-                  type: ExternalAuth
       listenerSets:
         seerr:
           listeners:
@@ -233,3 +329,110 @@ spec:
             kind: Gateway
             name: shared
             namespace: kube-system
+---
+# Source: app-seerr/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: seerr-postgresql
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/postgresql-cluster
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-cnpg
+    namespace: cnpg-system
+  - name: app-longhorn
+    namespace: longhorn-system
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    clients:
+      seerr:
+        matchLabels:
+          app.kubernetes.io/name: seerr
+---
+# Source: app-seerr/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: seerr-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: authelia-pre
+    namespace: authelia
+  - name: app-external-secrets
+    namespace: external-secrets
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      externalSecrets:
+        seerr-oidc:
+          data:
+            secret:
+              remoteRef:
+                key: authelia-oidc-seerr
+                property: secret
+              secretKey: secret
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: SecretStore
+            name: authelia
+      secretStores:
+        authelia:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: authelia-reader
+              remoteNamespace: authelia
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        authelia-reader:
+          automountServiceAccountToken: false
