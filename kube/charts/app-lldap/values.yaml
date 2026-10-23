@@ -16,7 +16,6 @@ global:
       - role_user
       - role_editor
       - app_forgejo
-      - app_gitea
       - app_immich
       - app_immich_one_factor
       - app_jellyfin
