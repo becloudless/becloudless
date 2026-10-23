@@ -91,17 +91,18 @@ deadlocks (https://github.com/cloudnative-pg/cloudnative-pg/issues/10433). Only 
         "cluster" (dict "name" $name)) }}
 {{- end }}
 
-{{- /* The instances talk to each other (replication) and to the clients. The operator and the API server are allowed for every cluster
-by the cluster wide policy of app-cnpg. */}}
+{{- /* The instances talk to each other (replication on 5432, status API of the instance manager on 8000) and to the clients.
+The operator and the API server are allowed for every cluster by the cluster wide policy of app-cnpg. */}}
 {{- $instances := dict "matchLabels" (dict "cnpg.io/cluster" $name) }}
 {{- $postgres := dict "ports" (dict "postgres" (dict "port" "5432" "protocol" "TCP")) }}
+{{- $peers := dict "ports" (dict "postgres" (dict "port" "5432" "protocol" "TCP") "status" (dict "port" "8000" "protocol" "TCP")) }}
 {{- $policy := dict
       "endpointSelector" $instances
       "ingress" (dict
-        "instances" (dict "fromEndpoints" (dict "instances" $instances) "toPorts" (dict "postgres" $postgres))
+        "instances" (dict "fromEndpoints" (dict "instances" $instances) "toPorts" (dict "postgres" $peers))
         "clients" (dict "fromEndpoints" ($values.clients | default dict) "toPorts" (dict "postgres" $postgres)))
       "egress" (dict
-        "instances" (dict "toEndpoints" (dict "instances" $instances) "toPorts" (dict "postgres" $postgres))) }}
+        "instances" (dict "toEndpoints" (dict "instances" $instances) "toPorts" (dict "postgres" $peers))) }}
 {{- if not $values.clients }}
   {{- $_ := unset $policy.ingress "clients" }}
 {{- end }}

@@ -96,6 +96,8 @@ spec:
     - ports:
       - port: "5432"
         protocol: TCP
+      - port: "8000"
+        protocol: TCP
   endpointSelector:
     matchLabels:
       cnpg.io/cluster: test-release
@@ -106,6 +108,8 @@ spec:
     toPorts:
     - ports:
       - port: "5432"
+        protocol: TCP
+      - port: "8000"
         protocol: TCP
 ---
 # Source: postgresql-cluster/templates/loader.yaml
