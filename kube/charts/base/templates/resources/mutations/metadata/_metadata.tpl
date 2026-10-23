@@ -11,13 +11,12 @@
   {{- $globalMetadataAll := $defaultsAll.metadata | default dict }}
   {{- $globalMetadataAll = tpl (toYaml $globalMetadataAll) $rootContext | fromYaml }}
   {{- $namespace := $resource.namespace | default $globalMetadataAll.namespace | default $rootContext.Release.Namespace }}
-  {{- /* The kinds without namespace are cluster scoped: they get no metadata.namespace. */}}
-  {{- $clusterScopedKinds := list "Namespace" "PersistentVolume" "StorageClass" "VolumeSnapshotClass" "ClusterRole" "ClusterRoleBinding" "GatewayClass" "ClusterIssuer" "ClusterPolicy" "ValidatingPolicy" "CiliumLoadBalancerIPPool" "CiliumBGPAdvertisement" "CiliumBGPPeerConfig" "CiliumBGPClusterConfig" }}
+  {{- /* The cluster scoped kinds (`clusterScoped: true` in resources.yaml) get no metadata.namespace. */}}
   {{- $labels := merge ($resource.labels | default dict) ($globalMetadataAll.labels | default dict) }}
   {{- $annotations := merge ($resource.annotations | default dict) ($globalMetadataAll.annotations | default dict) }}
 
   {{- $metadata := dict "name" $name }}
-  {{- if not (has .kind $clusterScopedKinds) }}
+  {{- if not .clusterScoped }}
     {{- $metadata = set $metadata "namespace" $namespace }}
   {{- end }}
   {{- if $labels }}

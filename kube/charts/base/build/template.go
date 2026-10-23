@@ -30,6 +30,9 @@ func generateTemplate(dir string, entries []resource) error {
 		}
 
 		args := []string{fmt.Sprintf(`"rootContext" $rootContext "name" %q "apiVersion" %q "kind" %q`, e.Name, e.APIVersion, e.Kind)}
+		if e.ClusterScoped {
+			args = append(args, `"clusterScoped" true`)
+		}
 		names := make([]string, 0, len(e.helmTemplateRenderArgs))
 		for name := range e.helmTemplateRenderArgs {
 			names = append(names, name)

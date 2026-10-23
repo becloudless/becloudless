@@ -33,6 +33,7 @@ resources:
     apiVersion: v1
     kind: Service
   - name: persistentVolumes
+    clusterScoped: true
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
       component: io.k8s.api.core.v1.PersistentVolume
@@ -45,6 +46,7 @@ resources:
     apiVersion: v1
     kind: PersistentVolumeClaim
   - name: namespaces
+    clusterScoped: true
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
       component: io.k8s.api.core.v1.Namespace
@@ -143,6 +145,7 @@ resources:
       extractContent:
         contentIsOutOfSpec: true
   - name: clusterRoles
+    clusterScoped: true
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
       component: io.k8s.api.rbac.v1.ClusterRole
@@ -152,6 +155,7 @@ resources:
       extractContent:
         contentIsOutOfSpec: true
   - name: clusterRoleBindings
+    clusterScoped: true
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
       component: io.k8s.api.rbac.v1.ClusterRoleBinding
@@ -183,6 +187,7 @@ resources:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_gateways.yaml
       crdVersion: v1
   - name: gatewayClasses
+    clusterScoped: true
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_gatewayclasses.yaml
       crdVersion: v1
@@ -216,6 +221,7 @@ resources:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_udproutes.yaml
       crdVersion: v1
   - name: storageClasses
+    clusterScoped: true
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__storage.k8s.io__v1_openapi.json
       component: io.k8s.api.storage.v1.StorageClass
@@ -225,6 +231,7 @@ resources:
       extractContent:
         contentIsOutOfSpec: true
   - name: volumeSnapshotClasses
+    clusterScoped: true
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
       crdVersion: v1
@@ -236,6 +243,7 @@ resources:
       url: https://raw.githubusercontent.com/bitnami-labs/sealed-secrets/main/helm/sealed-secrets/crds/bitnami.com_sealedsecrets.yaml
       crdVersion: v1alpha1
   - name: kyvernoClusterPolicies
+    clusterScoped: true
     sourceCRD:
       url: https://raw.githubusercontent.com/kyverno/kyverno/main/config/crds/kyverno/kyverno.io_clusterpolicies.yaml
       crdVersion: v1
@@ -293,6 +301,7 @@ resources:
       url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_issuers.yaml
       crdVersion: v1
   - name: certManagerClusterIssuers
+    clusterScoped: true
     sourceCRD:
       url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_clusterissuers.yaml
       crdVersion: v1
@@ -353,6 +362,7 @@ resources:
       url: https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml
       crdVersion: v1
   - name: kyvernoValidatingPolicies
+    clusterScoped: true
     sourceCRD:
       url: https://raw.githubusercontent.com/kyverno/kyverno/main/config/crds/policies.kyverno.io/policies.kyverno.io_validatingpolicies.yaml
       crdVersion: v1
@@ -362,18 +372,31 @@ resources:
       crdVersion: v1
       kind: VerticalPodAutoscaler
   - name: ciliumLoadBalancerIPPools
+    clusterScoped: true
     sourceCRD:
       url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumloadbalancerippools.yaml
       crdVersion: v2
   - name: ciliumBGPAdvertisements
+    clusterScoped: true
     sourceCRD:
       url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumbgpadvertisements.yaml
       crdVersion: v2
   - name: ciliumBGPPeerConfigs
+    clusterScoped: true
     sourceCRD:
       url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumbgppeerconfigs.yaml
       crdVersion: v2
   - name: ciliumBGPClusterConfigs
+    clusterScoped: true
     sourceCRD:
       url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumbgpclusterconfigs.yaml
+      crdVersion: v2
+  - name: ciliumNetworkPolicies
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumnetworkpolicies.yaml
+      crdVersion: v2
+  - name: ciliumClusterwideNetworkPolicies
+    clusterScoped: true
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumclusterwidenetworkpolicies.yaml
       crdVersion: v2

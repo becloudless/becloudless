@@ -126,3 +126,32 @@ func TestParseCRDs_NoMutationsLeavesFieldsZero(t *testing.T) {
 		t.Errorf("secrets.Mutations.ArraysToMaps = nil, want non-nil")
 	}
 }
+
+func TestParseCRDs_ParsesClusterScoped(t *testing.T) {
+	path := writeResourcesYAML(t, `resources:
+  - name: namespaces
+    clusterScoped: true
+    sourceOpenAPI:
+      url: https://example.invalid/namespace.json
+      component: io.k8s.api.core.v1.Namespace
+    apiVersion: v1
+    kind: Namespace
+  - name: configMaps
+    sourceOpenAPI:
+      url: https://example.invalid/configmap.json
+      component: io.k8s.api.core.v1.ConfigMap
+    apiVersion: v1
+    kind: ConfigMap
+`)
+
+	file, err := newResourcesFile(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !file.Resources[0].ClusterScoped {
+		t.Errorf("namespaces.ClusterScoped = false, want true")
+	}
+	if file.Resources[1].ClusterScoped {
+		t.Errorf("configMaps.ClusterScoped = true, want false")
+	}
+}

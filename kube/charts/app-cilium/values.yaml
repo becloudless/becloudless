@@ -123,3 +123,447 @@ resources:
                   allowedRoutes: # the http-01 solver of cert-manager creates its route in the namespace of each certificate
                     namespaces:
                       from: All
+
+    # Default deny of all pod traffic (ingress and egress), then the legitimate flows allowed one by one.
+    # Host networked pods (apiserver, etcd, cilium...) are not endpoints of Cilium and are not affected.
+    # All policies are cluster wide (selecting namespaces by label) so a missing app never breaks the release.
+    # To roll back quickly: `apps.cilium.values.resources.fluxHelmReleases.cilium-policies.enabled: false` in the cluster values.
+    # To see what a policy blocks: `hubble observe --verdict DROPPED` (or set `policyAuditMode: true` on the cilium chart to only log).
+    # The Envoy of the Gateway runs on every node: from another node its traffic reaches a pod as `remote-node`, not `ingress`.
+    # A flow needs an egress rule on the source side and an ingress rule on the destination side (the same-namespace rules do both).
+    cilium-policies:
+      dependsOn:
+        cilium:
+          name: cilium
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          ciliumClusterwideNetworkPolicies:
+
+            # ---------------------------------------------------------------- baseline
+            # `none` matches nothing: selecting a pod with an ingress/egress section is what turns on the default deny.
+            default-deny:
+              endpointSelector:
+                matchExpressions:
+                  any-namespace: {key: "k8s:io.kubernetes.pod.namespace", operator: Exists}
+              ingress:
+                deny: {fromEntities: {none: none}}
+              egress:
+                deny: {toEntities: {none: none}}
+
+            allow-dns:
+              endpointSelector:
+                matchExpressions:
+                  any-namespace: {key: "k8s:io.kubernetes.pod.namespace", operator: Exists}
+              egress:
+                kube-dns:
+                  toEndpoints:
+                    kube-dns:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": kube-system, "k8s:k8s-app": kube-dns}
+                  toPorts:
+                    dns:
+                      ports:
+                        udp: {port: "53", protocol: UDP}
+                        tcp: {port: "53", protocol: TCP}
+
+            coredns:
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": kube-system, "k8s:k8s-app": kube-dns}
+              ingress:
+                from-pods:
+                  fromEndpoints:
+                    any-namespace:
+                      matchExpressions:
+                        any-namespace: {key: "k8s:io.kubernetes.pod.namespace", operator: Exists}
+                  toPorts:
+                    dns:
+                      ports:
+                        udp: {port: "53", protocol: UDP}
+                        tcp: {port: "53", protocol: TCP}
+              egress:
+                upstream-resolvers: # the resolvers of the nodes / the LAN
+                  toEntities: {world: world, host: host, remote-node: remote-node}
+                  toPorts:
+                    dns:
+                      ports:
+                        udp: {port: "53", protocol: UDP}
+                        tcp: {port: "53", protocol: TCP}
+                kube-apiserver:
+                  toEntities: {apiserver: kube-apiserver}
+
+            # Everything that talks to the Kubernetes API.
+            api-clients:
+              endpointSelector:
+                matchExpressions:
+                  namespaces:
+                    key: "k8s:io.kubernetes.pod.namespace"
+                    operator: In
+                    values:
+                      cert-manager: cert-manager
+                      cnpg-system: cnpg-system
+                      external-secrets: external-secrets
+                      external-snapshotter: external-snapshotter
+                      flux-system: flux-system
+                      kube-system: kube-system
+                      kyverno: kyverno
+                      longhorn-system: longhorn-system
+                      prometheus: prometheus
+                      secret-generator: secret-generator
+              egress:
+                kube-apiserver:
+                  toEntities: {apiserver: kube-apiserver}
+
+            # The Kubernetes API calls the admission / conversion webhooks and the aggregated APIs.
+            api-webhooks:
+              endpointSelector:
+                matchExpressions:
+                  namespaces:
+                    key: "k8s:io.kubernetes.pod.namespace"
+                    operator: In
+                    values:
+                      cert-manager: cert-manager
+                      cnpg-system: cnpg-system
+                      external-secrets: external-secrets
+                      kube-system: kube-system # metrics-server
+                      kyverno: kyverno
+                      prometheus: prometheus
+              ingress:
+                kube-apiserver: # the API server is host networked: it is seen as the host or a remote node
+                  fromEntities: {apiserver: kube-apiserver, host: host, remote-node: remote-node}
+                  toPorts:
+                    webhooks:
+                      ports:
+                        p10250: {port: "10250", protocol: TCP}
+                        p9443: {port: "9443", protocol: TCP}
+
+            # Prometheus scrapes any port of any pod (the targets are discovered from the ServiceMonitors).
+            prometheus-scrape:
+              endpointSelector:
+                matchExpressions:
+                  any-namespace: {key: "k8s:io.kubernetes.pod.namespace", operator: Exists}
+              ingress:
+                prometheus:
+                  fromEndpoints:
+                    prometheus:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": prometheus, "k8s:app.kubernetes.io/name": prometheus}
+
+            # The gateway reaches the solver pod created by cert-manager in the namespace of each certificate.
+            http01-solver:
+              endpointSelector:
+                matchLabels: {"k8s:acme.cert-manager.io/http01-solver": "true"}
+              ingress:
+                gateway:
+                  fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+                  toPorts:
+                    http: {ports: {p8089: {port: "8089", protocol: TCP}}}
+
+            metrics-server: # scrapes the kubelet of every node
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": kube-system, "k8s:app.kubernetes.io/name": metrics-server}
+              egress:
+                kubelets:
+                  toEntities: {host: host, remote-node: remote-node}
+                  toPorts:
+                    kubelet: {ports: {p10250: {port: "10250", protocol: TCP}}}
+
+            # The instances of every CloudNativePG cluster: status API for the operator, the API server for their own lifecycle.
+            # Replication and clients are in the same namespace, see the `ns-*` policies.
+            cnpg-instances:
+              endpointSelector:
+                matchExpressions:
+                  cnpg-cluster: {key: "k8s:cnpg.io/cluster", operator: Exists}
+              ingress:
+                operator:
+                  fromEndpoints:
+                    operator:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": cnpg-system}
+                  toPorts:
+                    postgres:
+                      ports:
+                        p8000: {port: "8000", protocol: TCP}
+                        p5432: {port: "5432", protocol: TCP}
+              egress:
+                kube-apiserver:
+                  toEntities: {apiserver: kube-apiserver}
+
+            # ---------------------------------------------------------------- namespaces
+            ns-cnpg-system:
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": cnpg-system}
+              egress:
+                instances:
+                  toEndpoints:
+                    instances:
+                      matchExpressions:
+                        cnpg-cluster: {key: "k8s:cnpg.io/cluster", operator: Exists}
+                  toPorts:
+                    postgres:
+                      ports:
+                        p8000: {port: "8000", protocol: TCP}
+                        p5432: {port: "5432", protocol: TCP}
+
+            ns-cert-manager: # ACME, and the self check of the http-01 challenge that goes through the public address of the gateway
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": cert-manager}
+              egress:
+                acme:
+                  toEntities: {world: world, ingress: ingress}
+                  toPorts:
+                    web:
+                      ports:
+                        p80: {port: "80", protocol: TCP}
+                        p443: {port: "443", protocol: TCP}
+
+            ns-flux-system: # git / helm / oci sources, notification providers. Flux also ships its own NetworkPolicies.
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": flux-system}
+              ingress:
+                same-namespace:
+                  fromEndpoints:
+                    self:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": flux-system}
+                webhook-receiver:
+                  fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+                  toPorts:
+                    receiver: {ports: {p9292: {port: "9292", protocol: TCP}}}
+              egress:
+                same-namespace:
+                  toEndpoints:
+                    self:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": flux-system}
+                internet:
+                  toEntities: {world: world, ingress: ingress}
+                  toPorts:
+                    sources:
+                      ports:
+                        p22: {port: "22", protocol: TCP}
+                        p80: {port: "80", protocol: TCP}
+                        p443: {port: "443", protocol: TCP}
+
+            ns-authelia:
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": authelia}
+              ingress:
+                same-namespace:
+                  fromEndpoints:
+                    self:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": authelia}
+                gateway: # the portal and the forward auth of every protected route
+                  fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+                  toPorts:
+                    http: {ports: {p9091: {port: "9091", protocol: TCP}}}
+              egress:
+                same-namespace:
+                  toEndpoints:
+                    self:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": authelia}
+                lldap:
+                  toEndpoints:
+                    lldap:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": lldap}
+                  toPorts:
+                    ldaps: {ports: {p6360: {port: "6360", protocol: TCP}}}
+
+            ns-lldap:
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": lldap}
+              ingress:
+                same-namespace:
+                  fromEndpoints:
+                    self:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": lldap}
+                authelia:
+                  fromEndpoints:
+                    authelia:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": authelia}
+                  toPorts:
+                    ldaps: {ports: {p6360: {port: "6360", protocol: TCP}}}
+                gateway: # the web ui, and the ldaps tls passthrough
+                  fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+                  toPorts:
+                    gateway:
+                      ports:
+                        p17170: {port: "17170", protocol: TCP}
+                        p6360: {port: "6360", protocol: TCP}
+              egress:
+                same-namespace:
+                  toEndpoints:
+                    self:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": lldap}
+
+            ns-forgejo: # the OIDC discovery of authelia goes through the public address of the gateway
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": forgejo}
+              ingress:
+                same-namespace:
+                  fromEndpoints:
+                    self:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": forgejo}
+                gateway:
+                  fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+                  toPorts:
+                    http: {ports: {p3000: {port: "3000", protocol: TCP}}}
+              egress:
+                same-namespace:
+                  toEndpoints:
+                    self:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": forgejo}
+                internet: # authelia through the gateway, mirrors, webhooks, git over ssh
+                  toEntities: {world: world, ingress: ingress}
+                  toPorts:
+                    out:
+                      ports:
+                        p22: {port: "22", protocol: TCP}
+                        p80: {port: "80", protocol: TCP}
+                        p443: {port: "443", protocol: TCP}
+
+            ns-immich: # the OIDC issuer is the public address of authelia, the ml models are downloaded on first use
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": immich}
+              ingress:
+                same-namespace:
+                  fromEndpoints:
+                    self:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": immich}
+                gateway:
+                  fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+                  toPorts:
+                    http: {ports: {p2283: {port: "2283", protocol: TCP}}}
+              egress:
+                same-namespace:
+                  toEndpoints:
+                    self:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": immich}
+                internet:
+                  toEntities: {world: world, ingress: ingress}
+                  toPorts:
+                    https: {ports: {p443: {port: "443", protocol: TCP}}}
+
+            ns-prometheus: # scrapes the whole cluster (pods, nodes, control plane)
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": prometheus}
+              ingress:
+                same-namespace:
+                  fromEndpoints:
+                    self:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": prometheus}
+                gateway: # prometheus, alertmanager, grafana, pushprox
+                  fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+                  toPorts:
+                    gateway:
+                      ports:
+                        p9090: {port: "9090", protocol: TCP}
+                        p9093: {port: "9093", protocol: TCP}
+                        p3000: {port: "3000", protocol: TCP}
+                        p8080: {port: "8080", protocol: TCP}
+              egress:
+                cluster:
+                  toEntities: {cluster: cluster, apiserver: kube-apiserver}
+
+            ns-longhorn-system: # the nodes mount the volumes (iscsi, nfs of the share managers) and call the webhooks
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": longhorn-system}
+              ingress:
+                same-namespace:
+                  fromEndpoints:
+                    self:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": longhorn-system}
+                nodes:
+                  fromEntities: {apiserver: kube-apiserver, host: host, remote-node: remote-node}
+                gateway:
+                  fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+                  toPorts:
+                    ui: {ports: {p8000: {port: "8000", protocol: TCP}}}
+              egress:
+                same-namespace:
+                  toEndpoints:
+                    self:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": longhorn-system}
+                nodes:
+                  toEntities: {host: host, remote-node: remote-node}
+
+            ns-mailu: # smtp / imap / pop3 from the internet through the LoadBalancer, any port outbound (smtp delivery, vpn, updates)
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": mailu}
+              ingress:
+                same-namespace:
+                  fromEndpoints:
+                    self:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": mailu}
+                gateway:
+                  fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+                  toPorts:
+                    http: {ports: {p80: {port: "80", protocol: TCP}}}
+                mail: # externalTrafficPolicy Cluster: the source is the internet or a node
+                  fromEntities: {world: world, host: host, remote-node: remote-node}
+                  toPorts:
+                    mail:
+                      ports:
+                        p25: {port: "25", protocol: TCP}
+                        p110: {port: "110", protocol: TCP}
+                        p143: {port: "143", protocol: TCP}
+                        p465: {port: "465", protocol: TCP}
+                        p587: {port: "587", protocol: TCP}
+                        p993: {port: "993", protocol: TCP}
+                        p995: {port: "995", protocol: TCP}
+                        p4190: {port: "4190", protocol: TCP}
+              egress:
+                same-namespace:
+                  toEndpoints:
+                    self:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": mailu}
+                internet:
+                  toEntities: {world: world}
+
+            # Apps only reached through the gateway
+            ns-homer:
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": homer}
+              ingress:
+                gateway:
+                  fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+                  toPorts:
+                    http: {ports: {p8080: {port: "8080", protocol: TCP}}}
+
+            ns-landing:
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": landing}
+              ingress:
+                gateway:
+                  fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+                  toPorts:
+                    http: {ports: {p8080: {port: "8080", protocol: TCP}}}
+
+            ns-whoami:
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": whoami}
+              ingress:
+                gateway:
+                  fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+                  toPorts:
+                    http: {ports: {p8080: {port: "8080", protocol: TCP}}}
+
+            ns-jellyfin: # not deployed on every cluster
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": jellyfin}
+              ingress:
+                gateway:
+                  fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+                  toPorts:
+                    http: {ports: {p8096: {port: "8096", protocol: TCP}}}
+
+            ns-seerr: # not deployed on every cluster
+              endpointSelector:
+                matchLabels: {"k8s:io.kubernetes.pod.namespace": seerr}
+              ingress:
+                gateway:
+                  fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+                  toPorts:
+                    http: {ports: {p5055: {port: "5055", protocol: TCP}}}

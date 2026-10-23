@@ -18,10 +18,6 @@ spec:
     namespace: gateway-api
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -65,6 +61,664 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
+  name: cilium-policies
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: cilium
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      ciliumClusterwideNetworkPolicies:
+        allow-dns:
+          egress:
+            kube-dns:
+              toEndpoints:
+                kube-dns:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: kube-system
+                    k8s:k8s-app: kube-dns
+              toPorts:
+                dns:
+                  ports:
+                    tcp:
+                      port: "53"
+                      protocol: TCP
+                    udp:
+                      port: "53"
+                      protocol: UDP
+          endpointSelector:
+            matchExpressions:
+              any-namespace:
+                key: k8s:io.kubernetes.pod.namespace
+                operator: Exists
+        api-clients:
+          egress:
+            kube-apiserver:
+              toEntities:
+                apiserver: kube-apiserver
+          endpointSelector:
+            matchExpressions:
+              namespaces:
+                key: k8s:io.kubernetes.pod.namespace
+                operator: In
+                values:
+                  cert-manager: cert-manager
+                  cnpg-system: cnpg-system
+                  external-secrets: external-secrets
+                  external-snapshotter: external-snapshotter
+                  flux-system: flux-system
+                  kube-system: kube-system
+                  kyverno: kyverno
+                  longhorn-system: longhorn-system
+                  prometheus: prometheus
+                  secret-generator: secret-generator
+        api-webhooks:
+          endpointSelector:
+            matchExpressions:
+              namespaces:
+                key: k8s:io.kubernetes.pod.namespace
+                operator: In
+                values:
+                  cert-manager: cert-manager
+                  cnpg-system: cnpg-system
+                  external-secrets: external-secrets
+                  kube-system: kube-system
+                  kyverno: kyverno
+                  prometheus: prometheus
+          ingress:
+            kube-apiserver:
+              fromEntities:
+                apiserver: kube-apiserver
+                host: host
+                remote-node: remote-node
+              toPorts:
+                webhooks:
+                  ports:
+                    p9443:
+                      port: "9443"
+                      protocol: TCP
+                    p10250:
+                      port: "10250"
+                      protocol: TCP
+        cnpg-instances:
+          egress:
+            kube-apiserver:
+              toEntities:
+                apiserver: kube-apiserver
+          endpointSelector:
+            matchExpressions:
+              cnpg-cluster:
+                key: k8s:cnpg.io/cluster
+                operator: Exists
+          ingress:
+            operator:
+              fromEndpoints:
+                operator:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: cnpg-system
+              toPorts:
+                postgres:
+                  ports:
+                    p5432:
+                      port: "5432"
+                      protocol: TCP
+                    p8000:
+                      port: "8000"
+                      protocol: TCP
+        coredns:
+          egress:
+            kube-apiserver:
+              toEntities:
+                apiserver: kube-apiserver
+            upstream-resolvers:
+              toEntities:
+                host: host
+                remote-node: remote-node
+                world: world
+              toPorts:
+                dns:
+                  ports:
+                    tcp:
+                      port: "53"
+                      protocol: TCP
+                    udp:
+                      port: "53"
+                      protocol: UDP
+          endpointSelector:
+            matchLabels:
+              k8s:io.kubernetes.pod.namespace: kube-system
+              k8s:k8s-app: kube-dns
+          ingress:
+            from-pods:
+              fromEndpoints:
+                any-namespace:
+                  matchExpressions:
+                    any-namespace:
+                      key: k8s:io.kubernetes.pod.namespace
+                      operator: Exists
+              toPorts:
+                dns:
+                  ports:
+                    tcp:
+                      port: "53"
+                      protocol: TCP
+                    udp:
+                      port: "53"
+                      protocol: UDP
+        default-deny:
+          egress:
+            deny:
+              toEntities:
+                none: none
+          endpointSelector:
+            matchExpressions:
+              any-namespace:
+                key: k8s:io.kubernetes.pod.namespace
+                operator: Exists
+          ingress:
+            deny:
+              fromEntities:
+                none: none
+        http01-solver:
+          endpointSelector:
+            matchLabels:
+              k8s:acme.cert-manager.io/http01-solver: "true"
+          ingress:
+            gateway:
+              fromEntities:
+                host: host
+                ingress: ingress
+                remote-node: remote-node
+              toPorts:
+                http:
+                  ports:
+                    p8089:
+                      port: "8089"
+                      protocol: TCP
+        metrics-server:
+          egress:
+            kubelets:
+              toEntities:
+                host: host
+                remote-node: remote-node
+              toPorts:
+                kubelet:
+                  ports:
+                    p10250:
+                      port: "10250"
+                      protocol: TCP
+          endpointSelector:
+            matchLabels:
+              k8s:app.kubernetes.io/name: metrics-server
+              k8s:io.kubernetes.pod.namespace: kube-system
+        ns-authelia:
+          egress:
+            lldap:
+              toEndpoints:
+                lldap:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: lldap
+              toPorts:
+                ldaps:
+                  ports:
+                    p6360:
+                      port: "6360"
+                      protocol: TCP
+            same-namespace:
+              toEndpoints:
+                self:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: authelia
+          endpointSelector:
+            matchLabels:
+              k8s:io.kubernetes.pod.namespace: authelia
+          ingress:
+            gateway:
+              fromEntities:
+                ingress: ingress
+              toPorts:
+                http:
+                  ports:
+                    p9091:
+                      port: "9091"
+                      protocol: TCP
+            same-namespace:
+              fromEndpoints:
+                self:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: authelia
+        ns-cert-manager:
+          egress:
+            acme:
+              toEntities:
+                ingress: ingress
+                world: world
+              toPorts:
+                web:
+                  ports:
+                    p80:
+                      port: "80"
+                      protocol: TCP
+                    p443:
+                      port: "443"
+                      protocol: TCP
+          endpointSelector:
+            matchLabels:
+              k8s:io.kubernetes.pod.namespace: cert-manager
+        ns-cnpg-system:
+          egress:
+            instances:
+              toEndpoints:
+                instances:
+                  matchExpressions:
+                    cnpg-cluster:
+                      key: k8s:cnpg.io/cluster
+                      operator: Exists
+              toPorts:
+                postgres:
+                  ports:
+                    p5432:
+                      port: "5432"
+                      protocol: TCP
+                    p8000:
+                      port: "8000"
+                      protocol: TCP
+          endpointSelector:
+            matchLabels:
+              k8s:io.kubernetes.pod.namespace: cnpg-system
+        ns-flux-system:
+          egress:
+            internet:
+              toEntities:
+                ingress: ingress
+                world: world
+              toPorts:
+                sources:
+                  ports:
+                    p22:
+                      port: "22"
+                      protocol: TCP
+                    p80:
+                      port: "80"
+                      protocol: TCP
+                    p443:
+                      port: "443"
+                      protocol: TCP
+            same-namespace:
+              toEndpoints:
+                self:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: flux-system
+          endpointSelector:
+            matchLabels:
+              k8s:io.kubernetes.pod.namespace: flux-system
+          ingress:
+            same-namespace:
+              fromEndpoints:
+                self:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: flux-system
+            webhook-receiver:
+              fromEntities:
+                ingress: ingress
+              toPorts:
+                receiver:
+                  ports:
+                    p9292:
+                      port: "9292"
+                      protocol: TCP
+        ns-forgejo:
+          egress:
+            internet:
+              toEntities:
+                ingress: ingress
+                world: world
+              toPorts:
+                out:
+                  ports:
+                    p22:
+                      port: "22"
+                      protocol: TCP
+                    p80:
+                      port: "80"
+                      protocol: TCP
+                    p443:
+                      port: "443"
+                      protocol: TCP
+            same-namespace:
+              toEndpoints:
+                self:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: forgejo
+          endpointSelector:
+            matchLabels:
+              k8s:io.kubernetes.pod.namespace: forgejo
+          ingress:
+            gateway:
+              fromEntities:
+                ingress: ingress
+              toPorts:
+                http:
+                  ports:
+                    p3000:
+                      port: "3000"
+                      protocol: TCP
+            same-namespace:
+              fromEndpoints:
+                self:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: forgejo
+        ns-homer:
+          endpointSelector:
+            matchLabels:
+              k8s:io.kubernetes.pod.namespace: homer
+          ingress:
+            gateway:
+              fromEntities:
+                ingress: ingress
+              toPorts:
+                http:
+                  ports:
+                    p8080:
+                      port: "8080"
+                      protocol: TCP
+        ns-immich:
+          egress:
+            internet:
+              toEntities:
+                ingress: ingress
+                world: world
+              toPorts:
+                https:
+                  ports:
+                    p443:
+                      port: "443"
+                      protocol: TCP
+            same-namespace:
+              toEndpoints:
+                self:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: immich
+          endpointSelector:
+            matchLabels:
+              k8s:io.kubernetes.pod.namespace: immich
+          ingress:
+            gateway:
+              fromEntities:
+                ingress: ingress
+              toPorts:
+                http:
+                  ports:
+                    p2283:
+                      port: "2283"
+                      protocol: TCP
+            same-namespace:
+              fromEndpoints:
+                self:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: immich
+        ns-jellyfin:
+          endpointSelector:
+            matchLabels:
+              k8s:io.kubernetes.pod.namespace: jellyfin
+          ingress:
+            gateway:
+              fromEntities:
+                ingress: ingress
+              toPorts:
+                http:
+                  ports:
+                    p8096:
+                      port: "8096"
+                      protocol: TCP
+        ns-landing:
+          endpointSelector:
+            matchLabels:
+              k8s:io.kubernetes.pod.namespace: landing
+          ingress:
+            gateway:
+              fromEntities:
+                ingress: ingress
+              toPorts:
+                http:
+                  ports:
+                    p8080:
+                      port: "8080"
+                      protocol: TCP
+        ns-lldap:
+          egress:
+            same-namespace:
+              toEndpoints:
+                self:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: lldap
+          endpointSelector:
+            matchLabels:
+              k8s:io.kubernetes.pod.namespace: lldap
+          ingress:
+            authelia:
+              fromEndpoints:
+                authelia:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: authelia
+              toPorts:
+                ldaps:
+                  ports:
+                    p6360:
+                      port: "6360"
+                      protocol: TCP
+            gateway:
+              fromEntities:
+                ingress: ingress
+              toPorts:
+                gateway:
+                  ports:
+                    p6360:
+                      port: "6360"
+                      protocol: TCP
+                    p17170:
+                      port: "17170"
+                      protocol: TCP
+            same-namespace:
+              fromEndpoints:
+                self:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: lldap
+        ns-longhorn-system:
+          egress:
+            nodes:
+              toEntities:
+                host: host
+                remote-node: remote-node
+            same-namespace:
+              toEndpoints:
+                self:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: longhorn-system
+          endpointSelector:
+            matchLabels:
+              k8s:io.kubernetes.pod.namespace: longhorn-system
+          ingress:
+            gateway:
+              fromEntities:
+                ingress: ingress
+              toPorts:
+                ui:
+                  ports:
+                    p8000:
+                      port: "8000"
+                      protocol: TCP
+            nodes:
+              fromEntities:
+                apiserver: kube-apiserver
+                host: host
+                remote-node: remote-node
+            same-namespace:
+              fromEndpoints:
+                self:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: longhorn-system
+        ns-mailu:
+          egress:
+            internet:
+              toEntities:
+                world: world
+            same-namespace:
+              toEndpoints:
+                self:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: mailu
+          endpointSelector:
+            matchLabels:
+              k8s:io.kubernetes.pod.namespace: mailu
+          ingress:
+            gateway:
+              fromEntities:
+                ingress: ingress
+              toPorts:
+                http:
+                  ports:
+                    p80:
+                      port: "80"
+                      protocol: TCP
+            mail:
+              fromEntities:
+                host: host
+                remote-node: remote-node
+                world: world
+              toPorts:
+                mail:
+                  ports:
+                    p25:
+                      port: "25"
+                      protocol: TCP
+                    p110:
+                      port: "110"
+                      protocol: TCP
+                    p143:
+                      port: "143"
+                      protocol: TCP
+                    p465:
+                      port: "465"
+                      protocol: TCP
+                    p587:
+                      port: "587"
+                      protocol: TCP
+                    p993:
+                      port: "993"
+                      protocol: TCP
+                    p995:
+                      port: "995"
+                      protocol: TCP
+                    p4190:
+                      port: "4190"
+                      protocol: TCP
+            same-namespace:
+              fromEndpoints:
+                self:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: mailu
+        ns-prometheus:
+          egress:
+            cluster:
+              toEntities:
+                apiserver: kube-apiserver
+                cluster: cluster
+          endpointSelector:
+            matchLabels:
+              k8s:io.kubernetes.pod.namespace: prometheus
+          ingress:
+            gateway:
+              fromEntities:
+                ingress: ingress
+              toPorts:
+                gateway:
+                  ports:
+                    p3000:
+                      port: "3000"
+                      protocol: TCP
+                    p8080:
+                      port: "8080"
+                      protocol: TCP
+                    p9090:
+                      port: "9090"
+                      protocol: TCP
+                    p9093:
+                      port: "9093"
+                      protocol: TCP
+            same-namespace:
+              fromEndpoints:
+                self:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: prometheus
+        ns-seerr:
+          endpointSelector:
+            matchLabels:
+              k8s:io.kubernetes.pod.namespace: seerr
+          ingress:
+            gateway:
+              fromEntities:
+                ingress: ingress
+              toPorts:
+                http:
+                  ports:
+                    p5055:
+                      port: "5055"
+                      protocol: TCP
+        ns-whoami:
+          endpointSelector:
+            matchLabels:
+              k8s:io.kubernetes.pod.namespace: whoami
+          ingress:
+            gateway:
+              fromEntities:
+                ingress: ingress
+              toPorts:
+                http:
+                  ports:
+                    p8080:
+                      port: "8080"
+                      protocol: TCP
+        prometheus-scrape:
+          endpointSelector:
+            matchExpressions:
+              any-namespace:
+                key: k8s:io.kubernetes.pod.namespace
+                operator: Exists
+          ingress:
+            prometheus:
+              fromEndpoints:
+                prometheus:
+                  matchLabels:
+                    k8s:app.kubernetes.io/name: prometheus
+                    k8s:io.kubernetes.pod.namespace: prometheus
+---
+# Source: app-cilium/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
   name: cilium-post
   namespace: default
 spec:
@@ -82,10 +736,6 @@ spec:
     namespace: gateway-api
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:

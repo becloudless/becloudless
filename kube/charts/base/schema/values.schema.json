@@ -63,8 +63,14 @@
             "ciliumBGPPeerConfigs": {
               "$ref": "./resources/ciliumBGPPeerConfigs.json"
             },
+            "ciliumClusterwideNetworkPolicies": {
+              "$ref": "./resources/ciliumClusterwideNetworkPolicies.json"
+            },
             "ciliumLoadBalancerIPPools": {
               "$ref": "./resources/ciliumLoadBalancerIPPools.json"
+            },
+            "ciliumNetworkPolicies": {
+              "$ref": "./resources/ciliumNetworkPolicies.json"
             },
             "clusterRoleBindings": {
               "$ref": "./resources/clusterRoleBindings.json"
@@ -313,11 +319,25 @@
           "description": "CiliumBGPPeerConfig instances, keyed by id.",
           "type": "object"
         },
+        "ciliumClusterwideNetworkPolicies": {
+          "additionalProperties": {
+            "$ref": "./resources/ciliumClusterwideNetworkPolicies.json"
+          },
+          "description": "CiliumClusterwideNetworkPolicy instances, keyed by id.",
+          "type": "object"
+        },
         "ciliumLoadBalancerIPPools": {
           "additionalProperties": {
             "$ref": "./resources/ciliumLoadBalancerIPPools.json"
           },
           "description": "CiliumLoadBalancerIPPool instances, keyed by id.",
+          "type": "object"
+        },
+        "ciliumNetworkPolicies": {
+          "additionalProperties": {
+            "$ref": "./resources/ciliumNetworkPolicies.json"
+          },
+          "description": "CiliumNetworkPolicy instances, keyed by id.",
           "type": "object"
         },
         "clusterRoleBindings": {

@@ -21,6 +21,7 @@ type resource struct {
 	Kind          string            `yaml:"kind"`          // required for sourceOpenAPI; self-deduced from the CRD manifest for sourceCRD, no need to set it
 	SourceOpenAPI *SourceOpenAPI    `yaml:"sourceOpenAPI"` // set to fetch the schema from a Kubernetes OpenAPI v3 spec document
 	SourceCRD     *SourceCRD        `yaml:"sourceCRD"`     // set to fetch the schema from a CRD manifest (YAML)
+	ClusterScoped bool              `yaml:"clusterScoped"` // set for the kinds that are not namespaced: they get no metadata.namespace
 	Mutations     resourceMutations `yaml:"mutations"`
 
 	helmTemplateRenderArgs map[string]string
