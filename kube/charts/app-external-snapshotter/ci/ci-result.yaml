@@ -1,5 +1,19 @@
 ---
 # Source: app-external-snapshotter/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: snapshot-controller
+  namespace: kube-system
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: snapshot-controller
+---
+# Source: app-external-snapshotter/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:

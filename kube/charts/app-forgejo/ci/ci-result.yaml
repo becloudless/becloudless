@@ -1,5 +1,44 @@
 ---
 # Source: app-forgejo/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: forgejo
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - ingress
+    - world
+    toPorts:
+    - ports:
+      - port: "22"
+        protocol: TCP
+      - port: "443"
+        protocol: TCP
+      - port: "80"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        cnpg.io/cluster: forgejo-postgresql
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: forgejo
+  ingress:
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "3000"
+        protocol: TCP
+---
+# Source: app-forgejo/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -222,6 +261,11 @@ spec:
     strategy:
       name: RetryOnFailure
       retryInterval: 5m
+  values:
+    clients:
+      forgejo:
+        matchLabels:
+          app.kubernetes.io/name: forgejo
 ---
 # Source: app-forgejo/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

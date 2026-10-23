@@ -19,6 +19,331 @@ resources:
     mailu:
       url: https://mailu.github.io/helm-charts
 
+  # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
+  # The mail ports do not reach the pods through the cluster: they come through the wireguard tunnel of the vpn sidecars of the front
+  # and of postfix, so only these two need to go out. The ports between the components are the ones of Mailu, to check with
+  # `hubble observe --verdict DROPPED` when a component is added or a feature is enabled.
+  ciliumNetworkPolicies:
+    mailu-front: # the proxy of the mail protocols and of the web interfaces
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p80: {port: "80", protocol: TCP}}}
+        webmail: # roundcube reaches the imap and the smtp of the users through the front
+          fromEndpoints:
+            webmail:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: webmail}
+          toPorts:
+            mail:
+              ports:
+                p10143: {port: "10143", protocol: TCP}
+                p10025: {port: "10025", protocol: TCP}
+      egress:
+        admin:
+          toEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+          toPorts:
+            http: {ports: {p8080: {port: "8080", protocol: TCP}}}
+        dovecot:
+          toEndpoints:
+            dovecot:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
+          toPorts:
+            mail:
+              ports:
+                p110: {port: "110", protocol: TCP}
+                p143: {port: "143", protocol: TCP}
+                p4190: {port: "4190", protocol: TCP}
+        postfix:
+          toEndpoints:
+            postfix:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: postfix}
+          toPorts:
+            smtp: {ports: {p25: {port: "25", protocol: TCP}}}
+        webmail:
+          toEndpoints:
+            webmail:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: webmail}
+          toPorts:
+            http: {ports: {p80: {port: "80", protocol: TCP}}}
+        webdav:
+          toEndpoints:
+            webdav:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: webdav}
+          toPorts:
+            http: {ports: {p5232: {port: "5232", protocol: TCP}}}
+        rspamd: # the web interface
+          toEndpoints:
+            rspamd:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
+          toPorts:
+            http: {ports: {p11334: {port: "11334", protocol: TCP}}}
+        vpn: # the wireguard tunnel of the sidecar
+          toEntities: {world: world}
+
+    mailu-admin:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+      ingress:
+        components: # the authentication and the configuration of the other components
+          fromEndpoints:
+            components:
+              matchExpressions:
+                component:
+                  key: app.kubernetes.io/component
+                  operator: In
+                  values: {front: front, postfix: postfix, dovecot: dovecot, rspamd: rspamd, webmail: webmail, webdav: webdav}
+          toPorts:
+            http: {ports: {p8080: {port: "8080", protocol: TCP}}}
+      egress:
+        mariadb:
+          toEndpoints:
+            mariadb:
+              matchLabels: {app.kubernetes.io/name: mariadb}
+          toPorts:
+            mysql: {ports: {p3306: {port: "3306", protocol: TCP}}}
+        redis:
+          toEndpoints:
+            redis:
+              matchLabels: {app.kubernetes.io/name: redis}
+          toPorts:
+            redis: {ports: {p6379: {port: "6379", protocol: TCP}}}
+
+    mailu-postfix: # receives and delivers the mails
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: postfix}
+      ingress:
+        senders:
+          fromEndpoints:
+            front:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
+            dovecot:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
+          toPorts:
+            smtp: {ports: {p25: {port: "25", protocol: TCP}}}
+      egress:
+        admin:
+          toEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+          toPorts:
+            http: {ports: {p8080: {port: "8080", protocol: TCP}}}
+        dovecot: # the delivery to the mailboxes (lmtp) and the authentication (sasl)
+          toEndpoints:
+            dovecot:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
+          toPorts:
+            dovecot:
+              ports:
+                p2525: {port: "2525", protocol: TCP}
+                p2102: {port: "2102", protocol: TCP}
+        rspamd:
+          toEndpoints:
+            rspamd:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
+          toPorts:
+            milter: {ports: {p11332: {port: "11332", protocol: TCP}}}
+        internet: # the delivery of the mails, the wireguard tunnel of the sidecar
+          toEntities: {world: world}
+
+    mailu-dovecot: # the mailboxes
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
+      ingress:
+        front:
+          fromEndpoints:
+            front:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
+          toPorts:
+            mail:
+              ports:
+                p110: {port: "110", protocol: TCP}
+                p143: {port: "143", protocol: TCP}
+                p4190: {port: "4190", protocol: TCP}
+        postfix:
+          fromEndpoints:
+            postfix:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: postfix}
+          toPorts:
+            dovecot:
+              ports:
+                p2525: {port: "2525", protocol: TCP}
+                p2102: {port: "2102", protocol: TCP}
+      egress:
+        admin:
+          toEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+          toPorts:
+            http: {ports: {p8080: {port: "8080", protocol: TCP}}}
+        postfix: # the redirections of the sieve filters
+          toEndpoints:
+            postfix:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: postfix}
+          toPorts:
+            smtp: {ports: {p25: {port: "25", protocol: TCP}}}
+        rspamd: # the learning of the spam
+          toEndpoints:
+            rspamd:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
+          toPorts:
+            milter: {ports: {p11332: {port: "11332", protocol: TCP}}}
+
+    mailu-rspamd: # the antispam
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
+      ingress:
+        milter:
+          fromEndpoints:
+            postfix:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: postfix}
+            dovecot:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
+          toPorts:
+            milter: {ports: {p11332: {port: "11332", protocol: TCP}}}
+        front:
+          fromEndpoints:
+            front:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
+          toPorts:
+            http: {ports: {p11334: {port: "11334", protocol: TCP}}}
+      egress:
+        admin:
+          toEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+          toPorts:
+            http: {ports: {p8080: {port: "8080", protocol: TCP}}}
+        redis:
+          toEndpoints:
+            redis:
+              matchLabels: {app.kubernetes.io/name: redis}
+          toPorts:
+            redis: {ports: {p6379: {port: "6379", protocol: TCP}}}
+        clamav:
+          toEndpoints:
+            clamav:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: clamav}
+          toPorts:
+            clamav: {ports: {p3310: {port: "3310", protocol: TCP}}}
+        oletools:
+          toEndpoints:
+            oletools:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: oletools}
+          toPorts:
+            oletools: {ports: {p11343: {port: "11343", protocol: TCP}}}
+
+    mailu-clamav: # the antivirus
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: clamav}
+      ingress:
+        rspamd:
+          fromEndpoints:
+            rspamd:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
+          toPorts:
+            clamav: {ports: {p3310: {port: "3310", protocol: TCP}}}
+      egress:
+        signatures: # the updates of the virus database
+          toEntities: {world: world}
+          toPorts:
+            web:
+              ports:
+                p80: {port: "80", protocol: TCP}
+                p443: {port: "443", protocol: TCP}
+
+    mailu-oletools: # the analysis of the office documents
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: oletools}
+      ingress:
+        rspamd:
+          fromEndpoints:
+            rspamd:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
+          toPorts:
+            oletools: {ports: {p11343: {port: "11343", protocol: TCP}}}
+
+    mailu-webmail:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: webmail}
+      ingress:
+        front:
+          fromEndpoints:
+            front:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
+          toPorts:
+            http: {ports: {p80: {port: "80", protocol: TCP}}}
+      egress:
+        front:
+          toEndpoints:
+            front:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
+          toPorts:
+            mail:
+              ports:
+                p10143: {port: "10143", protocol: TCP}
+                p10025: {port: "10025", protocol: TCP}
+        admin:
+          toEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+          toPorts:
+            http: {ports: {p8080: {port: "8080", protocol: TCP}}}
+        mariadb: # the database of roundcube
+          toEndpoints:
+            mariadb:
+              matchLabels: {app.kubernetes.io/name: mariadb}
+          toPorts:
+            mysql: {ports: {p3306: {port: "3306", protocol: TCP}}}
+
+    mailu-webdav: # the contacts and the calendars
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: webdav}
+      ingress:
+        front:
+          fromEndpoints:
+            front:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
+          toPorts:
+            http: {ports: {p5232: {port: "5232", protocol: TCP}}}
+      egress:
+        admin:
+          toEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+          toPorts:
+            http: {ports: {p8080: {port: "8080", protocol: TCP}}}
+
+    mailu-mariadb:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mariadb}
+      ingress:
+        clients:
+          fromEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+            webmail:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: webmail}
+          toPorts:
+            mysql: {ports: {p3306: {port: "3306", protocol: TCP}}}
+
+    mailu-redis:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: redis}
+      ingress:
+        clients:
+          fromEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+            rspamd:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
+          toPorts:
+            redis: {ports: {p6379: {port: "6379", protocol: TCP}}}
+
   fluxHelmReleases:
     # the secrets and the certificate of the services, created before they start
     mailu-pre:

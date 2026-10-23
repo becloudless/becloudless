@@ -36,6 +36,53 @@ global:
 
 resources:
 
+  # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
+  # The database has its own policy, from the postgresql-cluster chart.
+  ciliumNetworkPolicies:
+    lldap:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: lldap}
+      ingress:
+        authelia:
+          fromEndpoints:
+            authelia:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": authelia, "k8s:app.kubernetes.io/name": authelia}
+          toPorts:
+            ldaps: {ports: {p6360: {port: "6360", protocol: TCP}}}
+        bootstrap:
+          fromEndpoints:
+            bootstrap:
+              matchExpressions:
+                job: {key: job-name, operator: Exists}
+          toPorts:
+            web: {ports: {p17170: {port: "17170", protocol: TCP}}}
+        gateway: # the web ui, and the ldaps tls passthrough
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            gateway:
+              ports:
+                p17170: {port: "17170", protocol: TCP}
+                p6360: {port: "6360", protocol: TCP}
+      egress:
+        postgresql:
+          toEndpoints:
+            postgresql:
+              matchLabels: {cnpg.io/cluster: lldap-postgresql}
+          toPorts:
+            postgresql: {ports: {p5432: {port: "5432", protocol: TCP}}}
+
+    lldap-bootstrap: # the job applying the users and the groups, its name changes with them
+      endpointSelector:
+        matchExpressions:
+          job: {key: job-name, operator: Exists}
+      egress:
+        lldap:
+          toEndpoints:
+            lldap:
+              matchLabels: {app.kubernetes.io/name: lldap}
+          toPorts:
+            web: {ports: {p17170: {port: "17170", protocol: TCP}}}
+
   fluxHelmReleases:
 
     lldap-postgresql:
@@ -59,6 +106,9 @@ resources:
           namespace: longhorn-system
       values:
         clientCertAuth: true
+        clients:
+          lldap:
+            matchLabels: {app.kubernetes.io/name: lldap}
         postgresql:
           parameters:
             max_slot_wal_keep_size: 500MB

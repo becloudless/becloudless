@@ -8,6 +8,34 @@ resources:
     coredns:
       url: https://coredns.github.io/helm
 
+  # on top of the default deny of app-cilium, which waits for this release: without these rules nothing could resolve a name.
+  # Cluster wide because the clients are in every namespace.
+  ciliumClusterwideNetworkPolicies:
+    kube-dns:
+      endpointSelector:
+        matchLabels: {"k8s:io.kubernetes.pod.namespace": kube-system, "k8s:k8s-app": kube-dns}
+      ingress:
+        from-pods:
+          fromEndpoints:
+            any-namespace:
+              matchExpressions:
+                any-namespace: {key: "k8s:io.kubernetes.pod.namespace", operator: Exists}
+          toPorts:
+            dns:
+              ports:
+                udp: {port: "53", protocol: UDP}
+                tcp: {port: "53", protocol: TCP}
+      egress:
+        upstream-resolvers: # the resolvers of the nodes / the LAN
+          toEntities: {world: world, host: host, remote-node: remote-node}
+          toPorts:
+            dns:
+              ports:
+                udp: {port: "53", protocol: UDP}
+                tcp: {port: "53", protocol: TCP}
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
   fluxHelmReleases:
     coredns:
       interval: 10m

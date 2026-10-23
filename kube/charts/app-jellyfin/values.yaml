@@ -9,6 +9,17 @@ global:
 
 resources:
 
+  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
+  ciliumNetworkPolicies:
+    jellyfin:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: jellyfin}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p8096: {port: "8096", protocol: TCP}}}
+
   fluxHelmReleases:
     jellyfin:
       chart:

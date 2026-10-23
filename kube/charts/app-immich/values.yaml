@@ -30,6 +30,87 @@ resources:
     immich-valkey:
       url: https://valkey.io/valkey-helm/
 
+  # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
+  # The database has its own policy, from the postgresql-cluster chart.
+  ciliumNetworkPolicies:
+    immich-server:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/instance: immich, app.kubernetes.io/name: server}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p2283: {port: "2283", protocol: TCP}}}
+        bootstrap:
+          fromEndpoints:
+            bootstrap:
+              matchExpressions:
+                job: {key: job-name, operator: Exists}
+          toPorts:
+            http: {ports: {p2283: {port: "2283", protocol: TCP}}}
+      egress:
+        postgresql:
+          toEndpoints:
+            postgresql:
+              matchLabels: {cnpg.io/cluster: immich-postgresql}
+          toPorts:
+            postgresql: {ports: {p5432: {port: "5432", protocol: TCP}}}
+        valkey:
+          toEndpoints:
+            valkey:
+              matchLabels: {app.kubernetes.io/name: valkey}
+          toPorts:
+            valkey: {ports: {p6379: {port: "6379", protocol: TCP}}}
+        machine-learning:
+          toEndpoints:
+            machine-learning:
+              matchLabels: {app.kubernetes.io/name: machine-learning}
+          toPorts:
+            http: {ports: {p3003: {port: "3003", protocol: TCP}}}
+        internet: # the OIDC issuer is the public address of authelia
+          toEntities: {world: world, ingress: ingress}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+
+    immich-machine-learning: # the models are downloaded on first use
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: machine-learning}
+      ingress:
+        server:
+          fromEndpoints:
+            server:
+              matchLabels: {app.kubernetes.io/instance: immich, app.kubernetes.io/name: server}
+          toPorts:
+            http: {ports: {p3003: {port: "3003", protocol: TCP}}}
+      egress:
+        internet:
+          toEntities: {world: world}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+
+    immich-valkey: # the job queue
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: valkey}
+      ingress:
+        server:
+          fromEndpoints:
+            server:
+              matchLabels: {app.kubernetes.io/instance: immich, app.kubernetes.io/name: server}
+          toPorts:
+            valkey: {ports: {p6379: {port: "6379", protocol: TCP}}}
+
+    immich-bootstrap: # the job creating the admin, its name changes with its content
+      endpointSelector:
+        matchExpressions:
+          job: {key: job-name, operator: Exists}
+      egress:
+        server:
+          toEndpoints:
+            server:
+              matchLabels: {app.kubernetes.io/instance: immich, app.kubernetes.io/name: server}
+          toPorts:
+            http: {ports: {p2283: {port: "2283", protocol: TCP}}}
+
   fluxHelmReleases:
     # the database is prepared by the postgresql-cluster chart (certificates, issuer, cluster and backups)
     # the cluster is named after the release, which is the name of this HelmRelease
@@ -54,6 +135,9 @@ resources:
           namespace: longhorn-system
       values:
         storageSize: 5Gi
+        clients:
+          server:
+            matchLabels: {app.kubernetes.io/instance: immich, app.kubernetes.io/name: server}
         postgresql:
           shared_preload_libraries:
             - vchord.so

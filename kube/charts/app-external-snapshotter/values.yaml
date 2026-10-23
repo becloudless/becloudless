@@ -8,6 +8,16 @@ resources:
       ref:
         tag: v8.7.0 # TODO renovate
 
+  # on top of the default deny of app-cilium. The controller runs in kube-system, shared with the other components, hence the selector.
+  ciliumNetworkPolicies:
+    snapshot-controller:
+      namespace: kube-system
+      endpointSelector:
+        matchLabels: {"app.kubernetes.io/name": snapshot-controller}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
   fluxKustomizations:
     external-snapshotter-crds:
       interval: 24h

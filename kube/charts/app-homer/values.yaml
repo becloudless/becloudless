@@ -5,6 +5,17 @@ global:
 
 resources:
 
+  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
+  ciliumNetworkPolicies:
+    homer:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: homer}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p8080: {port: "8080", protocol: TCP}}}
+
   fluxHelmReleases:
     homer:
       chart:

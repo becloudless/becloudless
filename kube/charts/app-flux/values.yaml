@@ -20,6 +20,195 @@ resources:
       ingress:
        something: {}
 
+  # on top of the default deny of app-cilium, which waits for this release: without these rules Flux could not reconcile anything anymore.
+  # One policy for each controller (the `app` label), the selectors are in the namespace of the release. The NetworkPolicies bundled
+  # in the flux manifests allow everything (`allow-egress`) or whole namespaces: they are removed by the patches of the `flux` Kustomization.
+  # Port 9090 is the artifacts of the sources (source-controller, source-watcher) and the events (notification-controller).
+  ciliumNetworkPolicies:
+    source-controller: # fetches the git repositories, the helm repositories and the OCI artifacts
+      endpointSelector:
+        matchLabels: {app: source-controller}
+      ingress:
+        artifacts:
+          fromEndpoints:
+            consumers:
+              matchExpressions:
+                app:
+                  key: app
+                  operator: In
+                  values: {helm-controller: helm-controller, kustomize-controller: kustomize-controller, image-automation-controller: image-automation-controller, source-watcher: source-watcher}
+          toPorts:
+            artifacts: {ports: {p9090: {port: "9090", protocol: TCP}}}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        notification-controller:
+          toEndpoints:
+            notification-controller:
+              matchLabels: {app: notification-controller}
+          toPorts:
+            events: {ports: {p9090: {port: "9090", protocol: TCP}}}
+        internet: # the sources, the public addresses are the gateway for the sources hosted in the cluster
+          toEntities: {world: world, ingress: ingress}
+          toPorts:
+            sources:
+              ports:
+                p22: {port: "22", protocol: TCP}
+                p80: {port: "80", protocol: TCP}
+                p443: {port: "443", protocol: TCP}
+
+    source-watcher:
+      endpointSelector:
+        matchLabels: {app: source-watcher}
+      ingress:
+        artifacts:
+          fromEndpoints:
+            consumers:
+              matchExpressions:
+                app:
+                  key: app
+                  operator: In
+                  values: {helm-controller: helm-controller, kustomize-controller: kustomize-controller}
+          toPorts:
+            artifacts: {ports: {p9090: {port: "9090", protocol: TCP}}}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        source-controller:
+          toEndpoints:
+            source-controller:
+              matchLabels: {app: source-controller}
+          toPorts:
+            artifacts: {ports: {p9090: {port: "9090", protocol: TCP}}}
+        notification-controller:
+          toEndpoints:
+            notification-controller:
+              matchLabels: {app: notification-controller}
+          toPorts:
+            events: {ports: {p9090: {port: "9090", protocol: TCP}}}
+
+    helm-controller:
+      endpointSelector:
+        matchLabels: {app: helm-controller}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        source-controller:
+          toEndpoints:
+            source-controller:
+              matchLabels: {app: source-controller}
+          toPorts:
+            artifacts: {ports: {p9090: {port: "9090", protocol: TCP}}}
+        source-watcher:
+          toEndpoints:
+            source-watcher:
+              matchLabels: {app: source-watcher}
+          toPorts:
+            artifacts: {ports: {p9090: {port: "9090", protocol: TCP}}}
+        notification-controller:
+          toEndpoints:
+            notification-controller:
+              matchLabels: {app: notification-controller}
+          toPorts:
+            events: {ports: {p9090: {port: "9090", protocol: TCP}}}
+
+    kustomize-controller:
+      endpointSelector:
+        matchLabels: {app: kustomize-controller}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        source-controller:
+          toEndpoints:
+            source-controller:
+              matchLabels: {app: source-controller}
+          toPorts:
+            artifacts: {ports: {p9090: {port: "9090", protocol: TCP}}}
+        source-watcher:
+          toEndpoints:
+            source-watcher:
+              matchLabels: {app: source-watcher}
+          toPorts:
+            artifacts: {ports: {p9090: {port: "9090", protocol: TCP}}}
+        notification-controller:
+          toEndpoints:
+            notification-controller:
+              matchLabels: {app: notification-controller}
+          toPorts:
+            events: {ports: {p9090: {port: "9090", protocol: TCP}}}
+
+    notification-controller: # the events of the controllers, and the webhook receiver exposed by the gateway
+      endpointSelector:
+        matchLabels: {app: notification-controller}
+      ingress:
+        events:
+          fromEndpoints:
+            controllers:
+              matchExpressions:
+                app:
+                  key: app
+                  operator: In
+                  values: {helm-controller: helm-controller, kustomize-controller: kustomize-controller, source-controller: source-controller, source-watcher: source-watcher, image-automation-controller: image-automation-controller, image-reflector-controller: image-reflector-controller}
+          toPorts:
+            events: {ports: {p9090: {port: "9090", protocol: TCP}}}
+        webhook-receiver:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            receiver: {ports: {p9292: {port: "9292", protocol: TCP}}}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        providers: # the notification providers
+          toEntities: {world: world, ingress: ingress}
+          toPorts:
+            https:
+              ports:
+                p80: {port: "80", protocol: TCP}
+                p443: {port: "443", protocol: TCP}
+
+    image-automation-controller:
+      endpointSelector:
+        matchLabels: {app: image-automation-controller}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        source-controller:
+          toEndpoints:
+            source-controller:
+              matchLabels: {app: source-controller}
+          toPorts:
+            artifacts: {ports: {p9090: {port: "9090", protocol: TCP}}}
+        notification-controller:
+          toEndpoints:
+            notification-controller:
+              matchLabels: {app: notification-controller}
+          toPorts:
+            events: {ports: {p9090: {port: "9090", protocol: TCP}}}
+        git: # the push of the updates
+          toEntities: {world: world, ingress: ingress}
+          toPorts:
+            git:
+              ports:
+                p22: {port: "22", protocol: TCP}
+                p443: {port: "443", protocol: TCP}
+
+    image-reflector-controller: # scans the registries
+      endpointSelector:
+        matchLabels: {app: image-reflector-controller}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        notification-controller:
+          toEndpoints:
+            notification-controller:
+              matchLabels: {app: notification-controller}
+          toPorts:
+            events: {ports: {p9090: {port: "9090", protocol: TCP}}}
+        registries:
+          toEntities: {world: world, ingress: ingress}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+
   fluxHelmReleases:
     # Webhook receiver exposed by the Cilium Gateway `shared` (kube-system). Disabled by default: it needs the Gateway API CRDs
     # and cert-manager, which a cluster only gets with the apps of the server groups. A cluster enables it with
@@ -174,6 +363,42 @@ resources:
             - op: add
               path: /spec/template/spec/containers/0/args/-
               value: --default-service-account=default
+
+        # the NetworkPolicies of the manifests allow everything (`allow-egress`) or whole namespaces (`allow-scraping`, `allow-webhooks`):
+        # the rules of each controller are the CiliumNetworkPolicies above
+        noAllowEgress:
+          target:
+            kind: NetworkPolicy
+            name: allow-egress
+            namespace: flux-system
+          patch: |
+            $patch: delete
+            apiVersion: networking.k8s.io/v1
+            kind: NetworkPolicy
+            metadata:
+              name: allow-egress
+        noAllowScraping:
+          target:
+            kind: NetworkPolicy
+            name: allow-scraping
+            namespace: flux-system
+          patch: |
+            $patch: delete
+            apiVersion: networking.k8s.io/v1
+            kind: NetworkPolicy
+            metadata:
+              name: allow-scraping
+        noAllowWebhooks:
+          target:
+            kind: NetworkPolicy
+            name: allow-webhooks
+            namespace: flux-system
+          patch: |
+            $patch: delete
+            apiVersion: networking.k8s.io/v1
+            kind: NetworkPolicy
+            metadata:
+              name: allow-webhooks
 
         # cancel the running health check when a new revision is available
         helmControllerCancelHealthCheck:

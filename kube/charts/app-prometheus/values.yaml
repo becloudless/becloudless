@@ -60,6 +60,116 @@ resources:
     prometheus-community:
       url: https://prometheus-community.github.io/helm-charts
 
+  # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
+  # What Prometheus scrapes accepts it by the cluster wide policy below.
+  ciliumNetworkPolicies:
+    prometheus: # scrapes the whole cluster (pods, nodes, control plane)
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: prometheus}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p9090: {port: "9090", protocol: TCP}}}
+        grafana:
+          fromEndpoints:
+            grafana:
+              matchLabels: {app.kubernetes.io/name: grafana}
+          toPorts:
+            http: {ports: {p9090: {port: "9090", protocol: TCP}}}
+      egress:
+        targets:
+          toEntities: {cluster: cluster, apiserver: kube-apiserver}
+
+    alertmanager:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: alertmanager}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p9093: {port: "9093", protocol: TCP}}}
+        prometheus: # the alerts
+          fromEndpoints:
+            prometheus:
+              matchLabels: {app.kubernetes.io/name: prometheus}
+          toPorts:
+            http: {ports: {p9093: {port: "9093", protocol: TCP}}}
+        grafana:
+          fromEndpoints:
+            grafana:
+              matchLabels: {app.kubernetes.io/name: grafana}
+          toPorts:
+            http: {ports: {p9093: {port: "9093", protocol: TCP}}}
+
+    grafana:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: grafana}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p3000: {port: "3000", protocol: TCP}}}
+      egress:
+        kube-apiserver: # the sidecars watch the ConfigMaps of the dashboards and of the datasources
+          toEntities: {apiserver: kube-apiserver}
+        prometheus:
+          toEndpoints:
+            prometheus:
+              matchLabels: {app.kubernetes.io/name: prometheus}
+          toPorts:
+            http: {ports: {p9090: {port: "9090", protocol: TCP}}}
+        alertmanager:
+          toEndpoints:
+            alertmanager:
+              matchLabels: {app.kubernetes.io/name: alertmanager}
+          toPorts:
+            http: {ports: {p9093: {port: "9093", protocol: TCP}}}
+        internet: # the OIDC issuer is the public address of authelia, the dashboards (init container) and the plugins come from grafana.com
+          toEntities: {world: world, ingress: ingress}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+
+    prometheus-operator:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: kube-prometheus-stack-prometheus-operator}
+      ingress:
+        kube-apiserver: # the admission webhook: the API server is host networked, it is seen as the host or a remote node
+          fromEntities: {apiserver: kube-apiserver, host: host, remote-node: remote-node}
+          toPorts:
+            webhook: {ports: {p10250: {port: "10250", protocol: TCP}}}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
+    kube-state-metrics:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: kube-state-metrics}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
+    pushprox: # relays the scrapes of the control plane, that is host networked
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: pushprox}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p8080: {port: "8080", protocol: TCP}}}
+
+  # Prometheus scrapes any port of any pod (the targets are discovered from the ServiceMonitors).
+  ciliumClusterwideNetworkPolicies:
+    prometheus-scrape-targets:
+      endpointSelector:
+        matchExpressions:
+          any-namespace: {key: "k8s:io.kubernetes.pod.namespace", operator: Exists}
+      ingress:
+        prometheus:
+          fromEndpoints:
+            prometheus:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": prometheus, "k8s:app.kubernetes.io/name": prometheus}
+
   fluxHelmReleases:
     # the release is named `prometheus`, which gives the service names used by the httpRoutes
     prometheus:

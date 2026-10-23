@@ -53,6 +53,188 @@ spec:
         runAsUser: 65534
 ---
 # Source: app-prometheus/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: prometheus-scrape-targets
+spec:
+  endpointSelector:
+    matchExpressions:
+    - key: k8s:io.kubernetes.pod.namespace
+      operator: Exists
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/name: prometheus
+        k8s:io.kubernetes.pod.namespace: prometheus
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: alertmanager
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: alertmanager
+  ingress:
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "9093"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: grafana
+    toPorts:
+    - ports:
+      - port: "9093"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: prometheus
+    toPorts:
+    - ports:
+      - port: "9093"
+        protocol: TCP
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: grafana
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: alertmanager
+    toPorts:
+    - ports:
+      - port: "9093"
+        protocol: TCP
+  - toEntities:
+    - ingress
+    - world
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: prometheus
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: grafana
+  ingress:
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "3000"
+        protocol: TCP
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: kube-state-metrics
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: kube-state-metrics
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: prometheus
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+    - cluster
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus
+  ingress:
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: grafana
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: prometheus-operator
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: kube-prometheus-stack-prometheus-operator
+  ingress:
+  - fromEntities:
+    - kube-apiserver
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "10250"
+        protocol: TCP
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: pushprox
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: pushprox
+  ingress:
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+---
+# Source: app-prometheus/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -71,10 +253,6 @@ spec:
     namespace: longhorn-system
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -320,10 +498,6 @@ spec:
   - name: prometheus
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     disableWait: true

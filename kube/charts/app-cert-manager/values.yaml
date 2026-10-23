@@ -7,6 +7,51 @@ resources:
     cert-manager:
       url: https://charts.jetstack.io
 
+  # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
+  ciliumNetworkPolicies:
+    cert-manager-controller:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/instance: cert-manager, app.kubernetes.io/component: controller}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        acme: # ACME, and the self check of the http-01 challenge that goes through the public address of the gateway
+          toEntities: {world: world, ingress: ingress}
+          toPorts:
+            web:
+              ports:
+                p80: {port: "80", protocol: TCP}
+                p443: {port: "443", protocol: TCP}
+
+    cert-manager-cainjector: # injects the CA bundles into the webhooks and the CRDs
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/instance: cert-manager, app.kubernetes.io/component: cainjector}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
+    cert-manager-webhook:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/instance: cert-manager, app.kubernetes.io/component: webhook}
+      ingress:
+        kube-apiserver: # the API server is host networked, it is seen as the host or a remote node
+          fromEntities: {apiserver: kube-apiserver, host: host, remote-node: remote-node}
+          toPorts:
+            webhook: {ports: {p10250: {port: "10250", protocol: TCP}}}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
+  ciliumClusterwideNetworkPolicies:
+    cert-manager-http01-solver: # the pod created by cert-manager in the namespace of each certificate: only the gateway reaches it
+      endpointSelector:
+        matchLabels: {"k8s:acme.cert-manager.io/http01-solver": "true"}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p8089: {port: "8089", protocol: TCP}}}
+
   fluxHelmReleases:
     cert-manager:
       chart:

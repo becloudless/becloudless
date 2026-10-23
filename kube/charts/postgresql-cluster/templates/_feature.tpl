@@ -91,9 +91,25 @@ deadlocks (https://github.com/cloudnative-pg/cloudnative-pg/issues/10433). Only 
         "cluster" (dict "name" $name)) }}
 {{- end }}
 
+{{- /* The instances talk to each other (replication) and to the clients. The operator and the API server are allowed for every cluster
+by the cluster wide policy of app-cnpg. */}}
+{{- $instances := dict "matchLabels" (dict "cnpg.io/cluster" $name) }}
+{{- $postgres := dict "ports" (dict "postgres" (dict "port" "5432" "protocol" "TCP")) }}
+{{- $policy := dict
+      "endpointSelector" $instances
+      "ingress" (dict
+        "instances" (dict "fromEndpoints" (dict "instances" $instances) "toPorts" (dict "postgres" $postgres))
+        "clients" (dict "fromEndpoints" ($values.clients | default dict) "toPorts" (dict "postgres" $postgres)))
+      "egress" (dict
+        "instances" (dict "toEndpoints" (dict "instances" $instances) "toPorts" (dict "postgres" $postgres))) }}
+{{- if not $values.clients }}
+  {{- $_ := unset $policy.ingress "clients" }}
+{{- end }}
+
 {{- dict "resources" (dict
       "certManagerCertificates" $certificates
       "certManagerIssuers" (dict "main" (dict "ca" (dict "secretName" (printf "%s-ca" $name))))
       "cnpgClusters" (dict "main" $cluster)
-      "cnpgScheduledBackups" $scheduledBackups) | toYaml }}
+      "cnpgScheduledBackups" $scheduledBackups
+      "ciliumNetworkPolicies" (dict "main" $policy)) | toYaml }}
 {{- end }}

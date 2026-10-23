@@ -1,5 +1,314 @@
 ---
 # Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-csi-plugin
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: longhorn-csi-plugin
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-csi-sidecars
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  endpointSelector:
+    matchExpressions:
+    - key: app
+      operator: In
+      values:
+      - csi-attacher
+      - csi-provisioner
+      - csi-resizer
+      - csi-snapshotter
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-driver-deployer
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: longhorn-driver-deployer
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-global-manager
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        longhorn.io/component: instance-manager
+    toPorts:
+    - ports:
+      - endPort: 8510
+        port: "8500"
+        protocol: TCP
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        longhorn.io/component: share-manager
+    toPorts:
+    - ports:
+      - port: "9600"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: longhorn-global-manager
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-instance-manager
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - world
+    toPorts:
+    - ports:
+      - port: "445"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        longhorn.io/component: instance-manager
+    toPorts:
+    - ports:
+      - endPort: 30000
+        port: "10000"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      longhorn.io/component: instance-manager
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        longhorn.io/component: instance-manager
+    toPorts:
+    - ports:
+      - endPort: 30000
+        port: "10000"
+        protocol: TCP
+  - fromEndpoints:
+    - matchExpressions:
+      - key: app
+        operator: In
+        values:
+        - longhorn-global-manager
+        - longhorn-manager
+    toPorts:
+    - ports:
+      - endPort: 8510
+        port: "8500"
+        protocol: TCP
+  - fromEntities:
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "3260"
+        protocol: TCP
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-manager
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - world
+    toPorts:
+    - ports:
+      - port: "445"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        longhorn.io/component: instance-manager
+    toPorts:
+    - ports:
+      - endPort: 8510
+        port: "8500"
+        protocol: TCP
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        longhorn.io/component: share-manager
+    toPorts:
+    - ports:
+      - port: "9600"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: longhorn-manager
+  ingress:
+  - fromEndpoints:
+    - matchExpressions:
+      - key: app
+        operator: In
+        values:
+        - csi-attacher
+        - csi-provisioner
+        - csi-resizer
+        - csi-snapshotter
+        - longhorn-csi-plugin
+        - longhorn-driver-deployer
+        - longhorn-global-manager
+        - longhorn-manager
+        - longhorn-ui
+    - matchLabels:
+        longhorn.io/component: instance-manager
+    - matchLabels:
+        longhorn.io/component: share-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  - fromEntities:
+    - kube-apiserver
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "9502"
+        protocol: TCP
+      - port: "9503"
+        protocol: TCP
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-share-manager
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      longhorn.io/component: share-manager
+  ingress:
+  - fromEndpoints:
+    - matchExpressions:
+      - key: app
+        operator: In
+        values:
+        - longhorn-global-manager
+        - longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9600"
+        protocol: TCP
+  - fromEntities:
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "2049"
+        protocol: TCP
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-ui
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: longhorn-ui
+  ingress:
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "8000"
+        protocol: TCP
+---
+# Source: app-longhorn/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -37,10 +346,12 @@ spec:
       backupTargetCredentialSecret: backupstore
       pollInterval: 180
     defaultSettings:
+      allowCollectingLonghornUsageMetrics: false
       autoDeletePodWhenVolumeDetachedUnexpectedly: true
       nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
       nodeDrainPolicy: always-allow
       storageReservedPercentageForDefaultDisk: 5
+      upgradeChecker: false
     enablePSP: false
     ingress:
       enabled: false
@@ -195,6 +506,10 @@ spec:
           retain: 2
           task: backup
       longhornSettings:
+        allow-collecting-longhorn-usage-metrics:
+          annotations:
+            helm.sh/resource-policy: keep
+          value: "false"
         concurrent-automatic-engine-upgrade-per-node-limit:
           annotations:
             helm.sh/resource-policy: keep
@@ -203,6 +518,10 @@ spec:
           annotations:
             helm.sh/resource-policy: keep
           value: "16"
+        upgrade-checker:
+          annotations:
+            helm.sh/resource-policy: keep
+          value: "false"
       storageClasses:
         longhorn-single-local-replica:
           allowVolumeExpansion: true

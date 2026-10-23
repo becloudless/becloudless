@@ -5,6 +5,15 @@ resources:
     secret-generator:
       url: https://helm.mittwald.de
 
+  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
+  ciliumNetworkPolicies:
+    secret-generator:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: kubernetes-secret-generator}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
   fluxHelmReleases:
     secret-generator:
       interval: 60m

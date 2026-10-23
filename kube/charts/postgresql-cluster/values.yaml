@@ -14,6 +14,11 @@ clientCertAuth: false
 # `spec.postgresql` of the cluster, ex: parameters
 postgresql: {}
 
+# The pods allowed to connect to the database (the default deny of Cilium blocks everyone else), one `matchLabels` selector
+# each. They are in the namespace of the cluster, or in another one with the `k8s:io.kubernetes.pod.namespace` label.
+# ex: `clients: {authelia: {matchLabels: {app.kubernetes.io/name: authelia}}}`
+clients: {}
+
 backup:
   enabled: true
   schedule: "0 0 4 * * *" # cron with seconds

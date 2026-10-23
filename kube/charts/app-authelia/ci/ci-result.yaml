@@ -1,5 +1,73 @@
 ---
 # Source: app-authelia/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: authelia
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/name: lldap
+        k8s:io.kubernetes.pod.namespace: lldap
+    toPorts:
+    - ports:
+      - port: "6360"
+        protocol: TCP
+  - toEntities:
+    - world
+    toPorts:
+    - ports:
+      - port: "123"
+        protocol: UDP
+  - toEndpoints:
+    - matchLabels:
+        cnpg.io/cluster: authelia-postgresql
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: valkey
+    toPorts:
+    - ports:
+      - port: "6379"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: authelia
+  ingress:
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "9091"
+        protocol: TCP
+---
+# Source: app-authelia/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: authelia-valkey
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: valkey
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: authelia
+    toPorts:
+    - ports:
+      - port: "6379"
+        protocol: TCP
+---
+# Source: app-authelia/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -526,6 +594,11 @@ spec:
     strategy:
       name: RetryOnFailure
       retryInterval: 5m
+  values:
+    clients:
+      authelia:
+        matchLabels:
+          app.kubernetes.io/name: authelia
 ---
 # Source: app-authelia/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

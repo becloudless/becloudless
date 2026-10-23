@@ -1,5 +1,93 @@
 ---
 # Source: app-kyverno/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: kyverno-admission-controller
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: kyverno-admission-controller
+  ingress:
+  - fromEntities:
+    - kube-apiserver
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "9443"
+        protocol: TCP
+---
+# Source: app-kyverno/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: kyverno-background-controller
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: kyverno-background-controller
+---
+# Source: app-kyverno/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: kyverno-cleanup-controller
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: kyverno-cleanup-controller
+  ingress:
+  - fromEntities:
+    - kube-apiserver
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "9443"
+        protocol: TCP
+---
+# Source: app-kyverno/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: kyverno-migrate-resources
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  endpointSelector:
+    matchLabels:
+      job-name: kyverno-migrate-resources
+---
+# Source: app-kyverno/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: kyverno-reports-controller
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: kyverno-reports-controller
+---
+# Source: app-kyverno/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -15,10 +103,6 @@ spec:
       version: 3.9.1
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -54,10 +138,6 @@ spec:
   - name: kyverno
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:

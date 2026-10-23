@@ -8,6 +8,225 @@ resources:
     longhorn:
       url: https://charts.longhorn.io
 
+  # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
+  # The nodes mount the volumes (iscsi of the instance managers, nfs of the share managers), the API server calls the webhooks of the
+  # managers, the instance managers replicate the data to each other (ports 10000-30000).
+  # The engine images do not use the network.
+  ciliumNetworkPolicies:
+    longhorn-manager:
+      endpointSelector:
+        matchLabels: {app: longhorn-manager}
+      ingress:
+        api: # every component talks to the API of the managers (`longhorn-backend`)
+          fromEndpoints:
+            components:
+              matchExpressions:
+                app:
+                  key: app
+                  operator: In
+                  values:
+                    longhorn-manager: longhorn-manager
+                    longhorn-global-manager: longhorn-global-manager
+                    longhorn-ui: longhorn-ui
+                    longhorn-csi-plugin: longhorn-csi-plugin
+                    longhorn-driver-deployer: longhorn-driver-deployer
+                    csi-attacher: csi-attacher
+                    csi-provisioner: csi-provisioner
+                    csi-resizer: csi-resizer
+                    csi-snapshotter: csi-snapshotter
+            instance-manager:
+              matchLabels: {longhorn.io/component: instance-manager}
+            share-manager:
+              matchLabels: {longhorn.io/component: share-manager}
+          toPorts:
+            api: {ports: {p9500: {port: "9500", protocol: TCP}}}
+        webhooks: # the API server is host networked, it is seen as the host or a remote node
+          fromEntities: {apiserver: kube-apiserver, host: host, remote-node: remote-node}
+          toPorts:
+            webhooks:
+              ports:
+                p9502: {port: "9502", protocol: TCP}
+                p9503: {port: "9503", protocol: TCP}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        managers:
+          toEndpoints:
+            managers:
+              matchLabels: {app: longhorn-manager}
+          toPorts:
+            api: {ports: {p9500: {port: "9500", protocol: TCP}}}
+        instance-managers:
+          toEndpoints:
+            instance-managers:
+              matchLabels: {longhorn.io/component: instance-manager}
+          toPorts:
+            grpc: {ports: {p8500: {port: "8500", endPort: 8510, protocol: TCP}}}
+        share-managers:
+          toEndpoints:
+            share-managers:
+              matchLabels: {longhorn.io/component: share-manager}
+          toPorts:
+            grpc: {ports: {p9600: {port: "9600", protocol: TCP}}}
+        backup-target: # the backup target (`defaultBackupStore`) is a CIFS share of the LAN
+          toEntities: {world: world}
+          toPorts:
+            cifs: {ports: {p445: {port: "445", protocol: TCP}}}
+
+    longhorn-global-manager:
+      endpointSelector:
+        matchLabels: {app: longhorn-global-manager}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        managers:
+          toEndpoints:
+            managers:
+              matchLabels: {app: longhorn-manager}
+          toPorts:
+            api: {ports: {p9500: {port: "9500", protocol: TCP}}}
+        instance-managers:
+          toEndpoints:
+            instance-managers:
+              matchLabels: {longhorn.io/component: instance-manager}
+          toPorts:
+            grpc: {ports: {p8500: {port: "8500", endPort: 8510, protocol: TCP}}}
+        share-managers:
+          toEndpoints:
+            share-managers:
+              matchLabels: {longhorn.io/component: share-manager}
+          toPorts:
+            grpc: {ports: {p9600: {port: "9600", protocol: TCP}}}
+
+    longhorn-instance-manager: # the engines and the replicas of the volumes
+      endpointSelector:
+        matchLabels: {longhorn.io/component: instance-manager}
+      ingress:
+        managers:
+          fromEndpoints:
+            managers:
+              matchExpressions:
+                app:
+                  key: app
+                  operator: In
+                  values: {longhorn-manager: longhorn-manager, longhorn-global-manager: longhorn-global-manager}
+          toPorts:
+            grpc: {ports: {p8500: {port: "8500", endPort: 8510, protocol: TCP}}}
+        instance-managers: # the replication of the data
+          fromEndpoints:
+            instance-managers:
+              matchLabels: {longhorn.io/component: instance-manager}
+          toPorts:
+            replicas: {ports: {p10000: {port: "10000", endPort: 30000, protocol: TCP}}}
+        nodes: # the iscsi initiator of the node that attaches the volume
+          fromEntities: {host: host, remote-node: remote-node}
+          toPorts:
+            iscsi: {ports: {p3260: {port: "3260", protocol: TCP}}}
+      egress:
+        instance-managers:
+          toEndpoints:
+            instance-managers:
+              matchLabels: {longhorn.io/component: instance-manager}
+          toPorts:
+            replicas: {ports: {p10000: {port: "10000", endPort: 30000, protocol: TCP}}}
+        managers:
+          toEndpoints:
+            managers:
+              matchLabels: {app: longhorn-manager}
+          toPorts:
+            api: {ports: {p9500: {port: "9500", protocol: TCP}}}
+        backup-target:
+          toEntities: {world: world}
+          toPorts:
+            cifs: {ports: {p445: {port: "445", protocol: TCP}}}
+
+    longhorn-share-manager: # the NFS server of the ReadWriteMany volumes
+      endpointSelector:
+        matchLabels: {longhorn.io/component: share-manager}
+      ingress:
+        managers:
+          fromEndpoints:
+            managers:
+              matchExpressions:
+                app:
+                  key: app
+                  operator: In
+                  values: {longhorn-manager: longhorn-manager, longhorn-global-manager: longhorn-global-manager}
+          toPorts:
+            grpc: {ports: {p9600: {port: "9600", protocol: TCP}}}
+        nodes: # the NFS mounts of the kubelets
+          fromEntities: {host: host, remote-node: remote-node}
+          toPorts:
+            nfs: {ports: {p2049: {port: "2049", protocol: TCP}}}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        managers:
+          toEndpoints:
+            managers:
+              matchLabels: {app: longhorn-manager}
+          toPorts:
+            api: {ports: {p9500: {port: "9500", protocol: TCP}}}
+
+    longhorn-ui:
+      endpointSelector:
+        matchLabels: {app: longhorn-ui}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            ui: {ports: {p8000: {port: "8000", protocol: TCP}}}
+      egress:
+        managers:
+          toEndpoints:
+            managers:
+              matchLabels: {app: longhorn-manager}
+          toPorts:
+            api: {ports: {p9500: {port: "9500", protocol: TCP}}}
+
+    longhorn-csi-sidecars: # the attacher, the provisioner, the resizer and the snapshotter
+      endpointSelector:
+        matchExpressions:
+          app:
+            key: app
+            operator: In
+            values: {csi-attacher: csi-attacher, csi-provisioner: csi-provisioner, csi-resizer: csi-resizer, csi-snapshotter: csi-snapshotter}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        managers:
+          toEndpoints:
+            managers:
+              matchLabels: {app: longhorn-manager}
+          toPorts:
+            api: {ports: {p9500: {port: "9500", protocol: TCP}}}
+
+    longhorn-csi-plugin: # on every node, mounts the volumes for the kubelet
+      endpointSelector:
+        matchLabels: {app: longhorn-csi-plugin}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        managers:
+          toEndpoints:
+            managers:
+              matchLabels: {app: longhorn-manager}
+          toPorts:
+            api: {ports: {p9500: {port: "9500", protocol: TCP}}}
+
+    longhorn-driver-deployer: # deploys the CSI components
+      endpointSelector:
+        matchLabels: {app: longhorn-driver-deployer}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        managers:
+          toEndpoints:
+            managers:
+              matchLabels: {app: longhorn-manager}
+          toPorts:
+            api: {ports: {p9500: {port: "9500", protocol: TCP}}}
+
   fluxHelmReleases:
     # the policy adding the PATH of NixOS to the pods, created before they start
     longhorn-pre:
@@ -91,6 +310,8 @@ resources:
           nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
           nodeDrainPolicy: always-allow
           storageReservedPercentageForDefaultDisk: 5 # only for new disks
+          upgradeChecker: false # the pods have no access to the internet (see the policies of app-cilium)
+          allowCollectingLonghornUsageMetrics: false
 
         defaultBackupStore:
           backupTarget: cifs://backupstore/backupstore
@@ -131,6 +352,14 @@ resources:
 
           # Longhorn refuses to delete its settings, which makes a helm uninstall fail, so helm must never delete them
           longhornSettings:
+            upgrade-checker: # defaultSettings are only read at the first install
+              annotations:
+                helm.sh/resource-policy: keep
+              value: "false"
+            allow-collecting-longhorn-usage-metrics:
+              annotations:
+                helm.sh/resource-policy: keep
+              value: "false"
             concurrent-automatic-engine-upgrade-per-node-limit:
               annotations:
                 helm.sh/resource-policy: keep

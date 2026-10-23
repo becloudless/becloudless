@@ -19,10 +19,41 @@ resources:
       type: oci
       url: oci://code.forgejo.org/forgejo-helm
 
+  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
+  # The database has its own policy, from the postgresql-cluster chart.
+  ciliumNetworkPolicies:
+    forgejo:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: forgejo}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p3000: {port: "3000", protocol: TCP}}}
+      egress:
+        postgresql:
+          toEndpoints:
+            postgresql:
+              matchLabels: {cnpg.io/cluster: forgejo-postgresql}
+          toPorts:
+            postgresql: {ports: {p5432: {port: "5432", protocol: TCP}}}
+        internet: # the OIDC discovery of authelia goes through the public address of the gateway, mirrors, webhooks, git over ssh
+          toEntities: {world: world, ingress: ingress}
+          toPorts:
+            out:
+              ports:
+                p22: {port: "22", protocol: TCP}
+                p80: {port: "80", protocol: TCP}
+                p443: {port: "443", protocol: TCP}
+
   fluxHelmReleases:
     # the database is prepared by the postgresql-cluster chart (certificates, issuer, cluster and backups)
     # the cluster is named after the release, which is the name of this HelmRelease
     forgejo-postgresql:
+      values:
+        clients:
+          forgejo:
+            matchLabels: {app.kubernetes.io/name: forgejo}
       dependsOn: # the certificates, the cluster and the volume snapshots
         cert-manager:
           name: app-cert-manager

@@ -1,5 +1,71 @@
 ---
 # Source: app-lldap/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: lldap
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        cnpg.io/cluster: lldap-postgresql
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: lldap
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/name: authelia
+        k8s:io.kubernetes.pod.namespace: authelia
+    toPorts:
+    - ports:
+      - port: "6360"
+        protocol: TCP
+  - fromEndpoints:
+    - matchExpressions:
+      - key: job-name
+        operator: Exists
+    toPorts:
+    - ports:
+      - port: "17170"
+        protocol: TCP
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "17170"
+        protocol: TCP
+      - port: "6360"
+        protocol: TCP
+---
+# Source: app-lldap/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: lldap-bootstrap
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: lldap
+    toPorts:
+    - ports:
+      - port: "17170"
+        protocol: TCP
+  endpointSelector:
+    matchExpressions:
+    - key: job-name
+      operator: Exists
+---
+# Source: app-lldap/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -19,10 +85,6 @@ spec:
   - name: lldap-pre
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -164,10 +226,6 @@ spec:
   - name: lldap-post
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     disableWait: true
@@ -275,10 +333,6 @@ spec:
   - name: lldap
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -301,7 +355,6 @@ spec:
               {"name":"role_user"}
               {"name":"role_editor"}
               {"name":"app_forgejo"}
-              {"name":"app_gitea"}
               {"name":"app_immich"}
               {"name":"app_immich_one_factor"}
               {"name":"app_jellyfin"}
@@ -316,7 +369,7 @@ spec:
         lldap-bootstrap:
           activeDeadlineSeconds: 600
           backoffLimit: 0
-          fullNameOverride: lldap-bootstrap-e44a25760f
+          fullNameOverride: lldap-bootstrap-abc2d29281
           template:
             spec:
               containers:
@@ -395,10 +448,6 @@ spec:
     namespace: longhorn-system
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -413,6 +462,10 @@ spec:
       retryInterval: 5m
   values:
     clientCertAuth: true
+    clients:
+      lldap:
+        matchLabels:
+          app.kubernetes.io/name: lldap
     postgresql:
       parameters:
         max_slot_wal_keep_size: 500MB
@@ -439,10 +492,6 @@ spec:
     namespace: secret-generator
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:

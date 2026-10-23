@@ -5,6 +5,24 @@ resources:
     metrics-server:
       url: https://kubernetes-sigs.github.io/metrics-server
 
+  # on top of the default deny of app-cilium. kube-system is shared with the other components, hence the selector.
+  ciliumNetworkPolicies:
+    metrics-server:
+      endpointSelector:
+        matchLabels: {"app.kubernetes.io/name": metrics-server}
+      ingress:
+        kube-apiserver: # the aggregated API: the API server is host networked, it is seen as the host or a remote node
+          fromEntities: {apiserver: kube-apiserver, host: host, remote-node: remote-node}
+          toPorts:
+            api: {ports: {p10250: {port: "10250", protocol: TCP}}}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        kubelets: # scrapes the kubelet of every node
+          toEntities: {host: host, remote-node: remote-node}
+          toPorts:
+            kubelet: {ports: {p10250: {port: "10250", protocol: TCP}}}
+
   fluxHelmReleases:
     metrics-server:
       chart:

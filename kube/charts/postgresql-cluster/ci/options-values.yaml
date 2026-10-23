@@ -2,6 +2,11 @@ instances: 1
 storageSize: 5Gi
 issuer: my-issuer
 clientCertAuth: true
+clients:
+  app:
+    matchLabels: {app.kubernetes.io/name: app}
+  other:
+    matchLabels: {"k8s:io.kubernetes.pod.namespace": other, app.kubernetes.io/name: other}
 postgresql:
   parameters:
     max_slot_wal_keep_size: 500MB

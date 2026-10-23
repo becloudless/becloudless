@@ -1,5 +1,40 @@
 ---
 # Source: app-coredns/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: kube-dns
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEntities:
+    - host
+    - remote-node
+    - world
+    toPorts:
+    - ports:
+      - port: "53"
+        protocol: TCP
+      - port: "53"
+        protocol: UDP
+  endpointSelector:
+    matchLabels:
+      k8s:io.kubernetes.pod.namespace: kube-system
+      k8s:k8s-app: kube-dns
+  ingress:
+  - fromEndpoints:
+    - matchExpressions:
+      - key: k8s:io.kubernetes.pod.namespace
+        operator: Exists
+    toPorts:
+    - ports:
+      - port: "53"
+        protocol: TCP
+      - port: "53"
+        protocol: UDP
+---
+# Source: app-coredns/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -15,10 +50,6 @@ spec:
       version: 1.48.2
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:

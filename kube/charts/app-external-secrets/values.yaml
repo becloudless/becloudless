@@ -7,6 +7,31 @@ resources:
     external-secrets:
       url: https://charts.external-secrets.io
 
+  # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
+  ciliumNetworkPolicies:
+    external-secrets: # the controller
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: external-secrets}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
+    external-secrets-cert-controller: # the certificate of the webhook
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: external-secrets-cert-controller}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
+    external-secrets-webhook:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: external-secrets-webhook}
+      ingress:
+        kube-apiserver: # the API server is host networked, it is seen as the host or a remote node
+          fromEntities: {apiserver: kube-apiserver, host: host, remote-node: remote-node}
+          toPorts:
+            webhook: {ports: {p10250: {port: "10250", protocol: TCP}}}
+
   fluxHelmReleases:
     external-secrets:
       chart:

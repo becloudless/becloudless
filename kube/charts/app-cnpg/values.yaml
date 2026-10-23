@@ -5,6 +5,49 @@ resources:
     cnpg:
       url: https://cloudnative-pg.github.io/charts
 
+  # on top of the default deny of app-cilium. Cluster wide because the instances are in the namespace of each app.
+  # Replication and clients are in the same namespace, see the policies of the apps.
+  ciliumClusterwideNetworkPolicies:
+    cnpg-operator:
+      endpointSelector:
+        matchLabels: {"k8s:io.kubernetes.pod.namespace": cnpg-system, "k8s:app.kubernetes.io/name": cloudnative-pg}
+      ingress:
+        webhook: # the admission webhook: the API server is host networked, it is seen as the host or a remote node
+          fromEntities: {apiserver: kube-apiserver, host: host, remote-node: remote-node}
+          toPorts:
+            webhook: {ports: {p9443: {port: "9443", protocol: TCP}}}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        instances: # status API of the instances
+          toEndpoints:
+            instances:
+              matchExpressions:
+                cnpg-cluster: {key: "k8s:cnpg.io/cluster", operator: Exists}
+          toPorts:
+            postgres:
+              ports:
+                p8000: {port: "8000", protocol: TCP}
+                p5432: {port: "5432", protocol: TCP}
+
+    cnpg-cluster-instances:
+      endpointSelector:
+        matchExpressions:
+          cnpg-cluster: {key: "k8s:cnpg.io/cluster", operator: Exists}
+      ingress:
+        operator:
+          fromEndpoints:
+            operator:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": cnpg-system}
+          toPorts:
+            postgres:
+              ports:
+                p8000: {port: "8000", protocol: TCP}
+                p5432: {port: "5432", protocol: TCP}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
   fluxHelmReleases:
     cnpg:
       chart:

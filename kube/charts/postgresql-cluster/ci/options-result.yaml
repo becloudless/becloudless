@@ -82,6 +82,43 @@ spec:
   - client auth
 ---
 # Source: postgresql-cluster/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        cnpg.io/cluster: test-release
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      cnpg.io/cluster: test-release
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: app
+    - matchLabels:
+        app.kubernetes.io/name: other
+        k8s:io.kubernetes.pod.namespace: other
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        cnpg.io/cluster: test-release
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+---
+# Source: postgresql-cluster/templates/loader.yaml
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:

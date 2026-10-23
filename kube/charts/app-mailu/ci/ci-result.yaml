@@ -1,5 +1,485 @@
 ---
 # Source: app-mailu/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mailu-admin
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: mariadb
+    toPorts:
+    - ports:
+      - port: "3306"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: redis
+    toPorts:
+    - ports:
+      - port: "6379"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: admin
+      app.kubernetes.io/name: mailu
+  ingress:
+  - fromEndpoints:
+    - matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+        - dovecot
+        - front
+        - postfix
+        - rspamd
+        - webdav
+        - webmail
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+---
+# Source: app-mailu/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mailu-clamav
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - world
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+      - port: "80"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: clamav
+      app.kubernetes.io/name: mailu
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: rspamd
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "3310"
+        protocol: TCP
+---
+# Source: app-mailu/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mailu-dovecot
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: admin
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: postfix
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "25"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: rspamd
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "11332"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: dovecot
+      app.kubernetes.io/name: mailu
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: front
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "110"
+        protocol: TCP
+      - port: "143"
+        protocol: TCP
+      - port: "4190"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: postfix
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "2102"
+        protocol: TCP
+      - port: "2525"
+        protocol: TCP
+---
+# Source: app-mailu/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mailu-front
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: admin
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: dovecot
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "110"
+        protocol: TCP
+      - port: "143"
+        protocol: TCP
+      - port: "4190"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: postfix
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "25"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: rspamd
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "11334"
+        protocol: TCP
+  - toEntities:
+    - world
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: webdav
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "5232"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: webmail
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "80"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: front
+      app.kubernetes.io/name: mailu
+  ingress:
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "80"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: webmail
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "10025"
+        protocol: TCP
+      - port: "10143"
+        protocol: TCP
+---
+# Source: app-mailu/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mailu-mariadb
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: mariadb
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: admin
+        app.kubernetes.io/name: mailu
+    - matchLabels:
+        app.kubernetes.io/component: webmail
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "3306"
+        protocol: TCP
+---
+# Source: app-mailu/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mailu-oletools
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: oletools
+      app.kubernetes.io/name: mailu
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: rspamd
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "11343"
+        protocol: TCP
+---
+# Source: app-mailu/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mailu-postfix
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: admin
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: dovecot
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "2102"
+        protocol: TCP
+      - port: "2525"
+        protocol: TCP
+  - toEntities:
+    - world
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: rspamd
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "11332"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: postfix
+      app.kubernetes.io/name: mailu
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: dovecot
+        app.kubernetes.io/name: mailu
+    - matchLabels:
+        app.kubernetes.io/component: front
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "25"
+        protocol: TCP
+---
+# Source: app-mailu/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mailu-redis
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: admin
+        app.kubernetes.io/name: mailu
+    - matchLabels:
+        app.kubernetes.io/component: rspamd
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "6379"
+        protocol: TCP
+---
+# Source: app-mailu/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mailu-rspamd
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: admin
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: clamav
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "3310"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: oletools
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "11343"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: redis
+    toPorts:
+    - ports:
+      - port: "6379"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: rspamd
+      app.kubernetes.io/name: mailu
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: front
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "11334"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: dovecot
+        app.kubernetes.io/name: mailu
+    - matchLabels:
+        app.kubernetes.io/component: postfix
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "11332"
+        protocol: TCP
+---
+# Source: app-mailu/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mailu-webdav
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: admin
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: webdav
+      app.kubernetes.io/name: mailu
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: front
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "5232"
+        protocol: TCP
+---
+# Source: app-mailu/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mailu-webmail
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: admin
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: front
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "10025"
+        protocol: TCP
+      - port: "10143"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: mariadb
+    toPorts:
+    - ports:
+      - port: "3306"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: webmail
+      app.kubernetes.io/name: mailu
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: front
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "80"
+        protocol: TCP
+---
+# Source: app-mailu/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -19,10 +499,6 @@ spec:
   - name: mailu-pre
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -256,10 +732,6 @@ spec:
   - name: mailu
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     disableWait: true
@@ -335,10 +807,6 @@ spec:
     namespace: secret-generator
   driftDetection:
     mode: enabled
-  healthCheckExprs:
-  - apiVersion: postgresql.cnpg.io/v1
-    current: has(status.readyInstances) && status.readyInstances >= 1
-    kind: Cluster
   install:
     crds: CreateReplace
     strategy:

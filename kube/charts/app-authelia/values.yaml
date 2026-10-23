@@ -13,10 +13,60 @@ resources:
     authelia-valkey:
       url: https://valkey.io/valkey-helm/
 
+  # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
+  # The database has its own policy, from the postgresql-cluster chart.
+  ciliumNetworkPolicies:
+    authelia:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: authelia}
+      ingress:
+        gateway: # the portal and the forward auth of every protected route
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p9091: {port: "9091", protocol: TCP}}}
+      egress:
+        lldap:
+          toEndpoints:
+            lldap:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": lldap, "k8s:app.kubernetes.io/name": lldap}
+          toPorts:
+            ldaps: {ports: {p6360: {port: "6360", protocol: TCP}}}
+        valkey:
+          toEndpoints:
+            valkey:
+              matchLabels: {app.kubernetes.io/name: valkey}
+          toPorts:
+            valkey: {ports: {p6379: {port: "6379", protocol: TCP}}}
+        postgresql:
+          toEndpoints:
+            postgresql:
+              matchLabels: {cnpg.io/cluster: authelia-postgresql}
+          toPorts:
+            postgresql: {ports: {p5432: {port: "5432", protocol: TCP}}}
+        ntp: # the startup check of the clock (`ntp` of the configuration)
+          toEntities: {world: world}
+          toPorts:
+            ntp: {ports: {p123: {port: "123", protocol: UDP}}}
+
+    authelia-valkey: # the sessions
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: valkey}
+      ingress:
+        authelia:
+          fromEndpoints:
+            authelia:
+              matchLabels: {app.kubernetes.io/name: authelia}
+          toPorts:
+            valkey: {ports: {p6379: {port: "6379", protocol: TCP}}}
+
   fluxHelmReleases:
     # the database is prepared by the postgresql-cluster chart (certificates, issuer, cluster and backups)
     # the cluster is named after the release, which is the name of this HelmRelease
     authelia-postgresql:
+      values:
+        clients:
+          authelia:
+            matchLabels: {app.kubernetes.io/name: authelia}
       chart:
         spec:
           chart: ./kube/charts/postgresql-cluster

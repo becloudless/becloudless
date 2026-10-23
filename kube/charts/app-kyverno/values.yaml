@@ -5,6 +5,53 @@ resources:
     kyverno:
       url: https://kyverno.github.io/kyverno
 
+  # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
+  ciliumNetworkPolicies:
+    kyverno-admission-controller:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: kyverno-admission-controller}
+      ingress:
+        kube-apiserver: # the webhooks: the API server is host networked, it is seen as the host or a remote node
+          fromEntities: {apiserver: kube-apiserver, host: host, remote-node: remote-node}
+          toPorts:
+            webhook: {ports: {p9443: {port: "9443", protocol: TCP}}}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
+    kyverno-cleanup-controller:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: kyverno-cleanup-controller}
+      ingress:
+        kube-apiserver:
+          fromEntities: {apiserver: kube-apiserver, host: host, remote-node: remote-node}
+          toPorts:
+            webhook: {ports: {p9443: {port: "9443", protocol: TCP}}}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
+    kyverno-background-controller:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: kyverno-background-controller}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
+    kyverno-reports-controller:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: kyverno-reports-controller}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
+    kyverno-migrate-resources: # the job of the upgrades
+      endpointSelector:
+        matchLabels: {job-name: kyverno-migrate-resources}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
   fluxHelmReleases:
     kyverno:
       chart:

@@ -15,6 +15,274 @@ spec:
   - Ingress
 ---
 # Source: app-flux/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: helm-controller
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: notification-controller
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app: source-controller
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app: source-watcher
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: helm-controller
+---
+# Source: app-flux/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: image-automation-controller
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - ingress
+    - world
+    toPorts:
+    - ports:
+      - port: "22"
+        protocol: TCP
+      - port: "443"
+        protocol: TCP
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: notification-controller
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app: source-controller
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: image-automation-controller
+---
+# Source: app-flux/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: image-reflector-controller
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: notification-controller
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+  - toEntities:
+    - ingress
+    - world
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: image-reflector-controller
+---
+# Source: app-flux/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: kustomize-controller
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: notification-controller
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app: source-controller
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app: source-watcher
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: kustomize-controller
+---
+# Source: app-flux/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: notification-controller
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEntities:
+    - ingress
+    - world
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+      - port: "80"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: notification-controller
+  ingress:
+  - fromEndpoints:
+    - matchExpressions:
+      - key: app
+        operator: In
+        values:
+        - helm-controller
+        - image-automation-controller
+        - image-reflector-controller
+        - kustomize-controller
+        - source-controller
+        - source-watcher
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "9292"
+        protocol: TCP
+---
+# Source: app-flux/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: source-controller
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - ingress
+    - world
+    toPorts:
+    - ports:
+      - port: "22"
+        protocol: TCP
+      - port: "443"
+        protocol: TCP
+      - port: "80"
+        protocol: TCP
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: notification-controller
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: source-controller
+  ingress:
+  - fromEndpoints:
+    - matchExpressions:
+      - key: app
+        operator: In
+        values:
+        - helm-controller
+        - image-automation-controller
+        - kustomize-controller
+        - source-watcher
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+---
+# Source: app-flux/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: source-watcher
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: notification-controller
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app: source-controller
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: source-watcher
+  ingress:
+  - fromEndpoints:
+    - matchExpressions:
+      - key: app
+        operator: In
+        values:
+        - helm-controller
+        - kustomize-controller
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+---
+# Source: app-flux/templates/loader.yaml
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -70,6 +338,36 @@ spec:
     target:
       kind: Deployment
       name: kustomize-controller
+      namespace: flux-system
+  - patch: |-
+      $patch: delete
+      apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
+      metadata:
+        name: allow-egress
+    target:
+      kind: NetworkPolicy
+      name: allow-egress
+      namespace: flux-system
+  - patch: |-
+      $patch: delete
+      apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
+      metadata:
+        name: allow-scraping
+    target:
+      kind: NetworkPolicy
+      name: allow-scraping
+      namespace: flux-system
+  - patch: |-
+      $patch: delete
+      apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
+      metadata:
+        name: allow-webhooks
+    target:
+      kind: NetworkPolicy
+      name: allow-webhooks
       namespace: flux-system
   - patch: |-
       apiVersion: apps/v1
