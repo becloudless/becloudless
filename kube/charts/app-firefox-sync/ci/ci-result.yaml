@@ -1,0 +1,317 @@
+---
+# Source: app-firefox-sync/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: firefox-sync
+  namespace: default
+spec:
+  egress:
+  - toFQDNs:
+    - matchName: oauth.accounts.firefox.com
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        cnpg.io/cluster: firefox-sync-postgresql
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: firefox-sync
+  ingress:
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "8000"
+        protocol: TCP
+---
+# Source: app-firefox-sync/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: firefox-sync
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: firefox-sync-postgresql
+  - name: firefox-sync-pre
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      deployments:
+        firefox-sync:
+          replicas: 1
+          selector:
+            matchLabels:
+              app.kubernetes.io/name: firefox-sync
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/name: firefox-sync
+            spec:
+              containers:
+                firefox-sync:
+                  env:
+                    DB_PASSWORD:
+                      secretKeyRef:
+                        key: password
+                        name: firefox-sync-postgresql-app
+                    SYNC_ENVIRONMENT: prod
+                    SYNC_HOST: 0.0.0.0
+                    SYNC_MASTER_SECRET:
+                      secretKeyRef:
+                        key: master-secret
+                        name: firefox-sync-generated
+                    SYNC_PORT: "8000"
+                    SYNC_SYNCSTORAGE__DATABASE_URL: postgres://app:$(DB_PASSWORD)@firefox-sync-postgresql-rw:5432/app
+                    SYNC_TOKENSERVER__ALLOW_NEW_USERS: "true"
+                    SYNC_TOKENSERVER__DATABASE_URL: postgres://app:$(DB_PASSWORD)@firefox-sync-postgresql-rw:5432/app
+                    SYNC_TOKENSERVER__ENABLED: "true"
+                    SYNC_TOKENSERVER__FXA_EMAIL_DOMAIN: api.accounts.firefox.com
+                    SYNC_TOKENSERVER__FXA_METRICS_HASH_SECRET:
+                      secretKeyRef:
+                        key: metrics-hash-secret
+                        name: firefox-sync-generated
+                    SYNC_TOKENSERVER__FXA_OAUTH_SERVER_URL: https://oauth.accounts.firefox.com
+                    SYNC_TOKENSERVER__INIT_NODE_URL: https://firefox-sync.test.com
+                    SYNC_TOKENSERVER__NODE_TYPE: postgres
+                    SYNC_TOKENSERVER__RUN_MIGRATIONS: "true"
+                  image: ghcr.io/mozilla-services/syncstorage-rs/syncserver-postgres:0.24.0
+                  livenessProbe:
+                    httpGet:
+                      path: /__lbheartbeat__
+                      port: 8000
+                    periodSeconds: 15
+                    timeoutSeconds: 3
+                  name: firefox-sync
+                  ports:
+                    http:
+                      containerPort: 8000
+                  readinessProbe:
+                    httpGet:
+                      path: /__heartbeat__
+                      port: 8000
+                    periodSeconds: 15
+                    timeoutSeconds: 5
+                  securityContext:
+                    allowPrivilegeEscalation: false
+                    capabilities:
+                      drop:
+                        all: ALL
+                    runAsGroup: 10001
+                    runAsNonRoot: true
+                    runAsUser: 10001
+                    seccompProfile:
+                      type: RuntimeDefault
+                  startupProbe:
+                    failureThreshold: 60
+                    httpGet:
+                      path: /__heartbeat__
+                      port: 8000
+                    periodSeconds: 5
+              nodeSelector:
+                kubernetes.io/arch: amd64
+      services:
+        firefox-sync:
+          ports:
+            http:
+              port: 8000
+          selector:
+            app.kubernetes.io/name: firefox-sync
+---
+# Source: app-firefox-sync/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: firefox-sync-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: firefox-sync
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      certManagerCertificates:
+        firefox-sync-gateway:
+          dnsNames:
+            firefox-sync: firefox-sync.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-firefox-sync-gateway
+      httpRoutes:
+        firefox-sync:
+          hostnames:
+            firefox-sync: firefox-sync.test.com
+          parentRefs:
+            firefox-sync:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: firefox-sync
+          rules:
+            root:
+              backendRefs:
+                firefox-sync:
+                  name: firefox-sync
+                  port: 8000
+      listenerSets:
+        firefox-sync:
+          listeners:
+            https:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: firefox-sync.test.com
+              name: https
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: tls-firefox-sync-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+---
+# Source: app-firefox-sync/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: firefox-sync-postgresql
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/postgresql-cluster
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-cnpg
+    namespace: cnpg-system
+  - name: app-longhorn
+    namespace: longhorn-system
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    clients:
+      firefox-sync:
+        matchLabels:
+          app.kubernetes.io/name: firefox-sync
+---
+# Source: app-firefox-sync/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: firefox-sync-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-secret-generator
+    namespace: secret-generator
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      stringSecrets:
+        firefox-sync-generated:
+          fields:
+            master-secret:
+              fieldName: master-secret
+            metrics-hash-secret:
+              fieldName: metrics-hash-secret

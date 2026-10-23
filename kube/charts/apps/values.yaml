@@ -194,6 +194,12 @@ apps:
     appChart:
       name: app-seerr
 
+  firefox-sync:
+    groups:
+      extra: true
+    appChart:
+      name: app-firefox-sync
+
   mailu:
     groups:
       extra: true

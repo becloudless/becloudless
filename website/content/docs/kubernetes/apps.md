@@ -20,6 +20,7 @@ All applications are defined under `kube/apps/`, one directory per app.
 | `descheduler` | Platform | Rebalances pods across nodes based on policy |
 | `external-secrets` | Security | Syncs secrets from external stores into Kubernetes Secrets |
 | `external-snapshotter` | Storage | CSI volume snapshot controller and CRDs |
+| `firefox-sync` | Productivity | Self-hosted storage for Firefox Sync (Mozilla accounts, data on your own server) |
 | `flux` | Platform | Flux CD GitOps controllers |
 | `gitea` | DevOps | Self-hosted Git service and container registry |
 | `homer` | Dashboard | Static application dashboard / home page |
