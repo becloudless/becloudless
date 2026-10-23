@@ -5,7 +5,8 @@ global:
 # Nothing has to be created by hand:
 #  - the database is a CloudNativePG cluster (with the vectorchord extension), the password of its `app` user is created by CNPG (`immich-postgresql-app`)
 #  - the valkey users are generated in the `immich-valkey` secret
-#  - the first user to register in the web UI becomes the admin of immich
+#  - the first user to register in the web UI becomes the admin of immich: not used, `immich-post` creates the account `immich-admin`
+#    and the admins are the users of lldap whose `immichrole` is `admin`
 # SSO: the OAuth login with authelia (OIDC client `immich`, see its access control in authelia), the users are created at their first
 # login. The configuration file of immich holds only the OAuth settings, so these settings are read only in the web UI: the secret
 # of the client is generated in the authelia namespace and copied by external-secrets (see `immich-pre`).
@@ -93,6 +94,12 @@ resources:
       values:
         resources:
           stringSecrets:
+            # password of the `immich-admin` account created by `immich-post`, only used if the password login is enabled again
+            immich-admin:
+              fields:
+                password:
+                  fieldName: password
+
             # users of valkey, the key is the name of the user
             immich-valkey:
               fields:
@@ -145,7 +152,9 @@ resources:
                         storageQuotaClaim: immich_quota
                         roleClaim: immich_role
                         autoRegister: true
-                        autoLaunch: false
+                        autoLaunch: true # `/auth/login?autoLaunch=0` shows the login page
+                      passwordLogin:
+                        enabled: false # the users and admins come from lldap, see `immich-post`
               data:
                 secret:
                   secretKey: secret
@@ -239,6 +248,58 @@ resources:
               accessMode: ReadWriteMany
               storageClass: longhorn
 
+    # The web UI shows the registration of the first admin until an admin exists, and the OAuth login is on the login page that
+    # it redirects from: an account of immich has to exist before anyone can log in with authelia. It is created here through the API,
+    # before the public exposure (`immich-integration` waits for this release). From then on the admins are the users whose
+    # `immichrole` attribute is `admin` in lldap, and the registration is refused by immich (the server already has an admin).
+    # The account is only a way back if the password login is enabled again (the `enable-password-login` command of `immich-admin`
+    # in the server pod), its password is the `immich-admin` secret.
+    immich-post:
+      dependsOn:
+        immich:
+          name: immich
+        immich-pre:
+          name: immich-pre
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          jobs:
+            immich-bootstrap:
+              fullNameOverride: 'immich-bootstrap-{{ list 1 .Values.global.domain | toJson | sha256sum | trunc 10 }}' # change the 1 when the spec of the Job changes (immutable fields)
+              backoffLimit: 0
+              activeDeadlineSeconds: 900
+              template:
+                spec:
+                  restartPolicy: Never
+                  securityContext:
+                    runAsUser: 1000
+                    runAsGroup: 1000
+                  containers:
+                    bootstrap:
+                      name: bootstrap
+                      image: curlimages/curl:8.19.0 # renovate: versioning=loose
+                      command: [ sh, -ec ]
+                      args:
+                        - |
+                          until curl -fsS http://immich-server:2283/api/server/config > /tmp/config; do sleep 5; done
+                          if grep -q '"isInitialized":true' /tmp/config; then echo 'an admin already exists'; exit 0; fi
+                          password=$(printf '%s' "$ADMIN_PASSWORD" | sed 's/\\/\\\\/g; s/"/\\"/g')
+                          curl -fsS -X POST http://immich-server:2283/api/auth/admin-sign-up -H 'Content-Type: application/json' \
+                            -d "{\"email\":\"$ADMIN_EMAIL\",\"name\":\"immich admin\",\"password\":\"$password\"}"
+                      env:
+                        ADMIN_EMAIL: immich-admin@{{ .Values.global.domain }}
+                        ADMIN_PASSWORD:
+                          secretKeyRef:
+                            name: immich-admin
+                            key: password
+
     # the public exposure, applied once immich is deployed and not waited for
     immich-integration:
       install:
@@ -246,8 +307,8 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        immich:
-          name: immich
+        immich-post: # the admin exists, nobody can register as the admin
+          name: immich-post
         cert-manager:
           name: app-cert-manager
           namespace: cert-manager

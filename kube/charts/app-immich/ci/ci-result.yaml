@@ -103,7 +103,7 @@ spec:
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
-  - name: immich
+  - name: immich-post
   driftDetection:
     mode: enabled
   install:
@@ -168,6 +168,72 @@ spec:
             kind: Gateway
             name: shared
             namespace: kube-system
+---
+# Source: app-immich/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: immich-post
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: immich
+  - name: immich-pre
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      jobs:
+        immich-bootstrap:
+          activeDeadlineSeconds: 900
+          backoffLimit: 0
+          fullNameOverride: immich-bootstrap-97bd647638
+          template:
+            spec:
+              containers:
+                bootstrap:
+                  args:
+                  - |-
+                    until curl -fsS http://immich-server:2283/api/server/config > /tmp/config; do sleep 5; done
+                    if grep -q '"isInitialized":true' /tmp/config; then echo 'an admin already exists'; exit 0; fi
+                    password=$(printf '%s' "$ADMIN_PASSWORD" | sed 's/\\/\\\\/g; s/"/\\"/g')
+                    curl -fsS -X POST http://immich-server:2283/api/auth/admin-sign-up -H 'Content-Type: application/json' \
+                      -d "{\"email\":\"$ADMIN_EMAIL\",\"name\":\"immich admin\",\"password\":\"$password\"}"
+                  command:
+                  - sh
+                  - -ec
+                  env:
+                    ADMIN_EMAIL: immich-admin@test.com
+                    ADMIN_PASSWORD:
+                      secretKeyRef:
+                        key: password
+                        name: immich-admin
+                  image: curlimages/curl:8.19.0
+                  name: bootstrap
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 1000
+                runAsUser: 1000
 ---
 # Source: app-immich/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -291,7 +357,9 @@ spec:
                     storageQuotaClaim: immich_quota
                     roleClaim: immich_role
                     autoRegister: true
-                    autoLaunch: false
+                    autoLaunch: true # `/auth/login?autoLaunch=0` shows the login page
+                  passwordLogin:
+                    enabled: false # the users and admins come from lldap, see `immich-post`
       secretStores:
         authelia:
           provider:
@@ -309,6 +377,10 @@ spec:
         authelia-reader:
           automountServiceAccountToken: false
       stringSecrets:
+        immich-admin:
+          fields:
+            password:
+              fieldName: password
         immich-valkey:
           fields:
             app:
