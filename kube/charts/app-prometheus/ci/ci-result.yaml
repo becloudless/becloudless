@@ -132,6 +132,7 @@ spec:
   - toFQDNs:
     - matchName: grafana.com
     - matchPattern: '**.grafana.com'
+    - matchName: storage.googleapis.com
     toPorts:
     - ports:
       - port: "443"

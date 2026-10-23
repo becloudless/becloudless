@@ -138,10 +138,11 @@ resources:
           toEntities: {ingress: ingress}
           toPorts:
             https: {ports: {p443: {port: "443", protocol: TCP}}}
-        grafana-com: # the dashboards (init container) and the plugins
+        grafana-com: # the dashboards (init container) and the plugins, whose archives are served by Google Cloud Storage
           toFQDNs:
             grafana: {matchName: grafana.com}
             grafana-subdomains: {matchPattern: "**.grafana.com"}
+            plugins: {matchName: storage.googleapis.com}
           toPorts:
             https: {ports: {p443: {port: "443", protocol: TCP}}}
 
