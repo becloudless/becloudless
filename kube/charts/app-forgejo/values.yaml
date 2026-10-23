@@ -37,8 +37,13 @@ resources:
               matchLabels: {cnpg.io/cluster: forgejo-postgresql}
           toPorts:
             postgresql: {ports: {p5432: {port: "5432", protocol: TCP}}}
-        internet: # the OIDC discovery of authelia goes through the public address of the gateway, mirrors, webhooks, git over ssh
-          toEntities: {world: world, ingress: ingress}
+        gateway: # the OIDC discovery of authelia goes through the public address of the gateway
+          toEntities: {ingress: ingress}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+        internet: # TODO mirrors, webhooks, git over ssh: any name, the destinations are chosen by the users
+          toFQDNs:
+            any: {matchPattern: "*"}
           toPorts:
             out:
               ports:

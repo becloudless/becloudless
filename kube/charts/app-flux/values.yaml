@@ -48,8 +48,17 @@ resources:
               matchLabels: {app: notification-controller}
           toPorts:
             events: {ports: {p9090: {port: "9090", protocol: TCP}}}
-        internet: # the sources, the public addresses are the gateway for the sources hosted in the cluster
-          toEntities: {world: world, ingress: ingress}
+        gateway: # the public addresses of the sources hosted in the cluster are the gateway
+          toEntities: {ingress: ingress}
+          toPorts:
+            sources:
+              ports:
+                p22: {port: "22", protocol: TCP}
+                p80: {port: "80", protocol: TCP}
+                p443: {port: "443", protocol: TCP}
+        internet: # the git repositories, the helm repositories and the OCI registries: any name, the sources are set by the clusters
+          toFQDNs:
+            any: {matchPattern: "*"}
           toPorts:
             sources:
               ports:
@@ -158,8 +167,16 @@ resources:
       egress:
         kube-apiserver:
           toEntities: {apiserver: kube-apiserver}
-        providers: # the notification providers
-          toEntities: {world: world, ingress: ingress}
+        gateway: # the public addresses of the providers hosted in the cluster are the gateway
+          toEntities: {ingress: ingress}
+          toPorts:
+            https:
+              ports:
+                p80: {port: "80", protocol: TCP}
+                p443: {port: "443", protocol: TCP}
+        providers: # the notification providers: any name, the providers are set by the clusters
+          toFQDNs:
+            any: {matchPattern: "*"}
           toPorts:
             https:
               ports:
@@ -184,8 +201,16 @@ resources:
               matchLabels: {app: notification-controller}
           toPorts:
             events: {ports: {p9090: {port: "9090", protocol: TCP}}}
-        git: # the push of the updates
-          toEntities: {world: world, ingress: ingress}
+        gateway: # the public addresses of the repositories hosted in the cluster are the gateway
+          toEntities: {ingress: ingress}
+          toPorts:
+            git:
+              ports:
+                p22: {port: "22", protocol: TCP}
+                p443: {port: "443", protocol: TCP}
+        git: # the push of the updates: any name, the repositories are set by the clusters
+          toFQDNs:
+            any: {matchPattern: "*"}
           toPorts:
             git:
               ports:
@@ -204,8 +229,13 @@ resources:
               matchLabels: {app: notification-controller}
           toPorts:
             events: {ports: {p9090: {port: "9090", protocol: TCP}}}
-        registries:
-          toEntities: {world: world, ingress: ingress}
+        gateway: # the public addresses of the registries hosted in the cluster are the gateway
+          toEntities: {ingress: ingress}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+        registries: # any name, the registries are set by the clusters
+          toFQDNs:
+            any: {matchPattern: "*"}
           toPorts:
             https: {ports: {p443: {port: "443", protocol: TCP}}}
 

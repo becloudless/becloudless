@@ -82,8 +82,11 @@ resources:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
           toPorts:
             http: {ports: {p11334: {port: "11334", protocol: TCP}}}
-        vpn: # the wireguard tunnel of the sidecar
-          toEntities: {world: world}
+        vpn: # the wireguard tunnel of the sidecar, the endpoint is a name of the `wg0.conf`, the port is the one of its peer
+          toFQDNs:
+            endpoint: {matchPattern: "*"}
+          toPorts:
+            wireguard: {ports: {p51820: {port: "51820", protocol: UDP}}}
 
     mailu-admin:
       endpointSelector:
@@ -147,8 +150,16 @@ resources:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
           toPorts:
             milter: {ports: {p11332: {port: "11332", protocol: TCP}}}
-        internet: # the delivery of the mails, the wireguard tunnel of the sidecar
-          toEntities: {world: world}
+        vpn: # the wireguard tunnel of the sidecar, the endpoint is a name of the `wg0.conf`, the port is the one of its peer
+          toFQDNs:
+            endpoint: {matchPattern: "*"}
+          toPorts:
+            wireguard: {ports: {p51820: {port: "51820", protocol: UDP}}}
+        internet: # the delivery of the mails to the mail exchangers of the recipients
+          toFQDNs:
+            any: {matchPattern: "*"}
+          toPorts:
+            smtp: {ports: {p25: {port: "25", protocol: TCP}}}
 
     mailu-dovecot: # the mailboxes
       endpointSelector:
@@ -249,7 +260,9 @@ resources:
             clamav: {ports: {p3310: {port: "3310", protocol: TCP}}}
       egress:
         signatures: # the updates of the virus database
-          toEntities: {world: world}
+          toFQDNs:
+            clamav: {matchName: clamav.net}
+            clamav-subdomains: {matchPattern: "**.clamav.net"}
           toPorts:
             web:
               ports:

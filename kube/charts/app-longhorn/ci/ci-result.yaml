@@ -112,8 +112,10 @@ metadata:
   namespace: default
 spec:
   egress:
-  - toEntities:
-    - world
+  - toFQDNs:
+    - matchName: backupstore
+    - matchName: backupstore.test.com
+    - matchName: backupstore.longhorn-system.svc.cluster.local
     toPorts:
     - ports:
       - port: "445"
@@ -173,8 +175,10 @@ metadata:
   namespace: default
 spec:
   egress:
-  - toEntities:
-    - world
+  - toFQDNs:
+    - matchName: backupstore
+    - matchName: backupstore.test.com
+    - matchName: backupstore.longhorn-system.svc.cluster.local
     toPorts:
     - ports:
       - port: "445"

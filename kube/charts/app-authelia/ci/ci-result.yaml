@@ -15,8 +15,8 @@ spec:
     - ports:
       - port: "6360"
         protocol: TCP
-  - toEntities:
-    - world
+  - toFQDNs:
+    - matchName: time.cloudflare.com
     toPorts:
     - ports:
       - port: "123"

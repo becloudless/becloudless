@@ -80,8 +80,8 @@ resources:
                 configBlock: |-
                   pods verified
                   fallthrough in-addr.arpa ip6.arpa
-              - name: autopath
-                parameters: "@kubernetes"
+              # no `autopath`: it answers the first search domain query (`name.namespace.svc.cluster.local`) with the final address, so
+              # Cilium learns the addresses under that name and the `toFQDNs` rules (matching `name`) never match.
               - name: forward
                 parameters: . /etc/resolv.conf
                 configBlock: |-

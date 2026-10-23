@@ -9,7 +9,12 @@ spec:
   egress:
   - toEntities:
     - ingress
-    - world
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toFQDNs:
+    - matchPattern: '*'
     toPorts:
     - ports:
       - port: "22"

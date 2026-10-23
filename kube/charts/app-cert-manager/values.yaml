@@ -15,8 +15,23 @@ resources:
       egress:
         kube-apiserver:
           toEntities: {apiserver: kube-apiserver}
-        acme: # ACME, and the self check of the http-01 challenge that goes through the public address of the gateway
-          toEntities: {world: world, ingress: ingress}
+        acme: # the ACME servers of the issuers (production and staging)
+          toFQDNs:
+            letsencrypt: {matchName: acme-v02.api.letsencrypt.org}
+            letsencrypt-staging: {matchName: acme-staging-v02.api.letsencrypt.org}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+        self-check: # the self check of the http-01 challenge: the names of the domain served by an external address (mail)
+          toFQDNs:
+            domain: {matchName: "{{ .Values.global.domain }}"}
+            subdomains: {matchPattern: "**.{{ .Values.global.domain }}"}
+          toPorts:
+            web:
+              ports:
+                p80: {port: "80", protocol: TCP}
+                p443: {port: "443", protocol: TCP}
+        gateway: # the self check of the http-01 challenge goes through the public address of the gateway
+          toEntities: {ingress: ingress}
           toPorts:
             web:
               ports:

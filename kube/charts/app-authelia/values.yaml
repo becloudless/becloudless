@@ -44,7 +44,8 @@ resources:
           toPorts:
             postgresql: {ports: {p5432: {port: "5432", protocol: TCP}}}
         ntp: # the startup check of the clock (`ntp` of the configuration)
-          toEntities: {world: world}
+          toFQDNs:
+            cloudflare: {matchName: time.cloudflare.com} # TODO check why
           toPorts:
             ntp: {ports: {p123: {port: "123", protocol: UDP}}}
 

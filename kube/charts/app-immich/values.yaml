@@ -67,8 +67,13 @@ resources:
               matchLabels: {app.kubernetes.io/name: machine-learning}
           toPorts:
             http: {ports: {p3003: {port: "3003", protocol: TCP}}}
-        internet: # the OIDC issuer is the public address of authelia
-          toEntities: {world: world, ingress: ingress}
+        authelia: # the OIDC issuer is the public address of authelia
+          toFQDNs:
+            authelia: {matchName: "authelia.{{ .Values.global.domain }}"}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+        gateway: # the public addresses of the cluster are the gateway for the pods
+          toEntities: {ingress: ingress}
           toPorts:
             https: {ports: {p443: {port: "443", protocol: TCP}}}
 
@@ -83,8 +88,12 @@ resources:
           toPorts:
             http: {ports: {p3003: {port: "3003", protocol: TCP}}}
       egress:
-        internet:
-          toEntities: {world: world}
+        huggingface: # the models, served by the CDNs of the hub
+          toFQDNs:
+            hub: {matchName: huggingface.co}
+            hub-subdomains: {matchPattern: "**.huggingface.co"}
+            cdn: {matchName: hf.co}
+            cdn-subdomains: {matchPattern: "**.hf.co"}
           toPorts:
             https: {ports: {p443: {port: "443", protocol: TCP}}}
 

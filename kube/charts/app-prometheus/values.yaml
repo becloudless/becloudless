@@ -125,8 +125,19 @@ resources:
               matchLabels: {app.kubernetes.io/name: alertmanager}
           toPorts:
             http: {ports: {p9093: {port: "9093", protocol: TCP}}}
-        internet: # the OIDC issuer is the public address of authelia, the dashboards (init container) and the plugins come from grafana.com
-          toEntities: {world: world, ingress: ingress}
+        authelia: # the OIDC issuer is the public address of authelia
+          toFQDNs:
+            authelia: {matchName: "authelia.{{ .Values.global.domain }}"}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+        gateway: # the public addresses of the cluster are the gateway for the pods
+          toEntities: {ingress: ingress}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+        grafana-com: # the dashboards (init container) and the plugins
+          toFQDNs:
+            grafana: {matchName: grafana.com}
+            grafana-subdomains: {matchPattern: "**.grafana.com"}
           toPorts:
             https: {ports: {p443: {port: "443", protocol: TCP}}}
 

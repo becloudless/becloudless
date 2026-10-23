@@ -179,4 +179,7 @@ resources:
                       ports:
                         udp: {port: "53", protocol: UDP}
                         tcp: {port: "53", protocol: TCP}
+                      rules: # the DNS proxy of Cilium learns the addresses behind the names, needed by the `toFQDNs` rules of the apps
+                        dns:
+                          all: {matchPattern: "*"}
 

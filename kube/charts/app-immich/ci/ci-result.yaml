@@ -42,8 +42,11 @@ metadata:
   namespace: default
 spec:
   egress:
-  - toEntities:
-    - world
+  - toFQDNs:
+    - matchName: hf.co
+    - matchPattern: '**.hf.co'
+    - matchName: huggingface.co
+    - matchPattern: '**.huggingface.co'
     toPorts:
     - ports:
       - port: "443"
@@ -69,9 +72,14 @@ metadata:
   namespace: default
 spec:
   egress:
+  - toFQDNs:
+    - matchName: authelia.test.com
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
   - toEntities:
     - ingress
-    - world
     toPorts:
     - ports:
       - port: "443"

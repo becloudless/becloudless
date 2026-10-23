@@ -117,9 +117,21 @@ spec:
     - ports:
       - port: "9093"
         protocol: TCP
+  - toFQDNs:
+    - matchName: authelia.test.com
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
   - toEntities:
     - ingress
-    - world
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toFQDNs:
+    - matchName: grafana.com
+    - matchPattern: '**.grafana.com'
     toPorts:
     - ports:
       - port: "443"

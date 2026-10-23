@@ -59,7 +59,14 @@ spec:
   egress:
   - toEntities:
     - ingress
-    - world
+    toPorts:
+    - ports:
+      - port: "22"
+        protocol: TCP
+      - port: "443"
+        protocol: TCP
+  - toFQDNs:
+    - matchPattern: '*'
     toPorts:
     - ports:
       - port: "22"
@@ -95,6 +102,12 @@ metadata:
 spec:
   egress:
   - toEntities:
+    - ingress
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toEntities:
     - kube-apiserver
   - toEndpoints:
     - matchLabels:
@@ -103,9 +116,8 @@ spec:
     - ports:
       - port: "9090"
         protocol: TCP
-  - toEntities:
-    - ingress
-    - world
+  - toFQDNs:
+    - matchPattern: '*'
     toPorts:
     - ports:
       - port: "443"
@@ -158,10 +170,17 @@ metadata:
 spec:
   egress:
   - toEntities:
-    - kube-apiserver
-  - toEntities:
     - ingress
-    - world
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+      - port: "80"
+        protocol: TCP
+  - toEntities:
+    - kube-apiserver
+  - toFQDNs:
+    - matchPattern: '*'
     toPorts:
     - ports:
       - port: "443"
@@ -206,7 +225,16 @@ spec:
   egress:
   - toEntities:
     - ingress
-    - world
+    toPorts:
+    - ports:
+      - port: "22"
+        protocol: TCP
+      - port: "443"
+        protocol: TCP
+      - port: "80"
+        protocol: TCP
+  - toFQDNs:
+    - matchPattern: '*'
     toPorts:
     - ports:
       - port: "22"

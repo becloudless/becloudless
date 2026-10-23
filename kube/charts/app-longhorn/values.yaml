@@ -68,8 +68,11 @@ resources:
               matchLabels: {longhorn.io/component: share-manager}
           toPorts:
             grpc: {ports: {p9600: {port: "9600", protocol: TCP}}}
-        backup-target: # the backup target (`defaultBackupStore`) is a CIFS share of the LAN
-          toEntities: {world: world}
+        backup-target: # the backup target (`defaultBackupStore`) is a CIFS share of the LAN, the name is resolved with the search domains
+          toFQDNs:
+            backupstore: {matchName: backupstore}
+            backupstore-svc: {matchName: backupstore.longhorn-system.svc.cluster.local}
+            backupstore-domain: {matchName: "backupstore.{{ .Values.global.domain }}"}
           toPorts:
             cifs: {ports: {p445: {port: "445", protocol: TCP}}}
 
@@ -136,7 +139,10 @@ resources:
           toPorts:
             api: {ports: {p9500: {port: "9500", protocol: TCP}}}
         backup-target:
-          toEntities: {world: world}
+          toFQDNs:
+            backupstore: {matchName: backupstore}
+            backupstore-svc: {matchName: backupstore.longhorn-system.svc.cluster.local}
+            backupstore-domain: {matchName: "backupstore.{{ .Values.global.domain }}"}
           toPorts:
             cifs: {ports: {p445: {port: "445", protocol: TCP}}}
 

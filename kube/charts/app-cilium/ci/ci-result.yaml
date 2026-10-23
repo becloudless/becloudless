@@ -112,6 +112,10 @@ spec:
                     udp:
                       port: "53"
                       protocol: UDP
+                  rules:
+                    dns:
+                      all:
+                        matchPattern: '*'
           endpointSelector:
             matchExpressions:
               any-namespace:
