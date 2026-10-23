@@ -134,7 +134,15 @@ spec:
                       if (!login.ok) login = await signIn({});
                       if (login.ok) {
                         fs.writeFileSync(marker, new Date().toISOString());
-                        console.log('administrator created');
+                        // turns the other logins off now (`configure.js` does it at each start from now on)
+                        const cookie = (login.headers.getSetCookie() || []).map((c) => c.split(';')[0]).join('; ');
+                        const off = await fetch(api + '/settings/main', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', Cookie: cookie },
+                          body: JSON.stringify({ localLogin: false, mediaServerLogin: false, newPlexLogin: false }),
+                          signal: AbortSignal.timeout(30000),
+                        });
+                        console.log('administrator created, the other logins are turned off: ' + off.status);
                         return idle();
                       }
                       console.log('administrator not created: ' + login.status + ' ' + (await login.text()));
@@ -240,6 +248,13 @@ spec:
                 }
 
                 settings.main.oidcLogin = true;
+                // Only the SSO login is left once the administrator exists (`admin.js` needs the jellyfin login to create it, and
+                // turns the others off right after). No password, no jellyfin login, and no new user from jellyfin (quick connect).
+                if (fs.existsSync(marker)) {
+                  settings.main.localLogin = false;
+                  settings.main.mediaServerLogin = false;
+                  settings.main.newPlexLogin = false;
+                }
                 settings.main.applicationUrl = env.APP_URL; // the redirect uri of the login
                 settings.network = settings.network || {};
                 settings.network.trustProxy = true; // behind the gateway

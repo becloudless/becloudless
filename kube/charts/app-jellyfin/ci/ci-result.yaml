@@ -158,6 +158,13 @@ spec:
                 const login = await jellyfin('POST', '/Users/AuthenticateByName', { Username: env.JELLYFIN_USER, Pw: env.JELLYFIN_PASSWORD });
                 const token = login.AccessToken;
 
+                // the name of the server (the pod name by default) is the name of the cluster
+                const system = await jellyfin('GET', '/System/Configuration', undefined, token);
+                if (system.ServerName !== env.SERVER_NAME) {
+                  await jellyfin('POST', '/System/Configuration', Object.assign({}, system, { ServerName: env.SERVER_NAME }), token);
+                  console.log('server name set to ' + env.SERVER_NAME);
+                }
+
                 // https://github.com/9p4/jellyfin-plugin-sso/blob/main/providers.md#authelia (the plugin answers 404 until it is loaded)
                 await jellyfin('POST', '/sso/OID/Add/authelia', {
                   oidEndpoint: env.ISSUER_URL,
@@ -223,6 +230,7 @@ spec:
                     JELLYFIN_URL: http://127.0.0.1:8096
                     JELLYFIN_USER: admin
                     PUBLIC_URL: https://jellyfin.test.com
+                    SERVER_NAME: test
                   image: docker.io/library/node:22.23.4-alpine
                   name: configure
                   securityContext:

@@ -4,7 +4,8 @@ global:
   name:
 
 # Nothing has to be done by hand, the pod configures jellyfin (see `configure.js`):
-#  - the setup wizard is completed: the `admin` user, its password is generated in `jellyfin-admin` (seerr uses it too);
+#  - the setup wizard is completed: the `admin` user, its password is generated in `jellyfin-admin` (seerr uses it too), and the name of
+#    the server is `global.name`;
 #  - SSO with Authelia (OIDC client `jellyfin`) with the SSO plugin https://github.com/9p4/jellyfin-plugin-sso (archived, the last release
 #    is pinned and checked by its checksum), installed by the `sso-plugin` init container. The `Sign in with Authelia` button is added
 #    on the login page of the web UI. The users of the groups `app_jellyfin` are created at their first login, those of `role_admin` are
@@ -227,6 +228,13 @@ resources:
                     const login = await jellyfin('POST', '/Users/AuthenticateByName', { Username: env.JELLYFIN_USER, Pw: env.JELLYFIN_PASSWORD });
                     const token = login.AccessToken;
 
+                    // the name of the server (the pod name by default) is the name of the cluster
+                    const system = await jellyfin('GET', '/System/Configuration', undefined, token);
+                    if (system.ServerName !== env.SERVER_NAME) {
+                      await jellyfin('POST', '/System/Configuration', Object.assign({}, system, { ServerName: env.SERVER_NAME }), token);
+                      console.log('server name set to ' + env.SERVER_NAME);
+                    }
+
                     // https://github.com/9p4/jellyfin-plugin-sso/blob/main/providers.md#authelia (the plugin answers 404 until it is loaded)
                     await jellyfin('POST', '/sso/OID/Add/authelia', {
                       oidEndpoint: env.ISSUER_URL,
@@ -330,6 +338,7 @@ resources:
                             name: jellyfin-admin
                             key: password
                         PUBLIC_URL: https://jellyfin.{{ .Values.global.domain }}
+                        SERVER_NAME: "{{ .Values.global.name }}"
                         ISSUER_URL: https://authelia.{{ .Values.global.domain }}
                         CLIENT_SECRET:
                           secretKeyRef:
