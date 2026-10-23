@@ -90,6 +90,7 @@ resources:
           autoDeletePodWhenVolumeDetachedUnexpectedly: true
           nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
           nodeDrainPolicy: always-allow
+          storageReservedPercentageForDefaultDisk: 5 # only for new disks
 
         defaultBackupStore:
           backupTarget: cifs://backupstore/backupstore
