@@ -22,6 +22,12 @@ metadata:
   namespace: default
 spec:
   egress:
+  - toFQDNs:
+    - matchName: charts.authelia.com
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
   - toEntities:
     - kube-apiserver
   - toEndpoints:

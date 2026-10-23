@@ -120,6 +120,12 @@ resources:
               matchLabels: {app: notification-controller}
           toPorts:
             events: {ports: {p9090: {port: "9090", protocol: TCP}}}
+        # TODO
+        chart-schemas: # the values schema of the authelia chart references `definitions.json`, loaded by helm at each install/upgrade
+          toFQDNs:
+            authelia: {matchName: charts.authelia.com}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
 
     kustomize-controller:
       endpointSelector:
