@@ -193,6 +193,13 @@ resources:
                   resources: [ secrets ]
                   resourceNames: [ authelia-oidc-forgejo ]
                   verbs: [ get ]
+            grafana-secrets-reader:
+              rules:
+                secrets:
+                  apiGroups: [ "" ]
+                  resources: [ secrets ]
+                  resourceNames: [ authelia-oidc-grafana ]
+                  verbs: [ get ]
 
           roleBindings:
             immich-secrets-reader:
@@ -215,6 +222,16 @@ resources:
                   kind: ServiceAccount
                   name: authelia-reader
                   namespace: forgejo
+            grafana-secrets-reader:
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: Role
+                name: grafana-secrets-reader
+              subjects:
+                authelia-reader:
+                  kind: ServiceAccount
+                  name: authelia-reader
+                  namespace: prometheus
 
           externalSecrets:
             authelia-ldap:

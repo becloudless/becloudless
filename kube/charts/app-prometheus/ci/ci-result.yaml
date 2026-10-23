@@ -263,6 +263,7 @@ spec:
   dependsOn:
   - name: app-longhorn
     namespace: longhorn-system
+  - name: prometheus-pre
   driftDetection:
     mode: enabled
   install:
@@ -407,7 +408,29 @@ spec:
             datasource: Prometheus
             gnetId: 9955
             revision: 1
+      envValueFrom:
+        GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET:
+          secretKeyRef:
+            key: secret
+            name: grafana-oidc
       grafana.ini:
+        auth.generic_oauth:
+          api_url: https://authelia.test.com/api/oidc/userinfo
+          auth_url: https://authelia.test.com/api/oidc/authorization
+          auto_login: true
+          client_id: grafana
+          empty_scopes: false
+          enabled: true
+          groups_attribute_path: groups
+          icon: signin
+          login_attribute_path: preferred_username
+          name: Authelia
+          name_attribute_path: name
+          role_attribute_path: contains(groups[*], 'role_admin') && 'Admin' || contains(groups[*],
+            'role_editor') && 'Editor' || 'Viewer'
+          scopes: openid profile email groups
+          token_url: https://authelia.test.com/api/oidc/token
+          use_pkce: true
         server:
           root_url: https://grafana.test.com
       ingress:
@@ -742,6 +765,71 @@ spec:
             kind: Gateway
             name: shared
             namespace: kube-system
+---
+# Source: app-prometheus/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: prometheus-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: authelia-pre
+    namespace: authelia
+  - name: app-external-secrets
+    namespace: external-secrets
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      externalSecrets:
+        grafana-oidc:
+          data:
+            secret:
+              remoteRef:
+                key: authelia-oidc-grafana
+                property: secret
+              secretKey: secret
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: SecretStore
+            name: authelia
+      secretStores:
+        authelia:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: authelia-reader
+              remoteNamespace: authelia
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        authelia-reader:
+          automountServiceAccountToken: false
 ---
 # Source: app-prometheus/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

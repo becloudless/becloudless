@@ -668,6 +668,16 @@ spec:
               kind: ServiceAccount
               name: authelia-reader
               namespace: forgejo
+        grafana-secrets-reader:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: grafana-secrets-reader
+          subjects:
+            authelia-reader:
+              kind: ServiceAccount
+              name: authelia-reader
+              namespace: prometheus
         immich-secrets-reader:
           roleRef:
             apiGroup: rbac.authorization.k8s.io
@@ -686,6 +696,17 @@ spec:
               - ""
               resourceNames:
               - authelia-oidc-forgejo
+              resources:
+              - secrets
+              verbs:
+              - get
+        grafana-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - authelia-oidc-grafana
               resources:
               - secrets
               verbs:
