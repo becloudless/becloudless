@@ -211,6 +211,13 @@ spec:
               - policy: one_factor
                 subject:
                 - group:app_immich_one_factor
+            jellyfin_authz:
+              default_policy: deny
+              rules:
+              - policy: two_factor
+                subject:
+                - group:role_admin
+                - group:app_jellyfin
             seerr_authz:
               default_policy: deny
               rules:
@@ -279,7 +286,7 @@ spec:
             token_endpoint_auth_method: client_secret_basic
             userinfo_signed_response_alg: none
           - access_token_signed_response_alg: none
-            authorization_policy: two_factor
+            authorization_policy: jellyfin_authz
             client_id: jellyfin
             client_name: Jellyfin
             client_secret:
@@ -722,6 +729,16 @@ spec:
               kind: ServiceAccount
               name: authelia-reader
               namespace: immich
+        jellyfin-secrets-reader:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: jellyfin-secrets-reader
+          subjects:
+            authelia-reader:
+              kind: ServiceAccount
+              name: authelia-reader
+              namespace: jellyfin
         seerr-secrets-reader:
           roleRef:
             apiGroup: rbac.authorization.k8s.io
@@ -762,6 +779,17 @@ spec:
               - ""
               resourceNames:
               - authelia-oidc-immich
+              resources:
+              - secrets
+              verbs:
+              - get
+        jellyfin-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - authelia-oidc-jellyfin
               resources:
               - secrets
               verbs:

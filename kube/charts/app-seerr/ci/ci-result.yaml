@@ -101,6 +101,166 @@ spec:
       retryInterval: 5m
   values:
     resources:
+      configMaps:
+        seerr-scripts:
+          data:
+            admin.js: |-
+              const fs = require('fs');
+              const env = process.env;
+              const marker = '/app/config/.admin-created';
+              const api = 'http://127.0.0.1:5055/api/v1';
+              const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+              const idle = () => setInterval(() => {}, 1 << 30); // the container has to keep running
+
+              (async () => {
+                if (fs.existsSync(marker)) return idle();
+                for (let i = 0; i < 120; i++) { // 10 minutes
+                  try {
+                    const res = await fetch(api + '/settings/public', { signal: AbortSignal.timeout(10000) });
+                    if (res.ok) {
+                      const pub = await res.json();
+                      if (!pub.initialized || pub.mediaServerType !== 2) {
+                        console.log('seerr is not configured with jellyfin, no administrator to create');
+                        return idle();
+                      }
+                      const signIn = (extra) => fetch(api + '/auth/jellyfin', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(Object.assign({ username: env.JELLYFIN_USER, password: env.JELLYFIN_PASSWORD, email: env.ADMIN_EMAIL, serverType: 2 }, extra)),
+                        signal: AbortSignal.timeout(30000),
+                      });
+                      // seerr takes the address of jellyfin from the first login, and refuses it when it already has one (existing install)
+                      let login = await signIn({ hostname: env.JELLYFIN_HOST, port: 8096, useSsl: false, urlBase: '' });
+                      if (!login.ok) login = await signIn({});
+                      if (login.ok) {
+                        fs.writeFileSync(marker, new Date().toISOString());
+                        console.log('administrator created');
+                        return idle();
+                      }
+                      console.log('administrator not created: ' + login.status + ' ' + (await login.text()));
+                    }
+                  } catch (e) {
+                    console.log('waiting for seerr: ' + e.message);
+                  }
+                  await sleep(5000);
+                }
+                idle();
+              })();
+            configure.js: |-
+              const fs = require('fs');
+              const env = process.env;
+              const file = '/app/config/settings.json';
+              const marker = '/app/config/.admin-created';
+              const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+              const header = (token) =>
+                'MediaBrowser Client="Seerr", Device="Seerr", DeviceId="seerr-configure", Version="1.0"' +
+                (token ? ', Token="' + token + '"' : '');
+
+              async function jellyfin(method, path, body, token) {
+                const res = await fetch(env.JELLYFIN_URL + path, {
+                  method: method,
+                  headers: { Authorization: header(token), 'Content-Type': 'application/json', Accept: 'application/json' },
+                  body: body === undefined ? undefined : JSON.stringify(body),
+                  signal: AbortSignal.timeout(15000),
+                });
+                if (!res.ok) throw new Error(method + ' ' + path + ': ' + res.status);
+                const text = await res.text();
+                return text ? JSON.parse(text) : undefined;
+              }
+
+              async function configureJellyfin(settings) {
+                let info;
+                for (let i = 0; i < 60 && !(info && info.StartupWizardCompleted); i++) { // 5 minutes
+                  try {
+                    info = await jellyfin('GET', '/System/Info/Public');
+                    if (info.StartupWizardCompleted) break;
+                    console.log('waiting for the setup wizard of jellyfin');
+                  } catch (e) {
+                    console.log('waiting for jellyfin: ' + e.message);
+                  }
+                  await sleep(5000);
+                }
+                if (!info || !info.StartupWizardCompleted) {
+                  console.log('jellyfin is not ready, its settings are left as they are');
+                  return;
+                }
+
+                const login = await jellyfin('POST', '/Users/AuthenticateByName', { Username: env.JELLYFIN_USER, Pw: env.JELLYFIN_PASSWORD });
+                const keys = async () => (await jellyfin('GET', '/Auth/Keys', undefined, login.AccessToken)).Items.filter((k) => k.AppName === 'Seerr');
+                let found = await keys();
+                if (found.length === 0) {
+                  await jellyfin('POST', '/Auth/Keys?App=Seerr', undefined, login.AccessToken);
+                  found = await keys();
+                }
+                const apiKey = found[found.length - 1].AccessToken;
+
+                const known = new Map((((settings.jellyfin || {}).libraries) || []).map((l) => [l.id, l]));
+                const excluded = ['music', 'books', 'musicvideos', 'homevideos', 'boxsets'];
+                const folders = await jellyfin('GET', '/Library/MediaFolders', undefined, apiKey);
+                const libraries = folders.Items
+                  .filter((f) => f.Type === 'CollectionFolder' && !excluded.includes(f.CollectionType))
+                  .map((f) => ({
+                    id: f.Id,
+                    name: f.Name,
+                    type: f.CollectionType === 'movies' ? 'movie' : 'show',
+                    enabled: known.has(f.Id) ? known.get(f.Id).enabled : true,
+                  }));
+
+                // The first login (`admin.js`) gives the address itself and seerr refuses it when it is already set: it stays empty
+                // until the administrator is created (an existing seerr already has its address).
+                const keepIp = fs.existsSync(marker) || !!(settings.jellyfin && settings.jellyfin.ip);
+                settings.main.mediaServerType = 2; // jellyfin
+                settings.jellyfin = Object.assign({}, settings.jellyfin, {
+                  name: info.ServerName,
+                  ip: keepIp ? env.JELLYFIN_HOST : '',
+                  port: Number(env.JELLYFIN_PORT),
+                  useSsl: false,
+                  urlBase: '',
+                  externalHostname: env.JELLYFIN_EXTERNAL_URL,
+                  serverId: info.Id,
+                  apiKey: apiKey,
+                  libraries: libraries,
+                });
+                settings.public = Object.assign({}, settings.public, { initialized: true }); // no setup wizard
+                console.log('jellyfin configured, ' + libraries.length + ' libraries');
+              }
+
+              (async () => {
+                const settings = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
+                settings.main = settings.main || {};
+                // the values the settings migrations of seerr set when they are missing
+                if (settings.main.discoverRegion === undefined) settings.main.discoverRegion = '';
+                if (settings.main.streamingRegion === undefined) settings.main.streamingRegion = '';
+
+                try {
+                  await configureJellyfin(settings);
+                } catch (e) {
+                  console.log('jellyfin is not configured: ' + e.message);
+                }
+
+                settings.main.oidcLogin = true;
+                settings.main.applicationUrl = env.APP_URL; // the redirect uri of the login
+                settings.network = settings.network || {};
+                settings.network.trustProxy = true; // behind the gateway
+                settings.oidc = {
+                  providers: [{
+                    slug: 'authelia',
+                    name: 'Authelia',
+                    issuerUrl: env.ISSUER_URL,
+                    clientId: 'seerr',
+                    clientSecret: env.CLIENT_SECRET,
+                    scopes: 'openid profile email',
+                    newUserLogin: true,
+                  }],
+                };
+
+                fs.writeFileSync(file + '.tmp', JSON.stringify(settings, null, 1));
+                fs.renameSync(file + '.tmp', file);
+              })().catch((e) => {
+                console.error(e);
+                process.exit(1);
+              });
       deployments:
         seerr:
           replicas: 1
@@ -115,6 +275,39 @@ spec:
                 app.kubernetes.io/name: seerr
             spec:
               containers:
+                admin:
+                  command:
+                  - node
+                  - /scripts/admin.js
+                  env:
+                    ADMIN_EMAIL: admin@test.com
+                    JELLYFIN_HOST: jellyfin.jellyfin
+                    JELLYFIN_PASSWORD:
+                      secretKeyRef:
+                        key: password
+                        name: seerr-jellyfin
+                    JELLYFIN_USER: admin
+                  image: ghcr.io/seerr-team/seerr:preview-new-oidc@sha256:28744b1ced522beb7af8e5c966b73c6e46b1dc2c4c8cb497ad2f12d3139699a3
+                  name: admin
+                  securityContext:
+                    allowPrivilegeEscalation: false
+                    capabilities:
+                      drop:
+                        all: ALL
+                    readOnlyRootFilesystem: true
+                    runAsGroup: 1000
+                    runAsNonRoot: true
+                    runAsUser: 1000
+                    seccompProfile:
+                      type: RuntimeDefault
+                  volumeMounts:
+                    config:
+                      mountPath: /app/config
+                      name: config
+                    scripts:
+                      mountPath: /scripts
+                      name: scripts
+                      readOnly: true
                 seerr:
                   env:
                     DB_HOST: seerr-postgresql-rw
@@ -167,37 +360,10 @@ spec:
                       mountPath: /app/config
                       name: config
               initContainers:
-                oidc:
-                  args:
-                  - |-
-                    const fs = require('fs');
-                    const file = '/app/config/settings.json';
-                    if (!fs.existsSync(file)) {
-                      console.log('no settings.json yet, restart the deployment once seerr has started');
-                      process.exit(0);
-                    }
-                    const settings = JSON.parse(fs.readFileSync(file, 'utf8'));
-                    settings.main = settings.main || {};
-                    settings.main.oidcLogin = true;
-                    settings.main.applicationUrl = process.env.APP_URL; // the redirect uri of the login
-                    settings.network = settings.network || {};
-                    settings.network.trustProxy = true; // behind the gateway
-                    settings.oidc = {
-                      providers: [{
-                        slug: 'authelia',
-                        name: 'Authelia',
-                        issuerUrl: process.env.ISSUER_URL,
-                        clientId: 'seerr',
-                        clientSecret: process.env.CLIENT_SECRET,
-                        scopes: 'openid profile email',
-                        newUserLogin: true,
-                      }],
-                    };
-                    fs.writeFileSync(file + '.tmp', JSON.stringify(settings, null, 1));
-                    fs.renameSync(file + '.tmp', file);
+                configure:
                   command:
                   - node
-                  - -e
+                  - /scripts/configure.js
                   env:
                     APP_URL: https://seerr.test.com
                     CLIENT_SECRET:
@@ -205,8 +371,17 @@ spec:
                         key: secret
                         name: seerr-oidc
                     ISSUER_URL: https://authelia.test.com
+                    JELLYFIN_EXTERNAL_URL: https://jellyfin.test.com
+                    JELLYFIN_HOST: jellyfin.jellyfin
+                    JELLYFIN_PASSWORD:
+                      secretKeyRef:
+                        key: password
+                        name: seerr-jellyfin
+                    JELLYFIN_PORT: "8096"
+                    JELLYFIN_URL: http://jellyfin.jellyfin:8096
+                    JELLYFIN_USER: admin
                   image: ghcr.io/seerr-team/seerr:preview-new-oidc@sha256:28744b1ced522beb7af8e5c966b73c6e46b1dc2c4c8cb497ad2f12d3139699a3
-                  name: oidc
+                  name: configure
                   securityContext:
                     allowPrivilegeEscalation: false
                     capabilities:
@@ -222,6 +397,10 @@ spec:
                     config:
                       mountPath: /app/config
                       name: config
+                    scripts:
+                      mountPath: /scripts
+                      name: scripts
+                      readOnly: true
               securityContext:
                 fsGroup: 1000
                 fsGroupChangePolicy: OnRootMismatch
@@ -230,6 +409,10 @@ spec:
                   name: config
                   persistentVolumeClaim:
                     claimName: seerr-config
+                scripts:
+                  configMap:
+                    name: seerr-scripts
+                  name: scripts
       persistentVolumeClaims:
         seerr-config:
           accessModes:
@@ -392,6 +575,8 @@ spec:
     namespace: authelia
   - name: app-external-secrets
     namespace: external-secrets
+  - name: jellyfin-pre
+    namespace: jellyfin
   driftDetection:
     mode: enabled
   install:
@@ -409,6 +594,17 @@ spec:
   values:
     resources:
       externalSecrets:
+        seerr-jellyfin:
+          data:
+            password:
+              remoteRef:
+                key: jellyfin-admin
+                property: password
+              secretKey: password
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: SecretStore
+            name: jellyfin
         seerr-oidc:
           data:
             secret:
@@ -433,6 +629,20 @@ spec:
                   key: ca.crt
                   name: kube-root-ca.crt
                   type: ConfigMap
+        jellyfin:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: jellyfin-reader
+              remoteNamespace: jellyfin
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
       serviceAccounts:
         authelia-reader:
+          automountServiceAccountToken: false
+        jellyfin-reader:
           automountServiceAccountToken: false

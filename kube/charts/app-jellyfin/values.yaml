@@ -3,9 +3,16 @@ global:
   domain:
   name:
 
-# Nothing has to be created by hand: the admin user is created in the setup wizard of the web UI at the first visit.
+# Nothing has to be done by hand, the pod configures jellyfin (see `configure.js`):
+#  - the setup wizard is completed: the `admin` user, its password is generated in `jellyfin-admin` (seerr uses it too);
+#  - SSO with Authelia (OIDC client `jellyfin`) with the SSO plugin https://github.com/9p4/jellyfin-plugin-sso (archived, the last release
+#    is pinned and checked by its checksum), installed by the `sso-plugin` init container. The `Sign in with Authelia` button is added
+#    on the login page of the web UI. The users of the groups `app_jellyfin` are created at their first login, those of `role_admin` are
+#    administrators. The client secret is generated in the authelia namespace and copied by external-secrets (see `jellyfin-pre`).
+#    SSO works in the web UI (and Quick Connect for the other clients), the TV and mobile apps use the local users (a user created by
+#    SSO has a random password, set one in its profile). An SSO user with the name of an existing user (`admin`) takes its permissions.
 # The media library is the `/data/Media` directory of the node running the pod (read only), add it as a library in the UI (`/media`).
-# Not configured: SSO (needs the SSO plugin and the authelia OIDC client, which is disabled) and the remote transcoding with ffmpeg-over-ip.
+# Not configured: the remote transcoding with ffmpeg-over-ip.
 
 resources:
 
@@ -25,9 +32,111 @@ resources:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": seerr, "k8s:app.kubernetes.io/name": seerr}
           toPorts:
             http: {ports: {p8096: {port: "8096", protocol: TCP}}}
+      egress:
+        authelia: # the OIDC issuer is the public address of authelia
+          toFQDNs:
+            authelia: {matchName: "authelia.{{ .Values.global.domain }}"}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+        gateway: # the public addresses of the cluster are the gateway for the pods
+          toEntities: {ingress: ingress}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+        github: # the download of the SSO plugin (release asset), by the init container
+          toFQDNs:
+            github: {matchName: github.com}
+            release-assets: {matchName: release-assets.githubusercontent.com}
+            objects: {matchName: objects.githubusercontent.com}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
 
   fluxHelmReleases:
+    # the secrets of jellyfin: the OIDC client (copied from authelia) and the administrator, before jellyfin starts
+    jellyfin-pre:
+      dependsOn:
+        external-secrets:
+          name: app-external-secrets
+          namespace: external-secrets
+        secret-generator:
+          name: app-secret-generator
+          namespace: secret-generator
+        authelia-pre: # the generated secret of the client and the right to read it
+          name: authelia-pre
+          namespace: authelia
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          # password of the `admin` user, created by the setup wizard that the `configure` container completes
+          stringSecrets:
+            jellyfin-admin:
+              fields:
+                password:
+                  fieldName: password
+
+          # lets seerr (its SecretStore) read the password of the administrator, and only this secret
+          roles:
+            seerr-secrets-reader:
+              rules:
+                secrets:
+                  apiGroups: [ "" ]
+                  resources: [ secrets ]
+                  resourceNames: [ jellyfin-admin ]
+                  verbs: [ get ]
+
+          roleBindings:
+            seerr-secrets-reader:
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: Role
+                name: seerr-secrets-reader
+              subjects:
+                jellyfin-reader:
+                  kind: ServiceAccount
+                  name: jellyfin-reader
+                  namespace: seerr
+
+          serviceAccounts:
+            authelia-reader:
+              automountServiceAccountToken: false # only used by external-secrets to get a token
+
+          secretStores:
+            authelia:
+              provider:
+                kubernetes:
+                  remoteNamespace: authelia
+                  server:
+                    caProvider:
+                      type: ConfigMap
+                      name: kube-root-ca.crt
+                      key: ca.crt
+                  auth:
+                    serviceAccount:
+                      name: authelia-reader
+
+          externalSecrets:
+            jellyfin-oidc:
+              refreshInterval: 1h
+              secretStoreRef:
+                kind: SecretStore
+                name: authelia
+              data:
+                secret:
+                  secretKey: secret
+                  remoteRef:
+                    key: authelia-oidc-jellyfin
+                    property: secret
+
     jellyfin:
+      dependsOn:
+        jellyfin-pre: # the secrets of the OIDC client and of the administrator
+          name: jellyfin-pre
       chart:
         spec:
           chart: ./kube/charts/base-loader
@@ -71,6 +180,93 @@ resources:
                     <IsRemoteIPFilterBlacklist>false</IsRemoteIPFilterBlacklist>
                   </NetworkConfiguration>
 
+            jellyfin-scripts:
+              data:
+                # completes the setup wizard, then (every hour, the secret can change) sets the SSO provider and the login button
+                configure.js: |
+                  const env = process.env;
+                  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+                  const header = (token) =>
+                    'MediaBrowser Client="Configure", Device="Configure", DeviceId="jellyfin-configure", Version="1.0"' +
+                    (token ? ', Token="' + token + '"' : '');
+
+                  async function jellyfin(method, path, body, token) {
+                    const res = await fetch(env.JELLYFIN_URL + path, {
+                      method: method,
+                      headers: { Authorization: header(token), 'Content-Type': 'application/json', Accept: 'application/json' },
+                      body: body === undefined ? undefined : JSON.stringify(body),
+                      signal: AbortSignal.timeout(15000),
+                    });
+                    if (!res.ok) throw new Error(method + ' ' + path + ': ' + res.status);
+                    const text = await res.text();
+                    return text ? JSON.parse(text) : undefined;
+                  }
+
+                  async function configure() {
+                    let info;
+                    for (let i = 0; i < 120 && !info; i++) { // 10 minutes, a huge library can be slow to start
+                      try {
+                        info = await jellyfin('GET', '/System/Info/Public');
+                      } catch (e) {
+                        console.log('waiting for jellyfin: ' + e.message);
+                        await sleep(5000);
+                      }
+                    }
+                    if (!info) throw new Error('jellyfin is not reachable');
+
+                    if (!info.StartupWizardCompleted) {
+                      console.log('completing the setup wizard');
+                      await jellyfin('POST', '/Startup/Configuration', { UICulture: 'en-US', MetadataCountryCode: 'FR', PreferredMetadataLanguage: 'en' });
+                      await jellyfin('GET', '/Startup/User'); // creates the default user the next call renames
+                      await jellyfin('POST', '/Startup/User', { Name: env.JELLYFIN_USER, Password: env.JELLYFIN_PASSWORD });
+                      await jellyfin('POST', '/Startup/RemoteAccess', { EnableRemoteAccess: true, EnableAutomaticPortMapping: false });
+                      await jellyfin('POST', '/Startup/Complete');
+                    }
+
+                    const login = await jellyfin('POST', '/Users/AuthenticateByName', { Username: env.JELLYFIN_USER, Pw: env.JELLYFIN_PASSWORD });
+                    const token = login.AccessToken;
+
+                    // https://github.com/9p4/jellyfin-plugin-sso/blob/main/providers.md#authelia (the plugin answers 404 until it is loaded)
+                    await jellyfin('POST', '/sso/OID/Add/authelia', {
+                      oidEndpoint: env.ISSUER_URL,
+                      oidClientId: 'jellyfin',
+                      oidSecret: env.CLIENT_SECRET,
+                      enabled: true,
+                      enableAuthorization: true, // the administrators and the access come from the groups, at each login
+                      enableAllFolders: true,
+                      enabledFolders: [],
+                      roles: ['app_jellyfin', 'role_admin'],
+                      adminRoles: ['role_admin'],
+                      roleClaim: 'groups',
+                      oidScopes: ['groups'],
+                      disablePushedAuthorization: true, // authelia does not require it
+                      schemeOverride: 'https', // the redirect uri, jellyfin sees the http of the gateway to the pod
+                    }, token);
+
+                    // the button of the login page
+                    const branding = await jellyfin('GET', '/System/Configuration/branding', undefined, token);
+                    await jellyfin('POST', '/System/Configuration/branding', Object.assign({}, branding, {
+                      LoginDisclaimer:
+                        '<form action="' + env.PUBLIC_URL + '/sso/OID/start/authelia">' +
+                        '<button class="raised block emby-button button-submit">Sign in with Authelia</button></form>',
+                      CustomCss: 'a.raised.emby-button { padding: 0.9em 1em; color: inherit !important; } .disclaimerContainer { display: block; }',
+                    }), token);
+                  }
+
+                  (async () => {
+                    for (;;) {
+                      try {
+                        await configure();
+                        console.log('jellyfin configured');
+                        await sleep(3600000);
+                      } catch (e) {
+                        console.log('jellyfin is not configured: ' + e.message);
+                        await sleep(30000);
+                      }
+                    }
+                  })();
+
           # database, metadata and cache of jellyfin
           persistentVolumeClaims:
             jellyfin-config:
@@ -94,7 +290,71 @@ resources:
                   labels:
                     app.kubernetes.io/name: jellyfin
                 spec:
+                  # installs the SSO plugin in the volume (jellyfin loads the plugins at its start), pinned and checked by the checksum of
+                  # https://raw.githubusercontent.com/9p4/jellyfin-plugin-sso/manifest-release/manifest.json
+                  initContainers:
+                    sso-plugin:
+                      name: sso-plugin
+                      image: docker.io/library/alpine:3.24.3 # renovate: versioning=loose
+                      command:
+                        - sh
+                        - -ec
+                        - |
+                          version=4.0.0.4
+                          md5=1e7908585ebee256203a0869dcdfbaf8
+                          dir=/config/plugins/sso-authentication_$version
+                          if [ ! -f $dir/.installed ]; then
+                            wget -q -O /tmp/plugin.zip https://github.com/9p4/jellyfin-plugin-sso/releases/download/v$version/sso-authentication_$version.zip
+                            echo "$md5  /tmp/plugin.zip" | md5sum -c -
+                            rm -rf /config/plugins/sso-authentication_*
+                            mkdir -p $dir
+                            unzip -q /tmp/plugin.zip -d $dir
+                            touch $dir/.installed
+                          fi
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        config:
+                          name: config
+                          mountPath: /config
                   containers:
+                    # completes the setup wizard and configures the SSO (see the header of this file), once jellyfin has started
+                    configure:
+                      name: configure
+                      image: docker.io/library/node:22.23.4-alpine # renovate: versioning=loose
+                      command: [ node, /scripts/configure.js ]
+                      env:
+                        JELLYFIN_URL: http://127.0.0.1:8096
+                        JELLYFIN_USER: admin
+                        JELLYFIN_PASSWORD:
+                          secretKeyRef:
+                            name: jellyfin-admin
+                            key: password
+                        PUBLIC_URL: https://jellyfin.{{ .Values.global.domain }}
+                        ISSUER_URL: https://authelia.{{ .Values.global.domain }}
+                        CLIENT_SECRET:
+                          secretKeyRef:
+                            name: jellyfin-oidc
+                            key: secret
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        readOnlyRootFilesystem: true
+                        runAsNonRoot: true
+                        runAsUser: 1000
+                        runAsGroup: 1000
+                        capabilities:
+                          drop:
+                            all: ALL
+                        seccompProfile:
+                          type: RuntimeDefault
+                      volumeMounts:
+                        scripts:
+                          name: scripts
+                          mountPath: /scripts
+                          readOnly: true
                     jellyfin:
                       name: jellyfin
                       image: ghcr.io/jellyfin/jellyfin:10.11.11 # renovate: versioning=loose
@@ -145,6 +405,10 @@ resources:
                       name: network
                       configMap:
                         name: jellyfin-config
+                    scripts:
+                      name: scripts
+                      configMap:
+                        name: jellyfin-scripts
                     media:
                       name: media
                       emptyDir: {} # TODO

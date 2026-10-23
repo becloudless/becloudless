@@ -211,6 +211,13 @@ resources:
                   resources: [ secrets ]
                   resourceNames: [ authelia-oidc-seerr ]
                   verbs: [ get ]
+            jellyfin-secrets-reader:
+              rules:
+                secrets:
+                  apiGroups: [ "" ]
+                  resources: [ secrets ]
+                  resourceNames: [ authelia-oidc-jellyfin ]
+                  verbs: [ get ]
 
           roleBindings:
             immich-secrets-reader:
@@ -253,6 +260,16 @@ resources:
                   kind: ServiceAccount
                   name: authelia-reader
                   namespace: seerr
+            jellyfin-secrets-reader:
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: Role
+                name: jellyfin-secrets-reader
+              subjects:
+                authelia-reader:
+                  kind: ServiceAccount
+                  name: authelia-reader
+                  namespace: jellyfin
 
           externalSecrets:
             authelia-ldap:
@@ -570,6 +587,13 @@ resources:
                       subject:
                         - 'group:role_admin'
                         - 'group:app_seerr'
+                jellyfin_authz:
+                  default_policy: deny
+                  rules:
+                    - policy: two_factor
+                      subject:
+                        - 'group:role_admin'
+                        - 'group:app_jellyfin'
 
               claims_policies:
                 grafana:
@@ -645,7 +669,7 @@ resources:
                   client_secret:
                     path: '/config/oidc-jellyfin.hash'
                   public: false
-                  authorization_policy: 'two_factor'
+                  authorization_policy: 'jellyfin_authz'
                   require_pkce: true
                   pkce_challenge_method: 'S256'
                   pre_configured_consent_duration: 1 year
