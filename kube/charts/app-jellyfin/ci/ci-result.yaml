@@ -151,7 +151,7 @@ spec:
                   await jellyfin('POST', '/Startup/Configuration', { UICulture: 'en-US', MetadataCountryCode: 'FR', PreferredMetadataLanguage: 'en' });
                   await jellyfin('GET', '/Startup/User'); // creates the default user the next call renames
                   await jellyfin('POST', '/Startup/User', { Name: env.JELLYFIN_USER, Password: env.JELLYFIN_PASSWORD });
-                  await jellyfin('POST', '/Startup/RemoteAccess', { EnableRemoteAccess: true, EnableAutomaticPortMapping: false });
+                  // no `/Startup/RemoteAccess`: it saves `network.xml`, which is the read only ConfigMap (remote access is enabled in it)
                   await jellyfin('POST', '/Startup/Complete');
                 }
 
