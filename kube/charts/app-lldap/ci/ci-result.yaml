@@ -358,12 +358,12 @@ spec:
               {"name":"app_immich"}
               {"name":"app_immich_one_factor"}
               {"name":"app_jellyfin"}
-              {"name":"app_mattermost"}
               {"name":"app_paperless"}
               {"name":"app_pushprox"}
               {"name":"app_seafile"}
               {"name":"app_seerr"}
               {"name":"app_syncthing"}
+              {"name":"app_tuwunel"}
             users-schema.json: '[{"attributeType":"INTEGER","isEditable":false,"isList":false,"isVisible":true,"name":"immichquota"},{"attributeType":"STRING","isEditable":false,"isList":false,"isVisible":true,"name":"immichrole"}]'
             users.json: |-
               {"displayName":"Authelia","email":"authelia@test.com","groups":["lldap_password_manager","lldap_strict_readonly"],"id":"authelia","password_file":"/secrets/authelia/password"}
@@ -373,7 +373,7 @@ spec:
         lldap-bootstrap:
           activeDeadlineSeconds: 600
           backoffLimit: 0
-          fullNameOverride: lldap-bootstrap-dd0f0caee5
+          fullNameOverride: lldap-bootstrap-31917e4614
           template:
             spec:
               containers:

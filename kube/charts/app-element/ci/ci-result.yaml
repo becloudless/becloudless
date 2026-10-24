@@ -1,0 +1,231 @@
+---
+# Source: app-element/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: element
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: element
+  ingress:
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+---
+# Source: app-element/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: element
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      configMaps:
+        element-config:
+          data:
+            config.json: |-
+              {
+                "default_server_config": {
+                  "m.homeserver": {
+                    "base_url": "https://matrix.test.com",
+                    "server_name": "matrix.test.com"
+                  }
+                },
+                "disable_custom_urls": true,
+                "disable_guests": true,
+                "disable_3pid_login": true,
+                "sso_redirect_options": {
+                  "on_welcome_page": true
+                },
+                "room_directory": {
+                  "servers": ["matrix.test.com"]
+                },
+                "brand": "Element",
+                "show_labs_settings": false
+              }
+      deployments:
+        element:
+          replicas: 2
+          selector:
+            matchLabels:
+              app.kubernetes.io/name: element
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/name: element
+            spec:
+              containers:
+                element:
+                  env:
+                    ELEMENT_WEB_PORT: "8080"
+                  image: vectorim/element-web:v1.12.32
+                  livenessProbe:
+                    httpGet:
+                      path: /
+                      port: 8080
+                  name: element
+                  ports:
+                    http:
+                      containerPort: 8080
+                  readinessProbe:
+                    httpGet:
+                      path: /
+                      port: 8080
+                  securityContext:
+                    allowPrivilegeEscalation: false
+                    capabilities:
+                      drop:
+                        all: ALL
+                    readOnlyRootFilesystem: true
+                    seccompProfile:
+                      type: RuntimeDefault
+                  volumeMounts:
+                    config:
+                      mountPath: /app/config.json
+                      name: config
+                      readOnly: true
+                      subPath: config.json
+                    nginx-conf:
+                      mountPath: /etc/nginx/conf.d
+                      name: nginx-conf
+                    tmp:
+                      mountPath: /tmp
+                      name: tmp
+              securityContext:
+                fsGroup: 101
+                runAsGroup: 101
+                runAsNonRoot: true
+                runAsUser: 101
+              volumes:
+                config:
+                  configMap:
+                    name: element-config
+                  name: config
+                nginx-conf:
+                  emptyDir: {}
+                  name: nginx-conf
+                tmp:
+                  emptyDir: {}
+                  name: tmp
+      services:
+        element:
+          ports:
+            http:
+              port: 80
+              targetPort: 8080
+          selector:
+            app.kubernetes.io/name: element
+---
+# Source: app-element/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: element-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: element
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      certManagerCertificates:
+        element-gateway:
+          dnsNames:
+            element: element.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-element-gateway
+      httpRoutes:
+        element:
+          hostnames:
+            element: element.test.com
+          parentRefs:
+            element:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: element
+          rules:
+            root:
+              backendRefs:
+                element:
+                  name: element
+                  port: 80
+      listenerSets:
+        element:
+          listeners:
+            https:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: element.test.com
+              name: https
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: tls-element-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system

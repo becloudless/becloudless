@@ -208,6 +208,18 @@ apps:
     appChart:
       name: app-paperless
 
+  tuwunel:
+    groups:
+      extra: true
+    appChart:
+      name: app-tuwunel
+
+  element:
+    groups:
+      extra: true
+    appChart:
+      name: app-element
+
   syncthing:
     groups:
       extra: true

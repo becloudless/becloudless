@@ -18,6 +18,7 @@ All applications are defined under `kube/apps/`, one directory per app.
 | `cnpg` | Storage | CloudNativePG operator for PostgreSQL clusters |
 | `coredns` | Networking | Cluster DNS resolver |
 | `descheduler` | Platform | Rebalances pods across nodes based on policy |
+| `element` | Productivity | Web client of Matrix (Element Web), for tuwunel |
 | `external-secrets` | Security | Syncs secrets from external stores into Kubernetes Secrets |
 | `external-snapshotter` | Storage | CSI volume snapshot controller and CRDs |
 | `firefox-sync` | Productivity | Self-hosted storage for Firefox Sync (Mozilla accounts, data on your own server) |
@@ -45,6 +46,7 @@ All applications are defined under `kube/apps/`, one directory per app.
 | `terraform` | Platform | Terraform runner for cloud resources |
 | `traefik` | Networking | Ingress controller and reverse proxy |
 | `traefik-config` | Networking | Traefik middlewares and IngressRoute defaults |
+| `tuwunel` | Productivity | Private Matrix homeserver (chat, no federation), SSO with Authelia |
 | `whoami` | Networking | Request echo server to check the Gateway, TLS and the Authelia forward auth headers |
 
 ## App Directory Layout

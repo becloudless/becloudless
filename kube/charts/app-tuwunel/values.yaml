@@ -1,0 +1,310 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+global:
+  domain:
+  name:
+
+# Tuwunel (https://github.com/matrix-construct/tuwunel): a Matrix homeserver (chat, in the Element client of `app-element`), written in
+# Rust, with its own embedded database (RocksDB), so there is no postgresql here.
+#
+# The server is `matrix.<domain>` and the users are `@<name>:matrix.<domain>`. The server name can NOT be changed afterwards without
+# wiping the database. The federation is disabled: the server is private, only its own users can talk, and nothing but authelia is
+# reached from the pod. Enable it (`TUWUNEL_ALLOW_FEDERATION`) with the delegation (`TUWUNEL_WELL_KNOWN__SERVER`), the egress to the
+# internet in the network policy, and think about the abuse before. No mails, no push notifications (they need the egress to the push
+# gateway of the clients), no URL previews, no TURN (the voice and video calls between two users on different networks need one).
+# SSO: the OpenID Connect login with authelia (OIDC client `tuwunel`, see its access control in authelia). The login with a password is
+#    disabled and so is the registration: the only way in is authelia, and a user of the groups `app_tuwunel` and `role_admin` gets an
+#    account (`@<preferred_username>:matrix.<domain>`) at its first login. The first user to log in is the administrator of the server
+#    (it is invited in the admin room `#admins`, where the commands start with `!admin`). The others can be promoted with
+#    `!admin users make-user-admin <user>` there. If authelia is down nobody can log in. The client id and secret are generated in
+#    the authelia namespace and copied by external-secrets (see `tuwunel-pre`), the provider is given by the environment (the
+#    `TUWUNEL_IDENTITY_PROVIDER__0__*` variables). The OIDC server built in tuwunel (next-gen authentication, needed by Element X) is
+#    enabled by the SSO and `well_known.client`, the web and mobile clients of Element are vouched with
+#    `oidc_registration_allowed_redirect_hosts`, the other clients get an approval page at their login.
+# The database and the media are in the volume `tuwunel-data`, saved daily by longhorn (the `default` group).
+
+resources:
+
+  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
+  ciliumNetworkPolicies:
+    tuwunel:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: tuwunel}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p8008: {port: "8008", protocol: TCP}}}
+      egress:
+        authelia: # the OIDC issuer is the public address of authelia
+          toFQDNs:
+            authelia: {matchName: "authelia.{{ .Values.global.domain }}"}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+        gateway: # the public addresses of the cluster are the gateway for the pods
+          toEntities: {ingress: ingress}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+
+  fluxHelmReleases:
+    # the OIDC client of authelia, copied before tuwunel starts
+    tuwunel-pre:
+      dependsOn:
+        external-secrets:
+          name: app-external-secrets
+          namespace: external-secrets
+        authelia-pre: # the generated secret of the client and the right to read it
+          name: authelia-pre
+          namespace: authelia
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          serviceAccounts:
+            authelia-reader:
+              automountServiceAccountToken: false # only used by external-secrets to get a token
+
+          secretStores:
+            authelia:
+              provider:
+                kubernetes:
+                  remoteNamespace: authelia
+                  server:
+                    caProvider:
+                      type: ConfigMap
+                      name: kube-root-ca.crt
+                      key: ca.crt
+                  auth:
+                    serviceAccount:
+                      name: authelia-reader
+
+          externalSecrets:
+            tuwunel-oidc:
+              refreshInterval: 1h
+              secretStoreRef:
+                kind: SecretStore
+                name: authelia
+              data:
+                client-id:
+                  secretKey: client-id
+                  remoteRef:
+                    key: authelia-oidc-tuwunel
+                    property: client-id
+                secret:
+                  secretKey: secret
+                  remoteRef:
+                    key: authelia-oidc-tuwunel
+                    property: secret
+
+    tuwunel:
+      dependsOn:
+        tuwunel-pre: # the OIDC client
+          name: tuwunel-pre
+        longhorn:
+          name: app-longhorn
+          namespace: longhorn-system
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          # the database (RocksDB) and the media
+          persistentVolumeClaims:
+            tuwunel-data:
+              accessModes:
+                - ReadWriteOnce
+              storageClassName: longhorn
+              resources:
+                requests:
+                  storage: 10Gi
+
+          deployments:
+            tuwunel:
+              replicas: 1 # the embedded database is only for one instance
+              strategy:
+                type: Recreate # the volume is ReadWriteOnce, and the database is locked by its server
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: tuwunel
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: tuwunel
+                spec:
+                  # the service named `tuwunel` would give a `TUWUNEL_PORT=tcp://...` variable, which is the option of the listening port
+                  enableServiceLinks: false
+                  securityContext:
+                    fsGroup: 1000 # the volume is writable by the user of the container
+                  containers:
+                    tuwunel:
+                      name: tuwunel
+                      image: ghcr.io/matrix-construct/tuwunel:v1.9.4
+                      ports:
+                        http:
+                          containerPort: 8008
+                      # Every option of the configuration file is a `TUWUNEL_<OPTION>` variable (`__` goes down in a table), and a
+                      # provider of the `identity_provider` list is `TUWUNEL_IDENTITY_PROVIDER__<index>__<FIELD>`.
+                      # The variables are sorted by name when the pod is rendered, and `$(NAME)` only gets the variables defined before it:
+                      # the secrets used by other variables are named before `TUWUNEL_*`.
+                      env:
+                        OIDC_CLIENT_ID:
+                          secretKeyRef:
+                            name: tuwunel-oidc
+                            key: client-id
+                        TUWUNEL_SERVER_NAME: matrix.{{ .Values.global.domain }} # can not be changed
+                        TUWUNEL_ADDRESS: 0.0.0.0
+                        # the subdirectory of the volume, the root has a `lost+found` directory
+                        TUWUNEL_DATABASE_PATH: /var/lib/tuwunel/data
+                        TUWUNEL_ALLOW_FEDERATION: "false"
+                        TUWUNEL_LOGIN_WITH_PASSWORD: "false" # the registration is disabled by default
+                        TUWUNEL_NEW_USER_DISPLAYNAME_SUFFIX: "" # the default is an emoji
+                        # the client well-known (the address of the server for the clients) also enables the built in OIDC server
+                        TUWUNEL_WELL_KNOWN__CLIENT: https://matrix.{{ .Values.global.domain }}
+                        # the clients that can sign in without the approval page: Element (`app-element`), and Element X on the phones
+                        TUWUNEL_OIDC_REGISTRATION_ALLOWED_REDIRECT_HOSTS: '["element.{{ .Values.global.domain }}", "io.element.android"]'
+                        # SSO with authelia: the callback is /_matrix/client/unstable/login/sso/callback/<client id>
+                        TUWUNEL_IDENTITY_PROVIDER__0__BRAND: Authelia
+                        TUWUNEL_IDENTITY_PROVIDER__0__NAME: Authelia
+                        TUWUNEL_IDENTITY_PROVIDER__0__ISSUER_URL: https://authelia.{{ .Values.global.domain }}
+                        TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_ID: $(OIDC_CLIENT_ID)
+                        TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_SECRET:
+                          secretKeyRef:
+                            name: tuwunel-oidc
+                            key: secret
+                        TUWUNEL_IDENTITY_PROVIDER__0__CALLBACK_URL: https://matrix.{{ .Values.global.domain }}/_matrix/client/unstable/login/sso/callback/$(OIDC_CLIENT_ID)
+                        # the user is the `preferred_username` of authelia: no random name when it is taken, the login fails
+                        TUWUNEL_IDENTITY_PROVIDER__0__UNIQUE_ID_FALLBACKS: "false"
+                      startupProbe:
+                        httpGet:
+                          path: /_matrix/client/versions
+                          port: 8008
+                        periodSeconds: 5
+                        failureThreshold: 60
+                      readinessProbe:
+                        httpGet:
+                          path: /_matrix/client/versions
+                          port: 8008
+                        timeoutSeconds: 5
+                      livenessProbe:
+                        httpGet:
+                          path: /_matrix/client/versions
+                          port: 8008
+                        periodSeconds: 30
+                        timeoutSeconds: 10
+                        failureThreshold: 6
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        readOnlyRootFilesystem: true # everything is written in the volume
+                        runAsNonRoot: true
+                        runAsUser: 1000
+                        runAsGroup: 1000
+                        capabilities:
+                          drop:
+                            all: ALL
+                        seccompProfile:
+                          type: RuntimeDefault
+                      volumeMounts:
+                        data:
+                          name: data
+                          mountPath: /var/lib/tuwunel
+                  volumes:
+                    data:
+                      name: data
+                      persistentVolumeClaim:
+                        claimName: tuwunel-data
+
+          services:
+            tuwunel:
+              selector:
+                app.kubernetes.io/name: tuwunel
+              ports:
+                http:
+                  port: 8008
+
+    # the public exposure, applied once tuwunel is deployed and not waited for
+    tuwunel-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        tuwunel:
+          name: tuwunel
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          certManagerCertificates:
+            # certificate of the API, terminated by the Gateway
+            tuwunel-gateway:
+              secretName: tls-tuwunel-gateway
+              dnsNames:
+                matrix: matrix.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
+          # It is not protected by forward auth: the Matrix clients (Element, Element X, ...) cannot follow the login redirect of
+          # authelia, tuwunel has its own SSO login.
+          listenerSets:
+            tuwunel:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: matrix.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-tuwunel-gateway
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            tuwunel:
+              parentRefs:
+                tuwunel:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: tuwunel
+              hostnames:
+                matrix: matrix.{{ .Values.global.domain }}
+              rules:
+                root:
+                  backendRefs:
+                    tuwunel:
+                      name: tuwunel
+                      port: 8008
+                  timeouts:
+                    request: 0s # the long polling of the sync and the uploads of big files can be long

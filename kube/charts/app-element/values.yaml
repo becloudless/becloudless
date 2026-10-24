@@ -1,0 +1,213 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+global:
+  domain:
+  name:
+
+# Element Web (https://element.io): the web client of Matrix, for the homeserver of `app-tuwunel` (`matrix.<domain>`), on
+# `element.<domain>`. It is a static application that runs in the browser: the only thing the pods do is to serve the files and the
+# `config.json`, so they need no network access, no volume and no secret.
+# The server is fixed (`disable_custom_urls`), the guests and the login with an email address or a phone number are disabled: the only
+# way in is the SSO of tuwunel, and the welcome page redirects to it. The client contacts nothing else (no identity server, no
+# integration manager, no analytics, no bug reports); the voice and video calls of the rooms (jitsi) are not configured.
+# The host `element.<domain>` is vouched for the sign in by the OIDC server of tuwunel (`oidc_registration_allowed_redirect_hosts`),
+# keep both charts in sync if it changes.
+
+resources:
+
+  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
+  ciliumNetworkPolicies:
+    element:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: element}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p8080: {port: "8080", protocol: TCP}}}
+
+  fluxHelmReleases:
+    element:
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          # https://github.com/element-hq/element-web/blob/develop/docs/config.md
+          configMaps:
+            element-config:
+              data:
+                config.json: |
+                  {
+                    "default_server_config": {
+                      "m.homeserver": {
+                        "base_url": "https://matrix.{{ .Values.global.domain }}",
+                        "server_name": "matrix.{{ .Values.global.domain }}"
+                      }
+                    },
+                    "disable_custom_urls": true,
+                    "disable_guests": true,
+                    "disable_3pid_login": true,
+                    "sso_redirect_options": {
+                      "on_welcome_page": true
+                    },
+                    "room_directory": {
+                      "servers": ["matrix.{{ .Values.global.domain }}"]
+                    },
+                    "brand": "Element",
+                    "show_labs_settings": false
+                  }
+
+          deployments:
+            element:
+              replicas: 2
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: element
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: element
+                spec:
+                  securityContext:
+                    runAsNonRoot: true
+                    runAsUser: 101
+                    runAsGroup: 101
+                    fsGroup: 101
+                  containers:
+                    element:
+                      name: element
+                      image: vectorim/element-web:v1.12.32
+                      ports:
+                        http:
+                          containerPort: 8080
+                      env:
+                        ELEMENT_WEB_PORT: "8080" # the default is 80, which an unprivileged user can not bind
+                      readinessProbe:
+                        httpGet:
+                          path: /
+                          port: 8080
+                      livenessProbe:
+                        httpGet:
+                          path: /
+                          port: 8080
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        readOnlyRootFilesystem: true
+                        capabilities:
+                          drop:
+                            all: ALL
+                        seccompProfile:
+                          type: RuntimeDefault
+                      volumeMounts:
+                        config:
+                          name: config
+                          mountPath: /app/config.json
+                          subPath: config.json
+                          readOnly: true
+                        tmp:
+                          name: tmp
+                          mountPath: /tmp
+                        # the entrypoint writes the configuration of nginx from its template
+                        nginx-conf:
+                          name: nginx-conf
+                          mountPath: /etc/nginx/conf.d
+                  volumes:
+                    config:
+                      name: config
+                      configMap:
+                        name: element-config
+                    tmp:
+                      name: tmp
+                      emptyDir: {}
+                    nginx-conf:
+                      name: nginx-conf
+                      emptyDir: {}
+
+          services:
+            element:
+              selector:
+                app.kubernetes.io/name: element
+              ports:
+                http:
+                  port: 80
+                  targetPort: 8080
+
+    # the public exposure, applied once element is deployed and not waited for
+    element-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        element:
+          name: element
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          certManagerCertificates:
+            # certificate of the web UI, terminated by the Gateway
+            element-gateway:
+              secretName: tls-element-gateway
+              dnsNames:
+                element: element.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
+          # It is not protected by forward auth: the login is the SSO of tuwunel, and the page holds nothing.
+          listenerSets:
+            element:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: element.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-element-gateway
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            element:
+              parentRefs:
+                element:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: element
+              hostnames:
+                element: element.{{ .Values.global.domain }}
+              rules:
+                root:
+                  backendRefs:
+                    element:
+                      name: element
+                      port: 80

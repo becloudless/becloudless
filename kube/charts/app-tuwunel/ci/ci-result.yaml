@@ -1,9 +1,9 @@
 ---
-# Source: app-mattermost/templates/loader.yaml
+# Source: app-tuwunel/templates/loader.yaml
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
-  name: mattermost
+  name: tuwunel
   namespace: default
 spec:
   egress:
@@ -19,16 +19,9 @@ spec:
     - ports:
       - port: "443"
         protocol: TCP
-  - toEndpoints:
-    - matchLabels:
-        cnpg.io/cluster: mattermost-postgresql
-    toPorts:
-    - ports:
-      - port: "5432"
-        protocol: TCP
   endpointSelector:
     matchLabels:
-      app.kubernetes.io/name: mattermost
+      app.kubernetes.io/name: tuwunel
   ingress:
   - fromEntities:
     - host
@@ -36,14 +29,14 @@ spec:
     - remote-node
     toPorts:
     - ports:
-      - port: "8065"
+      - port: "8008"
         protocol: TCP
 ---
-# Source: app-mattermost/templates/loader.yaml
+# Source: app-tuwunel/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: mattermost
+  name: tuwunel
   namespace: default
 spec:
   chart:
@@ -55,8 +48,9 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
-  - name: mattermost-postgresql
-  - name: mattermost-pre
+  - name: app-longhorn
+    namespace: longhorn-system
+  - name: tuwunel-pre
   driftDetection:
     mode: enabled
   install:
@@ -65,7 +59,7 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   interval: 10m
-  timeout: 15m
+  timeout: 10m
   upgrade:
     cleanupOnFail: true
     strategy:
@@ -74,130 +68,111 @@ spec:
   values:
     resources:
       deployments:
-        mattermost:
+        tuwunel:
           replicas: 1
           selector:
             matchLabels:
-              app.kubernetes.io/name: mattermost
+              app.kubernetes.io/name: tuwunel
           strategy:
             type: Recreate
           template:
             metadata:
               labels:
-                app.kubernetes.io/name: mattermost
+                app.kubernetes.io/name: tuwunel
             spec:
               containers:
-                mattermost:
+                tuwunel:
                   env:
-                    DB_PASSWORD:
-                      secretKeyRef:
-                        key: password
-                        name: mattermost-postgresql-app
-                    MM_EMAILSETTINGS_ENABLESIGNINWITHEMAIL: "false"
-                    MM_EMAILSETTINGS_ENABLESIGNINWITHUSERNAME: "false"
-                    MM_EMAILSETTINGS_ENABLESIGNUPWITHEMAIL: "false"
-                    MM_EMAILSETTINGS_SENDEMAILNOTIFICATIONS: "false"
-                    MM_EMAILSETTINGS_SENDPUSHNOTIFICATIONS: "false"
-                    MM_LOGSETTINGS_CONSOLELEVEL: INFO
-                    MM_LOGSETTINGS_ENABLEDIAGNOSTICS: "false"
-                    MM_LOGSETTINGS_ENABLEFILE: "false"
-                    MM_OPENIDSETTINGS_BUTTONTEXT: Authelia
-                    MM_OPENIDSETTINGS_DISCOVERYENDPOINT: https://authelia.test.com/.well-known/openid-configuration
-                    MM_OPENIDSETTINGS_ENABLE: "true"
-                    MM_OPENIDSETTINGS_ID:
+                    OIDC_CLIENT_ID:
                       secretKeyRef:
                         key: client-id
-                        name: mattermost-oidc
-                    MM_OPENIDSETTINGS_SECRET:
+                        name: tuwunel-oidc
+                    TUWUNEL_ADDRESS: 0.0.0.0
+                    TUWUNEL_ALLOW_FEDERATION: "false"
+                    TUWUNEL_DATABASE_PATH: /var/lib/tuwunel/data
+                    TUWUNEL_IDENTITY_PROVIDER__0__BRAND: Authelia
+                    TUWUNEL_IDENTITY_PROVIDER__0__CALLBACK_URL: https://matrix.test.com/_matrix/client/unstable/login/sso/callback/$(OIDC_CLIENT_ID)
+                    TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_ID: $(OIDC_CLIENT_ID)
+                    TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_SECRET:
                       secretKeyRef:
                         key: secret
-                        name: mattermost-oidc
-                    MM_OPENIDSETTINGS_USEPREFERREDUSERNAME: "true"
-                    MM_PLUGINSETTINGS_ENABLEMARKETPLACE: "false"
-                    MM_SERVICESETTINGS_ENABLELOCALMODE: "true"
-                    MM_SERVICESETTINGS_ENABLESECURITYFIXALERT: "false"
-                    MM_SERVICESETTINGS_SITEURL: https://mattermost.test.com
-                    MM_SQLSETTINGS_DATASOURCE: postgres://app:$(DB_PASSWORD)@mattermost-postgresql-rw:5432/app?sslmode=require&connect_timeout=10
-                    MM_SQLSETTINGS_DRIVERNAME: postgres
-                  image: mattermost/mattermost-enterprise-edition:12.0.1
+                        name: tuwunel-oidc
+                    TUWUNEL_IDENTITY_PROVIDER__0__ISSUER_URL: https://authelia.test.com
+                    TUWUNEL_IDENTITY_PROVIDER__0__NAME: Authelia
+                    TUWUNEL_IDENTITY_PROVIDER__0__UNIQUE_ID_FALLBACKS: "false"
+                    TUWUNEL_LOGIN_WITH_PASSWORD: "false"
+                    TUWUNEL_NEW_USER_DISPLAYNAME_SUFFIX: ""
+                    TUWUNEL_OIDC_REGISTRATION_ALLOWED_REDIRECT_HOSTS: '["element.test.com",
+                      "io.element.android"]'
+                    TUWUNEL_SERVER_NAME: matrix.test.com
+                    TUWUNEL_WELL_KNOWN__CLIENT: https://matrix.test.com
+                  image: ghcr.io/matrix-construct/tuwunel:v1.9.4
                   livenessProbe:
                     failureThreshold: 6
                     httpGet:
-                      path: /api/v4/system/ping
-                      port: 8065
+                      path: /_matrix/client/versions
+                      port: 8008
                     periodSeconds: 30
                     timeoutSeconds: 10
-                  name: mattermost
+                  name: tuwunel
                   ports:
                     http:
-                      containerPort: 8065
+                      containerPort: 8008
                   readinessProbe:
                     httpGet:
-                      path: /api/v4/system/ping
-                      port: 8065
+                      path: /_matrix/client/versions
+                      port: 8008
                     timeoutSeconds: 5
                   securityContext:
                     allowPrivilegeEscalation: false
                     capabilities:
                       drop:
                         all: ALL
-                    runAsGroup: 2000
+                    readOnlyRootFilesystem: true
+                    runAsGroup: 1000
                     runAsNonRoot: true
-                    runAsUser: 2000
+                    runAsUser: 1000
                     seccompProfile:
                       type: RuntimeDefault
                   startupProbe:
-                    failureThreshold: 120
+                    failureThreshold: 60
                     httpGet:
-                      path: /api/v4/system/ping
-                      port: 8065
+                      path: /_matrix/client/versions
+                      port: 8008
                     periodSeconds: 5
                   volumeMounts:
-                    client-plugins:
-                      mountPath: /mattermost/client/plugins
-                      name: data
-                      subPath: client-plugins
-                    config:
-                      mountPath: /mattermost/config
-                      name: data
-                      subPath: config
                     data:
-                      mountPath: /mattermost/data
+                      mountPath: /var/lib/tuwunel
                       name: data
-                      subPath: data
-                    plugins:
-                      mountPath: /mattermost/plugins
-                      name: data
-                      subPath: plugins
               enableServiceLinks: false
               securityContext:
-                fsGroup: 2000
+                fsGroup: 1000
               volumes:
                 data:
                   name: data
                   persistentVolumeClaim:
-                    claimName: mattermost-data
+                    claimName: tuwunel-data
       persistentVolumeClaims:
-        mattermost-data:
+        tuwunel-data:
           accessModes:
           - ReadWriteOnce
           resources:
             requests:
-              storage: 20Gi
+              storage: 10Gi
           storageClassName: longhorn
       services:
-        mattermost:
+        tuwunel:
           ports:
             http:
-              port: 8065
+              port: 8008
           selector:
-            app.kubernetes.io/name: mattermost
+            app.kubernetes.io/name: tuwunel
 ---
-# Source: app-mattermost/templates/loader.yaml
+# Source: app-tuwunel/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: mattermost-integration
+  name: tuwunel-integration
   namespace: default
 spec:
   chart:
@@ -213,7 +188,7 @@ spec:
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
-  - name: mattermost
+  - name: tuwunel
   driftDetection:
     mode: enabled
   install:
@@ -233,45 +208,45 @@ spec:
   values:
     resources:
       certManagerCertificates:
-        mattermost-gateway:
+        tuwunel-gateway:
           dnsNames:
-            mattermost: mattermost.test.com
+            matrix: matrix.test.com
           issuerRef:
             kind: ClusterIssuer
             name: letsencrypt-prod
-          secretName: tls-mattermost-gateway
+          secretName: tls-tuwunel-gateway
       httpRoutes:
-        mattermost:
+        tuwunel:
           hostnames:
-            mattermost: mattermost.test.com
+            matrix: matrix.test.com
           parentRefs:
-            mattermost:
+            tuwunel:
               group: gateway.networking.k8s.io
               kind: ListenerSet
-              name: mattermost
+              name: tuwunel
           rules:
             root:
               backendRefs:
-                mattermost:
-                  name: mattermost
-                  port: 8065
+                tuwunel:
+                  name: tuwunel
+                  port: 8008
               timeouts:
                 request: 0s
       listenerSets:
-        mattermost:
+        tuwunel:
           listeners:
             https:
               allowedRoutes:
                 namespaces:
                   from: Same
-              hostname: mattermost.test.com
+              hostname: matrix.test.com
               name: https
               port: 443
               protocol: HTTPS
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-mattermost-gateway
+                    name: tls-tuwunel-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
@@ -279,54 +254,11 @@ spec:
             name: shared
             namespace: kube-system
 ---
-# Source: app-mattermost/templates/loader.yaml
+# Source: app-tuwunel/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: mattermost-postgresql
-  namespace: default
-spec:
-  chart:
-    spec:
-      chart: ./kube/charts/postgresql
-      reconcileStrategy: Revision
-      sourceRef:
-        kind: GitRepository
-        name: bcl
-        namespace: apps
-  dependsOn:
-  - name: app-cert-manager
-    namespace: cert-manager
-  - name: app-cnpg
-    namespace: cnpg-system
-  - name: app-longhorn
-    namespace: longhorn-system
-  driftDetection:
-    mode: enabled
-  install:
-    crds: CreateReplace
-    strategy:
-      name: RetryOnFailure
-      retryInterval: 5m
-  interval: 10m
-  timeout: 10m
-  upgrade:
-    cleanupOnFail: true
-    strategy:
-      name: RetryOnFailure
-      retryInterval: 5m
-  values:
-    clients:
-      mattermost:
-        matchLabels:
-          app.kubernetes.io/name: mattermost
-    storageSize: 5Gi
----
-# Source: app-mattermost/templates/loader.yaml
-apiVersion: helm.toolkit.fluxcd.io/v2
-kind: HelmRelease
-metadata:
-  name: mattermost-pre
+  name: tuwunel-pre
   namespace: default
 spec:
   chart:
@@ -359,16 +291,16 @@ spec:
   values:
     resources:
       externalSecrets:
-        mattermost-oidc:
+        tuwunel-oidc:
           data:
             client-id:
               remoteRef:
-                key: authelia-oidc-mattermost
+                key: authelia-oidc-tuwunel
                 property: client-id
               secretKey: client-id
             secret:
               remoteRef:
-                key: authelia-oidc-mattermost
+                key: authelia-oidc-tuwunel
                 property: secret
               secretKey: secret
           refreshInterval: 1h
