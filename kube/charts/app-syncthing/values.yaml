@@ -3,36 +3,55 @@ global:
   domain:
   name:
 
+  # the users of the cluster (the key is the user id), the ones of the group `app_syncthing` get an instance, see `templates/_instances.tpl`.
+  # Declared by the cluster as `config.lldapUsers` of `apps`, shared with lldap (`lldap-post`) through the global values.
+  lldapUsers: {}
+
 # Syncthing (https://syncthing.net): continuous file synchronization.
 #
-# Only the web UI is prepared for now, the synchronization with the other devices is not exposed yet:
-#  - the UI is behind the Gateway with the forward auth of authelia, for the members of the group `role_admin` (the syncthing UI has no
-#    user of its own: its own authentication is not set, the pod only accepts the connections of the Gateway);
-#  - the sync protocol (22000 TCP and UDP), the local discovery (21027 UDP) are not reachable, and the pod cannot go out of the cluster
-#    (default deny of app-cilium): the global discovery, the relays and the NAT detection only log errors. Nothing is synchronized
-#    until the ports are exposed (a LoadBalancer service and the policies) and the devices are added in the UI.
-# The configuration, the keys (the device id comes from them) and the folders are in the volume `syncthing-data`, backed up daily by
-# longhorn (the `default` group). The default folder is not created.
+#  - one instance for each user of lldap member of the group `app_syncthing` (`syncthing-<user>`, from the `syncthing` chart): its web UI is
+#    `https://<user>.syncthing.<domain>`, behind the Gateway with the forward auth of authelia, which only lets this user in (see its
+#    access control, `domain_regex`). The data of the instance is a volume backed up daily by longhorn. The instances are not exposed
+#    for the synchronization: their devices are reached through the relay below, the instances configure themselves for it;
+#  - a relay (`syncthing-relay`, https://docs.syncthing.net/users/strelaysrv.html), public on the TCP port 22067 of the Gateway (a
+#    TCPRoute, the relay does its own TLS and its clients send no SNI). It is private: it does not join the public pools, and it only
+#    serves the clients that give its token. A device that cannot be reached directly is reached through it.
+#
+# The relay (the default deny of app-cilium blocks the instances from the rest, so the global discovery, the public relays and the NAT
+# detection only log errors):
+#  - its certificate is made by cert-manager (`syncthing-relay-keys`, valid 100 years and never rotated: the relay ID is the device ID of
+#    its certificate, a renewal would change it) and its token is generated (`syncthing-relay`, key `token`), by `syncthing-pre`;
+#  - the instances set their sync protocol listen address to `relay://syncthing-relay:22067/?id=<relay id>&token=<token>` themselves,
+#    the relay ID being computed from its certificate (see the `syncthing` chart);
+#  - the devices that connect to an instance add it with the address `relay://<public name of the Gateway>:22067/?id=<relay id>&token=<token>`
+#    (DNS record of the name to the IP of the Gateway, e.g. `sync.syncthing.<domain>`: nothing in the cluster knows it). The relay ID is in
+#    the log of the relay (`kubectl -n syncthing logs deploy/syncthing-relay`, `URI: relay://...?id=<relay id>`) and the token is read with
+#    `kubectl -n syncthing get secret syncthing-relay -o jsonpath='{.data.token}' | base64 -d`.
 
 resources:
 
   # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
-    syncthing:
+    syncthing-relay:
       endpointSelector:
-        matchLabels: {app.kubernetes.io/name: syncthing}
+        matchLabels: {app.kubernetes.io/name: syncthing-relay}
       ingress:
-        gateway:
-          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+        relay: # served by the Gateway service without Envoy: the source is the client itself (public, or in the cluster)
+          fromEntities: {world: world, cluster: cluster}
           toPorts:
-            http: {ports: {p8384: {port: "8384", protocol: TCP}}}
+            relay: {ports: {p22067: {port: "22067", protocol: TCP}}}
 
   fluxHelmReleases:
-    syncthing:
+
+    # the secrets of the relay, created before it and the instances start
+    syncthing-pre:
       dependsOn:
-        longhorn: # the volume
-          name: app-longhorn
-          namespace: longhorn-system
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        secret-generator:
+          name: app-secret-generator
+          namespace: secret-generator
       chart:
         spec:
           chart: ./kube/charts/base-loader
@@ -43,102 +62,32 @@ resources:
             namespace: apps
       values:
         resources:
-          persistentVolumeClaims:
-            syncthing-data:
-              accessModes:
-                - ReadWriteOnce
-              storageClassName: longhorn
-              resources:
-                requests:
-                  storage: 20Gi
+          stringSecrets:
+            syncthing-relay:
+              fields:
+                token:
+                  fieldName: token
 
-          deployments:
-            syncthing:
-              replicas: 1 # one instance is one device
-              strategy:
-                type: Recreate # the volume is ReadWriteOnce
-              selector:
-                matchLabels:
-                  app.kubernetes.io/name: syncthing
-              template:
-                metadata:
-                  labels:
-                    app.kubernetes.io/name: syncthing
-                spec:
-                  enableServiceLinks: false # the `SYNCTHING_*` variables of the services would conflict
-                  securityContext:
-                    fsGroup: 1000 # the `syncthing` user of the image
-                  containers:
-                    syncthing:
-                      name: syncthing
-                      image: docker.io/syncthing/syncthing:2.1.7 # renovate: versioning=loose
-                      ports:
-                        http:
-                          containerPort: 8384
-                      env:
-                        TZ: Europe/Paris
-                        STNODEFAULTFOLDER: "1" # the folders are added in the UI
-                      startupProbe:
-                        httpGet:
-                          path: /rest/noauth/health
-                          port: 8384
-                        periodSeconds: 5
-                        failureThreshold: 60
-                      readinessProbe:
-                        httpGet:
-                          path: /rest/noauth/health
-                          port: 8384
-                        timeoutSeconds: 5
-                      livenessProbe:
-                        httpGet:
-                          path: /rest/noauth/health
-                          port: 8384
-                        periodSeconds: 30
-                        timeoutSeconds: 10
-                        failureThreshold: 6
-                      # started as the user, the entrypoint of the image does not need root then (it only changes the owner of the volume)
-                      securityContext:
-                        allowPrivilegeEscalation: false
-                        runAsNonRoot: true
-                        runAsUser: 1000
-                        runAsGroup: 1000
-                        capabilities:
-                          drop:
-                            all: ALL
-                        seccompProfile:
-                          type: RuntimeDefault
-                      volumeMounts:
-                        data:
-                          name: data
-                          mountPath: /var/syncthing
-                          subPath: data # the volume has a `lost+found` directory
-                  volumes:
-                    data:
-                      name: data
-                      persistentVolumeClaim:
-                        claimName: syncthing-data
+          # key pair of the relay, mounted as `cert.pem` and `key.pem`. The ID of the relay is the device ID of the certificate, so it must
+          # never be renewed (a duration of 100 years) nor get a new key.
+          certManagerCertificates:
+            syncthing-relay-keys:
+              secretName: syncthing-relay-keys
+              commonName: syncthing-relay
+              duration: 876000h
+              privateKey:
+                algorithm: ECDSA
+                size: 256
+                rotationPolicy: Never
+              issuerRef:
+                name: self-signed
+                kind: ClusterIssuer
 
-          services:
-            syncthing:
-              selector:
-                app.kubernetes.io/name: syncthing
-              ports:
-                http:
-                  port: 8384
-
-    # the public exposure, applied once syncthing is deployed and not waited for
-    syncthing-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
+    syncthing-relay:
       dependsOn:
-        syncthing:
-          name: syncthing
-        cert-manager:
-          name: app-cert-manager
-          namespace: cert-manager
-        gateway-api:
+        syncthing-pre: # the token and the certificate
+          name: syncthing-pre
+        gateway-api: # the listener set and the route
           name: app-gateway-api
           namespace: gateway-api
       chart:
@@ -150,73 +99,118 @@ resources:
             name: bcl
             namespace: apps
       values:
-        # UI behind the Cilium Gateway `shared` (kube-system) with Authelia forward auth (see its access control).
         resources:
-          certManagerCertificates:
-            syncthing-gateway:
-              secretName: tls-syncthing-gateway
-              dnsNames:
-                syncthing: syncthing.{{ .Values.global.domain }}
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
+          deployments:
+            syncthing-relay:
+              replicas: 1
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: syncthing-relay
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: syncthing-relay
+                spec:
+                  enableServiceLinks: false
+                  securityContext:
+                    fsGroup: 1000 # the group of the files of the key pair
+                  containers:
+                    relay:
+                      name: relay
+                      image: docker.io/syncthing/relaysrv:2.1.7 # renovate: versioning=loose
+                      command: [ /bin/strelaysrv ] # not the entrypoint of the image, it needs root to change the user
+                      args:
+                        - -keys=/var/strelaysrv
+                        - -pools= # private relay, it does not join the public pools
+                        - -status-srv= # the statistics are for the pools
+                        - -token=$(RELAY_TOKEN) # expanded by Kubernetes: the token is not in the spec
+                      env:
+                        RELAY_TOKEN:
+                          secretKeyRef:
+                            name: syncthing-relay
+                            key: token
+                      ports:
+                        relay:
+                          containerPort: 22067
+                      startupProbe:
+                        tcpSocket:
+                          port: 22067
+                        periodSeconds: 5
+                        failureThreshold: 30
+                      readinessProbe:
+                        tcpSocket:
+                          port: 22067
+                      livenessProbe:
+                        tcpSocket:
+                          port: 22067
+                        periodSeconds: 30
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        readOnlyRootFilesystem: true
+                        runAsNonRoot: true
+                        runAsUser: 1000
+                        runAsGroup: 1000
+                        capabilities:
+                          drop:
+                            all: ALL
+                        seccompProfile:
+                          type: RuntimeDefault
+                      volumeMounts:
+                        keys:
+                          name: keys
+                          mountPath: /var/strelaysrv
+                          readOnly: true
+                  volumes:
+                    keys:
+                      name: keys
+                      secret:
+                        secretName: syncthing-relay-keys
+                        defaultMode: 0440
+                        items:
+                          cert:
+                            key: tls.crt
+                            path: cert.pem
+                          key:
+                            key: tls.key
+                            path: key.pem
 
+          services:
+            syncthing-relay:
+              selector:
+                app.kubernetes.io/name: syncthing-relay
+              ports:
+                relay:
+                  port: 22067
+
+          # Public on the Cilium Gateway `shared` (kube-system): a plain TCP listener, served by Cilium on the LoadBalancer service of the
+          # Gateway without Envoy, so the relay sees the address of the client.
           listenerSets:
-            syncthing:
+            syncthing-relay:
               parentRef:
                 group: gateway.networking.k8s.io
                 kind: Gateway
                 name: shared
                 namespace: kube-system
               listeners:
-                https:
-                  name: https
-                  hostname: syncthing.{{ .Values.global.domain }}
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: tls-syncthing-gateway
+                relay:
+                  name: relay
+                  port: 22067
+                  protocol: TCP
                   allowedRoutes:
                     namespaces:
                       from: Same
 
-          httpRoutes:
-            syncthing:
+          tcpRoutes:
+            syncthing-relay:
               parentRefs:
-                syncthing:
+                syncthing-relay:
                   group: gateway.networking.k8s.io
                   kind: ListenerSet
-                  name: syncthing
-              hostnames:
-                syncthing: syncthing.{{ .Values.global.domain }}
+                  name: syncthing-relay
+                  sectionName: relay
               rules:
-                root:
-                  filters:
-                    authelia:
-                      type: ExternalAuth
-                      externalAuth:
-                        protocol: HTTP
-                        backendRef:
-                          name: authelia
-                          namespace: authelia
-                          port: 80
-                        http:
-                          path: /api/authz/ext-authz/
-                          allowedResponseHeaders: # only the identity headers, not the authz content-type/content-length (a GET with a content-length makes upstreams answer 400)
-                            remote-user: remote-user
-                            remote-groups: remote-groups
-                            remote-name: remote-name
-                            remote-email: remote-email
-                          allowedHeaders: # what authelia needs to find the session and to redirect to the login page
-                            cookie: cookie
-                            accept: accept
-                            proxy-authorization: proxy-authorization
-                            x-forwarded-proto: x-forwarded-proto
-                            x-forwarded-for: x-forwarded-for
+                relay:
                   backendRefs:
-                    syncthing:
-                      name: syncthing
-                      port: 8384
+                    syncthing-relay:
+                      name: syncthing-relay
+                      port: 22067

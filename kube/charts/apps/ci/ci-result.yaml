@@ -105,6 +105,7 @@ data:
     global:
       domain: test.com
       ldapdn: dc=test,dc=com
+      lldapUsers: {}
       name: test
 kind: ConfigMap
 metadata:
@@ -118,6 +119,7 @@ data:
     global:
       domain: test.com
       ldapdn: dc=test,dc=com
+      lldapUsers: {}
       name: test
 kind: ConfigMap
 metadata:
@@ -131,6 +133,7 @@ data:
     global:
       domain: test.com
       ldapdn: dc=test,dc=com
+      lldapUsers: {}
       name: test
 kind: ConfigMap
 metadata:
@@ -144,6 +147,7 @@ data:
     global:
       domain: test.com
       ldapdn: dc=test,dc=com
+      lldapUsers: {}
       name: test
 kind: ConfigMap
 metadata:
@@ -157,6 +161,7 @@ data:
     global:
       domain: test.com
       ldapdn: dc=test,dc=com
+      lldapUsers: {}
       name: test
 kind: ConfigMap
 metadata:

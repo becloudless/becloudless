@@ -1,0 +1,335 @@
+---
+# Source: syncthing/templates/loader.yaml
+apiVersion: v1
+data:
+  relay.sh: |-
+    #!/bin/sh
+    # Sidecar of the Syncthing instance: keeps the sync protocol listen address of the instance on the relay of the cluster, so that the
+    # instance is reachable through it without any manual step in the UI.
+    #
+    # The relay ID is the device ID of its certificate (sha256 of the DER, base32, a luhn32 check character every 13 characters, groups of 7),
+    # computed here from the public certificate of the relay so that nothing has to be copied by hand.
+    #
+    # Environment: RELAY_HOST, RELAY_PORT, RELAY_TOKEN
+    # Files: /relay/tls.crt (certificate of the relay), /var/syncthing/config/config.xml (read only: the API key of the instance is in it)
+    set -eu
+
+    relay_id() {
+      awk '/BEGIN CERTIFICATE/ {f = 1; next} /END CERTIFICATE/ {exit} f' "$1" | base64 -d | sha256sum | awk '{
+        alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"; hex = "0123456789abcdef"; bits = ""
+        for (i = 1; i <= length($1); i++) {
+          d = index(hex, substr($1, i, 1)) - 1
+          bits = bits (d >= 8 ? 1 : 0) (int(d / 4) % 2) (int(d / 2) % 2) (d % 2)
+        }
+        bits = bits "0000"
+        s = ""
+        for (i = 0; i < 52; i++) {
+          v = 0
+          for (j = 1; j <= 5; j++) v = v * 2 + substr(bits, i * 5 + j, 1)
+          s = s substr(alpha, v + 1, 1)
+        }
+        out = ""
+        for (b = 0; b < 4; b++) {
+          p = substr(s, b * 13 + 1, 13); factor = 1; sum = 0
+          for (k = 1; k <= 13; k++) {
+            add = factor * (index(alpha, substr(p, k, 1)) - 1); factor = (factor == 2 ? 1 : 2)
+            sum += int(add / 32) + add % 32
+          }
+          out = out p substr(alpha, (32 - sum % 32) % 32 + 1, 1)
+        }
+        res = ""
+        for (i = 1; i <= 56; i += 7) res = res (i > 1 ? "-" : "") substr(out, i, 7)
+        print res
+      }'
+    }
+
+    id=$(relay_id /relay/tls.crt)
+    if [ "${#id}" != 63 ]; then
+      echo "cannot compute the ID of the relay from /relay/tls.crt" >&2
+      exit 1
+    fi
+    want="relay://${RELAY_HOST}:${RELAY_PORT}/?id=${id}&token=${RELAY_TOKEN}"
+    echo "the instance listens on the relay relay://${RELAY_HOST}:${RELAY_PORT}/?id=${id}"
+
+    # The addresses are reset at each check: a change made in the UI is reverted. The first checks are quick, the instance is starting.
+    wait=2
+    while true; do
+      key=$(sed -n 's:.*<apikey>\(.*\)</apikey>.*:\1:p' /var/syncthing/config/config.xml 2>/dev/null || true)
+      if [ -n "$key" ]; then
+        # the API escapes the `&` of the address
+        current=$(curl -sf -H "X-API-Key: $key" http://localhost:8384/rest/config/options 2>/dev/null | tr -d ' \n' | sed 's/\\u0026/\&/g' || true)
+        case "$current" in
+          *"\"listenAddresses\":[\"$want\"]"*)
+            wait=30
+            ;;
+          "")
+            ;;
+          *)
+            if curl -sf -X PATCH -H "X-API-Key: $key" -d "{\"listenAddresses\":[\"$want\"]}" http://localhost:8384/rest/config/options >/dev/null; then
+              echo "the listen address of the instance is set to the relay"
+            else
+              echo "cannot set the listen address of the instance" >&2
+            fi
+            ;;
+        esac
+      fi
+      sleep "$wait"
+    done
+kind: ConfigMap
+metadata:
+  name: test-release
+  namespace: default
+---
+# Source: syncthing/templates/loader.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: longhorn
+---
+# Source: syncthing/templates/loader.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 8384
+  selector:
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: syncthing
+---
+# Source: syncthing/templates/loader.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: test-release
+      app.kubernetes.io/name: syncthing
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        checksum/relay-script: 7f204dd9f6659b2b1487cdc8c87444c6167b7891524cf353f61730e47d962c87
+      labels:
+        app.kubernetes.io/instance: test-release
+        app.kubernetes.io/name: syncthing
+    spec:
+      containers:
+      - command:
+        - sh
+        - /scripts/relay.sh
+        env:
+        - name: RELAY_HOST
+          value: syncthing-relay
+        - name: RELAY_PORT
+          value: "22067"
+        - name: RELAY_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: token
+              name: syncthing-relay
+        image: docker.io/syncthing/syncthing:2.1.7
+        name: relay-config
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 1000
+          runAsNonRoot: true
+          runAsUser: 1000
+          seccompProfile:
+            type: RuntimeDefault
+        volumeMounts:
+        - mountPath: /var/syncthing
+          name: data
+          readOnly: true
+          subPath: data
+        - mountPath: /relay
+          name: relay
+          readOnly: true
+        - mountPath: /scripts
+          name: scripts
+          readOnly: true
+      - env:
+        - name: STNODEFAULTFOLDER
+          value: "1"
+        - name: TZ
+          value: Europe/Paris
+        image: docker.io/syncthing/syncthing:2.1.7
+        livenessProbe:
+          failureThreshold: 6
+          httpGet:
+            path: /rest/noauth/health
+            port: 8384
+          periodSeconds: 30
+          timeoutSeconds: 10
+        name: syncthing
+        ports:
+        - containerPort: 8384
+          name: http
+        readinessProbe:
+          httpGet:
+            path: /rest/noauth/health
+            port: 8384
+          timeoutSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsGroup: 1000
+          runAsNonRoot: true
+          runAsUser: 1000
+          seccompProfile:
+            type: RuntimeDefault
+        startupProbe:
+          failureThreshold: 60
+          httpGet:
+            path: /rest/noauth/health
+            port: 8384
+          periodSeconds: 5
+        volumeMounts:
+        - mountPath: /var/syncthing
+          name: data
+          subPath: data
+      enableServiceLinks: false
+      securityContext:
+        fsGroup: 1000
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: test-release
+      - name: relay
+        secret:
+          items:
+          - key: tls.crt
+            path: tls.crt
+          secretName: syncthing-relay-keys
+      - configMap:
+          name: test-release
+        name: scripts
+---
+# Source: syncthing/templates/loader.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  dnsNames:
+  - n0rad.syncthing.test.com
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: tls-test-release
+---
+# Source: syncthing/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: syncthing-relay
+    toPorts:
+    - ports:
+      - port: "22067"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: test-release
+      app.kubernetes.io/name: syncthing
+  ingress:
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "8384"
+        protocol: TCP
+---
+# Source: syncthing/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  hostnames:
+  - n0rad.syncthing.test.com
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: test-release
+  rules:
+  - backendRefs:
+    - name: test-release
+      port: 8384
+    filters:
+    - externalAuth:
+        backendRef:
+          name: authelia
+          namespace: authelia
+          port: 80
+        http:
+          allowedHeaders:
+          - accept
+          - cookie
+          - proxy-authorization
+          - x-forwarded-for
+          - x-forwarded-proto
+          allowedResponseHeaders:
+          - remote-email
+          - remote-groups
+          - remote-name
+          - remote-user
+          path: /api/authz/ext-authz/
+        protocol: HTTP
+      type: ExternalAuth
+---
+# Source: syncthing/templates/loader.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  listeners:
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: n0rad.syncthing.test.com
+    name: https
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - name: tls-test-release
+      mode: Terminate
+  parentRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: shared
+    namespace: kube-system

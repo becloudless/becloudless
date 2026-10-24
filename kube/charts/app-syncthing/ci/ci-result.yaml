@@ -3,27 +3,70 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
-  name: syncthing
+  name: syncthing-relay
   namespace: default
 spec:
   endpointSelector:
     matchLabels:
-      app.kubernetes.io/name: syncthing
+      app.kubernetes.io/name: syncthing-relay
   ingress:
   - fromEntities:
-    - host
-    - ingress
-    - remote-node
+    - cluster
+    - world
     toPorts:
     - ports:
-      - port: "8384"
+      - port: "22067"
         protocol: TCP
 ---
 # Source: app-syncthing/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: syncthing
+  name: syncthing-n0rad
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/syncthing
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  - name: app-longhorn
+    namespace: longhorn-system
+  - name: syncthing-pre
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    global:
+      domain: test.com
+    user: n0rad
+---
+# Source: app-syncthing/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: syncthing-pre
   namespace: default
 spec:
   chart:
@@ -35,8 +78,63 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
-  - name: app-longhorn
-    namespace: longhorn-system
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-secret-generator
+    namespace: secret-generator
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      certManagerCertificates:
+        syncthing-relay-keys:
+          commonName: syncthing-relay
+          duration: 876000h
+          issuerRef:
+            kind: ClusterIssuer
+            name: self-signed
+          privateKey:
+            algorithm: ECDSA
+            rotationPolicy: Never
+            size: 256
+          secretName: syncthing-relay-keys
+      stringSecrets:
+        syncthing-relay:
+          fields:
+            token:
+              fieldName: token
+---
+# Source: app-syncthing/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: syncthing-relay
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-gateway-api
+    namespace: gateway-api
+  - name: syncthing-pre
   driftDetection:
     mode: enabled
   install:
@@ -54,187 +152,112 @@ spec:
   values:
     resources:
       deployments:
-        syncthing:
+        syncthing-relay:
           replicas: 1
           selector:
             matchLabels:
-              app.kubernetes.io/name: syncthing
-          strategy:
-            type: Recreate
+              app.kubernetes.io/name: syncthing-relay
           template:
             metadata:
               labels:
-                app.kubernetes.io/name: syncthing
+                app.kubernetes.io/name: syncthing-relay
             spec:
               containers:
-                syncthing:
+                relay:
+                  args:
+                  - -keys=/var/strelaysrv
+                  - -pools=
+                  - -status-srv=
+                  - -token=$(RELAY_TOKEN)
+                  command:
+                  - /bin/strelaysrv
                   env:
-                    STNODEFAULTFOLDER: "1"
-                    TZ: Europe/Paris
-                  image: docker.io/syncthing/syncthing:2.1.7
+                    RELAY_TOKEN:
+                      secretKeyRef:
+                        key: token
+                        name: syncthing-relay
+                  image: docker.io/syncthing/relaysrv:2.1.7
                   livenessProbe:
-                    failureThreshold: 6
-                    httpGet:
-                      path: /rest/noauth/health
-                      port: 8384
                     periodSeconds: 30
-                    timeoutSeconds: 10
-                  name: syncthing
+                    tcpSocket:
+                      port: 22067
+                  name: relay
                   ports:
-                    http:
-                      containerPort: 8384
+                    relay:
+                      containerPort: 22067
                   readinessProbe:
-                    httpGet:
-                      path: /rest/noauth/health
-                      port: 8384
-                    timeoutSeconds: 5
+                    tcpSocket:
+                      port: 22067
                   securityContext:
                     allowPrivilegeEscalation: false
                     capabilities:
                       drop:
                         all: ALL
+                    readOnlyRootFilesystem: true
                     runAsGroup: 1000
                     runAsNonRoot: true
                     runAsUser: 1000
                     seccompProfile:
                       type: RuntimeDefault
                   startupProbe:
-                    failureThreshold: 60
-                    httpGet:
-                      path: /rest/noauth/health
-                      port: 8384
+                    failureThreshold: 30
                     periodSeconds: 5
+                    tcpSocket:
+                      port: 22067
                   volumeMounts:
-                    data:
-                      mountPath: /var/syncthing
-                      name: data
-                      subPath: data
+                    keys:
+                      mountPath: /var/strelaysrv
+                      name: keys
+                      readOnly: true
               enableServiceLinks: false
               securityContext:
                 fsGroup: 1000
               volumes:
-                data:
-                  name: data
-                  persistentVolumeClaim:
-                    claimName: syncthing-data
-      persistentVolumeClaims:
-        syncthing-data:
-          accessModes:
-          - ReadWriteOnce
-          resources:
-            requests:
-              storage: 20Gi
-          storageClassName: longhorn
-      services:
-        syncthing:
-          ports:
-            http:
-              port: 8384
-          selector:
-            app.kubernetes.io/name: syncthing
----
-# Source: app-syncthing/templates/loader.yaml
-apiVersion: helm.toolkit.fluxcd.io/v2
-kind: HelmRelease
-metadata:
-  name: syncthing-integration
-  namespace: default
-spec:
-  chart:
-    spec:
-      chart: ./kube/charts/base-loader
-      reconcileStrategy: Revision
-      sourceRef:
-        kind: GitRepository
-        name: bcl
-        namespace: apps
-  dependsOn:
-  - name: app-cert-manager
-    namespace: cert-manager
-  - name: app-gateway-api
-    namespace: gateway-api
-  - name: syncthing
-  driftDetection:
-    mode: enabled
-  install:
-    crds: CreateReplace
-    disableWait: true
-    strategy:
-      name: RetryOnFailure
-      retryInterval: 5m
-  interval: 10m
-  timeout: 10m
-  upgrade:
-    cleanupOnFail: true
-    disableWait: true
-    strategy:
-      name: RetryOnFailure
-      retryInterval: 5m
-  values:
-    resources:
-      certManagerCertificates:
-        syncthing-gateway:
-          dnsNames:
-            syncthing: syncthing.test.com
-          issuerRef:
-            kind: ClusterIssuer
-            name: letsencrypt-prod
-          secretName: tls-syncthing-gateway
-      httpRoutes:
-        syncthing:
-          hostnames:
-            syncthing: syncthing.test.com
-          parentRefs:
-            syncthing:
-              group: gateway.networking.k8s.io
-              kind: ListenerSet
-              name: syncthing
-          rules:
-            root:
-              backendRefs:
-                syncthing:
-                  name: syncthing
-                  port: 8384
-              filters:
-                authelia:
-                  externalAuth:
-                    backendRef:
-                      name: authelia
-                      namespace: authelia
-                      port: 80
-                    http:
-                      allowedHeaders:
-                        accept: accept
-                        cookie: cookie
-                        proxy-authorization: proxy-authorization
-                        x-forwarded-for: x-forwarded-for
-                        x-forwarded-proto: x-forwarded-proto
-                      allowedResponseHeaders:
-                        remote-email: remote-email
-                        remote-groups: remote-groups
-                        remote-name: remote-name
-                        remote-user: remote-user
-                      path: /api/authz/ext-authz/
-                    protocol: HTTP
-                  type: ExternalAuth
+                keys:
+                  name: keys
+                  secret:
+                    defaultMode: 288
+                    items:
+                      cert:
+                        key: tls.crt
+                        path: cert.pem
+                      key:
+                        key: tls.key
+                        path: key.pem
+                    secretName: syncthing-relay-keys
       listenerSets:
-        syncthing:
+        syncthing-relay:
           listeners:
-            https:
+            relay:
               allowedRoutes:
                 namespaces:
                   from: Same
-              hostname: syncthing.test.com
-              name: https
-              port: 443
-              protocol: HTTPS
-              tls:
-                certificateRefs:
-                  tls:
-                    name: tls-syncthing-gateway
-                mode: Terminate
+              name: relay
+              port: 22067
+              protocol: TCP
           parentRef:
             group: gateway.networking.k8s.io
             kind: Gateway
             name: shared
             namespace: kube-system
+      services:
+        syncthing-relay:
+          ports:
+            relay:
+              port: 22067
+          selector:
+            app.kubernetes.io/name: syncthing-relay
+      tcpRoutes:
+        syncthing-relay:
+          parentRefs:
+            syncthing-relay:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: syncthing-relay
+              sectionName: relay
+          rules:
+            relay:
+              backendRefs:
+                syncthing-relay:
+                  name: syncthing-relay
+                  port: 22067

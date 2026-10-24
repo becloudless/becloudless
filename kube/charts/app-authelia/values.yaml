@@ -561,9 +561,13 @@ resources:
                   - prometheus.{{ .Values.global.domain }}
                   - fluxwebhook.{{ .Values.global.domain }}
                   - rutorrent.{{ .Values.global.domain }}
-                  - syncthing.{{ .Values.global.domain }}
                 subject:
                   - [ 'group:role_admin' ]
+                policy: two_factor
+              - domain_regex: # the Syncthing instance of a user (app-syncthing): only the user of `<user>.syncthing.<domain>`
+                  - '^(?P<User>[a-z0-9-]+)\.syncthing\.{{ regexQuoteMeta .Values.global.domain }}$'
+                subject:
+                  - 'user:{user}'
                 policy: two_factor
               - domain:
                   - homer.{{ .Values.global.domain }}

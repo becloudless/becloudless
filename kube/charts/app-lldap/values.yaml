@@ -23,6 +23,7 @@ global:
       - app_pushprox
       - app_seafile
       - app_seerr
+      - app_syncthing
     # the custom attributes of the users, used by the OIDC claims of authelia
     userSchema:
       - name: immichquota

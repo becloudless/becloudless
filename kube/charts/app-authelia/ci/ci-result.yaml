@@ -117,10 +117,14 @@ spec:
           - prometheus.test.com
           - fluxwebhook.test.com
           - rutorrent.test.com
-          - syncthing.test.com
           policy: two_factor
           subject:
           - - group:role_admin
+        - domain_regex:
+          - ^(?P<User>[a-z0-9-]+)\.syncthing\.test\.com$
+          policy: two_factor
+          subject:
+          - user:{user}
         - domain:
           - homer.test.com
           policy: one_factor

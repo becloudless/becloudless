@@ -1,0 +1,8 @@
+apiVersion: v2
+name: syncthing
+description: One Syncthing instance for a user, with its web UI behind the Cilium Gateway and Authelia
+version: 0.0.0
+dependencies:
+  - name: base
+    version: 0.0.0
+    repository: "file://../base"

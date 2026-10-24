@@ -1,0 +1,7 @@
+{{- include "base.loader.init" $ }}
+
+{{- /* The resources of the instance are prepared by default, values set by the user take precedence. */}}
+{{- $featureValues := include "syncthing.feature" (dict "rootContext" $) | fromYaml }}
+{{- $_ := set $ "Values" (mustMergeOverwrite $featureValues $.Values) }}
+
+{{- include "base.resources.renderResources" (dict "rootContext" $) }}

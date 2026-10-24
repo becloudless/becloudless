@@ -1,0 +1,48 @@
+# One Syncthing instance (https://syncthing.net), named after the release: install it once for each user.
+#
+#  - the web UI is `https://<user>.syncthing.<global.domain>` on the Cilium Gateway `shared`, behind the forward auth of authelia. The
+#    access control of authelia (`domain_regex` with `user:{user}`) only lets the user in. The UI has no authentication of its own, the
+#    pod only accepts the connections of the Gateway;
+#  - the pod is not exposed for the synchronization, and it cannot go out of the cluster (default deny of app-cilium) but to the relay
+#    of `app-syncthing`: its devices are reached through the relay. A sidecar (`files/relay.sh`) sets the sync protocol listen address of
+#    the instance to `relay://<relay.host>:<relay.port>/?id=<relay id>&token=<token>`, the relay id being computed from the certificate
+#    of the relay: nothing to do in the UI. The address is checked every 30s, a change made in the UI is reverted. The devices that
+#    connect to the instance use the same address with the public name of the relay;
+#  - the configuration, the keys (the device id comes from them) and the folders are in the volume of the release (`<release>`), backed
+#    up daily by longhorn (the `default` group). The default folder is not created.
+
+prefixNamesWithRelease: true
+
+global:
+  domain:
+
+# the owner of the instance, required: the id of its LDAP user
+user:
+
+# `<user>.syncthing.<global.domain>` by default
+host: ""
+
+image: docker.io/syncthing/syncthing:2.1.7 # renovate: versioning=loose
+
+storageClassName: longhorn
+storageSize: 10Gi
+
+# the Gateway the web UI is exposed by, and the ClusterIssuer of its certificate
+gateway:
+  name: shared
+  namespace: kube-system
+issuer: letsencrypt-prod
+
+# the relay of the cluster (app-syncthing): the pods of the relay the instance is allowed to reach (the default deny of Cilium blocks
+# everyone else), its service, and the secrets of the namespace it is configured from. Empty `host`: no relay, no sidecar.
+relay:
+  host: syncthing-relay
+  port: 22067
+  matchLabels:
+    app.kubernetes.io/name: syncthing-relay
+  tokenSecret: # the token of the relay
+    name: syncthing-relay
+    key: token
+  certSecret: # the certificate of the relay, its device ID is computed from it
+    name: syncthing-relay-keys
+    key: tls.crt

@@ -17,6 +17,8 @@ config:
   domain:
   # name: # deduced from domain by default
   # ldapdn: # deduced from domain by default (dc=example,dc=com)
+  # lldapUsers: # TODO probably not a good idea to be in global config. the users of the cluster, created in lldap and given an instance by some apps (syncthing), keyed by user id
+  #   n0rad: {displayName: n0rad, email: n0rad@example.com, groups: [role_admin, role_user]}
 
 appsGroups:
   minimal:

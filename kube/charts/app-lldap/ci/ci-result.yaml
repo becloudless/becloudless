@@ -362,6 +362,7 @@ spec:
               {"name":"app_pushprox"}
               {"name":"app_seafile"}
               {"name":"app_seerr"}
+              {"name":"app_syncthing"}
             users-schema.json: '[{"attributeType":"INTEGER","isEditable":false,"isList":false,"isVisible":true,"name":"immichquota"},{"attributeType":"STRING","isEditable":false,"isList":false,"isVisible":true,"name":"immichrole"}]'
             users.json: |-
               {"displayName":"Authelia","email":"authelia@test.com","groups":["lldap_password_manager","lldap_strict_readonly"],"id":"authelia","password_file":"/secrets/authelia/password"}
@@ -371,7 +372,7 @@ spec:
         lldap-bootstrap:
           activeDeadlineSeconds: 600
           backoffLimit: 0
-          fullNameOverride: lldap-bootstrap-be81d22d03
+          fullNameOverride: lldap-bootstrap-3c94d131f4
           template:
             spec:
               containers:

@@ -38,6 +38,13 @@
             "string",
             "null"
           ]
+        },
+        "lldapUsers": {
+          "description": "Users of the cluster, keyed by user id. Created in lldap (attributes of its bootstrap script) and given an instance by the apps that have one for each user (ex: syncthing).",
+          "type": [
+            "object",
+            "null"
+          ]
         }
       },
       "type": "object"

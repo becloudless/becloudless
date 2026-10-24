@@ -1,1 +1,7 @@
-{{- include "base.loader.all" $ }}
+{{- include "base.loader.init" $ }}
+
+{{- /* The instances are prepared as resources by default, values set by the cluster take precedence. */}}
+{{- $featureValues := include "app-syncthing.features.instances" (dict "rootContext" $) | fromYaml }}
+{{- $_ := set $ "Values" (mustMergeOverwrite $featureValues $.Values) }}
+
+{{- include "base.resources.renderResources" (dict "rootContext" $) }}
