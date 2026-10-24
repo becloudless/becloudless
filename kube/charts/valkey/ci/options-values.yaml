@@ -1,0 +1,15 @@
+clients:
+  app:
+    matchLabels: {app.kubernetes.io/name: app}
+  other:
+    matchLabels: {"k8s:io.kubernetes.pod.namespace": other, app.kubernetes.io/name: other}
+
+valkey:
+  dataStorage:
+    requestedSize: 5Gi
+  auth:
+    aclUsers:
+      default:
+        permissions: "~* -@all"
+      app:
+        permissions: "~* &* +@all"

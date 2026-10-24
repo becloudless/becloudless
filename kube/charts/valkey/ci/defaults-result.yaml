@@ -1,0 +1,299 @@
+---
+# Source: valkey/charts/valkey/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: test-release-valkey
+  labels:
+    helm.sh/chart: valkey-0.12.0
+    app.kubernetes.io/name: valkey
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/version: "9.1.2"
+    app.kubernetes.io/managed-by: Helm
+automountServiceAccountToken: false
+---
+# Source: valkey/charts/valkey/templates/init_config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-release-valkey-init-scripts
+  labels:
+    helm.sh/chart: valkey-0.12.0
+    app.kubernetes.io/name: valkey
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/version: "9.1.2"
+    app.kubernetes.io/managed-by: Helm
+data:
+  init.sh: |-
+    #!/bin/sh
+    set -eu
+
+    # Default config paths
+    VALKEY_CONFIG=${VALKEY_CONFIG_PATH:-/data/conf/valkey.conf}
+
+    LOGFILE="/data/init.log"
+    DATA_DIR="/data/conf"
+
+    # Logging function (outputs to stderr and file)
+    log() {
+      echo "$(date) $1" | tee -a "$LOGFILE" >&2
+    }
+    # Function to get password for a user
+    # Usage: get_user_password <username> [password_key]
+    # Returns: password via stdout, exits with error if not found
+    get_user_password() {
+      username="$1"
+      password_key="${2:-$username}"
+      password=""
+      # Try to get password from existing secret first (priority)
+      if [ -f "/valkey-users-secret/$password_key" ]; then
+        password=$(cat "/valkey-users-secret/$password_key")
+        log "Using password from existing secret for user $username"
+      elif [ -f "/valkey-auth-secret/${username}-password" ]; then
+        # Fallback to inline password
+        password=$(cat "/valkey-auth-secret/${username}-password")
+        log "Using inline password for user $username"
+      else
+        log "ERROR: No password found for user $username"
+        return 1
+      fi
+
+      echo "$password"
+    }
+
+    # Clean old log if requested
+    if [ "${KEEP_OLD_LOGS:-false}" != "true" ]; then
+      rm -f "$LOGFILE"
+    fi
+
+    if [ -f "$LOGFILE" ]; then
+      log "Detected restart of this instance ($HOSTNAME)"
+    fi
+
+    log "Creating configuration in $DATA_DIR..."
+    mkdir -p "$DATA_DIR"
+    rm -f "$VALKEY_CONFIG"
+
+
+    # Base valkey.conf
+    log "Generating base valkey.conf"
+    {
+      echo "port 6379"
+      echo "protected-mode no"
+      echo "bind * -::*"
+      echo "dir /data"
+    } >>"$VALKEY_CONFIG"
+    # Create secure directory for ACL file
+    log "Creating /etc/valkey directory for ACL file"
+    mkdir -p /etc/valkey
+
+    # Set aclfile path in valkey.conf
+    echo "aclfile /etc/valkey/users.acl" >>"$VALKEY_CONFIG"
+
+    # Remove or reset existing ACL file if present (it may be read-only from previous run)
+    log "Preparing ACL file at /etc/valkey/users.acl"
+    if [ -f /etc/valkey/users.acl ]; then
+      log "Removing existing read-only users.acl file"
+      chmod 0600 /etc/valkey/users.acl
+      rm -f /etc/valkey/users.acl
+    fi
+
+    # Create ACL file with secure permissions
+    touch /etc/valkey/users.acl
+    chmod 0600 /etc/valkey/users.acl
+    # Generate ACL entries for each user
+    log "Generating ACL entries for users"
+
+    # User: default
+    PASSWORD=$(get_user_password "default" "default") || exit 1
+
+    # Hash the password and write ACL entry
+    PASSHASH=$(echo -n "$PASSWORD" | sha256sum | cut -f 1 -d " ")
+    echo "user default on #$PASSHASH ~* &* +@all" >> /etc/valkey/users.acl
+
+    # Set final permissions
+    chmod 0400 /etc/valkey/users.acl
+    log "ACL file created with 0400 permissions"
+
+    # Append extra configs if present
+    if [ -f /usr/local/etc/valkey/valkey.conf ]; then
+      log "Appending /usr/local/etc/valkey/valkey.conf"
+      cat /usr/local/etc/valkey/valkey.conf >>"$VALKEY_CONFIG"
+    fi
+    if [ -d /extravalkeyconfigs ]; then
+      log "Appending files in /extravalkeyconfigs/"
+      cat /extravalkeyconfigs/* >>"$VALKEY_CONFIG"
+    fi
+---
+# Source: valkey/charts/valkey/templates/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-release-valkey
+  labels:
+    helm.sh/chart: valkey-0.12.0
+    app.kubernetes.io/name: valkey
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/version: "9.1.2"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Gi
+---
+# Source: valkey/charts/valkey/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-release-valkey
+  labels:
+    helm.sh/chart: valkey-0.12.0
+    app.kubernetes.io/name: valkey
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/version: "9.1.2"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: primary
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6379
+      targetPort: tcp
+      protocol: TCP
+      name: tcp
+  selector:
+    app.kubernetes.io/name: valkey
+    app.kubernetes.io/instance: test-release
+---
+# Source: valkey/charts/valkey/templates/deploy_valkey.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-release-valkey
+  labels:
+    helm.sh/chart: valkey-0.12.0
+    app.kubernetes.io/name: valkey
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/version: "9.1.2"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: valkey
+      app.kubernetes.io/instance: test-release
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: valkey
+        app.kubernetes.io/instance: test-release
+      annotations:
+        checksum/initconfig: 4d344e2060a25336c436c063f0597927
+    spec:
+      
+      automountServiceAccountToken: false
+      serviceAccountName: test-release-valkey
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: test-release-valkey-init
+          image: docker.io/valkey/valkey:9.1.2
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+          command: [ "/scripts/init.sh" ]
+          volumeMounts:
+            - name: valkey-data
+              mountPath: /data
+            - name: scripts
+              mountPath: /scripts
+            - name: valkey-acl
+              mountPath: /etc/valkey
+            - name: valkey-users-secret
+              mountPath: /valkey-users-secret
+              readOnly: true
+      containers:
+        - name: test-release-valkey
+          image: docker.io/valkey/valkey:9.1.2
+          imagePullPolicy: IfNotPresent
+          command: [ "valkey-server" ]
+          args: [ "/data/conf/valkey.conf" ]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+          env:
+            - name: VALKEY_LOG_LEVEL
+              value: "notice"
+          ports:
+            - name: tcp
+              containerPort: 6379
+              protocol: TCP
+          livenessProbe:
+            exec:
+              command:
+              - valkey-cli
+              - ping
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 1
+          startupProbe:
+            exec:
+              command:
+              - valkey-cli
+              - ping
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 1
+          resources:
+            {}
+          volumeMounts:
+            - name: valkey-data
+              mountPath: /data
+            - name: valkey-acl
+              mountPath: /etc/valkey
+      volumes:
+        - name: scripts
+          configMap:
+            name: test-release-valkey-init-scripts
+            defaultMode: 0555
+        - name: valkey-acl
+          emptyDir:
+            medium: Memory
+        - name: valkey-users-secret
+          secret:
+            secretName: test-release
+            defaultMode: 0400
+        - name: valkey-data
+          persistentVolumeClaim:
+            claimName: test-release-valkey
+---
+# Source: valkey/templates/loader.yaml
+apiVersion: secretgenerator.mittwald.de/v1alpha1
+kind: StringSecret
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  fields:
+  - fieldName: default

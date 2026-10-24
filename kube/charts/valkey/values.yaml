@@ -1,0 +1,38 @@
+# Valkey (https://valkey.io), the public `valkey` chart (the `valkey` key below) with what every app needs around it. Install it as the
+# HelmRelease `<app>-valkey` (any name containing `valkey` keeps the name of the Service and of the pods equal to the release name).
+# The password of each user is generated, so the HelmRelease has to wait for `secret-generator`:
+#
+#   <app>-valkey:
+#     dependsOn: {secret-generator: {name: app-secret-generator, namespace: secret-generator}}
+#     values:
+#       clients: {<app>: {matchLabels: {app.kubernetes.io/name: <app>}}}
+
+prefixNamesWithRelease: true
+
+# the values of the public chart have null defaults, which the check of the base chart rejects
+checkRequiredValues: false
+
+# The pods allowed to connect to valkey (the default deny of Cilium blocks everyone else), one `matchLabels` selector each. They are
+# in the namespace of valkey, or in another one with the `k8s:io.kubernetes.pod.namespace` label.
+# ex: `clients: {authelia: {matchLabels: {app.kubernetes.io/name: authelia}}}`
+clients: {}
+
+# values of the public chart: https://github.com/valkey-io/valkey-helm/blob/main/valkey/values.yaml
+valkey:
+  dataStorage:
+    enabled: true
+    requestedSize: 1Gi
+
+  auth:
+    enabled: true
+
+    # The passwords are generated in the secret named after the release, its keys are the names of the users.
+    usersExistingSecret: "{{ .Release.Name }}"
+
+    # The users, a password is generated for each of them. The `default` user has to be defined, and its password is the one of the
+    # clients that do not have a user of their own. ex: lock `default` and give the app its own user:
+    #   default: {permissions: "~* -@all"}
+    #   app: {permissions: "~* &* +@all"}
+    aclUsers:
+      default:
+        permissions: "~* &* +@all"

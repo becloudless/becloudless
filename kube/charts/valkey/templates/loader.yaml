@@ -1,0 +1,7 @@
+{{- include "base.loader.init" $ }}
+
+{{- /* The password secret and the network policy are prepared as resources by default, values set by the user take precedence. */}}
+{{- $featureValues := include "valkey.feature" (dict "rootContext" $) | fromYaml }}
+{{- $_ := set $ "Values" (mustMergeOverwrite $featureValues $.Values) }}
+
+{{- include "base.resources.renderResources" (dict "rootContext" $) }}

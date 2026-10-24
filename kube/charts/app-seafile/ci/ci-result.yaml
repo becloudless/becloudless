@@ -66,25 +66,6 @@ spec:
         protocol: TCP
 ---
 # Source: app-seafile/templates/loader.yaml
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
-metadata:
-  name: seafile-valkey
-  namespace: default
-spec:
-  endpointSelector:
-    matchLabels:
-      app.kubernetes.io/name: valkey
-  ingress:
-  - fromEndpoints:
-    - matchLabels:
-        app.kubernetes.io/name: seafile
-    toPorts:
-    - ports:
-      - port: "6379"
-        protocol: TCP
----
-# Source: app-seafile/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -581,10 +562,6 @@ spec:
               fieldName: db-root-password
             jwt-private-key:
               fieldName: jwt-private-key
-        seafile-valkey:
-          fields:
-            default:
-              fieldName: default
 ---
 # Source: app-seafile/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -595,13 +572,15 @@ metadata:
 spec:
   chart:
     spec:
-      chart: valkey
+      chart: ./kube/charts/valkey
+      reconcileStrategy: Revision
       sourceRef:
-        kind: HelmRepository
-        name: seafile-valkey
-      version: 0.12.0
+        kind: GitRepository
+        name: bcl
+        namespace: apps
   dependsOn:
-  - name: seafile-pre
+  - name: app-secret-generator
+    namespace: secret-generator
   driftDetection:
     mode: enabled
   install:
@@ -617,23 +596,7 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
-    auth:
-      aclUsers:
-        default:
-          permissions: ~* &* +@all
-      enabled: true
-      usersExistingSecret: seafile-valkey
-    dataStorage:
-      enabled: true
-      requestedSize: 1Gi
-    replicaCount: 1
----
-# Source: app-seafile/templates/loader.yaml
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: HelmRepository
-metadata:
-  name: seafile-valkey
-  namespace: default
-spec:
-  interval: 10m
-  url: https://valkey.io/valkey-helm/
+    clients:
+      seafile:
+        matchLabels:
+          app.kubernetes.io/name: seafile

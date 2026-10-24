@@ -25,7 +25,7 @@ namespace. Resource names are the id of the resource: `prefixNamesWithRelease` i
 
 A chart does not create everything in its own release. A resource that needs something that does not exist yet
 (a secret, a CRD, a running service) goes in a sub-HR created by the chart, which waits for it with `dependsOn`.
-A sub-HR is either a chart of its own (`postgresql`, a chart of this repository) or `./kube/charts/base-loader`,
+A sub-HR is either a chart of its own (`postgresql`, `valkey`: charts of this repository) or `./kube/charts/base-loader`,
 which renders the `resources` given in its `values`.
 
 | HR | Contains | Waits for | Waited for |
@@ -51,6 +51,9 @@ Rules:
   apps with `clusterAdmin`.
 - The postgres cluster of an app is a sub-HR `<app>-postgresql` (chart `postgresql`) depending on `app-cert-manager`,
   `app-cnpg` and `app-longhorn`. The chart sets `prefixNamesWithRelease: true`, its resources are named `<release>-<id>`.
+- The valkey of an app is a sub-HR `<app>-valkey` (chart `valkey`) depending on `app-secret-generator`. The chart wraps the public
+  valkey chart: `valkey.auth.aclUsers` lists the users, whose passwords are generated in the secret `<app>-valkey` (one key per
+  user), and `clients` lists the pods that can connect to it (network policy).
 
 ```mermaid
 flowchart LR
