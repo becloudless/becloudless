@@ -218,6 +218,13 @@ spec:
                 subject:
                 - group:role_admin
                 - group:app_jellyfin
+            seafile_authz:
+              default_policy: deny
+              rules:
+              - policy: two_factor
+                subject:
+                - group:role_admin
+                - group:app_seafile
             seerr_authz:
               default_policy: deny
               rules:
@@ -356,6 +363,28 @@ spec:
             - email
             token_endpoint_auth_method: client_secret_post
             userinfo_signed_response_alg: none
+          - access_token_signed_response_alg: none
+            authorization_policy: seafile_authz
+            client_id: '{{ secret "/secrets/authelia-oidc-seafile/client-id" }}'
+            client_name: Seafile
+            client_secret:
+              path: /config/oidc-seafile.hash
+            grant_types:
+            - authorization_code
+            pkce_challenge_method: ""
+            pre_configured_consent_duration: 1 year
+            public: false
+            redirect_uris:
+            - https://seafile.test.com/oauth/callback/
+            require_pkce: false
+            response_types:
+            - code
+            scopes:
+            - openid
+            - profile
+            - email
+            token_endpoint_auth_method: client_secret_basic
+            userinfo_signed_response_alg: none
           enabled: true
           hmac_secret:
             secret_name: authelia-generated
@@ -448,7 +477,7 @@ spec:
         - sh
         - -ec
         - |
-          for client in forgejo grafana jellyfin immich seerr; do
+          for client in forgejo grafana jellyfin immich seerr seafile; do
             hash=$(authelia crypto hash generate pbkdf2 --variant sha512 --password "$(cat /secrets/authelia-oidc-$client/secret)" | sed 's/^Digest: //')
             printf '%s' "$hash" > /config/oidc-$client.hash
           done
@@ -472,6 +501,9 @@ spec:
         - mountPath: /secrets/authelia-oidc-seerr
           name: secret-authelia-oidc-seerr
           readOnly: true
+        - mountPath: /secrets/authelia-oidc-seafile
+          name: secret-authelia-oidc-seafile
+          readOnly: true
       kind: Deployment
       replicas: 1
     secret:
@@ -483,6 +515,7 @@ spec:
         authelia-oidc-grafana: {}
         authelia-oidc-immich: {}
         authelia-oidc-jellyfin: {}
+        authelia-oidc-seafile: {}
         authelia-oidc-seerr: {}
         authelia-postgresql-app: {}
         authelia-valkey: {}
@@ -739,6 +772,16 @@ spec:
               kind: ServiceAccount
               name: authelia-reader
               namespace: jellyfin
+        seafile-secrets-reader:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: seafile-secrets-reader
+          subjects:
+            authelia-reader:
+              kind: ServiceAccount
+              name: authelia-reader
+              namespace: seafile
         seerr-secrets-reader:
           roleRef:
             apiGroup: rbac.authorization.k8s.io
@@ -794,6 +837,17 @@ spec:
               - secrets
               verbs:
               - get
+        seafile-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - authelia-oidc-seafile
+              resources:
+              - secrets
+              verbs:
+              - get
         seerr-secrets-reader:
           rules:
             secrets:
@@ -833,41 +887,37 @@ spec:
         authelia-oidc-forgejo:
           fields:
             client-id:
-              encoding: hex
               fieldName: client-id
-              length: "32"
             secret:
               fieldName: secret
         authelia-oidc-grafana:
           fields:
             client-id:
-              encoding: hex
               fieldName: client-id
-              length: "32"
             secret:
               fieldName: secret
         authelia-oidc-immich:
           fields:
             client-id:
-              encoding: hex
               fieldName: client-id
-              length: "32"
             secret:
               fieldName: secret
         authelia-oidc-jellyfin:
           fields:
             client-id:
-              encoding: hex
               fieldName: client-id
-              length: "32"
+            secret:
+              fieldName: secret
+        authelia-oidc-seafile:
+          fields:
+            client-id:
+              fieldName: client-id
             secret:
               fieldName: secret
         authelia-oidc-seerr:
           fields:
             client-id:
-              encoding: hex
               fieldName: client-id
-              length: "32"
             secret:
               fieldName: secret
         authelia-valkey:

@@ -1,0 +1,619 @@
+---
+# Source: app-seafile/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: seafile
+  namespace: default
+spec:
+  egress:
+  - toFQDNs:
+    - matchName: authelia.test.com
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toEntities:
+    - ingress
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: seafile-mariadb
+    toPorts:
+    - ports:
+      - port: "3306"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: valkey
+    toPorts:
+    - ports:
+      - port: "6379"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: seafile
+  ingress:
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "80"
+        protocol: TCP
+---
+# Source: app-seafile/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: seafile-mariadb
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: seafile-mariadb
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: seafile
+    toPorts:
+    - ports:
+      - port: "3306"
+        protocol: TCP
+---
+# Source: app-seafile/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: seafile-valkey
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: valkey
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: seafile
+    toPorts:
+    - ports:
+      - port: "6379"
+        protocol: TCP
+---
+# Source: app-seafile/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: seafile
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: seafile-mariadb
+  - name: seafile-pre
+  - name: seafile-valkey
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 15m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      configMaps:
+        seafile-config:
+          data:
+            local_settings.py: |-
+              import os
+
+              issuer = os.environ['OAUTH_ISSUER_URL'].rstrip('/')
+              service = '%s://%s' % (os.environ['SEAFILE_SERVER_PROTOCOL'], os.environ['SEAFILE_SERVER_HOSTNAME'])
+
+              ENABLE_OAUTH = True
+              OAUTH_CLIENT_ID = os.environ['OAUTH_CLIENT_ID']
+              OAUTH_CLIENT_SECRET = os.environ['OAUTH_CLIENT_SECRET']
+              OAUTH_REDIRECT_URL = service + '/oauth/callback/'
+              OAUTH_PROVIDER = 'authelia'
+              OAUTH_AUTHORIZATION_URL = issuer + '/api/oidc/authorization'
+              OAUTH_TOKEN_URL = issuer + '/api/oidc/token'
+              OAUTH_USER_INFO_URL = issuer + '/api/oidc/userinfo'
+              OAUTH_SCOPE = ['openid', 'profile', 'email']
+              OAUTH_ATTRIBUTE_MAP = {
+                  'preferred_username': (True, 'uid'),
+                  'name': (False, 'name'),
+                  'email': (False, 'contact_email'),
+              }
+              OAUTH_CREATE_UNKNOWN_USER = True
+              OAUTH_ACTIVATE_USER_AFTER_CREATION = True
+              # the users created by SSO cannot use the local password login
+              DISABLE_SSO_USER_LOCAL_PWD_LOGIN = True
+      deployments:
+        seafile:
+          replicas: 1
+          selector:
+            matchLabels:
+              app.kubernetes.io/name: seafile
+          strategy:
+            type: Recreate
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/name: seafile
+            spec:
+              containers:
+                seafile:
+                  command:
+                  - sh
+                  - -c
+                  - |-
+                    ln -sf /config/local_settings.py /opt/seafile/seafile-server-$SEAFILE_VERSION/seahub/seahub/local_settings.py
+                    exec /sbin/my_init -- /scripts/enterpoint.sh
+                  env:
+                    CACHE_PROVIDER: redis
+                    INIT_SEAFILE_ADMIN_EMAIL: admin@test.com
+                    INIT_SEAFILE_ADMIN_PASSWORD:
+                      secretKeyRef:
+                        key: admin-password
+                        name: seafile-generated
+                    INIT_SEAFILE_MYSQL_ROOT_PASSWORD:
+                      secretKeyRef:
+                        key: db-root-password
+                        name: seafile-generated
+                    JWT_PRIVATE_KEY:
+                      secretKeyRef:
+                        key: jwt-private-key
+                        name: seafile-generated
+                    OAUTH_CLIENT_ID:
+                      secretKeyRef:
+                        key: client-id
+                        name: seafile-oidc
+                    OAUTH_CLIENT_SECRET:
+                      secretKeyRef:
+                        key: secret
+                        name: seafile-oidc
+                    OAUTH_ISSUER_URL: https://authelia.test.com
+                    REDIS_HOST: seafile-valkey
+                    REDIS_PASSWORD:
+                      secretKeyRef:
+                        key: default
+                        name: seafile-valkey
+                    REDIS_PORT: "6379"
+                    SEAFILE_LOG_TO_STDOUT: "true"
+                    SEAFILE_MYSQL_DB_CCNET_DB_NAME: ccnet_db
+                    SEAFILE_MYSQL_DB_HOST: seafile-mariadb
+                    SEAFILE_MYSQL_DB_PASSWORD:
+                      secretKeyRef:
+                        key: db-password
+                        name: seafile-generated
+                    SEAFILE_MYSQL_DB_PORT: "3306"
+                    SEAFILE_MYSQL_DB_SEAFILE_DB_NAME: seafile_db
+                    SEAFILE_MYSQL_DB_SEAHUB_DB_NAME: seahub_db
+                    SEAFILE_MYSQL_DB_USER: seafile
+                    SEAFILE_SERVER_HOSTNAME: seafile.test.com
+                    SEAFILE_SERVER_PROTOCOL: https
+                    TIME_ZONE: Europe/Paris
+                  image: docker.io/seafileltd/seafile-mc:13.0.28
+                  livenessProbe:
+                    failureThreshold: 6
+                    httpGet:
+                      path: /api2/ping/
+                      port: 80
+                    periodSeconds: 30
+                    timeoutSeconds: 10
+                  name: seafile
+                  ports:
+                    http:
+                      containerPort: 80
+                  readinessProbe:
+                    httpGet:
+                      path: /api2/ping/
+                      port: 80
+                    timeoutSeconds: 5
+                  securityContext:
+                    allowPrivilegeEscalation: false
+                    capabilities:
+                      add:
+                      - CHOWN
+                      - DAC_OVERRIDE
+                      - FOWNER
+                      - SETGID
+                      - SETUID
+                      - KILL
+                      - NET_BIND_SERVICE
+                      drop:
+                        all: ALL
+                    seccompProfile:
+                      type: RuntimeDefault
+                  startupProbe:
+                    failureThreshold: 120
+                    httpGet:
+                      path: /api2/ping/
+                      port: 80
+                    periodSeconds: 5
+                  volumeMounts:
+                    config:
+                      mountPath: /config
+                      name: config
+                      readOnly: true
+                    data:
+                      mountPath: /shared
+                      name: data
+              enableServiceLinks: false
+              volumes:
+                config:
+                  configMap:
+                    name: seafile-config
+                  name: config
+                data:
+                  name: data
+                  persistentVolumeClaim:
+                    claimName: seafile-data
+      persistentVolumeClaims:
+        seafile-data:
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi
+          storageClassName: longhorn
+      services:
+        seafile:
+          ports:
+            http:
+              port: 80
+          selector:
+            app.kubernetes.io/name: seafile
+---
+# Source: app-seafile/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: seafile-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  - name: seafile
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      certManagerCertificates:
+        seafile-gateway:
+          dnsNames:
+            seafile: seafile.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-seafile-gateway
+      httpRoutes:
+        seafile:
+          hostnames:
+            seafile: seafile.test.com
+          parentRefs:
+            seafile:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: seafile
+          rules:
+            root:
+              backendRefs:
+                seafile:
+                  name: seafile
+                  port: 80
+              timeouts:
+                request: 0s
+      listenerSets:
+        seafile:
+          listeners:
+            https:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: seafile.test.com
+              name: https
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: tls-seafile-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+---
+# Source: app-seafile/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: seafile-mariadb
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: seafile-pre
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      deployments:
+        seafile-mariadb:
+          replicas: 1
+          selector:
+            matchLabels:
+              app.kubernetes.io/name: seafile-mariadb
+          strategy:
+            type: Recreate
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/name: seafile-mariadb
+            spec:
+              containers:
+                mariadb:
+                  env:
+                    MARIADB_AUTO_UPGRADE: "1"
+                    MARIADB_ROOT_PASSWORD:
+                      secretKeyRef:
+                        key: db-root-password
+                        name: seafile-generated
+                  image: docker.io/library/mariadb:10.11.19
+                  livenessProbe:
+                    failureThreshold: 6
+                    periodSeconds: 20
+                    tcpSocket:
+                      port: 3306
+                  name: mariadb
+                  ports:
+                    mysql:
+                      containerPort: 3306
+                  readinessProbe:
+                    tcpSocket:
+                      port: 3306
+                  securityContext:
+                    allowPrivilegeEscalation: false
+                    capabilities:
+                      drop:
+                        all: ALL
+                    runAsGroup: 999
+                    runAsNonRoot: true
+                    runAsUser: 999
+                    seccompProfile:
+                      type: RuntimeDefault
+                  startupProbe:
+                    failureThreshold: 60
+                    periodSeconds: 5
+                    tcpSocket:
+                      port: 3306
+                  volumeMounts:
+                    data:
+                      mountPath: /var/lib/mysql
+                      name: data
+                      subPath: data
+              securityContext:
+                fsGroup: 999
+              volumes:
+                data:
+                  name: data
+                  persistentVolumeClaim:
+                    claimName: seafile-mariadb
+      persistentVolumeClaims:
+        seafile-mariadb:
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 5Gi
+          storageClassName: longhorn
+      services:
+        seafile-mariadb:
+          ports:
+            mysql:
+              port: 3306
+          selector:
+            app.kubernetes.io/name: seafile-mariadb
+---
+# Source: app-seafile/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: seafile-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: authelia-pre
+    namespace: authelia
+  - name: app-external-secrets
+    namespace: external-secrets
+  - name: app-secret-generator
+    namespace: secret-generator
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      externalSecrets:
+        seafile-oidc:
+          data:
+            client-id:
+              remoteRef:
+                key: authelia-oidc-seafile
+                property: client-id
+              secretKey: client-id
+            secret:
+              remoteRef:
+                key: authelia-oidc-seafile
+                property: secret
+              secretKey: secret
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: SecretStore
+            name: authelia
+      secretStores:
+        authelia:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: authelia-reader
+              remoteNamespace: authelia
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        authelia-reader:
+          automountServiceAccountToken: false
+      stringSecrets:
+        seafile-generated:
+          fields:
+            admin-password:
+              fieldName: admin-password
+            db-password:
+              fieldName: db-password
+            db-root-password:
+              fieldName: db-root-password
+            jwt-private-key:
+              fieldName: jwt-private-key
+        seafile-valkey:
+          fields:
+            default:
+              fieldName: default
+---
+# Source: app-seafile/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: seafile-valkey
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: valkey
+      sourceRef:
+        kind: HelmRepository
+        name: seafile-valkey
+      version: 0.12.0
+  dependsOn:
+  - name: seafile-pre
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    auth:
+      aclUsers:
+        default:
+          permissions: ~* &* +@all
+      enabled: true
+      usersExistingSecret: seafile-valkey
+    dataStorage:
+      enabled: true
+      requestedSize: 1Gi
+    replicaCount: 1
+---
+# Source: app-seafile/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: seafile-valkey
+  namespace: default
+spec:
+  interval: 10m
+  url: https://valkey.io/valkey-helm/

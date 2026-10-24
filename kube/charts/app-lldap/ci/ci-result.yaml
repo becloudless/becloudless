@@ -359,6 +359,7 @@ spec:
               {"name":"app_immich_one_factor"}
               {"name":"app_jellyfin"}
               {"name":"app_pushprox"}
+              {"name":"app_seafile"}
               {"name":"app_seerr"}
             users-schema.json: '[{"attributeType":"INTEGER","isEditable":false,"isList":false,"isVisible":true,"name":"immichquota"},{"attributeType":"STRING","isEditable":false,"isList":false,"isVisible":true,"name":"immichrole"}]'
             users.json: |-
@@ -369,7 +370,7 @@ spec:
         lldap-bootstrap:
           activeDeadlineSeconds: 600
           backoffLimit: 0
-          fullNameOverride: lldap-bootstrap-abc2d29281
+          fullNameOverride: lldap-bootstrap-527a3029f0
           template:
             spec:
               containers:

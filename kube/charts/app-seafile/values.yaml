@@ -1,0 +1,551 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+global:
+  domain:
+  name:
+
+# Seafile (community edition, https://www.seafile.com): file sync and share.
+#
+# Nothing has to be created by hand:
+#  - the database is a MariaDB (`seafile-mariadb`): seafile creates its three databases and its user at its first start, with the root
+#    password, which is generated like the other secrets (`seafile-generated`, see `seafile-pre`);
+#  - the cache is a valkey (`seafile-valkey`, the password is generated);
+#  - the local administrator is `admin@<domain>`, its password is the `admin-password` key of `seafile-generated`. It is the only user that
+#    can use a password (the web UI shows the login form next to the SSO button), and the only administrator seafile can create itself.
+# SSO: the OAuth login with authelia (OIDC client `seafile`, see its access control in authelia). The users of the groups `app_seafile` and
+#    `role_admin` are created at their first login, with the `preferred_username` as unique id. They have no password (the SSO users are
+#    not allowed to use the local one). Seafile cannot give the administration with a claim: make an SSO user an administrator in the
+#    admin panel of the local administrator. The SSO settings are given by a `local_settings.py` module (see `seafile-config`): the
+#    secrets are read from the environment, and the file the image generates is not touched. The client id and secret are generated in the
+#    authelia namespace and copied by external-secrets (see `seafile-pre`).
+# The desktop and mobile clients (SeaDrive, the sync client) use the SSO of the web browser, or the token of the local administrator.
+# Not configured: mails, SeaDoc, the notification and metadata servers, S3 storage (the files are in the volume `seafile-data`).
+# The volumes are backed up daily by longhorn (the `default` group): the database is saved as it is on the disk, mariadb recovers like
+# after a crash.
+
+resources:
+
+  # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
+  ciliumNetworkPolicies:
+    seafile:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: seafile}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p80: {port: "80", protocol: TCP}}}
+      egress:
+        mariadb:
+          toEndpoints:
+            mariadb:
+              matchLabels: {app.kubernetes.io/name: seafile-mariadb}
+          toPorts:
+            mysql: {ports: {p3306: {port: "3306", protocol: TCP}}}
+        valkey:
+          toEndpoints:
+            valkey:
+              matchLabels: {app.kubernetes.io/name: valkey}
+          toPorts:
+            valkey: {ports: {p6379: {port: "6379", protocol: TCP}}}
+        authelia: # the OIDC issuer is the public address of authelia
+          toFQDNs:
+            authelia: {matchName: "authelia.{{ .Values.global.domain }}"}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+        gateway: # the public addresses of the cluster are the gateway for the pods
+          toEntities: {ingress: ingress}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+
+    seafile-mariadb:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: seafile-mariadb}
+      ingress:
+        seafile:
+          fromEndpoints:
+            seafile:
+              matchLabels: {app.kubernetes.io/name: seafile}
+          toPorts:
+            mysql: {ports: {p3306: {port: "3306", protocol: TCP}}}
+
+    seafile-valkey: # the cache and the sessions
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: valkey}
+      ingress:
+        seafile:
+          fromEndpoints:
+            seafile:
+              matchLabels: {app.kubernetes.io/name: seafile}
+          toPorts:
+            valkey: {ports: {p6379: {port: "6379", protocol: TCP}}}
+
+  fluxHelmRepositories:
+    seafile-valkey:
+      url: https://valkey.io/valkey-helm/
+
+  fluxHelmReleases:
+    # the secrets of the services, created before they start
+    seafile-pre:
+      dependsOn:
+        secret-generator:
+          name: app-secret-generator
+          namespace: secret-generator
+        external-secrets:
+          name: app-external-secrets
+          namespace: external-secrets
+        authelia-pre: # the generated secret of the client and the right to read it
+          name: authelia-pre
+          namespace: authelia
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          stringSecrets:
+            # hex (the default of the generator): the passwords go through the environment, the configuration files and the SQL of seafile
+            seafile-generated:
+              fields:
+                jwt-private-key: # signs the tokens, at least 32 characters
+                  fieldName: jwt-private-key
+                db-root-password: # created by mariadb, used by seafile to create its databases
+                  fieldName: db-root-password
+                db-password: # the `seafile` user of the databases, created by seafile
+                  fieldName: db-password
+                admin-password: # the local administrator, created by seafile at its first start
+                  fieldName: admin-password
+
+            # password of the `default` user of valkey: seafile connects with a password only
+            seafile-valkey:
+              fields:
+                default:
+                  fieldName: default
+
+          serviceAccounts:
+            authelia-reader:
+              automountServiceAccountToken: false # only used by external-secrets to get a token
+
+          secretStores:
+            authelia:
+              provider:
+                kubernetes:
+                  remoteNamespace: authelia
+                  server:
+                    caProvider:
+                      type: ConfigMap
+                      name: kube-root-ca.crt
+                      key: ca.crt
+                  auth:
+                    serviceAccount:
+                      name: authelia-reader
+
+          externalSecrets:
+            seafile-oidc:
+              refreshInterval: 1h
+              secretStoreRef:
+                kind: SecretStore
+                name: authelia
+              data:
+                client-id:
+                  secretKey: client-id
+                  remoteRef:
+                    key: authelia-oidc-seafile
+                    property: client-id
+                secret:
+                  secretKey: secret
+                  remoteRef:
+                    key: authelia-oidc-seafile
+                    property: secret
+
+    seafile-mariadb:
+      dependsOn: # the generated passwords
+        seafile-pre:
+          name: seafile-pre
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          persistentVolumeClaims:
+            seafile-mariadb:
+              accessModes:
+                - ReadWriteOnce
+              storageClassName: longhorn
+              resources:
+                requests:
+                  storage: 5Gi
+
+          deployments:
+            seafile-mariadb:
+              replicas: 1
+              strategy:
+                type: Recreate # the volume is ReadWriteOnce
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: seafile-mariadb
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: seafile-mariadb
+                spec:
+                  securityContext:
+                    fsGroup: 999 # the `mysql` user of the image
+                  containers:
+                    mariadb:
+                      name: mariadb
+                      image: docker.io/library/mariadb:10.11.19 # renovate: versioning=loose
+                      ports:
+                        mysql:
+                          containerPort: 3306
+                      env:
+                        MARIADB_ROOT_PASSWORD:
+                          secretKeyRef:
+                            name: seafile-generated
+                            key: db-root-password
+                        MARIADB_AUTO_UPGRADE: "1"
+                      startupProbe:
+                        tcpSocket:
+                          port: 3306
+                        periodSeconds: 5
+                        failureThreshold: 60
+                      readinessProbe:
+                        tcpSocket:
+                          port: 3306
+                      livenessProbe:
+                        tcpSocket:
+                          port: 3306
+                        periodSeconds: 20
+                        failureThreshold: 6
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        runAsNonRoot: true
+                        runAsUser: 999
+                        runAsGroup: 999
+                        capabilities:
+                          drop:
+                            all: ALL
+                        seccompProfile:
+                          type: RuntimeDefault
+                      volumeMounts:
+                        data:
+                          name: data
+                          mountPath: /var/lib/mysql
+                          subPath: data # the volume has a `lost+found` directory
+                  volumes:
+                    data:
+                      name: data
+                      persistentVolumeClaim:
+                        claimName: seafile-mariadb
+
+          services:
+            seafile-mariadb:
+              selector:
+                app.kubernetes.io/name: seafile-mariadb
+              ports:
+                mysql:
+                  port: 3306
+
+    # the cache and the sessions of seafile
+    seafile-valkey:
+      dependsOn: # the generated secret
+        seafile-pre:
+          name: seafile-pre
+      chart:
+        spec:
+          chart: valkey
+          version: 0.12.0
+          sourceRef:
+            kind: HelmRepository
+            name: seafile-valkey
+      values:
+        replicaCount: 1
+        dataStorage:
+          enabled: true
+          requestedSize: 1Gi
+
+        auth:
+          enabled: true
+          aclUsers:
+            default:
+              permissions: "~* &* +@all"
+          usersExistingSecret: seafile-valkey
+
+    seafile:
+      timeout: 15m # the first start creates the databases
+      dependsOn:
+        seafile-pre: # the generated secrets and the OIDC client
+          name: seafile-pre
+        seafile-mariadb:
+          name: seafile-mariadb
+        seafile-valkey:
+          name: seafile-valkey
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          configMaps:
+            seafile-config:
+              data:
+                # Loaded by seahub before the `seahub_settings.py` the image generates (see the command of the container). The values
+                # of the secrets come from the environment. https://manual.seafile.com/latest/config/oauth/
+                local_settings.py: |
+                  import os
+
+                  issuer = os.environ['OAUTH_ISSUER_URL'].rstrip('/')
+                  service = '%s://%s' % (os.environ['SEAFILE_SERVER_PROTOCOL'], os.environ['SEAFILE_SERVER_HOSTNAME'])
+
+                  ENABLE_OAUTH = True
+                  OAUTH_CLIENT_ID = os.environ['OAUTH_CLIENT_ID']
+                  OAUTH_CLIENT_SECRET = os.environ['OAUTH_CLIENT_SECRET']
+                  OAUTH_REDIRECT_URL = service + '/oauth/callback/'
+                  OAUTH_PROVIDER = 'authelia'
+                  OAUTH_AUTHORIZATION_URL = issuer + '/api/oidc/authorization'
+                  OAUTH_TOKEN_URL = issuer + '/api/oidc/token'
+                  OAUTH_USER_INFO_URL = issuer + '/api/oidc/userinfo'
+                  OAUTH_SCOPE = ['openid', 'profile', 'email']
+                  OAUTH_ATTRIBUTE_MAP = {
+                      'preferred_username': (True, 'uid'),
+                      'name': (False, 'name'),
+                      'email': (False, 'contact_email'),
+                  }
+                  OAUTH_CREATE_UNKNOWN_USER = True
+                  OAUTH_ACTIVATE_USER_AFTER_CREATION = True
+                  # the users created by SSO cannot use the local password login
+                  DISABLE_SSO_USER_LOCAL_PWD_LOGIN = True
+
+          # the libraries, the configuration and the logs of seafile
+          persistentVolumeClaims:
+            seafile-data:
+              accessModes:
+                - ReadWriteOnce
+              storageClassName: longhorn
+              resources:
+                requests:
+                  storage: 20Gi
+
+          deployments:
+            seafile:
+              replicas: 1 # the community edition is not HA ready
+              strategy:
+                type: Recreate # the volume is ReadWriteOnce
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: seafile
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: seafile
+                spec:
+                  enableServiceLinks: false # the `SEAFILE_*` variables of the services would conflict
+                  containers:
+                    seafile:
+                      name: seafile
+                      image: docker.io/seafileltd/seafile-mc:13.0.28 # renovate: versioning=loose
+                      command:
+                        - sh
+                        - -c
+                        # seahub loads the `local_settings` module of its directory before `seahub_settings.py`, the version is in the path
+                        - |
+                          ln -sf /config/local_settings.py /opt/seafile/seafile-server-$SEAFILE_VERSION/seahub/seahub/local_settings.py
+                          exec /sbin/my_init -- /scripts/enterpoint.sh
+                      ports:
+                        http:
+                          containerPort: 80
+                      env:
+                        TIME_ZONE: Europe/Paris
+                        SEAFILE_LOG_TO_STDOUT: "true"
+                        SEAFILE_SERVER_HOSTNAME: seafile.{{ .Values.global.domain }}
+                        SEAFILE_SERVER_PROTOCOL: https # the gateway terminates the TLS
+                        JWT_PRIVATE_KEY:
+                          secretKeyRef:
+                            name: seafile-generated
+                            key: jwt-private-key
+                        # the databases and the user are created at the first start with the root password
+                        SEAFILE_MYSQL_DB_HOST: seafile-mariadb
+                        SEAFILE_MYSQL_DB_PORT: "3306"
+                        SEAFILE_MYSQL_DB_USER: seafile
+                        SEAFILE_MYSQL_DB_CCNET_DB_NAME: ccnet_db
+                        SEAFILE_MYSQL_DB_SEAFILE_DB_NAME: seafile_db
+                        SEAFILE_MYSQL_DB_SEAHUB_DB_NAME: seahub_db
+                        SEAFILE_MYSQL_DB_PASSWORD:
+                          secretKeyRef:
+                            name: seafile-generated
+                            key: db-password
+                        INIT_SEAFILE_MYSQL_ROOT_PASSWORD:
+                          secretKeyRef:
+                            name: seafile-generated
+                            key: db-root-password
+                        CACHE_PROVIDER: redis
+                        REDIS_HOST: seafile-valkey
+                        REDIS_PORT: "6379"
+                        REDIS_PASSWORD:
+                          secretKeyRef:
+                            name: seafile-valkey
+                            key: default
+                        # the local administrator, created at the first start
+                        INIT_SEAFILE_ADMIN_EMAIL: admin@{{ .Values.global.domain }}
+                        INIT_SEAFILE_ADMIN_PASSWORD:
+                          secretKeyRef:
+                            name: seafile-generated
+                            key: admin-password
+                        # used by `local_settings.py`
+                        OAUTH_ISSUER_URL: https://authelia.{{ .Values.global.domain }}
+                        OAUTH_CLIENT_ID:
+                          secretKeyRef:
+                            name: seafile-oidc
+                            key: client-id
+                        OAUTH_CLIENT_SECRET:
+                          secretKeyRef:
+                            name: seafile-oidc
+                            key: secret
+                      startupProbe:
+                        httpGet:
+                          path: /api2/ping/
+                          port: 80
+                        periodSeconds: 5
+                        failureThreshold: 120 # 10min, the first start creates the databases
+                      readinessProbe:
+                        httpGet:
+                          path: /api2/ping/
+                          port: 80
+                        timeoutSeconds: 5
+                      livenessProbe:
+                        httpGet:
+                          path: /api2/ping/
+                          port: 80
+                        periodSeconds: 30
+                        timeoutSeconds: 10
+                        failureThreshold: 6
+                      # the image runs as root (nginx, cron, the init of the files of the volume): only the capabilities it uses are kept
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        capabilities:
+                          drop:
+                            all: ALL
+                          add:
+                            - CHOWN
+                            - DAC_OVERRIDE
+                            - FOWNER
+                            - SETGID
+                            - SETUID
+                            - KILL
+                            - NET_BIND_SERVICE
+                        seccompProfile:
+                          type: RuntimeDefault
+                      volumeMounts:
+                        data:
+                          name: data
+                          mountPath: /shared
+                        config:
+                          name: config
+                          mountPath: /config
+                          readOnly: true
+                  volumes:
+                    data:
+                      name: data
+                      persistentVolumeClaim:
+                        claimName: seafile-data
+                    config:
+                      name: config
+                      configMap:
+                        name: seafile-config
+
+          services:
+            seafile:
+              selector:
+                app.kubernetes.io/name: seafile
+              ports:
+                http:
+                  port: 80
+
+    # the public exposure, applied once seafile is deployed and not waited for
+    seafile-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        seafile:
+          name: seafile
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          certManagerCertificates:
+            # certificate of the web UI, terminated by the Gateway
+            seafile-gateway:
+              secretName: tls-seafile-gateway
+              dnsNames:
+                seafile: seafile.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
+          # It is not protected by forward auth: the sync clients cannot follow the login redirect of authelia, seafile has its own login.
+          listenerSets:
+            seafile:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: seafile.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-seafile-gateway
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            seafile:
+              parentRefs:
+                seafile:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: seafile
+              hostnames:
+                seafile: seafile.{{ .Values.global.domain }}
+              rules:
+                root:
+                  backendRefs:
+                    seafile:
+                      name: seafile
+                      port: 80
+                  timeouts:
+                    request: 0s # uploads and downloads of big files can be long

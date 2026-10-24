@@ -194,6 +194,12 @@ apps:
     appChart:
       name: app-seerr
 
+  seafile:
+    groups:
+      extra: true
+    appChart:
+      name: app-seafile
+
   firefox-sync:
     groups:
       extra: true

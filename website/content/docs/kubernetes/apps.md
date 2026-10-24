@@ -37,6 +37,7 @@ All applications are defined under `kube/apps/`, one directory per app.
 | `multus-config` | Networking | NetworkAttachmentDefinitions for Multus |
 | `prometheus` | Observability | Prometheus + Grafana monitoring stack |
 | `renovate` | DevOps | Automated dependency update PRs |
+| `seafile` | Productivity | Self-hosted file sync and share (Dropbox alternative), SSO with Authelia |
 | `secret-generator` | Security | Generates random secrets and stores them as Kubernetes Secrets |
 | `seerr` | Media | Overseerr/Jellyseerr media request management |
 | `terraform` | Platform | Terraform runner for cloud resources |
