@@ -1,0 +1,240 @@
+---
+# Source: app-syncthing/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: syncthing
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: syncthing
+  ingress:
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "8384"
+        protocol: TCP
+---
+# Source: app-syncthing/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: syncthing
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-longhorn
+    namespace: longhorn-system
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      deployments:
+        syncthing:
+          replicas: 1
+          selector:
+            matchLabels:
+              app.kubernetes.io/name: syncthing
+          strategy:
+            type: Recreate
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/name: syncthing
+            spec:
+              containers:
+                syncthing:
+                  env:
+                    STNODEFAULTFOLDER: "1"
+                    TZ: Europe/Paris
+                  image: docker.io/syncthing/syncthing:2.1.7
+                  livenessProbe:
+                    failureThreshold: 6
+                    httpGet:
+                      path: /rest/noauth/health
+                      port: 8384
+                    periodSeconds: 30
+                    timeoutSeconds: 10
+                  name: syncthing
+                  ports:
+                    http:
+                      containerPort: 8384
+                  readinessProbe:
+                    httpGet:
+                      path: /rest/noauth/health
+                      port: 8384
+                    timeoutSeconds: 5
+                  securityContext:
+                    allowPrivilegeEscalation: false
+                    capabilities:
+                      drop:
+                        all: ALL
+                    runAsGroup: 1000
+                    runAsNonRoot: true
+                    runAsUser: 1000
+                    seccompProfile:
+                      type: RuntimeDefault
+                  startupProbe:
+                    failureThreshold: 60
+                    httpGet:
+                      path: /rest/noauth/health
+                      port: 8384
+                    periodSeconds: 5
+                  volumeMounts:
+                    data:
+                      mountPath: /var/syncthing
+                      name: data
+                      subPath: data
+              enableServiceLinks: false
+              securityContext:
+                fsGroup: 1000
+              volumes:
+                data:
+                  name: data
+                  persistentVolumeClaim:
+                    claimName: syncthing-data
+      persistentVolumeClaims:
+        syncthing-data:
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi
+          storageClassName: longhorn
+      services:
+        syncthing:
+          ports:
+            http:
+              port: 8384
+          selector:
+            app.kubernetes.io/name: syncthing
+---
+# Source: app-syncthing/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: syncthing-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  - name: syncthing
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      certManagerCertificates:
+        syncthing-gateway:
+          dnsNames:
+            syncthing: syncthing.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-syncthing-gateway
+      httpRoutes:
+        syncthing:
+          hostnames:
+            syncthing: syncthing.test.com
+          parentRefs:
+            syncthing:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: syncthing
+          rules:
+            root:
+              backendRefs:
+                syncthing:
+                  name: syncthing
+                  port: 8384
+              filters:
+                authelia:
+                  externalAuth:
+                    backendRef:
+                      name: authelia
+                      namespace: authelia
+                      port: 80
+                    http:
+                      allowedHeaders:
+                        accept: accept
+                        cookie: cookie
+                        proxy-authorization: proxy-authorization
+                        x-forwarded-for: x-forwarded-for
+                        x-forwarded-proto: x-forwarded-proto
+                      allowedResponseHeaders:
+                        remote-email: remote-email
+                        remote-groups: remote-groups
+                        remote-name: remote-name
+                        remote-user: remote-user
+                      path: /api/authz/ext-authz/
+                    protocol: HTTP
+                  type: ExternalAuth
+      listenerSets:
+        syncthing:
+          listeners:
+            https:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: syncthing.test.com
+              name: https
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: tls-syncthing-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system

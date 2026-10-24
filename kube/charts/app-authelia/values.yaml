@@ -561,6 +561,7 @@ resources:
                   - prometheus.{{ .Values.global.domain }}
                   - fluxwebhook.{{ .Values.global.domain }}
                   - rutorrent.{{ .Values.global.domain }}
+                  - syncthing.{{ .Values.global.domain }}
                 subject:
                   - [ 'group:role_admin' ]
                 policy: two_factor

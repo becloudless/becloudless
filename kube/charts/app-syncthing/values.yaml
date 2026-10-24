@@ -1,0 +1,222 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+global:
+  domain:
+  name:
+
+# Syncthing (https://syncthing.net): continuous file synchronization.
+#
+# Only the web UI is prepared for now, the synchronization with the other devices is not exposed yet:
+#  - the UI is behind the Gateway with the forward auth of authelia, for the members of the group `role_admin` (the syncthing UI has no
+#    user of its own: its own authentication is not set, the pod only accepts the connections of the Gateway);
+#  - the sync protocol (22000 TCP and UDP), the local discovery (21027 UDP) are not reachable, and the pod cannot go out of the cluster
+#    (default deny of app-cilium): the global discovery, the relays and the NAT detection only log errors. Nothing is synchronized
+#    until the ports are exposed (a LoadBalancer service and the policies) and the devices are added in the UI.
+# The configuration, the keys (the device id comes from them) and the folders are in the volume `syncthing-data`, backed up daily by
+# longhorn (the `default` group). The default folder is not created.
+
+resources:
+
+  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
+  ciliumNetworkPolicies:
+    syncthing:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: syncthing}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p8384: {port: "8384", protocol: TCP}}}
+
+  fluxHelmReleases:
+    syncthing:
+      dependsOn:
+        longhorn: # the volume
+          name: app-longhorn
+          namespace: longhorn-system
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          persistentVolumeClaims:
+            syncthing-data:
+              accessModes:
+                - ReadWriteOnce
+              storageClassName: longhorn
+              resources:
+                requests:
+                  storage: 20Gi
+
+          deployments:
+            syncthing:
+              replicas: 1 # one instance is one device
+              strategy:
+                type: Recreate # the volume is ReadWriteOnce
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: syncthing
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: syncthing
+                spec:
+                  enableServiceLinks: false # the `SYNCTHING_*` variables of the services would conflict
+                  securityContext:
+                    fsGroup: 1000 # the `syncthing` user of the image
+                  containers:
+                    syncthing:
+                      name: syncthing
+                      image: docker.io/syncthing/syncthing:2.1.7 # renovate: versioning=loose
+                      ports:
+                        http:
+                          containerPort: 8384
+                      env:
+                        TZ: Europe/Paris
+                        STNODEFAULTFOLDER: "1" # the folders are added in the UI
+                      startupProbe:
+                        httpGet:
+                          path: /rest/noauth/health
+                          port: 8384
+                        periodSeconds: 5
+                        failureThreshold: 60
+                      readinessProbe:
+                        httpGet:
+                          path: /rest/noauth/health
+                          port: 8384
+                        timeoutSeconds: 5
+                      livenessProbe:
+                        httpGet:
+                          path: /rest/noauth/health
+                          port: 8384
+                        periodSeconds: 30
+                        timeoutSeconds: 10
+                        failureThreshold: 6
+                      # started as the user, the entrypoint of the image does not need root then (it only changes the owner of the volume)
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        runAsNonRoot: true
+                        runAsUser: 1000
+                        runAsGroup: 1000
+                        capabilities:
+                          drop:
+                            all: ALL
+                        seccompProfile:
+                          type: RuntimeDefault
+                      volumeMounts:
+                        data:
+                          name: data
+                          mountPath: /var/syncthing
+                          subPath: data # the volume has a `lost+found` directory
+                  volumes:
+                    data:
+                      name: data
+                      persistentVolumeClaim:
+                        claimName: syncthing-data
+
+          services:
+            syncthing:
+              selector:
+                app.kubernetes.io/name: syncthing
+              ports:
+                http:
+                  port: 8384
+
+    # the public exposure, applied once syncthing is deployed and not waited for
+    syncthing-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        syncthing:
+          name: syncthing
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        # UI behind the Cilium Gateway `shared` (kube-system) with Authelia forward auth (see its access control).
+        resources:
+          certManagerCertificates:
+            syncthing-gateway:
+              secretName: tls-syncthing-gateway
+              dnsNames:
+                syncthing: syncthing.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+          listenerSets:
+            syncthing:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: syncthing.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-syncthing-gateway
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            syncthing:
+              parentRefs:
+                syncthing:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: syncthing
+              hostnames:
+                syncthing: syncthing.{{ .Values.global.domain }}
+              rules:
+                root:
+                  filters:
+                    authelia:
+                      type: ExternalAuth
+                      externalAuth:
+                        protocol: HTTP
+                        backendRef:
+                          name: authelia
+                          namespace: authelia
+                          port: 80
+                        http:
+                          path: /api/authz/ext-authz/
+                          allowedResponseHeaders: # only the identity headers, not the authz content-type/content-length (a GET with a content-length makes upstreams answer 400)
+                            remote-user: remote-user
+                            remote-groups: remote-groups
+                            remote-name: remote-name
+                            remote-email: remote-email
+                          allowedHeaders: # what authelia needs to find the session and to redirect to the login page
+                            cookie: cookie
+                            accept: accept
+                            proxy-authorization: proxy-authorization
+                            x-forwarded-proto: x-forwarded-proto
+                            x-forwarded-for: x-forwarded-for
+                  backendRefs:
+                    syncthing:
+                      name: syncthing
+                      port: 8384

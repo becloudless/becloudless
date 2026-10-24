@@ -41,6 +41,7 @@ All applications are defined under `kube/apps/`, one directory per app.
 | `seafile` | Productivity | Self-hosted file sync and share (Dropbox alternative), SSO with Authelia |
 | `secret-generator` | Security | Generates random secrets and stores them as Kubernetes Secrets |
 | `seerr` | Media | Overseerr/Jellyseerr media request management |
+| `syncthing` | Productivity | Continuous file synchronization (web UI behind Authelia, sync protocol not exposed yet) |
 | `terraform` | Platform | Terraform runner for cloud resources |
 | `traefik` | Networking | Ingress controller and reverse proxy |
 | `traefik-config` | Networking | Traefik middlewares and IngressRoute defaults |

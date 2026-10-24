@@ -206,6 +206,12 @@ apps:
     appChart:
       name: app-paperless
 
+  syncthing:
+    groups:
+      extra: true
+    appChart:
+      name: app-syncthing
+
   firefox-sync:
     groups:
       extra: true
