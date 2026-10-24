@@ -10,7 +10,8 @@ global:
 #    password, which is generated like the other secrets (`seafile-generated`, see `seafile-pre`);
 #  - the cache is a valkey (`seafile-valkey`, the password is generated);
 #  - the local administrator is `admin@<domain>`, its password is the `admin-password` key of `seafile-generated`. It is the only user that
-#    can use a password (the web UI shows the login form next to the SSO button), and the only administrator seafile can create itself.
+#    can use a password: the login page only shows the SSO button, add `?local` to its URL (`/accounts/login/?local`) to get the form. It is
+#    also the only administrator seafile can create itself.
 # SSO: the OAuth login with authelia (OIDC client `seafile`, see its access control in authelia). The users of the groups `app_seafile` and
 #    `role_admin` are created at their first login, with the `preferred_username` as unique id. They have no password (the SSO users are
 #    not allowed to use the local one). Seafile cannot give the administration with a claim: make an SSO user an administrator in the
@@ -328,6 +329,24 @@ resources:
                   # the users created by SSO cannot use the local password login
                   DISABLE_SSO_USER_LOCAL_PWD_LOGIN = True
 
+                # Overrides the login page of seahub (its template of the same name is extended): only the SSO button is shown. The form
+                # is still served and works, for the local administrator: add `?local` to the URL of the login page to show it.
+                login.html: |
+                  {% extends "registration/login.html" %}
+                  {% block extra_style %}{{ "{{ `{{ block.super }}` }}" }}
+                  <style id="sso-only">
+                  #login-form, .login-panel-hd, #login-bottom .bottom-item { display: none; }
+                  </style>
+                  {% endblock %}
+                  {% block extra_script %}
+                  <script type="text/javascript">
+                  if (new URLSearchParams(window.location.search).has('local')) {
+                      $('#sso-only').remove();
+                  }
+                  </script>
+                  {{ "{{ `{{ block.super }}` }}" }}
+                  {% endblock %}
+
           # the libraries, the configuration and the logs of seafile
           persistentVolumeClaims:
             seafile-data:
@@ -454,6 +473,11 @@ resources:
                         config:
                           name: config
                           mountPath: /config
+                          readOnly: true
+                        login:
+                          name: config
+                          mountPath: /shared/seafile/seahub-data/custom/templates/registration/login.html # the custom templates of seahub
+                          subPath: login.html
                           readOnly: true
                   volumes:
                     data:

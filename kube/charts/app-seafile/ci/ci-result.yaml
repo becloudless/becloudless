@@ -146,6 +146,21 @@ spec:
               OAUTH_ACTIVATE_USER_AFTER_CREATION = True
               # the users created by SSO cannot use the local password login
               DISABLE_SSO_USER_LOCAL_PWD_LOGIN = True
+            login.html: |-
+              {% extends "registration/login.html" %}
+              {% block extra_style %}{{ `{{ block.super }}` }}
+              <style id="sso-only">
+              #login-form, .login-panel-hd, #login-bottom .bottom-item { display: none; }
+              </style>
+              {% endblock %}
+              {% block extra_script %}
+              <script type="text/javascript">
+              if (new URLSearchParams(window.location.search).has('local')) {
+                  $('#sso-only').remove();
+              }
+              </script>
+              {{ `{{ block.super }}` }}
+              {% endblock %}
       deployments:
         seafile:
           replicas: 1
@@ -257,6 +272,11 @@ spec:
                     data:
                       mountPath: /shared
                       name: data
+                    login:
+                      mountPath: /shared/seafile/seahub-data/custom/templates/registration/login.html
+                      name: config
+                      readOnly: true
+                      subPath: login.html
               enableServiceLinks: false
               volumes:
                 config:
