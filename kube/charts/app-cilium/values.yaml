@@ -124,6 +124,25 @@ resources:
                     namespaces:
                       from: All
 
+          # Every plain http request is redirected to the same address over https. The route has no hostname, so it is the fallback of the
+          # listener: the http-01 solver routes of cert-manager (one hostname and a path each) are more specific and keep working.
+          httpRoutes:
+            https-redirect:
+              parentRefs:
+                shared:
+                  group: gateway.networking.k8s.io
+                  kind: Gateway
+                  name: shared
+                  sectionName: http
+              rules:
+                redirect:
+                  filters:
+                    redirect:
+                      type: RequestRedirect
+                      requestRedirect:
+                        scheme: https
+                        statusCode: 301
+
     # Baseline: default deny of all pod traffic (ingress and egress) and the DNS client side. The legitimate flows are allowed by each app
     # (`ciliumNetworkPolicies` / `ciliumClusterwideNetworkPolicies` of its own chart, the server side of DNS is in app-coredns),
     # so an app without its policies is isolated.

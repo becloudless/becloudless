@@ -211,6 +211,22 @@ spec:
               name: http
               port: 80
               protocol: HTTP
+      httpRoutes:
+        https-redirect:
+          parentRefs:
+            shared:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: shared
+              sectionName: http
+          rules:
+            redirect:
+              filters:
+                redirect:
+                  requestRedirect:
+                    scheme: https
+                    statusCode: 301
+                  type: RequestRedirect
 ---
 # Source: app-cilium/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1
