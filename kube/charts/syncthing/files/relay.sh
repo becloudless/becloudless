@@ -1,6 +1,7 @@
 #!/bin/sh
 # Sidecar of the Syncthing instance: keeps the sync protocol listen address of the instance on the relay of the cluster, so that the
-# instance is reachable through it without any manual step in the UI.
+# instance is reachable through it without any manual step in the UI. It also sets `gui.insecureAdminAccess`, which only turns off the
+# warning of the UI about the missing password (the access is restricted by authelia and the Gateway).
 #
 # The relay ID is the device ID of its certificate (sha256 of the DER, base32, a luhn32 check character every 13 characters, groups of 7),
 # computed here from the public certificate of the relay so that nothing has to be copied by hand.
@@ -51,6 +52,12 @@ wait=2
 while true; do
   key=$(sed -n 's:.*<apikey>\(.*\)</apikey>.*:\1:p' /var/syncthing/config/config.xml 2>/dev/null || true)
   if [ -n "$key" ]; then
+    # the UI has no authentication of its own (authelia is in front of it): without this flag it warns about the remote access
+    if ! curl -sf -H "X-API-Key: $key" http://localhost:8384/rest/config/gui 2>/dev/null | tr -d ' \n' | grep -q '"insecureAdminAccess":true'; then
+      if curl -sf -X PATCH -H "X-API-Key: $key" -d '{"insecureAdminAccess":true}' http://localhost:8384/rest/config/gui >/dev/null; then
+        echo "the insecure admin access warning of the UI is disabled"
+      fi
+    fi
     # the API escapes the `&` of the address
     current=$(curl -sf -H "X-API-Key: $key" http://localhost:8384/rest/config/options 2>/dev/null | tr -d ' \n' | sed 's/\\u0026/\&/g' || true)
     case "$current" in
