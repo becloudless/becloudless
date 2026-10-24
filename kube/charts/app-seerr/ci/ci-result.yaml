@@ -263,7 +263,7 @@ spec:
                     slug: 'authelia',
                     name: 'Authelia',
                     issuerUrl: env.ISSUER_URL,
-                    clientId: 'seerr',
+                    clientId: env.CLIENT_ID,
                     clientSecret: env.CLIENT_SECRET,
                     scopes: 'openid profile email',
                     newUserLogin: true,
@@ -381,6 +381,10 @@ spec:
                   - /scripts/configure.js
                   env:
                     APP_URL: https://seerr.test.com
+                    CLIENT_ID:
+                      secretKeyRef:
+                        key: client-id
+                        name: seerr-oidc
                     CLIENT_SECRET:
                       secretKeyRef:
                         key: secret
@@ -622,6 +626,11 @@ spec:
             name: jellyfin
         seerr-oidc:
           data:
+            client-id:
+              remoteRef:
+                key: authelia-oidc-seerr
+                property: client-id
+              secretKey: client-id
             secret:
               remoteRef:
                 key: authelia-oidc-seerr

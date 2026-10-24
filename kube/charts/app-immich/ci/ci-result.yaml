@@ -469,6 +469,11 @@ spec:
       externalSecrets:
         immich-config:
           data:
+            clientId:
+              remoteRef:
+                key: authelia-oidc-immich
+                property: client-id
+              secretKey: clientId
             secret:
               remoteRef:
                 key: authelia-oidc-immich
@@ -485,7 +490,7 @@ spec:
                   oauth:
                     enabled: true
                     issuerUrl: https://authelia.test.com
-                    clientId: immich
+                    clientId: {{ "{{ .clientId }}" }}
                     clientSecret: {{ "{{ .secret }}" }}
                     scope: openid profile email immich_scope
                     buttonText: Login with Authelia

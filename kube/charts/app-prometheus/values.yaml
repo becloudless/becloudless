@@ -231,6 +231,11 @@ resources:
                 kind: SecretStore
                 name: authelia
               data:
+                client-id:
+                  secretKey: client-id
+                  remoteRef:
+                    key: authelia-oidc-grafana
+                    property: client-id
                 secret:
                   secretKey: secret
                   remoteRef:
@@ -315,7 +320,6 @@ resources:
               enabled: true
               name: Authelia
               icon: signin
-              client_id: grafana
               scopes: openid profile email groups
               empty_scopes: false
               auth_url: https://authelia.{{ .Values.global.domain }}/api/oidc/authorization
@@ -328,6 +332,10 @@ resources:
               auto_login: true # `/login?disableAutoLogin=true` shows the login form
               role_attribute_path: contains(groups[*], 'role_admin') && 'Admin' || contains(groups[*], 'role_editor') && 'Editor' || 'Viewer'
           envValueFrom:
+            GF_AUTH_GENERIC_OAUTH_CLIENT_ID:
+              secretKeyRef:
+                name: grafana-oidc
+                key: client-id
             GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET:
               secretKeyRef:
                 name: grafana-oidc

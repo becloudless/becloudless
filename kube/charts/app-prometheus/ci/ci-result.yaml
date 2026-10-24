@@ -410,6 +410,10 @@ spec:
             gnetId: 9955
             revision: 1
       envValueFrom:
+        GF_AUTH_GENERIC_OAUTH_CLIENT_ID:
+          secretKeyRef:
+            key: client-id
+            name: grafana-oidc
         GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET:
           secretKeyRef:
             key: secret
@@ -419,7 +423,6 @@ spec:
           api_url: https://authelia.test.com/api/oidc/userinfo
           auth_url: https://authelia.test.com/api/oidc/authorization
           auto_login: true
-          client_id: grafana
           empty_scopes: false
           enabled: true
           groups_attribute_path: groups
@@ -806,6 +809,11 @@ spec:
       externalSecrets:
         grafana-oidc:
           data:
+            client-id:
+              remoteRef:
+                key: authelia-oidc-grafana
+                property: client-id
+              secretKey: client-id
             secret:
               remoteRef:
                 key: authelia-oidc-grafana

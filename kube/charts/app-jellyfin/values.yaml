@@ -128,6 +128,11 @@ resources:
                 kind: SecretStore
                 name: authelia
               data:
+                client-id:
+                  secretKey: client-id
+                  remoteRef:
+                    key: authelia-oidc-jellyfin
+                    property: client-id
                 secret:
                   secretKey: secret
                   remoteRef:
@@ -238,7 +243,7 @@ resources:
                     // https://github.com/9p4/jellyfin-plugin-sso/blob/main/providers.md#authelia (the plugin answers 404 until it is loaded)
                     await jellyfin('POST', '/sso/OID/Add/authelia', {
                       oidEndpoint: env.ISSUER_URL,
-                      oidClientId: 'jellyfin',
+                      oidClientId: env.CLIENT_ID,
                       oidSecret: env.CLIENT_SECRET,
                       enabled: true,
                       enableAuthorization: true, // the administrators and the access come from the groups, at each login
@@ -340,6 +345,10 @@ resources:
                         PUBLIC_URL: https://jellyfin.{{ .Values.global.domain }}
                         SERVER_NAME: "{{ .Values.global.name }}"
                         ISSUER_URL: https://authelia.{{ .Values.global.domain }}
+                        CLIENT_ID:
+                          secretKeyRef:
+                            name: jellyfin-oidc
+                            key: client-id
                         CLIENT_SECRET:
                           secretKeyRef:
                             name: jellyfin-oidc

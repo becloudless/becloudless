@@ -219,7 +219,7 @@ resources:
                     serviceAccount:
                       name: authelia-reader
 
-          # The configuration file of immich with the OAuth settings, the secret of the client is the only value read from authelia.
+          # The configuration file of immich with the OAuth settings, the client id and the secret of the client are the only values read from authelia.
           # The template of external-secrets is escaped twice: the values are rendered by the app chart, then by the base chart.
           externalSecrets:
             immich-config:
@@ -234,7 +234,7 @@ resources:
                       oauth:
                         enabled: true
                         issuerUrl: https://authelia.{{ .Values.global.domain }}
-                        clientId: immich
+                        clientId: {{ "{{ \"{{ .clientId }}\" }}" }}
                         clientSecret: {{ "{{ \"{{ .secret }}\" }}" }}
                         scope: openid profile email immich_scope
                         buttonText: Login with Authelia
@@ -249,6 +249,11 @@ resources:
                       passwordLogin:
                         enabled: false # the users and admins come from lldap, see `immich-post`
               data:
+                clientId:
+                  secretKey: clientId
+                  remoteRef:
+                    key: authelia-oidc-immich
+                    property: client-id
                 secret:
                   secretKey: secret
                   remoteRef:

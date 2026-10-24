@@ -168,7 +168,7 @@ spec:
                 // https://github.com/9p4/jellyfin-plugin-sso/blob/main/providers.md#authelia (the plugin answers 404 until it is loaded)
                 await jellyfin('POST', '/sso/OID/Add/authelia', {
                   oidEndpoint: env.ISSUER_URL,
-                  oidClientId: 'jellyfin',
+                  oidClientId: env.CLIENT_ID,
                   oidSecret: env.CLIENT_SECRET,
                   enabled: true,
                   enableAuthorization: true, // the administrators and the access come from the groups, at each login
@@ -218,6 +218,10 @@ spec:
                   - while true; do if node /scripts/configure.js; then sleep 3600;
                     else sleep 30; fi; done
                   env:
+                    CLIENT_ID:
+                      secretKeyRef:
+                        key: client-id
+                        name: jellyfin-oidc
                     CLIENT_SECRET:
                       secretKeyRef:
                         key: secret
@@ -477,6 +481,11 @@ spec:
       externalSecrets:
         jellyfin-oidc:
           data:
+            client-id:
+              remoteRef:
+                key: authelia-oidc-jellyfin
+                property: client-id
+              secretKey: client-id
             secret:
               remoteRef:
                 key: authelia-oidc-jellyfin

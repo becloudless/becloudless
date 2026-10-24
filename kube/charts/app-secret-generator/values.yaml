@@ -27,6 +27,8 @@ resources:
             name: secret-generator
       values:
         secretLength: 100
+        args:
+          - --secret-encoding=hex
         # upstream only publishes amd64, this one is built for amd64 and arm64 from docker/misc/secret-generator
         image: 
           registry: ghcr.io

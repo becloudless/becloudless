@@ -311,6 +311,11 @@ spec:
       externalSecrets:
         forgejo-oidc:
           data:
+            key:
+              remoteRef:
+                key: authelia-oidc-forgejo
+                property: client-id
+              secretKey: key
             secret:
               remoteRef:
                 key: authelia-oidc-forgejo
@@ -320,11 +325,6 @@ spec:
           secretStoreRef:
             kind: SecretStore
             name: authelia
-          target:
-            template:
-              data:
-                key: forgejo
-              mergePolicy: Merge
       secretStores:
         authelia:
           provider:

@@ -174,6 +174,11 @@ resources:
                 kind: SecretStore
                 name: authelia
               data:
+                client-id:
+                  secretKey: client-id
+                  remoteRef:
+                    key: authelia-oidc-seerr
+                    property: client-id
                 secret:
                   secretKey: secret
                   remoteRef:
@@ -319,7 +324,7 @@ resources:
                         slug: 'authelia',
                         name: 'Authelia',
                         issuerUrl: env.ISSUER_URL,
-                        clientId: 'seerr',
+                        clientId: env.CLIENT_ID,
                         clientSecret: env.CLIENT_SECRET,
                         scopes: 'openid profile email',
                         newUserLogin: true,
@@ -410,6 +415,10 @@ resources:
                       env:
                         APP_URL: https://seerr.{{ .Values.global.domain }}
                         ISSUER_URL: https://authelia.{{ .Values.global.domain }}
+                        CLIENT_ID:
+                          secretKeyRef:
+                            name: seerr-oidc
+                            key: client-id
                         CLIENT_SECRET:
                           secretKeyRef:
                             name: seerr-oidc

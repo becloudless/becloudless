@@ -122,12 +122,12 @@ resources:
               secretStoreRef:
                 kind: SecretStore
                 name: authelia
-              target:
-                template:
-                  mergePolicy: Merge
-                  data:
-                    key: forgejo
               data:
+                key:
+                  secretKey: key
+                  remoteRef:
+                    key: authelia-oidc-forgejo
+                    property: client-id
                 secret:
                   secretKey: secret
                   remoteRef:

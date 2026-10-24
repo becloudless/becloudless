@@ -42,6 +42,8 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    args:
+    - --secret-encoding=hex
     image:
       registry: ghcr.io
       repository: becloudless/secret-generator
