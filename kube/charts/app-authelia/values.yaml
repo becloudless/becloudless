@@ -376,7 +376,7 @@ resources:
           # the hashes of the OIDC client secrets are built from the generated secrets, the hashes change at each start but the secrets do not
           initContainers:
             - name: oidc-hashes
-              image: ghcr.io/authelia/authelia:4.39.24
+              image: ghcr.io/authelia/authelia:4.39.27
               command:
                 - sh
                 - -ec
