@@ -32,7 +32,6 @@ All applications are defined under `kube/apps/`, one directory per app.
 | `longhorn` | Storage | Distributed block storage for Kubernetes |
 | `longhorn-config` | Storage | Longhorn StorageClass and backup targets |
 | `mailu` | Email | Self-hosted email stack (SMTP, IMAP, webmail) |
-| `mattermost` | Productivity | Team chat (Mattermost Enterprise image, free Entry license), SSO with Authelia |
 | `metrics-server` | Platform | Kubernetes resource metrics (used by HPA and `kubectl top`) |
 | `multus` | Networking | Meta-CNI plugin for attaching multiple network interfaces to pods |
 | `multus-config` | Networking | NetworkAttachmentDefinitions for Multus |

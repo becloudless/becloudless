@@ -208,12 +208,6 @@ apps:
     appChart:
       name: app-paperless
 
-  mattermost:
-    groups:
-      extra: true
-    appChart:
-      name: app-mattermost
-
   syncthing:
     groups:
       extra: true

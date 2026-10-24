@@ -151,12 +151,6 @@ resources:
                   fieldName: client-id
                 secret:
                   fieldName: secret
-            authelia-oidc-mattermost:
-              fields:
-                client-id:
-                  fieldName: client-id
-                secret:
-                  fieldName: secret
 
           # key pair signing the OIDC tokens, mounted from /secrets/authelia-jwks
           certManagerCertificates:
@@ -240,13 +234,6 @@ resources:
                   resources: [ secrets ]
                   resourceNames: [ authelia-oidc-paperless ]
                   verbs: [ get ]
-            mattermost-secrets-reader:
-              rules:
-                secrets:
-                  apiGroups: [ "" ]
-                  resources: [ secrets ]
-                  resourceNames: [ authelia-oidc-mattermost ]
-                  verbs: [ get ]
 
           roleBindings:
             immich-secrets-reader:
@@ -319,16 +306,6 @@ resources:
                   kind: ServiceAccount
                   name: authelia-reader
                   namespace: paperless
-            mattermost-secrets-reader:
-              roleRef:
-                apiGroup: rbac.authorization.k8s.io
-                kind: Role
-                name: mattermost-secrets-reader
-              subjects:
-                authelia-reader:
-                  kind: ServiceAccount
-                  name: authelia-reader
-                  namespace: mattermost
 
           externalSecrets:
             authelia-ldap:
@@ -406,7 +383,7 @@ resources:
                 - sh
                 - -ec
                 - |
-                  for client in forgejo grafana jellyfin immich seerr seafile paperless mattermost; do
+                  for client in forgejo grafana jellyfin immich seerr seafile paperless; do
                     hash=$(authelia crypto hash generate pbkdf2 --variant sha512 --password "$(cat /secrets/authelia-oidc-$client/secret)" | sed 's/^Digest: //')
                     printf '%s' "$hash" > /config/oidc-$client.hash
                   done
@@ -434,9 +411,6 @@ resources:
                 - name: secret-authelia-oidc-paperless
                   mountPath: /secrets/authelia-oidc-paperless
                   readOnly: true
-                - name: secret-authelia-oidc-mattermost
-                  mountPath: /secrets/authelia-oidc-mattermost
-                  readOnly: true
           # setting extra volumes removes the default /config volume of the chart
           extraVolumes:
             - name: authelia
@@ -459,7 +433,6 @@ resources:
             authelia-oidc-seerr: {}
             authelia-oidc-seafile: {}
             authelia-oidc-paperless: {}
-            authelia-oidc-mattermost: {}
             authelia-jwks: {}
 
         configMap:
@@ -682,13 +655,6 @@ resources:
                       subject:
                         - 'group:role_admin'
                         - 'group:app_paperless'
-                mattermost_authz:
-                  default_policy: deny
-                  rules:
-                    - policy: two_factor
-                      subject:
-                        - 'group:role_admin'
-                        - 'group:app_mattermost'
 
               claims_policies:
                 grafana:
@@ -885,31 +851,6 @@ resources:
                   access_token_signed_response_alg: 'none'
                   userinfo_signed_response_alg: 'none'
                   token_endpoint_auth_method: 'client_secret_basic'
-
-                # mattermost (OpenID Connect, "OpenID Connect (Other)" provider): the user is created from the email and the
-                # preferred_username (`MM_OPENIDSETTINGS_USEPREFERREDUSERNAME`) of the userinfo
-                - client_id: '{{ `{{ secret "/secrets/authelia-oidc-mattermost/client-id" }}` }}'
-                  client_name: 'Mattermost'
-                  client_secret:
-                    path: '/config/oidc-mattermost.hash'
-                  public: false
-                  authorization_policy: 'mattermost_authz'
-                  require_pkce: false
-                  pkce_challenge_method: ''
-                  pre_configured_consent_duration: 1 year
-                  redirect_uris:
-                    - 'https://mattermost.{{ .Values.global.domain }}/signup/openid/complete'
-                  scopes:
-                    - 'openid'
-                    - 'profile'
-                    - 'email'
-                  response_types:
-                    - 'code'
-                  grant_types:
-                    - 'authorization_code'
-                  access_token_signed_response_alg: 'none'
-                  userinfo_signed_response_alg: 'none'
-                  token_endpoint_auth_method: 'client_secret_post'
 
     # the public exposure, applied once authelia is deployed and not waited for
     authelia-integration:
