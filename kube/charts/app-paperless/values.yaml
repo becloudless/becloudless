@@ -1,0 +1,442 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+global:
+  domain:
+  name:
+
+# Paperless-ngx (https://docs.paperless-ngx.com): document management, with OCR and full text search.
+#
+# Nothing has to be created by hand:
+#  - the database is a CloudNativePG cluster (`paperless-postgresql`), the password of its `app` user is created by CNPG
+#    (`paperless-postgresql-app`);
+#  - the broker is a valkey (`paperless-valkey`, the password is generated);
+#  - the secret key and the password of the local administrator are generated like the other secrets (`paperless-generated`, see
+#    `paperless-pre`).
+# The login page only shows the SSO button (and redirects to it): there is no login form, not even for the local administrator. The
+# local administrator `paperless_admin` (password: the `admin-password` key of `paperless-generated`) can only use the API (basic
+# authentication, or a token from `/api/token/`), it is the way in when authelia is down. The members of `role_admin` are superusers.
+# SSO: the OpenID Connect login with authelia (OIDC client `paperless`, see its access control in authelia). The users of the groups
+#    `app_paperless` and `role_admin` are created at their first login, from their `preferred_username` and their email. The members of
+#    the group `role_admin` are the superusers of paperless. The other groups of authelia are synchronized with the groups of paperless of
+#    the same name, at each login: the permissions of a user come from them, and a user without any group can do nothing. Create a group
+#    named `app_paperless` in the administration of paperless, with the permissions the users should have. The client id and secret are
+#    generated in the authelia namespace and copied by external-secrets (see `paperless-pre`), the provider settings are given by the
+#    environment (see `PAPERLESS_SOCIALACCOUNT_PROVIDERS`).
+# Not configured: mails, tika and gotenberg (the office documents), the consumption folder (the documents are uploaded in the web
+# interface, the consumer is disabled), the AI features. The documents are in the volume `paperless-data` (the documents and the data of
+# paperless: the search index and the classifier), the database is saved by the postgresql-cluster chart. The volumes are backed up daily
+# by longhorn (the `default` group).
+
+resources:
+
+  # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
+  # The database has its own policy, from the postgresql-cluster chart.
+  ciliumNetworkPolicies:
+    paperless:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: paperless}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p8000: {port: "8000", protocol: TCP}}}
+      egress:
+        postgresql:
+          toEndpoints:
+            postgresql:
+              matchLabels: {cnpg.io/cluster: paperless-postgresql}
+          toPorts:
+            postgresql: {ports: {p5432: {port: "5432", protocol: TCP}}}
+        valkey:
+          toEndpoints:
+            valkey:
+              matchLabels: {app.kubernetes.io/name: valkey}
+          toPorts:
+            valkey: {ports: {p6379: {port: "6379", protocol: TCP}}}
+        authelia: # the OIDC issuer is the public address of authelia
+          toFQDNs:
+            authelia: {matchName: "authelia.{{ .Values.global.domain }}"}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+        gateway: # the public addresses of the cluster are the gateway for the pods
+          toEntities: {ingress: ingress}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+
+    paperless-valkey: # the broker of the tasks and the cache
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: valkey}
+      ingress:
+        paperless:
+          fromEndpoints:
+            paperless:
+              matchLabels: {app.kubernetes.io/name: paperless}
+          toPorts:
+            valkey: {ports: {p6379: {port: "6379", protocol: TCP}}}
+
+  fluxHelmRepositories:
+    paperless-valkey:
+      url: https://valkey.io/valkey-helm/
+
+  fluxHelmReleases:
+    # the database is prepared by the postgresql-cluster chart (certificates, issuer, cluster and backups)
+    # the cluster is named after the release, which is the name of this HelmRelease
+    paperless-postgresql:
+      values:
+        storageSize: 5Gi
+        clients:
+          paperless:
+            matchLabels: {app.kubernetes.io/name: paperless}
+      dependsOn: # the certificates, the cluster and the volume snapshots
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        cnpg:
+          name: app-cnpg
+          namespace: cnpg-system
+        longhorn:
+          name: app-longhorn
+          namespace: longhorn-system
+      chart:
+        spec:
+          chart: ./kube/charts/postgresql-cluster
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+
+    # the secrets of the services, created before they start
+    paperless-pre:
+      dependsOn:
+        secret-generator:
+          name: app-secret-generator
+          namespace: secret-generator
+        external-secrets:
+          name: app-external-secrets
+          namespace: external-secrets
+        authelia-pre: # the generated secret of the client and the right to read it
+          name: authelia-pre
+          namespace: authelia
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          stringSecrets:
+            paperless-generated:
+              fields:
+                secret-key: # signs the sessions and the tokens
+                  fieldName: secret-key
+                admin-password: # the local administrator, created by paperless at its start
+                  fieldName: admin-password
+
+            # password of the `default` user of valkey: paperless connects with a password only
+            paperless-valkey:
+              fields:
+                default:
+                  fieldName: default
+
+          serviceAccounts:
+            authelia-reader:
+              automountServiceAccountToken: false # only used by external-secrets to get a token
+
+          secretStores:
+            authelia:
+              provider:
+                kubernetes:
+                  remoteNamespace: authelia
+                  server:
+                    caProvider:
+                      type: ConfigMap
+                      name: kube-root-ca.crt
+                      key: ca.crt
+                  auth:
+                    serviceAccount:
+                      name: authelia-reader
+
+          externalSecrets:
+            paperless-oidc:
+              refreshInterval: 1h
+              secretStoreRef:
+                kind: SecretStore
+                name: authelia
+              data:
+                client-id:
+                  secretKey: client-id
+                  remoteRef:
+                    key: authelia-oidc-paperless
+                    property: client-id
+                secret:
+                  secretKey: secret
+                  remoteRef:
+                    key: authelia-oidc-paperless
+                    property: secret
+
+    # the broker of the tasks and the cache of paperless
+    paperless-valkey:
+      dependsOn: # the generated secret
+        paperless-pre:
+          name: paperless-pre
+      chart:
+        spec:
+          chart: valkey
+          version: 0.12.0
+          sourceRef:
+            kind: HelmRepository
+            name: paperless-valkey
+      values:
+        replicaCount: 1
+        dataStorage:
+          enabled: true
+          requestedSize: 1Gi
+
+        auth:
+          enabled: true
+          aclUsers:
+            default:
+              permissions: "~* &* +@all"
+          usersExistingSecret: paperless-valkey
+
+    paperless:
+      timeout: 15m # the first start migrates the database
+      dependsOn:
+        paperless-pre: # the generated secrets and the OIDC client
+          name: paperless-pre
+        paperless-postgresql:
+          name: paperless-postgresql
+        paperless-valkey:
+          name: paperless-valkey
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          # the documents (`media`) and the data (the search index, the classifier) of paperless
+          persistentVolumeClaims:
+            paperless-data:
+              accessModes:
+                - ReadWriteOnce
+              storageClassName: longhorn
+              resources:
+                requests:
+                  storage: 20Gi
+
+          deployments:
+            paperless:
+              replicas: 1 # paperless is not HA ready
+              strategy:
+                type: Recreate # the volume is ReadWriteOnce
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: paperless
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: paperless
+                spec:
+                  enableServiceLinks: false # the `PAPERLESS_*` variables of the services would conflict
+                  securityContext:
+                    fsGroup: 1000 # the `paperless` user of the image
+                  containers:
+                    paperless:
+                      name: paperless
+                      image: ghcr.io/paperless-ngx/paperless-ngx:3.3.4 # renovate: versioning=loose
+                      ports:
+                        http:
+                          containerPort: 8000
+                      # The variables are sorted by name when the pod is rendered, and `$(NAME)` only gets the variables defined before it:
+                      # the secrets used by other variables are named before `PAPERLESS_*`.
+                      env:
+                        BROKER_PASSWORD:
+                          secretKeyRef:
+                            name: paperless-valkey
+                            key: default
+                        OIDC_CLIENT_ID:
+                          secretKeyRef:
+                            name: paperless-oidc
+                            key: client-id
+                        OIDC_CLIENT_SECRET:
+                          secretKeyRef:
+                            name: paperless-oidc
+                            key: secret
+                        PAPERLESS_URL: https://paperless.{{ .Values.global.domain }}
+                        PAPERLESS_PROXY_SSL_HEADER: '["HTTP_X_FORWARDED_PROTO", "https"]' # the gateway terminates the TLS
+                        PAPERLESS_TIME_ZONE: Europe/Paris
+                        PAPERLESS_OCR_LANGUAGE: fra+eng
+                        PAPERLESS_CONSUMER_DISABLE: "true"
+                        PAPERLESS_SECRET_KEY:
+                          secretKeyRef:
+                            name: paperless-generated
+                            key: secret-key
+                        PAPERLESS_DBENGINE: postgresql
+                        PAPERLESS_DBHOST: paperless-postgresql-rw
+                        PAPERLESS_DBNAME: app
+                        PAPERLESS_DBUSER: app
+                        PAPERLESS_DBPASS:
+                          secretKeyRef:
+                            name: paperless-postgresql-app
+                            key: password
+                        PAPERLESS_DB_OPTIONS: sslmode=require
+                        PAPERLESS_REDIS: redis://:$(BROKER_PASSWORD)@paperless-valkey:6379
+                        # the local administrator, created at the start if it does not exist
+                        PAPERLESS_ADMIN_USER: paperless_admin
+                        PAPERLESS_ADMIN_MAIL: paperless_admin@{{ .Values.global.domain }}
+                        PAPERLESS_ADMIN_PASSWORD:
+                          secretKeyRef:
+                            name: paperless-generated
+                            key: admin-password
+                        # SSO with authelia: the `authelia` provider, the callback is /accounts/oidc/authelia/login/callback/
+                        PAPERLESS_APPS: allauth.socialaccount.providers.openid_connect
+                        PAPERLESS_SOCIALACCOUNT_PROVIDERS: '{"openid_connect":{"SCOPE":["openid","profile","email","groups"],"OAUTH_PKCE_ENABLED":true,"APPS":[{"provider_id":"authelia","name":"Authelia","client_id":"$(OIDC_CLIENT_ID)","secret":"$(OIDC_CLIENT_SECRET)","settings":{"server_url":"https://authelia.{{ .Values.global.domain }}","token_auth_method":"client_secret_basic"}}]}}'
+                        PAPERLESS_SOCIAL_AUTO_SIGNUP: "true"
+                        PAPERLESS_SOCIAL_ACCOUNT_SYNC_GROUPS: "true"
+                        PAPERLESS_SOCIAL_ACCOUNT_SYNC_SUPERUSER_GROUP: role_admin
+                        PAPERLESS_ACCOUNT_EMAIL_VERIFICATION: none # no mails are sent, authelia verified the address
+                        PAPERLESS_DISABLE_REGULAR_LOGIN: "true"
+                        PAPERLESS_REDIRECT_LOGIN_TO_SSO: "true"
+                      # `localhost` is the only host of the probes allowed when `PAPERLESS_URL` is set
+                      startupProbe:
+                        httpGet:
+                          path: /
+                          port: 8000
+                          httpHeaders:
+                            host: {name: Host, value: localhost}
+                        periodSeconds: 5
+                        failureThreshold: 120 # 10min, the first start migrates the database
+                      readinessProbe:
+                        httpGet:
+                          path: /
+                          port: 8000
+                          httpHeaders:
+                            host: {name: Host, value: localhost}
+                        timeoutSeconds: 5
+                      livenessProbe:
+                        httpGet:
+                          path: /
+                          port: 8000
+                          httpHeaders:
+                            host: {name: Host, value: localhost}
+                        periodSeconds: 30
+                        timeoutSeconds: 10
+                        failureThreshold: 6
+                      # the image supports to run without root
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        runAsNonRoot: true
+                        runAsUser: 1000
+                        runAsGroup: 1000
+                        capabilities:
+                          drop:
+                            all: ALL
+                        seccompProfile:
+                          type: RuntimeDefault
+                      volumeMounts:
+                        data:
+                          name: data
+                          mountPath: /usr/src/paperless/data
+                          subPath: data # the volume has a `lost+found` directory
+                        media:
+                          name: data
+                          mountPath: /usr/src/paperless/media
+                          subPath: media
+                  volumes:
+                    data:
+                      name: data
+                      persistentVolumeClaim:
+                        claimName: paperless-data
+
+          services:
+            paperless:
+              selector:
+                app.kubernetes.io/name: paperless
+              ports:
+                http:
+                  port: 8000
+
+    # the public exposure, applied once paperless is deployed and not waited for
+    paperless-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        paperless:
+          name: paperless
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          certManagerCertificates:
+            # certificate of the web UI, terminated by the Gateway
+            paperless-gateway:
+              secretName: tls-paperless-gateway
+              dnsNames:
+                paperless: paperless.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
+          # It is not protected by forward auth: the API clients (mobile applications, scanners) cannot follow the login redirect of
+          # authelia, paperless has its own SSO login.
+          listenerSets:
+            paperless:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: paperless.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-paperless-gateway
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            paperless:
+              parentRefs:
+                paperless:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: paperless
+              hostnames:
+                paperless: paperless.{{ .Values.global.domain }}
+              rules:
+                root:
+                  backendRefs:
+                    paperless:
+                      name: paperless
+                      port: 8000
+                  timeouts:
+                    request: 0s # the uploads and the downloads of big documents can be long

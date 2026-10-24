@@ -200,6 +200,12 @@ apps:
     appChart:
       name: app-seafile
 
+  paperless:
+    groups:
+      extra: true
+    appChart:
+      name: app-paperless
+
   firefox-sync:
     groups:
       extra: true

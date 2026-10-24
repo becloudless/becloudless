@@ -8,7 +8,7 @@ global:
 
   # setup applied to lldap by `lldap-post`
   lldapBootstrap:
-    revision: 4 # part of the name of the Job: bump it when the spec of the Job changes (immutable fields), see `lldap-post`
+    revision: 5 # part of the name of the Job: bump it when the spec of the Job changes (immutable fields), see `lldap-post`
     image: lldap/lldap:2026-09-22-debian-rootless # renovate: versioning=loose
     # the groups the apps authorize (see the access control of authelia and the roles of the apps)
     groups:
@@ -19,6 +19,7 @@ global:
       - app_immich
       - app_immich_one_factor
       - app_jellyfin
+      - app_paperless
       - app_pushprox
       - app_seafile
       - app_seerr

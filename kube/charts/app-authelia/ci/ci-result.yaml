@@ -218,6 +218,13 @@ spec:
                 subject:
                 - group:role_admin
                 - group:app_jellyfin
+            paperless_authz:
+              default_policy: deny
+              rules:
+              - policy: two_factor
+                subject:
+                - group:role_admin
+                - group:app_paperless
             seafile_authz:
               default_policy: deny
               rules:
@@ -385,6 +392,29 @@ spec:
             - email
             token_endpoint_auth_method: client_secret_basic
             userinfo_signed_response_alg: none
+          - access_token_signed_response_alg: none
+            authorization_policy: paperless_authz
+            client_id: '{{ secret "/secrets/authelia-oidc-paperless/client-id" }}'
+            client_name: Paperless
+            client_secret:
+              path: /config/oidc-paperless.hash
+            grant_types:
+            - authorization_code
+            pkce_challenge_method: S256
+            pre_configured_consent_duration: 1 year
+            public: false
+            redirect_uris:
+            - https://paperless.test.com/accounts/oidc/authelia/login/callback/
+            require_pkce: true
+            response_types:
+            - code
+            scopes:
+            - openid
+            - profile
+            - email
+            - groups
+            token_endpoint_auth_method: client_secret_basic
+            userinfo_signed_response_alg: none
           enabled: true
           hmac_secret:
             secret_name: authelia-generated
@@ -477,11 +507,11 @@ spec:
         - sh
         - -ec
         - |
-          for client in forgejo grafana jellyfin immich seerr seafile; do
+          for client in forgejo grafana jellyfin immich seerr seafile paperless; do
             hash=$(authelia crypto hash generate pbkdf2 --variant sha512 --password "$(cat /secrets/authelia-oidc-$client/secret)" | sed 's/^Digest: //')
             printf '%s' "$hash" > /config/oidc-$client.hash
           done
-        image: ghcr.io/authelia/authelia:4.39.24
+        image: ghcr.io/authelia/authelia:4.39.27
         name: oidc-hashes
         volumeMounts:
         - mountPath: /config
@@ -504,6 +534,9 @@ spec:
         - mountPath: /secrets/authelia-oidc-seafile
           name: secret-authelia-oidc-seafile
           readOnly: true
+        - mountPath: /secrets/authelia-oidc-paperless
+          name: secret-authelia-oidc-paperless
+          readOnly: true
       kind: Deployment
       replicas: 1
     secret:
@@ -515,6 +548,7 @@ spec:
         authelia-oidc-grafana: {}
         authelia-oidc-immich: {}
         authelia-oidc-jellyfin: {}
+        authelia-oidc-paperless: {}
         authelia-oidc-seafile: {}
         authelia-oidc-seerr: {}
         authelia-postgresql-app: {}
@@ -772,6 +806,16 @@ spec:
               kind: ServiceAccount
               name: authelia-reader
               namespace: jellyfin
+        paperless-secrets-reader:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: paperless-secrets-reader
+          subjects:
+            authelia-reader:
+              kind: ServiceAccount
+              name: authelia-reader
+              namespace: paperless
         seafile-secrets-reader:
           roleRef:
             apiGroup: rbac.authorization.k8s.io
@@ -833,6 +877,17 @@ spec:
               - ""
               resourceNames:
               - authelia-oidc-jellyfin
+              resources:
+              - secrets
+              verbs:
+              - get
+        paperless-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - authelia-oidc-paperless
               resources:
               - secrets
               verbs:
@@ -903,6 +958,12 @@ spec:
             secret:
               fieldName: secret
         authelia-oidc-jellyfin:
+          fields:
+            client-id:
+              fieldName: client-id
+            secret:
+              fieldName: secret
+        authelia-oidc-paperless:
           fields:
             client-id:
               fieldName: client-id

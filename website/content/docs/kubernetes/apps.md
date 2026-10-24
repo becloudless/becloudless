@@ -35,6 +35,7 @@ All applications are defined under `kube/apps/`, one directory per app.
 | `metrics-server` | Platform | Kubernetes resource metrics (used by HPA and `kubectl top`) |
 | `multus` | Networking | Meta-CNI plugin for attaching multiple network interfaces to pods |
 | `multus-config` | Networking | NetworkAttachmentDefinitions for Multus |
+| `paperless` | Productivity | Document management with OCR and full text search (Paperless-ngx), SSO with Authelia |
 | `prometheus` | Observability | Prometheus + Grafana monitoring stack |
 | `renovate` | DevOps | Automated dependency update PRs |
 | `seafile` | Productivity | Self-hosted file sync and share (Dropbox alternative), SSO with Authelia |
