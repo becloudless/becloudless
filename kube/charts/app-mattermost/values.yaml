@@ -1,0 +1,362 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+global:
+  domain:
+  name:
+
+# Mattermost (https://mattermost.com): team chat.
+#
+# Nothing has to be created by hand:
+#  - the database is a CloudNativePG cluster (`mattermost-postgresql`), the password of its `app` user is created by CNPG
+#    (`mattermost-postgresql-app`);
+#  - the client id and secret of the SSO are generated in the authelia namespace and copied by external-secrets (see `mattermost-pre`).
+# The image is the Enterprise Edition (`mattermost-enterprise-edition`) and no license is installed: it runs as the free "Entry" plan,
+# which keeps the SSO (OpenID Connect) the Team Edition does not have anymore. The limits of the Entry plan apply (a small number of
+# users and a limited history of the messages, see https://mattermost.com/pricing), and the license of this image is not an open source
+# one. There is no valkey: the cache of the Entreprise Edition is in memory.
+# SSO: the OpenID Connect login with authelia (OIDC client `mattermost`, see its access control in authelia). The users of the groups
+#    `app_mattermost` and `role_admin` are created at their first login, from their email and their `preferred_username`. The login by
+#    email and by username is disabled, so the only way in is authelia, and the first user to log in is the first administrator of
+#    mattermost. The provider settings are given by the environment (the `MM_OPENIDSETTINGS_*` variables), they are read only in the
+#    system console. `mmctl --local` (the local mode is enabled) works in the pod to recover an instance: `kubectl exec -n mattermost
+#    deploy/mattermost -- mmctl --local user list`.
+# Not configured: mails (no notification, no invitation by mail), the push notifications, the plugin marketplace. The files, the
+# plugins and the configuration of mattermost are in the volume `mattermost-data`, the database is saved by the postgresql chart. The
+# volumes are backed up daily by longhorn (the `default` group).
+
+resources:
+
+  # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
+  # The database has its own policy, from the postgresql chart.
+  ciliumNetworkPolicies:
+    mattermost:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mattermost}
+      ingress:
+        gateway:
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            http: {ports: {p8065: {port: "8065", protocol: TCP}}}
+      egress:
+        postgresql:
+          toEndpoints:
+            postgresql:
+              matchLabels: {cnpg.io/cluster: mattermost-postgresql}
+          toPorts:
+            postgresql: {ports: {p5432: {port: "5432", protocol: TCP}}}
+        authelia: # the OIDC issuer is the public address of authelia
+          toFQDNs:
+            authelia: {matchName: "authelia.{{ .Values.global.domain }}"}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+        gateway: # the public addresses of the cluster are the gateway for the pods
+          toEntities: {ingress: ingress}
+          toPorts:
+            https: {ports: {p443: {port: "443", protocol: TCP}}}
+
+  fluxHelmReleases:
+    # the database is prepared by the postgresql chart (certificates, issuer, cluster and backups)
+    # the cluster is named after the release, which is the name of this HelmRelease
+    mattermost-postgresql:
+      values:
+        storageSize: 5Gi
+        clients:
+          mattermost:
+            matchLabels: {app.kubernetes.io/name: mattermost}
+      dependsOn: # the certificates, the cluster and the volume snapshots
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        cnpg:
+          name: app-cnpg
+          namespace: cnpg-system
+        longhorn:
+          name: app-longhorn
+          namespace: longhorn-system
+      chart:
+        spec:
+          chart: ./kube/charts/postgresql
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+
+    # the OIDC client of authelia, copied before mattermost starts
+    mattermost-pre:
+      dependsOn:
+        external-secrets:
+          name: app-external-secrets
+          namespace: external-secrets
+        authelia-pre: # the generated secret of the client and the right to read it
+          name: authelia-pre
+          namespace: authelia
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          serviceAccounts:
+            authelia-reader:
+              automountServiceAccountToken: false # only used by external-secrets to get a token
+
+          secretStores:
+            authelia:
+              provider:
+                kubernetes:
+                  remoteNamespace: authelia
+                  server:
+                    caProvider:
+                      type: ConfigMap
+                      name: kube-root-ca.crt
+                      key: ca.crt
+                  auth:
+                    serviceAccount:
+                      name: authelia-reader
+
+          externalSecrets:
+            mattermost-oidc:
+              refreshInterval: 1h
+              secretStoreRef:
+                kind: SecretStore
+                name: authelia
+              data:
+                client-id:
+                  secretKey: client-id
+                  remoteRef:
+                    key: authelia-oidc-mattermost
+                    property: client-id
+                secret:
+                  secretKey: secret
+                  remoteRef:
+                    key: authelia-oidc-mattermost
+                    property: secret
+
+    mattermost:
+      timeout: 15m # the first start migrates the database
+      dependsOn:
+        mattermost-pre: # the OIDC client
+          name: mattermost-pre
+        mattermost-postgresql:
+          name: mattermost-postgresql
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          # the configuration, the files and the plugins of mattermost
+          persistentVolumeClaims:
+            mattermost-data:
+              accessModes:
+                - ReadWriteOnce
+              storageClassName: longhorn
+              resources:
+                requests:
+                  storage: 20Gi
+
+          deployments:
+            mattermost:
+              replicas: 1 # the Entry plan has no cluster mode
+              strategy:
+                type: Recreate # the volume is ReadWriteOnce
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: mattermost
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: mattermost
+                spec:
+                  enableServiceLinks: false # the `MATTERMOST_*` variables of the service would be in the environment
+                  securityContext:
+                    fsGroup: 2000 # the `mattermost` user of the image
+                  containers:
+                    mattermost:
+                      name: mattermost
+                      image: mattermost/mattermost-enterprise-edition:12.0.1
+                      ports:
+                        http:
+                          containerPort: 8065
+                      # The variables are sorted by name when the pod is rendered, and `$(NAME)` only gets the variables defined before it:
+                      # the secrets used by other variables are named before `MM_*`.
+                      env:
+                        DB_PASSWORD:
+                          secretKeyRef:
+                            name: mattermost-postgresql-app
+                            key: password
+                        MM_SQLSETTINGS_DRIVERNAME: postgres
+                        MM_SQLSETTINGS_DATASOURCE: postgres://app:$(DB_PASSWORD)@mattermost-postgresql-rw:5432/app?sslmode=require&connect_timeout=10
+                        MM_SERVICESETTINGS_SITEURL: https://mattermost.{{ .Values.global.domain }}
+                        MM_SERVICESETTINGS_ENABLELOCALMODE: "true" # the socket is only reachable from the pod
+                        # SSO with authelia: "OpenID Connect (Other)", the callback is /signup/openid/complete
+                        MM_OPENIDSETTINGS_ENABLE: "true"
+                        MM_OPENIDSETTINGS_ID:
+                          secretKeyRef:
+                            name: mattermost-oidc
+                            key: client-id
+                        MM_OPENIDSETTINGS_SECRET:
+                          secretKeyRef:
+                            name: mattermost-oidc
+                            key: secret
+                        MM_OPENIDSETTINGS_DISCOVERYENDPOINT: https://authelia.{{ .Values.global.domain }}/.well-known/openid-configuration
+                        MM_OPENIDSETTINGS_BUTTONTEXT: Authelia
+                        MM_OPENIDSETTINGS_USEPREFERREDUSERNAME: "true"
+                        # authelia is the only way in
+                        MM_EMAILSETTINGS_ENABLESIGNUPWITHEMAIL: "false"
+                        MM_EMAILSETTINGS_ENABLESIGNINWITHEMAIL: "false"
+                        MM_EMAILSETTINGS_ENABLESIGNINWITHUSERNAME: "false"
+                        # nothing is sent to the outside: no mails, no push notifications, no telemetry
+                        MM_EMAILSETTINGS_SENDEMAILNOTIFICATIONS: "false"
+                        MM_EMAILSETTINGS_SENDPUSHNOTIFICATIONS: "false"
+                        MM_LOGSETTINGS_ENABLEDIAGNOSTICS: "false"
+                        MM_SERVICESETTINGS_ENABLESECURITYFIXALERT: "false"
+                        MM_PLUGINSETTINGS_ENABLEMARKETPLACE: "false"
+                        # the logs go to the console only
+                        MM_LOGSETTINGS_ENABLEFILE: "false"
+                        MM_LOGSETTINGS_CONSOLELEVEL: INFO
+                      startupProbe:
+                        httpGet:
+                          path: /api/v4/system/ping
+                          port: 8065
+                        periodSeconds: 5
+                        failureThreshold: 120 # 10min, the first start migrates the database
+                      readinessProbe:
+                        httpGet:
+                          path: /api/v4/system/ping
+                          port: 8065
+                        timeoutSeconds: 5
+                      livenessProbe:
+                        httpGet:
+                          path: /api/v4/system/ping
+                          port: 8065
+                        periodSeconds: 30
+                        timeoutSeconds: 10
+                        failureThreshold: 6
+                      # the image runs without root
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        runAsNonRoot: true
+                        runAsUser: 2000
+                        runAsGroup: 2000
+                        capabilities:
+                          drop:
+                            all: ALL
+                        seccompProfile:
+                          type: RuntimeDefault
+                      volumeMounts:
+                        config:
+                          name: data
+                          mountPath: /mattermost/config
+                          subPath: config # the volume has a `lost+found` directory
+                        data:
+                          name: data
+                          mountPath: /mattermost/data
+                          subPath: data
+                        plugins:
+                          name: data
+                          mountPath: /mattermost/plugins
+                          subPath: plugins
+                        client-plugins:
+                          name: data
+                          mountPath: /mattermost/client/plugins
+                          subPath: client-plugins
+                  volumes:
+                    data:
+                      name: data
+                      persistentVolumeClaim:
+                        claimName: mattermost-data
+
+          services:
+            mattermost:
+              selector:
+                app.kubernetes.io/name: mattermost
+              ports:
+                http:
+                  port: 8065
+
+    # the public exposure, applied once mattermost is deployed and not waited for
+    mattermost-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        mattermost:
+          name: mattermost
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          certManagerCertificates:
+            # certificate of the web UI, terminated by the Gateway
+            mattermost-gateway:
+              secretName: tls-mattermost-gateway
+              dnsNames:
+                mattermost: mattermost.{{ .Values.global.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
+          # It is not protected by forward auth: the desktop and mobile applications cannot follow the login redirect of authelia,
+          # mattermost has its own SSO login.
+          listenerSets:
+            mattermost:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: mattermost.{{ .Values.global.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-mattermost-gateway
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            mattermost:
+              parentRefs:
+                mattermost:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: mattermost
+              hostnames:
+                mattermost: mattermost.{{ .Values.global.domain }}
+              rules:
+                root:
+                  backendRefs:
+                    mattermost:
+                      name: mattermost
+                      port: 8065
+                  timeouts:
+                    request: 0s # the websocket and the uploads of big files can be long

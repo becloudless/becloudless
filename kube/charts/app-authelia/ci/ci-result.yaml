@@ -202,6 +202,13 @@ spec:
                 subject:
                 - group:role_admin
                 - group:app_jellyfin
+            mattermost_authz:
+              default_policy: deny
+              rules:
+              - policy: two_factor
+                subject:
+                - group:role_admin
+                - group:app_mattermost
             paperless_authz:
               default_policy: deny
               rules:
@@ -399,6 +406,28 @@ spec:
             - groups
             token_endpoint_auth_method: client_secret_basic
             userinfo_signed_response_alg: none
+          - access_token_signed_response_alg: none
+            authorization_policy: mattermost_authz
+            client_id: '{{ secret "/secrets/authelia-oidc-mattermost/client-id" }}'
+            client_name: Mattermost
+            client_secret:
+              path: /config/oidc-mattermost.hash
+            grant_types:
+            - authorization_code
+            pkce_challenge_method: ""
+            pre_configured_consent_duration: 1 year
+            public: false
+            redirect_uris:
+            - https://mattermost.test.com/signup/openid/complete
+            require_pkce: false
+            response_types:
+            - code
+            scopes:
+            - openid
+            - profile
+            - email
+            token_endpoint_auth_method: client_secret_post
+            userinfo_signed_response_alg: none
           enabled: true
           hmac_secret:
             secret_name: authelia-generated
@@ -491,7 +520,7 @@ spec:
         - sh
         - -ec
         - |
-          for client in forgejo grafana jellyfin immich seerr seafile paperless; do
+          for client in forgejo grafana jellyfin immich seerr seafile paperless mattermost; do
             hash=$(authelia crypto hash generate pbkdf2 --variant sha512 --password "$(cat /secrets/authelia-oidc-$client/secret)" | sed 's/^Digest: //')
             printf '%s' "$hash" > /config/oidc-$client.hash
           done
@@ -521,6 +550,9 @@ spec:
         - mountPath: /secrets/authelia-oidc-paperless
           name: secret-authelia-oidc-paperless
           readOnly: true
+        - mountPath: /secrets/authelia-oidc-mattermost
+          name: secret-authelia-oidc-mattermost
+          readOnly: true
       kind: Deployment
       replicas: 1
     secret:
@@ -532,6 +564,7 @@ spec:
         authelia-oidc-grafana: {}
         authelia-oidc-immich: {}
         authelia-oidc-jellyfin: {}
+        authelia-oidc-mattermost: {}
         authelia-oidc-paperless: {}
         authelia-oidc-seafile: {}
         authelia-oidc-seerr: {}
@@ -794,6 +827,16 @@ spec:
               kind: ServiceAccount
               name: authelia-reader
               namespace: jellyfin
+        mattermost-secrets-reader:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: mattermost-secrets-reader
+          subjects:
+            authelia-reader:
+              kind: ServiceAccount
+              name: authelia-reader
+              namespace: mattermost
         paperless-secrets-reader:
           roleRef:
             apiGroup: rbac.authorization.k8s.io
@@ -865,6 +908,17 @@ spec:
               - ""
               resourceNames:
               - authelia-oidc-jellyfin
+              resources:
+              - secrets
+              verbs:
+              - get
+        mattermost-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - authelia-oidc-mattermost
               resources:
               - secrets
               verbs:
@@ -946,6 +1000,12 @@ spec:
             secret:
               fieldName: secret
         authelia-oidc-jellyfin:
+          fields:
+            client-id:
+              fieldName: client-id
+            secret:
+              fieldName: secret
+        authelia-oidc-mattermost:
           fields:
             client-id:
               fieldName: client-id
