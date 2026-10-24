@@ -1,5 +1,5 @@
 ---
-# Source: postgresql-cluster/templates/loader.yaml
+# Source: postgresql/templates/loader.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -17,7 +17,7 @@ spec:
   usages:
   - client auth
 ---
-# Source: postgresql-cluster/templates/loader.yaml
+# Source: postgresql/templates/loader.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -35,7 +35,7 @@ spec:
     size: 256
   secretName: test-release-ca
 ---
-# Source: postgresql-cluster/templates/loader.yaml
+# Source: postgresql/templates/loader.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -63,7 +63,7 @@ spec:
     labels:
       cnpg.io/reload: ""
 ---
-# Source: postgresql-cluster/templates/loader.yaml
+# Source: postgresql/templates/loader.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -81,7 +81,7 @@ spec:
   usages:
   - client auth
 ---
-# Source: postgresql-cluster/templates/loader.yaml
+# Source: postgresql/templates/loader.yaml
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -122,7 +122,7 @@ spec:
       - port: "8000"
         protocol: TCP
 ---
-# Source: postgresql-cluster/templates/loader.yaml
+# Source: postgresql/templates/loader.yaml
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
@@ -147,7 +147,7 @@ spec:
   storage:
     size: 5Gi
 ---
-# Source: postgresql-cluster/templates/loader.yaml
+# Source: postgresql/templates/loader.yaml
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
@@ -157,7 +157,7 @@ spec:
   ca:
     secretName: test-release-ca
 ---
-# Source: postgresql-cluster/templates/loader.yaml
+# Source: postgresql/templates/loader.yaml
 apiVersion: postgresql.cnpg.io/v1
 kind: ScheduledBackup
 metadata:

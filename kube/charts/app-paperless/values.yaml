@@ -23,13 +23,13 @@ global:
 #    environment (see `PAPERLESS_SOCIALACCOUNT_PROVIDERS`).
 # Not configured: mails, tika and gotenberg (the office documents), the consumption folder (the documents are uploaded in the web
 # interface, the consumer is disabled), the AI features. The documents are in the volume `paperless-data` (the documents and the data of
-# paperless: the search index and the classifier), the database is saved by the postgresql-cluster chart. The volumes are backed up daily
+# paperless: the search index and the classifier), the database is saved by the postgresql chart. The volumes are backed up daily
 # by longhorn (the `default` group).
 
 resources:
 
   # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
-  # The database has its own policy, from the postgresql-cluster chart.
+  # The database has its own policy, from the postgresql chart.
   ciliumNetworkPolicies:
     paperless:
       endpointSelector:
@@ -78,7 +78,7 @@ resources:
       url: https://valkey.io/valkey-helm/
 
   fluxHelmReleases:
-    # the database is prepared by the postgresql-cluster chart (certificates, issuer, cluster and backups)
+    # the database is prepared by the postgresql chart (certificates, issuer, cluster and backups)
     # the cluster is named after the release, which is the name of this HelmRelease
     paperless-postgresql:
       values:
@@ -98,7 +98,7 @@ resources:
           namespace: longhorn-system
       chart:
         spec:
-          chart: ./kube/charts/postgresql-cluster
+          chart: ./kube/charts/postgresql
           reconcileStrategy: Revision
           sourceRef:
             kind: GitRepository

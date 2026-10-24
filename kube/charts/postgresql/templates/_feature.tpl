@@ -14,7 +14,7 @@ Everything is returned as a default: set `resources.<kind>.<id>...` to override 
 Warning: never delete the `<release>-ca` Secret. The leaf certificates would stay signed by the previous CA and CNPG
 deadlocks (https://github.com/cloudnative-pg/cloudnative-pg/issues/10433). Only the 3 leaf secrets are safe to delete.
 */}}
-{{- define "postgresql-cluster.feature" }}
+{{- define "postgresql.feature" }}
 {{- $rootContext := .rootContext }}
 {{- $values := $rootContext.Values }}
 {{- $name := $rootContext.Release.Name }}

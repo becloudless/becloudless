@@ -1,5 +1,5 @@
 apiVersion: v2
-name: postgresql-cluster
+name: postgresql
 description: CloudNativePG clusters secured by cert-manager certificates
 version: 0.0.0
 dependencies:

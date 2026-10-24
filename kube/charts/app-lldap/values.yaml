@@ -40,7 +40,7 @@ global:
 resources:
 
   # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
-  # The database has its own policy, from the postgresql-cluster chart.
+  # The database has its own policy, from the postgresql chart.
   ciliumNetworkPolicies:
     lldap:
       endpointSelector:
@@ -91,7 +91,7 @@ resources:
     lldap-postgresql:
       chart:
         spec:
-          chart: ./kube/charts/postgresql-cluster
+          chart: ./kube/charts/postgresql
           reconcileStrategy: Revision
           sourceRef:
             kind: GitRepository

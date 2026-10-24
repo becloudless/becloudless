@@ -1,7 +1,7 @@
 {{- include "base.loader.init" $ }}
 
 {{- /* The clusters are prepared as resources by default, values set by the user take precedence. */}}
-{{- $featureValues := include "postgresql-cluster.feature" (dict "rootContext" $) | fromYaml }}
+{{- $featureValues := include "postgresql.feature" (dict "rootContext" $) | fromYaml }}
 {{- $_ := set $ "Values" (mustMergeOverwrite $featureValues $.Values) }}
 
 {{- include "base.resources.renderResources" (dict "rootContext" $) }}

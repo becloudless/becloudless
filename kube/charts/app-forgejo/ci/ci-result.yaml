@@ -239,7 +239,7 @@ metadata:
 spec:
   chart:
     spec:
-      chart: ./kube/charts/postgresql-cluster
+      chart: ./kube/charts/postgresql
       reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository

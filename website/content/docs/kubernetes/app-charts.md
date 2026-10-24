@@ -25,7 +25,7 @@ namespace. Resource names are the id of the resource: `prefixNamesWithRelease` i
 
 A chart does not create everything in its own release. A resource that needs something that does not exist yet
 (a secret, a CRD, a running service) goes in a sub-HR created by the chart, which waits for it with `dependsOn`.
-A sub-HR is either a chart of its own (`postgresql-cluster`, a public Helm chart) or `./kube/charts/base-loader`,
+A sub-HR is either a chart of its own (`postgresql`, a chart of this repository) or `./kube/charts/base-loader`,
 which renders the `resources` given in its `values`.
 
 | HR | Contains | Waits for | Waited for |
@@ -49,7 +49,7 @@ Rules:
 - A certificate that a pod mounts (`tls-lldaps`) is in `-pre`, the one only used by the Gateway (`lldap-gateway`) is in `-integration`.
 - The sub-HRs of an app run as `flux-<name>`, they can only create resources in the namespace of the app, except for
   apps with `clusterAdmin`.
-- The postgres cluster of an app is a sub-HR `<app>-postgresql` (chart `postgresql-cluster`) depending on `app-cert-manager`,
+- The postgres cluster of an app is a sub-HR `<app>-postgresql` (chart `postgresql`) depending on `app-cert-manager`,
   `app-cnpg` and `app-longhorn`. The chart sets `prefixNamesWithRelease: true`, its resources are named `<release>-<id>`.
 
 ```mermaid
@@ -72,7 +72,7 @@ resources:
     lldap-postgresql:            # the database
       chart:
         spec:
-          chart: ./kube/charts/postgresql-cluster
+          chart: ./kube/charts/postgresql
           ...
 
     lldap-pre:                   # secrets and certificate mounted by the pod

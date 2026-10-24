@@ -14,7 +14,7 @@ resources:
       url: https://valkey.io/valkey-helm/
 
   # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
-  # The database has its own policy, from the postgresql-cluster chart.
+  # The database has its own policy, from the postgresql chart.
   ciliumNetworkPolicies:
     authelia:
       endpointSelector:
@@ -61,7 +61,7 @@ resources:
             valkey: {ports: {p6379: {port: "6379", protocol: TCP}}}
 
   fluxHelmReleases:
-    # the database is prepared by the postgresql-cluster chart (certificates, issuer, cluster and backups)
+    # the database is prepared by the postgresql chart (certificates, issuer, cluster and backups)
     # the cluster is named after the release, which is the name of this HelmRelease
     authelia-postgresql:
       values:
@@ -70,7 +70,7 @@ resources:
             matchLabels: {app.kubernetes.io/name: authelia}
       chart:
         spec:
-          chart: ./kube/charts/postgresql-cluster
+          chart: ./kube/charts/postgresql
           reconcileStrategy: Revision
           sourceRef:
             kind: GitRepository

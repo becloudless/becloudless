@@ -1,10 +1,10 @@
 ---
-# Source: postgresql-cluster/templates/loader.yaml
+# Source: postgresql/templates/loader.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: test-release-app
-  namespace: myapp
+  namespace: default
 spec:
   commonName: app
   issuerRef:
@@ -17,15 +17,14 @@ spec:
   usages:
   - client auth
 ---
-# Source: postgresql-cluster/templates/loader.yaml
+# Source: postgresql/templates/loader.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: test-release-ca
-  namespace: myapp
+  namespace: default
 spec:
   commonName: test-release-ca
-  duration: 87600h
   isCA: true
   issuerRef:
     kind: ClusterIssuer
@@ -36,26 +35,26 @@ spec:
     size: 256
   secretName: test-release-ca
 ---
-# Source: postgresql-cluster/templates/loader.yaml
+# Source: postgresql/templates/loader.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: test-release
-  namespace: myapp
+  namespace: default
 spec:
   dnsNames:
   - test-release-rw
-  - test-release-rw.myapp
-  - test-release-rw.myapp.svc
-  - test-release-rw.myapp.svc.cluster.local
+  - test-release-rw.default
+  - test-release-rw.default.svc
+  - test-release-rw.default.svc.cluster.local
   - test-release-r
-  - test-release-r.myapp
-  - test-release-r.myapp.svc
-  - test-release-r.myapp.svc.cluster.local
+  - test-release-r.default
+  - test-release-r.default.svc
+  - test-release-r.default.svc.cluster.local
   - test-release-ro
-  - test-release-ro.myapp
-  - test-release-ro.myapp.svc
-  - test-release-ro.myapp.svc.cluster.local
+  - test-release-ro.default
+  - test-release-ro.default.svc
+  - test-release-ro.default.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: test-release
@@ -64,12 +63,12 @@ spec:
     labels:
       cnpg.io/reload: ""
 ---
-# Source: postgresql-cluster/templates/loader.yaml
+# Source: postgresql/templates/loader.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: test-release-replication
-  namespace: myapp
+  namespace: default
 spec:
   commonName: streaming_replica
   issuerRef:
@@ -82,12 +81,12 @@ spec:
   usages:
   - client auth
 ---
-# Source: postgresql-cluster/templates/loader.yaml
+# Source: postgresql/templates/loader.yaml
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
   name: test-release
-  namespace: myapp
+  namespace: default
 spec:
   egress:
   - toEndpoints:
@@ -113,17 +112,17 @@ spec:
       - port: "8000"
         protocol: TCP
 ---
-# Source: postgresql-cluster/templates/loader.yaml
+# Source: postgresql/templates/loader.yaml
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
   name: test-release
-  namespace: myapp
+  namespace: default
 spec:
-  bootstrap:
-    recovery:
-      backup:
-        name: backup-example
+  backup:
+    volumeSnapshot:
+      className: longhorn-backup-incremental
+      snapshotOwnerReference: backup
   certificates:
     clientCASecret: test-release-ca
     replicationTLSSecret: test-release-replication-tls
@@ -133,12 +132,26 @@ spec:
   storage:
     size: 1Gi
 ---
-# Source: postgresql-cluster/templates/loader.yaml
+# Source: postgresql/templates/loader.yaml
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: test-release
-  namespace: myapp
+  namespace: default
 spec:
   ca:
     secretName: test-release-ca
+---
+# Source: postgresql/templates/loader.yaml
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  backupOwnerReference: self
+  cluster:
+    name: test-release
+  immediate: true
+  method: volumeSnapshot
+  schedule: 0 0 4 * * *
