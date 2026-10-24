@@ -1,7 +1,8 @@
 #!/bin/sh
 # Sidecar of the Syncthing instance: keeps the sync protocol listen address of the instance on the relay of the cluster, so that the
 # instance is reachable through it without any manual step in the UI. It also sets `gui.insecureAdminAccess`, which only turns off the
-# warning of the UI about the missing password (the access is restricted by authelia and the Gateway).
+# warning of the UI about the missing password (the access is restricted by authelia and the Gateway), and acknowledges the notification
+# about the GUI user and password.
 #
 # The relay ID is the device ID of its certificate (sha256 of the DER, base32, a luhn32 check character every 13 characters, groups of 7),
 # computed here from the public certificate of the relay so that nothing has to be copied by hand.
@@ -60,6 +61,14 @@ while true; do
     fi
     # the API escapes the `&` of the address
     current=$(curl -sf -H "X-API-Key: $key" http://localhost:8384/rest/config/options 2>/dev/null | tr -d ' \n' | sed 's/\\u0026/\&/g' || true)
+    # the notification about the missing user and password is acknowledged (what its OK button does)
+    case "$current" in
+      *'"authenticationUserAndPassword"'*)
+        if curl -sf -X PATCH -H "X-API-Key: $key" -d '{"unackedNotificationIDs":[]}' http://localhost:8384/rest/config/options >/dev/null; then
+          echo "the notification about the missing GUI password is acknowledged"
+        fi
+        ;;
+    esac
     case "$current" in
       *"\"listenAddresses\":[\"$want\"]"*)
         wait=30
