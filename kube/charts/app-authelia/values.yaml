@@ -931,6 +931,10 @@ resources:
                   group: gateway.networking.k8s.io
                   kind: HTTPRoute
                   namespace: whoami
+                syncthing:
+                  group: gateway.networking.k8s.io
+                  kind: HTTPRoute
+                  namespace: syncthing
               to:
                 authelia:
                   group: ""

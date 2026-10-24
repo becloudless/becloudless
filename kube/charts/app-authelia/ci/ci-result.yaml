@@ -657,6 +657,10 @@ spec:
               group: gateway.networking.k8s.io
               kind: HTTPRoute
               namespace: seerr
+            syncthing:
+              group: gateway.networking.k8s.io
+              kind: HTTPRoute
+              namespace: syncthing
             whoami:
               group: gateway.networking.k8s.io
               kind: HTTPRoute
