@@ -123,8 +123,6 @@ spec:
         - domain_regex:
           - ^(?P<User>[a-z0-9-]+)\.syncthing\.test\.com$
           policy: two_factor
-          subject:
-          - user:{user}
         - domain:
           - homer.test.com
           policy: one_factor
