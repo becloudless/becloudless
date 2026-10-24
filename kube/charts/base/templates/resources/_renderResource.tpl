@@ -11,7 +11,8 @@
                                "base.resources.mutations.mapsToArrays"
                                "base.resources.mutations.mapsToEnv"
                                "base.resources.mutations.mapsToPorts"
-                               "base.resources.mutations.content") }}
+                               "base.resources.mutations.content"
+                               "base.resources.mutations.checksums") }}
     {{- $inputs := merge (dict "work" $work) $context }}
     {{- $work = include $mutation $inputs | fromYaml }}
   {{- end }}

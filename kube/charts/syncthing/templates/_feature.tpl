@@ -5,7 +5,7 @@ instances of the same namespace do not overlap.
 
 Everything is returned as a default: set `resources.<kind>.<id>...` to override or extend any generated field.
 
-When `relay.host` is set, a sidecar (`files/relay.sh`) keeps the sync protocol listen address of the instance on that relay: the ID of
+When `relay.host` is set, a sidecar (`files/relay.sh`, the pod restarts when it changes: see the checksum annotations of the base chart) keeps the sync protocol listen address of the instance on that relay: the ID of
 the relay is computed from its certificate (`relay.certSecret`) and the token comes from `relay.tokenSecret`.
 */}}
 {{- define "syncthing.feature" }}
@@ -50,10 +50,6 @@ resources:
           labels:
             app.kubernetes.io/name: syncthing
             app.kubernetes.io/instance: {{ $name | quote }}
-{{- if $relay.host }}
-          annotations:
-            checksum/relay-script: {{ $script | sha256sum | quote }} # a change of the script restarts the pod
-{{- end }}
         spec:
           enableServiceLinks: false # the `SYNCTHING_*` variables of the services would conflict
           securityContext:

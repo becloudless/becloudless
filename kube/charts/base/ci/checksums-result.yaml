@@ -1,0 +1,217 @@
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: creds
+  namespace: default
+stringData:
+  password: secret
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mounted
+  namespace: default
+stringData:
+  token: secret
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: projected
+  namespace: default
+stringData:
+  key: secret
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+data:
+  KEY: value
+kind: ConfigMap
+metadata:
+  name: env
+  namespace: default
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+data:
+  config: value
+kind: ConfigMap
+metadata:
+  name: test-release
+  namespace: default
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+data:
+  file: projected
+kind: ConfigMap
+metadata:
+  name: projected
+  namespace: default
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: v1
+data:
+  not: used
+kind: ConfigMap
+metadata:
+  name: unused
+  namespace: default
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: daemon
+  template:
+    metadata:
+      annotations:
+        checksum/secrets: e63354bdb9fcdf403e5580e9f14a78f6aaaae51092ba1e426006fb22f6bed0ee
+      labels:
+        app: daemon
+    spec:
+      containers:
+      - envFrom:
+        - secretRef:
+            name: creds
+        image: myimage:latest
+        name: myapp
+      enableServiceLinks: false
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      annotations:
+        checksum/configmaps: a7a20d91004d0c5a6390868f53c73d33e4e309815a8345383280e1ddb75b324a
+        checksum/secrets: 15305634748b067bd8900a11bf06f44874d22f3b6ea30b61f17f603dad881aca
+      labels:
+        app: myapp
+    spec:
+      containers:
+      - env:
+        - name: FROM_CONFIGMAP
+          valueFrom:
+            configMapKeyRef:
+              key: KEY
+              name: env
+        - name: FROM_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: creds
+        image: myimage:latest
+        name: myapp
+        volumeMounts:
+        - mountPath: /config
+          name: config
+      enableServiceLinks: false
+      volumes:
+      - configMap:
+          name: main
+        name: config
+      - name: mounted
+        secret:
+          secretName: mounted
+      - name: projected
+        projected:
+          sources:
+          - configMap:
+              name: projected
+          - secret:
+              name: projected
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: manual
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: manual
+  template:
+    metadata:
+      annotations:
+        checksum/configmaps: mine
+      labels:
+        app: manual
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: env
+        image: myimage:latest
+        name: myapp
+      enableServiceLinks: false
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: other
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: other
+  template:
+    metadata:
+      annotations:
+        mine: kept
+      labels:
+        app: other
+    spec:
+      containers:
+      - envFrom:
+        - secretRef:
+            name: made-elsewhere
+        image: myimage:latest
+        name: myapp
+      enableServiceLinks: false
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: stateful
+  template:
+    metadata:
+      annotations:
+        checksum/configmaps: ace306f4ad209088181d4f95eadc5f87a288c133ab8fac4cf91a8f3ac6f87fd2
+      labels:
+        app: stateful
+    spec:
+      containers:
+      - image: myimage:latest
+        name: myapp
+      enableServiceLinks: false
+      initContainers:
+      - envFrom:
+        - configMapRef:
+            name: env
+        image: myimage:latest
+        name: init

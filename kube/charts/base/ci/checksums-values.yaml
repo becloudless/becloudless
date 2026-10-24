@@ -1,0 +1,159 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+# The workloads get the `checksum/configmaps` and `checksum/secrets` annotations from the ConfigMaps and the Secrets of the release
+# they use, so the pods are rolled out when their content changes.
+resources:
+  configMaps:
+    main:
+      data:
+        config: value
+    env:
+      data:
+        KEY: value
+    projected:
+      data:
+        file: projected
+    unused:
+      data:
+        not: used
+  secrets:
+    creds:
+      stringData:
+        password: secret
+    mounted:
+      stringData:
+        token: secret
+    projected:
+      stringData:
+        key: secret
+
+  deployments:
+    main:
+      selector:
+        matchLabels:
+          app: myapp
+      template:
+        metadata:
+          labels:
+            app: myapp
+        spec:
+          containers:
+            myapp:
+              name: myapp
+              image: myimage:latest
+              env:
+                FROM_CONFIGMAP:
+                  configMapKeyRef:
+                    name: env
+                    key: KEY
+                FROM_SECRET:
+                  secretKeyRef:
+                    name: creds
+                    key: password
+              volumeMounts:
+                config:
+                  name: config
+                  mountPath: /config
+          volumes:
+            config:
+              name: config
+              configMap:
+                name: main
+            mounted:
+              name: mounted
+              secret:
+                secretName: mounted
+            projected:
+              name: projected
+              projected:
+                sources:
+                  cm:
+                    configMap:
+                      name: projected
+                  secret:
+                    secret:
+                      name: projected
+
+    # nothing to hash (not a ConfigMap or a Secret of the release), and its own annotations are kept
+    other:
+      selector:
+        matchLabels:
+          app: other
+      template:
+        metadata:
+          labels:
+            app: other
+          annotations:
+            mine: kept
+        spec:
+          containers:
+            myapp:
+              name: myapp
+              image: myimage:latest
+              envFrom:
+                external:
+                  secretRef:
+                    name: made-elsewhere
+
+    # the annotation of the resource wins
+    manual:
+      selector:
+        matchLabels:
+          app: manual
+      template:
+        metadata:
+          labels:
+            app: manual
+          annotations:
+            checksum/configmaps: mine
+        spec:
+          containers:
+            myapp:
+              name: myapp
+              image: myimage:latest
+              envFrom:
+                cm:
+                  configMapRef:
+                    name: env
+
+  statefulSets:
+    main:
+      selector:
+        matchLabels:
+          app: stateful
+      template:
+        metadata:
+          labels:
+            app: stateful
+        spec:
+          initContainers:
+            init:
+              name: init
+              image: myimage:latest
+              envFrom:
+                cm:
+                  configMapRef:
+                    name: env
+          containers:
+            myapp:
+              name: myapp
+              image: myimage:latest
+
+  daemonSets:
+    main:
+      selector:
+        matchLabels:
+          app: daemon
+      template:
+        metadata:
+          labels:
+            app: daemon
+        spec:
+          containers:
+            myapp:
+              name: myapp
+              image: myimage:latest
+              envFrom:
+                secret:
+                  secretRef:
+                    name: creds

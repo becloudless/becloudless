@@ -125,7 +125,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/relay-script: 7f204dd9f6659b2b1487cdc8c87444c6167b7891524cf353f61730e47d962c87
+        checksum/configmaps: 5f71eabe09488865392a46a41ea5f1aa30e844dff8f3fff30052cf1bbda2590d
       labels:
         app.kubernetes.io/instance: test-release
         app.kubernetes.io/name: syncthing
