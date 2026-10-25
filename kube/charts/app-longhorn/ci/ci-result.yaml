@@ -1,5 +1,101 @@
 ---
 # Source: app-longhorn/templates/loader.yaml
+apiVersion: v1
+automountServiceAccountToken: true
+kind: ServiceAccount
+metadata:
+  name: backup-restore
+  namespace: default
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backup-restore
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumes
+  verbs:
+  - get
+  - list
+  - create
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - storageclasses
+  verbs:
+  - get
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backup-restore
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: backup-restore
+subjects:
+- kind: ServiceAccount
+  name: backup-restore
+  namespace: longhorn-system
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: backup-restore
+  namespace: default
+rules:
+- apiGroups:
+  - longhorn.io
+  resources:
+  - backups
+  - backupvolumes
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - longhorn.io
+  resources:
+  - backuptargets
+  verbs:
+  - get
+  - patch
+- apiGroups:
+  - longhorn.io
+  resources:
+  - volumes
+  verbs:
+  - get
+  - list
+  - create
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: backup-restore
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: backup-restore
+subjects:
+- kind: ServiceAccount
+  name: backup-restore
+  namespace: longhorn-system
+---
+# Source: app-longhorn/templates/loader.yaml
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -262,6 +358,20 @@ spec:
         protocol: TCP
       - port: "9503"
         protocol: TCP
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-restore
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: longhorn-restore
 ---
 # Source: app-longhorn/templates/loader.yaml
 apiVersion: cilium.io/v2

@@ -177,6 +177,10 @@
           "releaseName": {
             "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/releaseName"
           },
+          "restore": {
+            "description": "Restore the PVCs of the app that do not exist from the last Longhorn backups before the app starts (a HelmRelease `restore-<name>` creates the volumes and the PVs, `app-<name>` waits for it). Only for the apps keeping all their state in their PVCs: not the ones with a database in another volume (CloudNativePG).",
+            "type": "boolean"
+          },
           "rollback": {
             "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/rollback"
           },

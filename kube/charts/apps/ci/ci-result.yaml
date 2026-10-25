@@ -23,7 +23,25 @@ kind: Namespace
 metadata:
   annotations:
     helm.sh/resource-policy: keep
+  name: garage
+spec: {}
+---
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: gateway-api
+spec: {}
+---
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: longhorn-system
 spec: {}
 ---
 # Source: apps/templates/loader.yaml
@@ -77,6 +95,15 @@ kind: ServiceAccount
 metadata:
   annotations:
     helm.sh/resource-policy: keep
+  name: flux-garage
+  namespace: garage
+---
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-gateway-api
   namespace: gateway-api
 ---
@@ -88,6 +115,15 @@ metadata:
     helm.sh/resource-policy: keep
   name: flux-kube
   namespace: kube-system
+---
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-longhorn
+  namespace: longhorn-system
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: v1
@@ -138,6 +174,20 @@ data:
 kind: ConfigMap
 metadata:
   name: global-values
+  namespace: garage
+---
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    app:
+      domain: test.com
+      lldapUsers: {}
+      lldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
   namespace: gateway-api
 ---
 # Source: apps/templates/loader.yaml
@@ -153,6 +203,20 @@ kind: ConfigMap
 metadata:
   name: global-values
   namespace: kube-system
+---
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    app:
+      domain: test.com
+      lldapUsers: {}
+      lldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: longhorn-system
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: v1
@@ -238,6 +302,22 @@ kind: ClusterRoleBinding
 metadata:
   annotations:
     helm.sh/resource-policy: keep
+  name: flux-garage
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-garage
+  namespace: garage
+---
+# Source: apps/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-gateway-api
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -263,6 +343,22 @@ subjects:
 - kind: ServiceAccount
   name: flux-kube
   namespace: kube-system
+---
+# Source: apps/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-longhorn
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-longhorn
+  namespace: longhorn-system
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -429,6 +525,50 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
+  name: app-garage
+  namespace: garage
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-garage
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    timeout: 20m
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-garage
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-garage
+        fluxKustomizations:
+          serviceAccountName: flux-garage
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: apps/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
   name: app-gateway-api
   namespace: gateway-api
 spec:
@@ -517,6 +657,50 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
+  name: app-longhorn
+  namespace: longhorn-system
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-longhorn
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    timeout: 20m
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-longhorn
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-longhorn
+        fluxKustomizations:
+          serviceAccountName: flux-longhorn
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: apps/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
   name: app-something
   namespace: something
 spec:
@@ -528,6 +712,9 @@ spec:
         kind: GitRepository
         name: bcl
         namespace: default
+  dependsOn:
+  - name: restore-something
+    namespace: longhorn-system
   driftDetection:
     mode: enabled
   install:
@@ -560,3 +747,46 @@ spec:
   valuesFrom:
   - kind: ConfigMap
     name: global-values
+---
+# Source: apps/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: restore-something
+  namespace: longhorn-system
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/longhorn-restore
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  dependsOn:
+  - name: longhorn-backup
+    namespace: garage
+  - name: app-longhorn
+    namespace: longhorn-system
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    timeout: 1h
+  interval: 1h
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-longhorn
+  timeout: 1h
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    timeout: 1h
+  values:
+    restore:
+      namespace: something

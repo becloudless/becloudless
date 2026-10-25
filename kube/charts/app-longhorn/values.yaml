@@ -240,6 +240,74 @@ resources:
         kube-apiserver:
           toEntities: {apiserver: kube-apiserver}
 
+    longhorn-restore: # the jobs of the `longhorn-restore` chart, they only talk to the API server (backups, volumes and PVs)
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: longhorn-restore}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
+  # The jobs restoring the volumes of the apps from the backups (chart `longhorn-restore`, `restore` of the apps): they read the
+  # backups, create the volumes restored from them and the PVs with a claim, which the PVC of the app is bound to. They are here
+  # because the PVs are cluster-wide, and the `flux-<app>` accounts must not be able to create them.
+  serviceAccounts:
+    backup-restore:
+      automountServiceAccountToken: true
+
+  roles:
+    backup-restore:
+      rules:
+        backups:
+          apiGroups: [ longhorn.io ]
+          resources: [ backups, backupvolumes ]
+          verbs: [ get, list ]
+        backuptargets:
+          apiGroups: [ longhorn.io ]
+          resources: [ backuptargets ]
+          verbs: [ get, patch ] # patch: ask for a sync
+        volumes:
+          apiGroups: [ longhorn.io ]
+          resources: [ volumes ]
+          verbs: [ get, list, create ]
+  roleBindings:
+    backup-restore:
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: Role
+        name: backup-restore
+      subjects:
+        backup-restore:
+          kind: ServiceAccount
+          name: backup-restore
+          namespace: longhorn-system
+
+  clusterRoles:
+    backup-restore:
+      rules:
+        pvs:
+          apiGroups: [ "" ]
+          resources: [ persistentvolumes ]
+          verbs: [ get, list, create ]
+        pvcs:
+          apiGroups: [ "" ]
+          resources: [ persistentvolumeclaims ]
+          verbs: [ get, list ]
+        storageclasses:
+          apiGroups: [ storage.k8s.io ]
+          resources: [ storageclasses ]
+          verbs: [ get ]
+  clusterRoleBindings:
+    backup-restore:
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: backup-restore
+      subjects:
+        backup-restore:
+          kind: ServiceAccount
+          name: backup-restore
+          namespace: longhorn-system
+
   fluxHelmReleases:
     # the policy adding the PATH of NixOS to the pods, created before they start
     longhorn-pre:

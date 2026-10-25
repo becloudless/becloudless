@@ -43,6 +43,35 @@ and `base`. Its editor schema (`schema/values.schema.json`) references `../app/s
 `app` schema lives. A chart that does not use the cluster values (`app-external-secrets`, `app-gateway-api`) stays
 on `base.loader.all`.
 
+## Restoring the volumes of an app
+
+The volumes of the apps are backed up daily by Longhorn into the bucket of Garage (the `default` group of recurring jobs). An
+app can get its volumes back from the last backup when it is enabled, with `restore: true` in its entry of the `apps` chart. The
+PVCs are not listed: nothing about them is declared in the chart of the app, the job finds the PVCs of the namespace in the
+backups (Longhorn saves the namespace and the name of the PVC in each one, and the storage class and access mode are those of the
+backed up volume).
+
+```yaml
+apps:
+  tuwunel:
+    restore: true
+```
+
+For such an app the `apps` chart also creates the HelmRelease `restore-<name>` (in `longhorn-system`, it waits for `app-longhorn` and
+for the backup target of Garage), and `app-<name>` waits for it. Its job (`kube/charts/longhorn-restore`), for each PVC that does not
+exist yet: syncs the backup target, finds the last completed backup of the PVC (Longhorn saves its namespace and name in the backup),
+creates a Longhorn volume restored from it and the PV of this volume with a `claimRef` to the PVC, so the PVC of the app is bound to it
+when it is created. It does nothing when the PVC exists, when there is no backup target or backup (the app starts empty), and fails (the
+app waits, the job is retried) when the target is not reachable.
+
+- The claim of the app has to use the same name, storage class and access mode as when it was backed up, and not ask for more than the size
+  of the volume at that time. A PVC the app does not use anymore but that is in the backups is restored too: delete its PV.
+- It is the flag that opts in, because the job needs rights on the whole cluster (PVs): they are given to the job, not to the apps.
+- Only for the apps that keep all their state in these volumes: the files of an app with a CloudNativePG database would not match its
+  new empty database. Not for `garage` (it holds the backups) nor `longhorn`.
+- The backups are in the cluster itself (the bucket of Garage is on Longhorn volumes), so this restores an app that was removed or whose
+  volume was lost, not a lost cluster.
+
 ## Sub-HRs
 
 A chart does not create everything in its own release. A resource that needs something that does not exist yet

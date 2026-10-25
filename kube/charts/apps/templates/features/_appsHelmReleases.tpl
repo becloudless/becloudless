@@ -13,6 +13,8 @@ Per app:
   - `appChart.name`: chart of the app, `app-<name>` by default, from `./kube/charts/<appChart.name>`
   - `dependsOn`: `<app>: true` makes the app wait for the HelmRelease of the enabled app `<app>`; `<app>: false` removes a dependency.
     A dependency on an app that is not enabled is ignored.
+  - `restore: true`: the PVCs of the app restored from the backups of Longhorn before the app starts, `app-<name>` waits for the
+    HelmRelease `restore-<name>` (see the restore feature)
   - `values`: the values of the chart of the app (`spec.values` of the HelmRelease), deep merged over the values of the chart
     ex: `apps.cilium.values.resources.fluxHelmReleases.cilium-post.values.resources.gateways.shared`
 
@@ -47,6 +49,11 @@ Any other key set next to these (ex: `interval`) is merged over the HelmRelease 
               "namespace" ($depApp.namespace | default $dep)) }}
       {{- end }}
     {{- end }}
+    {{- if include "app-apps.restore.enabled" (dict "apps" $apps "name" $name) | trim }}
+      {{- $_ := set $dependsOn "restore" (dict
+            "name" (printf "restore-%s" $name)
+            "namespace" ((get $apps "longhorn").namespace | default "longhorn")) }}
+    {{- end }}
 
     {{- $hr := dict
           "namespace" $namespace
@@ -67,7 +74,7 @@ Any other key set next to these (ex: `interval`) is merged over the HelmRelease 
     {{- if $dependsOn }}
       {{- $_ := set $hr "dependsOn" $dependsOn }}
     {{- end }}
-    {{- $_ := set $helmReleases $hrName (mustMergeOverwrite $hr (omit $app "enabled" "groups" "namespace" "appChart" "dependsOn" "clusterAdmin")) }}
+    {{- $_ := set $helmReleases $hrName (mustMergeOverwrite $hr (omit $app "enabled" "groups" "namespace" "appChart" "dependsOn" "clusterAdmin" "restore")) }}
     {{- end }}
   {{- end }}
 {{- end }}
