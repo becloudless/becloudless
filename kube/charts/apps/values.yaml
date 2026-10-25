@@ -246,3 +246,10 @@ apps:
       extra: true
     appChart:
       name: app-immich
+
+  garage:
+    groups:
+      extra: true
+    clusterAdmin: true # the CRD and the ClusterRole of the discovery of the nodes
+    appChart:
+      name: app-garage

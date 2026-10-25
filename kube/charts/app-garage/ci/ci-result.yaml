@@ -1,0 +1,548 @@
+---
+# Source: app-garage/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: garage
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: garage
+    toPorts:
+    - ports:
+      - port: "3901"
+        protocol: TCP
+  - toEntities:
+    - kube-apiserver
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: garage
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: garage
+    toPorts:
+    - ports:
+      - port: "3901"
+        protocol: TCP
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "3900"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: garage-layout
+    toPorts:
+    - ports:
+      - port: "3903"
+        protocol: TCP
+---
+# Source: app-garage/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: garage-layout
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: garage
+    toPorts:
+    - ports:
+      - port: "3903"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: garage-layout
+---
+# Source: app-garage/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: garage
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: garage-pre
+  - name: app-longhorn
+    namespace: longhorn-system
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      clusterRoleBindings:
+        garage-crds:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: garage-crds
+          subjects:
+            garage:
+              kind: ServiceAccount
+              name: garage
+              namespace: garage
+      clusterRoles:
+        garage-crds:
+          rules:
+            crds:
+              apiGroups:
+              - apiextensions.k8s.io
+              resources:
+              - customresourcedefinitions
+              verbs:
+              - get
+              - list
+              - watch
+              - create
+              - patch
+      configMaps:
+        garage-config:
+          data:
+            garage.toml: |-
+              replication_factor = 2
+              consistency_mode = "consistent"
+
+              metadata_dir = "/var/lib/garage/meta"
+              data_dir = "/var/lib/garage/data"
+              # LMDB can be corrupted by an unclean shutdown: the snapshots are in the metadata volume, and the metadata
+              # can also be rebuilt from the other nodes
+              db_engine = "lmdb"
+              metadata_auto_snapshot_interval = "6h"
+
+              rpc_bind_addr = "0.0.0.0:3901"
+
+              [kubernetes_discovery]
+              namespace = "garage"
+              service_name = "garage"
+
+              [s3_api]
+              api_bind_addr = "0.0.0.0:3900"
+              s3_region = "garage"
+
+              [admin]
+              api_bind_addr = "0.0.0.0:3903"
+      roleBindings:
+        garage-nodes:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: garage-nodes
+          subjects:
+            garage:
+              kind: ServiceAccount
+              name: garage
+              namespace: garage
+      roles:
+        garage-nodes:
+          rules:
+            garagenodes:
+              apiGroups:
+              - deuxfleurs.fr
+              resources:
+              - garagenodes
+              verbs:
+              - get
+              - list
+              - watch
+              - create
+              - update
+              - patch
+              - delete
+      serviceAccounts:
+        garage:
+          automountServiceAccountToken: true
+      services:
+        garage:
+          ports:
+            s3:
+              port: 3900
+          selector:
+            app.kubernetes.io/name: garage
+        garage-headless:
+          clusterIP: None
+          ports:
+            admin:
+              port: 3903
+            rpc:
+              port: 3901
+            s3:
+              port: 3900
+          selector:
+            app.kubernetes.io/name: garage
+      statefulSets:
+        garage:
+          podManagementPolicy: Parallel
+          replicas: 2
+          selector:
+            matchLabels:
+              app.kubernetes.io/name: garage
+          serviceName: garage-headless
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/name: garage
+            spec:
+              containers:
+                garage:
+                  env:
+                    GARAGE_ADMIN_TOKEN:
+                      secretKeyRef:
+                        key: admin-token
+                        name: garage
+                    GARAGE_RPC_SECRET:
+                      secretKeyRef:
+                        key: rpc-secret
+                        name: garage
+                  image: docker.io/dxflrs/garage:v2.5.0
+                  livenessProbe:
+                    failureThreshold: 6
+                    periodSeconds: 30
+                    tcpSocket:
+                      port: 3903
+                    timeoutSeconds: 10
+                  name: garage
+                  ports:
+                    admin:
+                      containerPort: 3903
+                    rpc:
+                      containerPort: 3901
+                    s3:
+                      containerPort: 3900
+                  readinessProbe:
+                    tcpSocket:
+                      port: 3903
+                  securityContext:
+                    allowPrivilegeEscalation: false
+                    capabilities:
+                      drop:
+                        all: ALL
+                    readOnlyRootFilesystem: true
+                    runAsGroup: 1000
+                    runAsNonRoot: true
+                    runAsUser: 1000
+                    seccompProfile:
+                      type: RuntimeDefault
+                  startupProbe:
+                    failureThreshold: 60
+                    periodSeconds: 5
+                    tcpSocket:
+                      port: 3903
+                  volumeMounts:
+                    config:
+                      mountPath: /etc/garage.toml
+                      name: config
+                      readOnly: true
+                      subPath: garage.toml
+                    data:
+                      mountPath: /var/lib/garage/data
+                      name: garage-data
+                    meta:
+                      mountPath: /var/lib/garage/meta
+                      name: garage-meta
+              enableServiceLinks: false
+              securityContext:
+                fsGroup: 1000
+                fsGroupChangePolicy: OnRootMismatch
+                runAsGroup: 1000
+                runAsNonRoot: true
+                runAsUser: 1000
+              serviceAccountName: garage
+              topologySpreadConstraints:
+                host:
+                  labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: garage
+                  maxSkew: 1
+                  topologyKey: kubernetes.io/hostname
+                  whenUnsatisfiable: ScheduleAnyway
+              volumes:
+                config:
+                  configMap:
+                    name: garage-config
+                  name: config
+          volumeClaimTemplates:
+            garage-data:
+              metadata:
+                name: garage-data
+              spec:
+                accessModes:
+                - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 10Gi
+                storageClassName: longhorn-files
+            garage-meta:
+              metadata:
+                name: garage-meta
+              spec:
+                accessModes:
+                - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+                storageClassName: longhorn-db
+---
+# Source: app-garage/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: garage-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: garage-post
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      certManagerCertificates:
+        garage-gateway:
+          dnsNames:
+            s3: s3.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-garage-gateway
+      httpRoutes:
+        garage:
+          hostnames:
+            s3: s3.test.com
+          parentRefs:
+            garage:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: garage
+          rules:
+            root:
+              backendRefs:
+                garage:
+                  name: garage
+                  port: 3900
+              timeouts:
+                request: 0s
+      listenerSets:
+        garage:
+          listeners:
+            https:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: s3.test.com
+              name: https
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: tls-garage-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+---
+# Source: app-garage/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: garage-post
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: garage
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      jobs:
+        garage-layout:
+          activeDeadlineSeconds: 900
+          backoffLimit: 0
+          fullNameOverride: garage-layout-90458b34f7
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/name: garage-layout
+            spec:
+              containers:
+                layout:
+                  args:
+                  - |-
+                    replicas=$(sed -n 's/^replication_factor = //p' /etc/garage/garage.toml)
+                    api=http://garage-0.garage-headless:3903/v2
+                    get() { wget -qO- --header "Authorization: Bearer $ADMIN_TOKEN" "$api/$1"; }
+                    post() { wget -qO- --header "Authorization: Bearer $ADMIN_TOKEN" --header 'Content-Type: application/json' --post-data "$2" "$api/$1"; }
+                    until status=$(get GetClusterStatus) && [ "$(echo "$status" | grep -o '"isUp": *true' | wc -l)" -ge "$replicas" ]; do
+                      echo 'waiting for the nodes'; sleep 5
+                    done
+                    have=$(get GetClusterLayout | grep -o '"id": *"[0-9a-f]*"' | cut -d'"' -f4 | tr '\n' ' ')
+                    zone=$(echo $have | wc -w)
+                    roles=
+                    for id in $(echo "$status" | grep -o '"id": *"[0-9a-f]*"' | cut -d'"' -f4); do
+                      case " $have " in *" $id "*) continue;; esac
+                      zone=$((zone + 1))
+                      roles="$roles${roles:+,}{\"id\":\"$id\",\"zone\":\"z$zone\",\"capacity\":$CAPACITY,\"tags\":[]}"
+                    done
+                    if [ -z "$roles" ]; then echo 'every node has a role'; exit 0; fi
+                    post UpdateClusterLayout "{\"roles\":[$roles]}"
+                    version=$(echo "$status" | grep -o '"layoutVersion": *[0-9]*' | cut -d: -f2)
+                    post ApplyClusterLayout "{\"version\":$((version + 1))}"
+                    echo 'the layout is applied'
+                  command:
+                  - sh
+                  - -ec
+                  env:
+                    ADMIN_TOKEN:
+                      secretKeyRef:
+                        key: admin-token
+                        name: garage
+                    CAPACITY: "10737418240"
+                  image: docker.io/library/alpine:3.24.3
+                  name: layout
+                  securityContext:
+                    allowPrivilegeEscalation: false
+                    capabilities:
+                      drop:
+                        all: ALL
+                    readOnlyRootFilesystem: true
+                    runAsGroup: 65534
+                    runAsNonRoot: true
+                    runAsUser: 65534
+                    seccompProfile:
+                      type: RuntimeDefault
+                  volumeMounts:
+                    config:
+                      mountPath: /etc/garage
+                      name: config
+                      readOnly: true
+              enableServiceLinks: false
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 65534
+                runAsNonRoot: true
+                runAsUser: 65534
+              volumes:
+                config:
+                  configMap:
+                    name: garage-config
+                  name: config
+---
+# Source: app-garage/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: garage-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-secret-generator
+    namespace: secret-generator
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      stringSecrets:
+        garage:
+          fields:
+            admin-token:
+              encoding: hex
+              fieldName: admin-token
+              length: "64"
+            rpc-secret:
+              encoding: hex
+              fieldName: rpc-secret
+              length: "64"

@@ -1,0 +1,490 @@
+# yaml-language-server: $schema=../app/schema/values.schema.json
+
+# Garage (https://garagehq.deuxfleurs.fr): an S3 compatible object store, light and made to be replicated on a few nodes.
+#
+# The S3 API is `https://s3.<domain>` (path-style: `https://s3.<domain>/<bucket>/<key>`, the region is `garage`). The virtual-hosted
+# style (`<bucket>.s3.<domain>`) is not enabled, it needs a wildcard DNS entry and certificate. The pods of the cluster use the
+# service `garage` (`http://garage.garage:3900`) once the network policy of the client allows it.
+# It is not protected by forward auth: the S3 clients cannot follow a login redirect, the access keys of Garage are the protection.
+# Nothing is created in it: the buckets and the access keys are made by the administrator with the admin API (the token is in the
+# secret `garage`, key `admin-token`) or with the CLI in a pod (the image only has the `garage` binary, no shell), for example:
+#    kubectl -n garage exec garage-0 -- /garage bucket create my-bucket
+#    kubectl -n garage exec garage-0 -- /garage key create my-key
+#    kubectl -n garage exec garage-0 -- /garage bucket allow --read --write --owner my-bucket --key my-key
+#
+# It is a StatefulSet of `app.scaling.dbReplicas` nodes, each one with a volume for its metadata (`longhorn-db`, an LMDB database) and
+# a volume for the objects (`longhorn-files`). Every object is stored on `replication_factor` nodes, set to the number of nodes: the
+# data is on every node, and the node count is the failure tolerance (with 2 nodes: reads continue when one is down, writes need both).
+# The replication factor can NOT be changed afterwards (the layout has to be recreated). Longhorn also replicates the volumes,
+# the data is copied (2 nodes of Garage) x (2 replicas of Longhorn): take it into account when sizing, and scale `dbReplicas` by 1
+# node of Garage only when the capacity is needed.
+# The nodes find each other with the `GarageNode` custom resources of Garage (the `kubernetes_discovery`), which also creates the CRD:
+# this is why the app is `clusterAdmin` (see `apps/values.yaml`).
+# The layout (which node has which zone and capacity) is applied once by `garage-post`: one zone per node, the capacity of the
+# data volume. Another node (a bigger `dbReplicas`) is added to the layout by the same job when its spec changes (the `1` of
+# its name below); removing a node from the layout is made by hand (`/garage layout remove`).
+
+resources:
+
+  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
+  ciliumNetworkPolicies:
+    garage:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: garage}
+      ingress:
+        gateway: # the S3 API, through the Gateway
+          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          toPorts:
+            s3: {ports: {p3900: {port: "3900", protocol: TCP}}}
+        garage: # the RPC between the nodes
+          fromEndpoints:
+            garage:
+              matchLabels: {app.kubernetes.io/name: garage}
+          toPorts:
+            rpc: {ports: {p3901: {port: "3901", protocol: TCP}}}
+        layout: # the admin API
+          fromEndpoints:
+            layout:
+              matchLabels: {app.kubernetes.io/name: garage-layout}
+          toPorts:
+            admin: {ports: {p3903: {port: "3903", protocol: TCP}}}
+      egress:
+        garage:
+          toEndpoints:
+            garage:
+              matchLabels: {app.kubernetes.io/name: garage}
+          toPorts:
+            rpc: {ports: {p3901: {port: "3901", protocol: TCP}}}
+        kube-apiserver: # the discovery of the nodes (the `GarageNode` resources)
+          toEntities: {apiserver: kube-apiserver}
+    garage-layout:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: garage-layout}
+      egress:
+        garage:
+          toEndpoints:
+            garage:
+              matchLabels: {app.kubernetes.io/name: garage}
+          toPorts:
+            admin: {ports: {p3903: {port: "3903", protocol: TCP}}}
+
+  fluxHelmReleases:
+    # the secrets, created before the nodes start
+    garage-pre:
+      dependsOn:
+        secret-generator:
+          name: app-secret-generator
+          namespace: secret-generator
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          stringSecrets:
+            garage:
+              fields:
+                # the secret of the nodes of the cluster, 32 bytes in hexadecimal (64 characters)
+                rpc-secret:
+                  fieldName: rpc-secret
+                  encoding: hex
+                  length: "64"
+                admin-token:
+                  fieldName: admin-token
+                  encoding: hex
+                  length: "64"
+
+    garage:
+      dependsOn:
+        garage-pre: # the secrets
+          name: garage-pre
+        longhorn:
+          name: app-longhorn
+          namespace: longhorn-system
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          serviceAccounts:
+            garage: # the discovery of the nodes
+              automountServiceAccountToken: true
+
+          # the nodes are `GarageNode` resources of the namespace, and Garage creates their CRD
+          clusterRoles:
+            garage-crds:
+              rules:
+                crds:
+                  apiGroups: [ apiextensions.k8s.io ]
+                  resources: [ customresourcedefinitions ]
+                  verbs: [ get, list, watch, create, patch ]
+          clusterRoleBindings:
+            garage-crds:
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: ClusterRole
+                name: garage-crds
+              subjects:
+                garage:
+                  kind: ServiceAccount
+                  name: garage
+                  namespace: garage
+          roles:
+            garage-nodes:
+              rules:
+                garagenodes:
+                  apiGroups: [ deuxfleurs.fr ]
+                  resources: [ garagenodes ]
+                  verbs: [ get, list, watch, create, update, patch, delete ]
+          roleBindings:
+            garage-nodes:
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: Role
+                name: garage-nodes
+              subjects:
+                garage:
+                  kind: ServiceAccount
+                  name: garage
+                  namespace: garage
+
+          configMaps:
+            garage-config:
+              data:
+                # https://garagehq.deuxfleurs.fr/documentation/reference-manual/configuration/
+                # `rpc_secret` and `admin_token` are the variables `GARAGE_RPC_SECRET` and `GARAGE_ADMIN_TOKEN`
+                garage.toml: |
+                  replication_factor = {{ .Values.app.scaling.dbReplicas }}
+                  consistency_mode = "consistent"
+
+                  metadata_dir = "/var/lib/garage/meta"
+                  data_dir = "/var/lib/garage/data"
+                  # LMDB can be corrupted by an unclean shutdown: the snapshots are in the metadata volume, and the metadata
+                  # can also be rebuilt from the other nodes
+                  db_engine = "lmdb"
+                  metadata_auto_snapshot_interval = "6h"
+
+                  rpc_bind_addr = "0.0.0.0:3901"
+
+                  [kubernetes_discovery]
+                  namespace = "garage"
+                  service_name = "garage"
+
+                  [s3_api]
+                  api_bind_addr = "0.0.0.0:3900"
+                  s3_region = "garage"
+
+                  [admin]
+                  api_bind_addr = "0.0.0.0:3903"
+
+          statefulSets:
+            garage:
+              replicas: "{{ .Values.app.scaling.dbReplicas }}"
+              serviceName: garage-headless
+              podManagementPolicy: Parallel # the nodes are ready without a layout, and they discover each other
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: garage
+              # Sizes: the capacity of the nodes in the layout is the one of `garage-data` (`CAPACITY` of `garage-post`)
+              volumeClaimTemplates:
+                garage-meta:
+                  metadata:
+                    name: garage-meta
+                  spec:
+                    accessModes:
+                      - ReadWriteOnce
+                    storageClassName: longhorn-db
+                    resources:
+                      requests:
+                        storage: 1Gi
+                garage-data:
+                  metadata:
+                    name: garage-data
+                  spec:
+                    accessModes:
+                      - ReadWriteOnce
+                    storageClassName: longhorn-files
+                    resources:
+                      requests:
+                        storage: 10Gi
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: garage
+                spec:
+                  serviceAccountName: garage
+                  enableServiceLinks: false
+                  securityContext:
+                    runAsNonRoot: true
+                    runAsUser: 1000
+                    runAsGroup: 1000
+                    fsGroup: 1000 # the volumes are writable by the user of the container
+                    fsGroupChangePolicy: OnRootMismatch
+                  topologySpreadConstraints: # the nodes of Garage on different Kubernetes nodes when possible
+                    host:
+                      maxSkew: 1
+                      topologyKey: kubernetes.io/hostname
+                      whenUnsatisfiable: ScheduleAnyway
+                      labelSelector:
+                        matchLabels:
+                          app.kubernetes.io/name: garage
+                  containers:
+                    garage:
+                      name: garage
+                      image: docker.io/dxflrs/garage:v2.5.0 # renovate: versioning=loose
+                      ports:
+                        s3:
+                          containerPort: 3900
+                        rpc:
+                          containerPort: 3901
+                        admin:
+                          containerPort: 3903
+                      env:
+                        GARAGE_RPC_SECRET:
+                          secretKeyRef:
+                            name: garage
+                            key: rpc-secret
+                        GARAGE_ADMIN_TOKEN:
+                          secretKeyRef:
+                            name: garage
+                            key: admin-token
+                      # the image only has the binary: no exec probe, and `/health` of the admin API needs the layout (a quorum),
+                      # which is applied once the nodes are started
+                      startupProbe:
+                        tcpSocket:
+                          port: 3903
+                        periodSeconds: 5
+                        failureThreshold: 60
+                      readinessProbe:
+                        tcpSocket:
+                          port: 3903
+                      livenessProbe:
+                        tcpSocket:
+                          port: 3903
+                        periodSeconds: 30
+                        timeoutSeconds: 10
+                        failureThreshold: 6
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        readOnlyRootFilesystem: true # everything is written in the volumes
+                        runAsNonRoot: true
+                        runAsUser: 1000
+                        runAsGroup: 1000
+                        capabilities:
+                          drop:
+                            all: ALL
+                        seccompProfile:
+                          type: RuntimeDefault
+                      volumeMounts:
+                        config:
+                          name: config
+                          mountPath: /etc/garage.toml # the default path of the config
+                          subPath: garage.toml
+                          readOnly: true
+                        meta:
+                          name: garage-meta
+                          mountPath: /var/lib/garage/meta
+                        data:
+                          name: garage-data
+                          mountPath: /var/lib/garage/data
+                  volumes:
+                    config:
+                      name: config
+                      configMap:
+                        name: garage-config
+
+          services:
+            # the S3 API, for the Gateway and the pods of the cluster
+            garage:
+              selector:
+                app.kubernetes.io/name: garage
+              ports:
+                s3:
+                  port: 3900
+            # the name of every node (`garage-<n>.garage-headless`), for the StatefulSet and the layout
+            garage-headless:
+              clusterIP: None
+              selector:
+                app.kubernetes.io/name: garage
+              ports:
+                s3:
+                  port: 3900
+                rpc:
+                  port: 3901
+                admin:
+                  port: 3903
+
+    # the layout of the cluster, applied once the nodes are started
+    garage-post:
+      dependsOn:
+        garage:
+          name: garage
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          jobs:
+            garage-layout:
+              fullNameOverride: 'garage-layout-{{ list 1 .Values.app.domain .Values.app.scaling.dbReplicas | toJson | sha256sum | trunc 10 }}' # change the 1 when the spec of the Job changes (immutable fields)
+              backoffLimit: 0
+              activeDeadlineSeconds: 900
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: garage-layout
+                spec:
+                  restartPolicy: Never
+                  enableServiceLinks: false
+                  securityContext:
+                    runAsNonRoot: true
+                    runAsUser: 65534
+                    runAsGroup: 65534
+                  containers:
+                    layout:
+                      name: layout
+                      image: docker.io/library/alpine:3.24.3 # renovate: versioning=loose
+                      command: [ sh, -ec ]
+                      # The admin API of the first node (it knows the others) with the busybox `wget`, nothing else is needed: the
+                      # image of Garage has no shell. The layout is only given to the nodes without a role, one zone per node.
+                      args:
+                        - |
+                          replicas=$(sed -n 's/^replication_factor = //p' /etc/garage/garage.toml)
+                          api=http://garage-0.garage-headless:3903/v2
+                          get() { wget -qO- --header "Authorization: Bearer $ADMIN_TOKEN" "$api/$1"; }
+                          post() { wget -qO- --header "Authorization: Bearer $ADMIN_TOKEN" --header 'Content-Type: application/json' --post-data "$2" "$api/$1"; }
+                          until status=$(get GetClusterStatus) && [ "$(echo "$status" | grep -o '"isUp": *true' | wc -l)" -ge "$replicas" ]; do
+                            echo 'waiting for the nodes'; sleep 5
+                          done
+                          have=$(get GetClusterLayout | grep -o '"id": *"[0-9a-f]*"' | cut -d'"' -f4 | tr '\n' ' ')
+                          zone=$(echo $have | wc -w)
+                          roles=
+                          for id in $(echo "$status" | grep -o '"id": *"[0-9a-f]*"' | cut -d'"' -f4); do
+                            case " $have " in *" $id "*) continue;; esac
+                            zone=$((zone + 1))
+                            roles="$roles${roles:+,}{\"id\":\"$id\",\"zone\":\"z$zone\",\"capacity\":$CAPACITY,\"tags\":[]}"
+                          done
+                          if [ -z "$roles" ]; then echo 'every node has a role'; exit 0; fi
+                          post UpdateClusterLayout "{\"roles\":[$roles]}"
+                          version=$(echo "$status" | grep -o '"layoutVersion": *[0-9]*' | cut -d: -f2)
+                          post ApplyClusterLayout "{\"version\":$((version + 1))}"
+                          echo 'the layout is applied'
+                      env:
+                        ADMIN_TOKEN:
+                          secretKeyRef:
+                            name: garage
+                            key: admin-token
+                        CAPACITY: "10737418240" # the size of `garage-data` (10Gi), in bytes
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        readOnlyRootFilesystem: true
+                        runAsNonRoot: true
+                        runAsUser: 65534
+                        runAsGroup: 65534
+                        capabilities:
+                          drop:
+                            all: ALL
+                        seccompProfile:
+                          type: RuntimeDefault
+                      volumeMounts:
+                        config:
+                          name: config
+                          mountPath: /etc/garage
+                          readOnly: true
+                  volumes:
+                    config:
+                      name: config
+                      configMap:
+                        name: garage-config
+
+    # the public exposure, applied once the nodes have their layout and not waited for
+    garage-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        garage-post: # the layout, the API is usable
+          name: garage-post
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          certManagerCertificates:
+            # certificate of the S3 API, terminated by the Gateway
+            garage-gateway:
+              secretName: tls-garage-gateway
+              dnsNames:
+                s3: s3.{{ .Values.app.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
+          # It is not protected by forward auth: the S3 clients cannot follow the login redirect of authelia, the access keys
+          # of Garage are the protection.
+          listenerSets:
+            garage:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: s3.{{ .Values.app.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: tls-garage-gateway
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            garage:
+              parentRefs:
+                garage:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: garage
+              hostnames:
+                s3: s3.{{ .Values.app.domain }}
+              rules:
+                root:
+                  backendRefs:
+                    garage:
+                      name: garage
+                      port: 3900
+                  timeouts:
+                    request: 0s # the uploads and downloads of big objects can be long
