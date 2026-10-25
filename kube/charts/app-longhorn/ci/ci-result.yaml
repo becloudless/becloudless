@@ -716,6 +716,25 @@ spec:
                 spec:
                   hostUsers: true
             name: pod-set-host-users
+        longhorn-skip-security-audit:
+          failurePolicy: Ignore
+          rules:
+          - match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+                  namespaces:
+                  - longhorn-system
+                  operations:
+                  - CREATE
+            mutate:
+              patchStrategicMerge:
+                metadata:
+                  annotations:
+                    +(policy.bcl/skipContainerRequireReadOnlyRootFilesystem): "true"
+                    +(policy.bcl/skipContainerRequireRunAsNonRoot): "true"
+            name: pod-add-skip-annotations
 ---
 # Source: app-longhorn/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

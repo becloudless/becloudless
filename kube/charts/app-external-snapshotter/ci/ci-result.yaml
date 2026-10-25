@@ -35,8 +35,33 @@ spec:
   dependsOn:
   - name: external-snapshotter-crds
   interval: 24h
+  patches:
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: snapshot-controller
+      spec:
+        template:
+          spec:
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65534
+              runAsGroup: 65534
+              seccompProfile:
+                type: RuntimeDefault
+            containers:
+              - name: snapshot-controller
+                securityContext:
+                  readOnlyRootFilesystem: true
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop: [ ALL ]
+    target:
+      kind: Deployment
+      name: snapshot-controller
   path: ./deploy/kubernetes/snapshot-controller
-  prune: true
+  prune: false
   sourceRef:
     kind: GitRepository
     name: external-snapshotter
@@ -52,7 +77,7 @@ metadata:
 spec:
   interval: 24h
   path: ./client/config/crd
-  prune: true
+  prune: false
   sourceRef:
     kind: GitRepository
     name: external-snapshotter

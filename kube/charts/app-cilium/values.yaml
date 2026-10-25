@@ -38,7 +38,11 @@ resources:
 
         operator:
           replicas: 1
-
+          # The operator and the envoy are the network of the cluster, they run as root with a writable root filesystem (the envoy
+          # has the capabilities NET_ADMIN and SYS_ADMIN): opted out of the audit policies of app-kyverno.
+          podAnnotations:
+            policy.bcl/skipContainerRequireRunAsNonRoot: "true"
+            policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
         ipam:
           mode: kubernetes
 
@@ -55,6 +59,9 @@ resources:
           enabled: true
         envoy:
           streamIdleTimeoutDurationSeconds: 600 # required by immich for big files upload
+          podAnnotations: # see operator
+            policy.bcl/skipContainerRequireRunAsNonRoot: "true"
+            policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
 
     # LoadBalancer pool and BGP need the Cilium CRDs, so they are installed once cilium is ready.
     # The cluster sets its pool and BGP cluster config through `resources.fluxHelmReleases.cilium-post.values.resources`.

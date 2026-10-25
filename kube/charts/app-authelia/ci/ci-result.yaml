@@ -539,6 +539,12 @@ spec:
           done
         image: ghcr.io/authelia/authelia:4.39.27
         name: oidc-hashes
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
         volumeMounts:
         - mountPath: /config
           name: authelia
@@ -568,6 +574,19 @@ spec:
           readOnly: true
       kind: Deployment
       replicas: 1
+      securityContext:
+        container:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        pod:
+          runAsGroup: 2000
+          runAsNonRoot: true
+          runAsUser: 2000
+          seccompProfile:
+            type: RuntimeDefault
     secret:
       additionalSecrets:
         authelia-generated: {}

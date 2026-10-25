@@ -393,10 +393,29 @@ resources:
           env:
             - name: TZ
               value: Europe/Paris
+          # compliant with the policies of app-kyverno (container-require-run-as-non-root, container-require-read-only-root-filesystem).
+          # The only writable path is /config, an emptyDir (see extraVolumes)
+          securityContext:
+            pod:
+              runAsNonRoot: true
+              runAsUser: 2000
+              runAsGroup: 2000
+              seccompProfile:
+                type: RuntimeDefault
+            container:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: [ ALL ]
           # the hashes of the OIDC client secrets are built from the generated secrets, the hashes change at each start but the secrets do not
           initContainers:
             - name: oidc-hashes
               image: ghcr.io/authelia/authelia:4.39.27
+              securityContext:
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: [ ALL ]
               command:
                 - sh
                 - -ec

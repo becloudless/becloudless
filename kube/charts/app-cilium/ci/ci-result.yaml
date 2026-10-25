@@ -39,6 +39,9 @@ spec:
       exclusive: false
     devices: br0
     envoy:
+      podAnnotations:
+        policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
+        policy.bcl/skipContainerRequireRunAsNonRoot: "true"
       streamIdleTimeoutDurationSeconds: 600
     extraEnv:
     - name: PATH
@@ -55,6 +58,9 @@ spec:
     nodePort:
       directRoutingDevice: br0
     operator:
+      podAnnotations:
+        policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
+        policy.bcl/skipContainerRequireRunAsNonRoot: "true"
       replicas: 1
 ---
 # Source: app-cilium/templates/loader.yaml

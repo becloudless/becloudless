@@ -42,3 +42,31 @@ resources:
       dependsOn:
         crds:
           name: external-snapshotter-crds
+      # the upstream manifest sets no security context: compliant with container-require-run-as-non-root and
+      # container-require-read-only-root-filesystem (see app-kyverno)
+      patches:
+        security-context:
+          target:
+            kind: Deployment
+            name: snapshot-controller
+          patch: |
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: snapshot-controller
+            spec:
+              template:
+                spec:
+                  securityContext:
+                    runAsNonRoot: true
+                    runAsUser: 65534
+                    runAsGroup: 65534
+                    seccompProfile:
+                      type: RuntimeDefault
+                  containers:
+                    - name: snapshot-controller
+                      securityContext:
+                        readOnlyRootFilesystem: true
+                        allowPrivilegeEscalation: false
+                        capabilities:
+                          drop: [ ALL ]

@@ -366,6 +366,29 @@ resources:
                       spec:
                         hostUsers: true
 
+            # The pods of Longhorn run as root with a writable root filesystem (the driver, the CSI sidecars created by the
+            # driver-deployer, the UI, the managers...): opted out of the audit policies of app-kyverno. The annotations are
+            # added by a policy, as most of these pods are not made from the values of the chart.
+            longhorn-skip-security-audit:
+              failurePolicy: Ignore
+              rules:
+                - name: pod-add-skip-annotations
+                  match:
+                    any:
+                      - resources:
+                          kinds:
+                            - Pod
+                          operations:
+                            - CREATE
+                          namespaces:
+                            - longhorn-system
+                  mutate:
+                    patchStrategicMerge:
+                      metadata:
+                        annotations:
+                          +(policy.bcl/skipContainerRequireRunAsNonRoot): "true"
+                          +(policy.bcl/skipContainerRequireReadOnlyRootFilesystem): "true"
+
     longhorn:
       chart:
         spec:
