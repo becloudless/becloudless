@@ -305,6 +305,8 @@ resources:
                     homer:
                       name: homer
                       image: b4bz/homer:v26.08.3 # renovate: versioning=loose
+                      env:
+                        INIT_ASSETS: "0" # the entrypoint would copy the default assets in /www/assets, read only
                       ports:
                         http:
                           containerPort: 8080
@@ -318,10 +320,14 @@ resources:
                           port: 8080
                       securityContext:
                         allowPrivilegeEscalation: false
+                        readOnlyRootFilesystem: true
                         capabilities:
                           drop:
                             all: ALL
                       volumeMounts:
+                        tmp:
+                          name: tmp
+                          mountPath: /tmp
                         config:
                           name: config
                           mountPath: /www/assets/config.yml
@@ -333,6 +339,9 @@ resources:
                           subPath: custom.css
                           readOnly: true
                   volumes:
+                    tmp:
+                      name: tmp
+                      emptyDir: {}
                     config:
                       name: config
                       configMap:

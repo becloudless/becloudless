@@ -8,34 +8,48 @@ defaults:
   metadata:
     namespace: "{{ .Release.Namespace }}"
 
+  # The pods are compliant by default with the kyverno policies of app-kyverno (container-require-run-as-non-root,
+  # pod-disable-service-links, pod-set-seccomp-profile). An app that needs more overrides the field in its own
+  # `securityContext` (e.g. `runAsNonRoot: false`) or opts out with the annotation `policy.bcl/skip...` of the policy.
+  # Not possible here: `readOnlyRootFilesystem` and `allowPrivilegeEscalation` are container fields, and the containers are
+  # keyed by their id, the defaults can not target all of them. `allowPrivilegeEscalation` is set by
+  # container-set-no-privilege-escalation, `readOnlyRootFilesystem` must be set by the app on each container.
   resources:
 
     statefulSets:
       template:
         spec:
           enableServiceLinks: false
-  
+          securityContext: &podSecurityContext
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+
     cronJobs:
       jobTemplate:
         spec:
           template:
             spec:
               enableServiceLinks: false
+              securityContext: *podSecurityContext
 
     daemonSets:
       template:
         spec:
           enableServiceLinks: false
+          securityContext: *podSecurityContext
 
     deployments:
       template:
         spec:
           enableServiceLinks: false
+          securityContext: *podSecurityContext
 
     jobs:
       template:
         spec:
           enableServiceLinks: false
+          securityContext: *podSecurityContext
 
     fluxOCIRepositories:
       interval: 10m

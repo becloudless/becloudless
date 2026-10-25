@@ -13,3 +13,7 @@ spec:
         name: myapp
       enableServiceLinks: false
       restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault

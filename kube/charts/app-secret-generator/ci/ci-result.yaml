@@ -48,7 +48,18 @@ spec:
       registry: ghcr.io
       repository: becloudless/secret-generator
       tag: 1.261018.1316
+    podSecurityContext:
+      runAsGroup: 65534
+      runAsNonRoot: true
+      runAsUser: 65534
     secretLength: 100
+    securityContext:
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
+      runAsUser: 65534
 ---
 # Source: app-secret-generator/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

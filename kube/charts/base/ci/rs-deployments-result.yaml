@@ -19,3 +19,7 @@ spec:
       - image: myimage:latest
         name: myapp
       enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault

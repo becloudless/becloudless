@@ -86,6 +86,10 @@ spec:
         image: myimage:latest
         name: myapp
       enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
 ---
 # Source: base-test/templates/loader.yaml
 apiVersion: apps/v1
@@ -123,6 +127,10 @@ spec:
         - mountPath: /config
           name: config
       enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
       - configMap:
           name: main
@@ -162,6 +170,10 @@ spec:
         image: myimage:latest
         name: myapp
       enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
 ---
 # Source: base-test/templates/loader.yaml
 apiVersion: apps/v1
@@ -187,6 +199,10 @@ spec:
         image: myimage:latest
         name: myapp
       enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
 ---
 # Source: base-test/templates/loader.yaml
 apiVersion: apps/v1
@@ -215,3 +231,7 @@ spec:
             name: env
         image: myimage:latest
         name: init
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault

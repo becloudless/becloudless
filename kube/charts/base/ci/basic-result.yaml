@@ -68,6 +68,10 @@ spec:
       - image: myimage:latest
         name: myapp
       enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
 ---
 # Source: base-test/templates/loader.yaml
 apiVersion: autoscaling/v2

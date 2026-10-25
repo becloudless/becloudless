@@ -26,6 +26,16 @@ resources:
             kind: HelmRepository
             name: secret-generator
       values:
+        podSecurityContext:
+          runAsNonRoot: true
+          runAsUser: 65534
+          runAsGroup: 65534
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65534
+          capabilities:
+            drop: [ALL]
         secretLength: 100
         args:
           - --secret-encoding=hex
