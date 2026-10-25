@@ -16,10 +16,17 @@ spec:
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: true
+            volumeMounts:
+              tmp:
+                mountPath: /tmp
+                name: tmp
           enableServiceLinks: false
           restartPolicy: Never
           securityContext:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
+          volumes:
+          - emptyDir: {}
+            name: tmp
   schedule: '*/5 * * * *'

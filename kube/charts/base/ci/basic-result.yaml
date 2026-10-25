@@ -70,11 +70,17 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
       enableServiceLinks: false
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
+      volumes:
+      - emptyDir: {}
+        name: tmp
 ---
 # Source: base-test/templates/loader.yaml
 apiVersion: autoscaling/v2

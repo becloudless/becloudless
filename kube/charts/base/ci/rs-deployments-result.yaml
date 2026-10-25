@@ -21,8 +21,15 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
+        volumeMounts:
+          tmp:
+            mountPath: /tmp
+            name: tmp
       enableServiceLinks: false
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
+      volumes:
+      - emptyDir: {}
+        name: tmp

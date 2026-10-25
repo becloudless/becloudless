@@ -88,11 +88,17 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
       enableServiceLinks: false
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
+      volumes:
+      - emptyDir: {}
+        name: tmp
 ---
 # Source: base-test/templates/loader.yaml
 apiVersion: apps/v1
@@ -132,6 +138,8 @@ spec:
         volumeMounts:
         - mountPath: /config
           name: config
+        - mountPath: /tmp
+          name: tmp
       enableServiceLinks: false
       securityContext:
         runAsNonRoot: true
@@ -151,6 +159,8 @@ spec:
               name: projected
           - secret:
               name: projected
+      - emptyDir: {}
+        name: tmp
 ---
 # Source: base-test/templates/loader.yaml
 apiVersion: apps/v1
@@ -178,11 +188,17 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
       enableServiceLinks: false
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
+      volumes:
+      - emptyDir: {}
+        name: tmp
 ---
 # Source: base-test/templates/loader.yaml
 apiVersion: apps/v1
@@ -210,11 +226,17 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
       enableServiceLinks: false
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
+      volumes:
+      - emptyDir: {}
+        name: tmp
 ---
 # Source: base-test/templates/loader.yaml
 apiVersion: apps/v1
@@ -239,6 +261,9 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
       enableServiceLinks: false
       initContainers:
       - envFrom:
@@ -249,7 +274,13 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
+      volumes:
+      - emptyDir: {}
+        name: tmp
