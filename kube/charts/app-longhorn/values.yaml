@@ -458,6 +458,19 @@ resources:
               retain: 2
               concurrency: 1
 
+            # The state of Longhorn (https://longhorn.io/docs/1.13.0/advanced-resources/system-backup-restore/backup-longhorn-system/):
+            # the volumes, PVs, PVCs, settings, recurring jobs, storage classes, engine images... in a bundle uploaded to the backup
+            # target `default` (the bucket of garage, see app-garage), so that Longhorn can be restored on a new cluster
+            # (`SystemRestore`, after the backup target is set there). The Kubernetes workloads are not in it, Flux recreates them.
+            # `if-not-present`: the volumes without a backup, or with an outdated one, are backed up first (the `daily-backups` job
+            # runs an hour before: the volumes are up to date, the system backup does not back them up twice).
+            daily-system-backup:
+              cron: 0 5 * * * # Daily at 5am
+              task: system-backup
+              retain: 3
+              concurrency: 1
+              parameters:
+                volume-backup-policy: if-not-present
           # Longhorn refuses to delete its settings, which makes a helm uninstall fail, so helm must never delete them
           longhornSettings:
             upgrade-checker: # defaultSettings are only read at the first install

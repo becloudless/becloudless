@@ -530,6 +530,13 @@ spec:
           - default
           retain: 2
           task: backup
+        daily-system-backup:
+          concurrency: 1
+          cron: 0 5 * * *
+          parameters:
+            volume-backup-policy: if-not-present
+          retain: 3
+          task: system-backup
       longhornSettings:
         allow-collecting-longhorn-usage-metrics:
           annotations:
