@@ -226,6 +226,7 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].securityContext
           value:
+            allowPrivilegeEscalation: false # defaults.container of the chart
             readOnlyRootFilesystem: true
             runAsUser: 1000
         documentSelector:

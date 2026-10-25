@@ -86,6 +86,7 @@ spec:
         image: myimage:latest
         name: myapp
         securityContext:
+          allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
       enableServiceLinks: false
       securityContext:
@@ -126,6 +127,7 @@ spec:
         image: myimage:latest
         name: myapp
         securityContext:
+          allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
         volumeMounts:
         - mountPath: /config
@@ -174,6 +176,7 @@ spec:
         image: myimage:latest
         name: myapp
         securityContext:
+          allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
       enableServiceLinks: false
       securityContext:
@@ -205,6 +208,7 @@ spec:
         image: myimage:latest
         name: myapp
         securityContext:
+          allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
       enableServiceLinks: false
       securityContext:
@@ -233,6 +237,7 @@ spec:
       - image: myimage:latest
         name: myapp
         securityContext:
+          allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
       enableServiceLinks: false
       initContainers:
@@ -242,6 +247,7 @@ spec:
         image: myimage:latest
         name: init
         securityContext:
+          allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
       securityContext:
         runAsNonRoot: true

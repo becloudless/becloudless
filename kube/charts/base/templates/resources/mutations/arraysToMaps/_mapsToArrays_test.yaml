@@ -90,10 +90,12 @@ tests:
             - name: api
               image: myapi:latest
               securityContext:
-                readOnlyRootFilesystem: true # defaults.container of the chart
+                allowPrivilegeEscalation: false # defaults.container of the chart
+                readOnlyRootFilesystem: true
             - name: web
               image: nginx:1.27
               securityContext:
+                allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true
               command:
                 - sh

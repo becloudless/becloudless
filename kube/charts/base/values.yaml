@@ -12,8 +12,6 @@ defaults:
   # container-require-read-only-root-filesystem, pod-disable-service-links, pod-set-seccomp-profile). An app that needs more
   # overrides the field in its own `securityContext` (e.g. `runAsNonRoot: false`, `readOnlyRootFilesystem: false`) or opts out
   # with the annotation `policy.bcl/skip...` of the policy.
-  # `allowPrivilegeEscalation` is not set here: it is set by container-set-no-privilege-escalation, which skips the privileged
-  # containers (the API rejects `allowPrivilegeEscalation: false` with `privileged: true`).
 
   # applied to the pod spec of the deployments, statefulSets, daemonSets, jobs and cronJobs
   pod:
@@ -27,6 +25,8 @@ defaults:
   container:
     securityContext:
       readOnlyRootFilesystem: true
+      # the API rejects `false` with `privileged: true` or the capability `SYS_ADMIN`: such a container sets `true`
+      allowPrivilegeEscalation: false
 
   resources:
 

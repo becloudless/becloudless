@@ -68,6 +68,7 @@ spec:
       - image: myimage:latest
         name: myapp
         securityContext:
+          allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
       enableServiceLinks: false
       securityContext:
