@@ -347,6 +347,7 @@ spec:
       paperless:
         matchLabels:
           app.kubernetes.io/name: paperless
+    instances: 2
     storageSize: 5Gi
 ---
 # Source: app-paperless/templates/loader.yaml

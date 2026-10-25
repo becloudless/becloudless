@@ -576,6 +576,7 @@ resources:
 
         mariadb:
           enabled: true
+          # TODO replicas from `app.scaling.dbReplicas`: it is a single standalone instance for now (architecture standalone)
           auth:
             existingSecret: mailu-mariadb
           primary:

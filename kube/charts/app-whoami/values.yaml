@@ -30,7 +30,7 @@ resources:
         resources:
           deployments:
             whoami:
-              replicas: 1
+              replicas: "{{ .Values.app.scaling.replicas }}"
               selector:
                 matchLabels:
                   app.kubernetes.io/name: whoami

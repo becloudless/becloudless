@@ -1,6 +1,6 @@
 {{- /*
 The values shared with every installed app, computed from `config`: the `app` values of the `app` library chart
-(`app.domain`, `app.name`, `app.lldapdn`, `app.lldapUsers`).
+(`app.domain`, `app.name`, `app.lldapdn`, `app.lldapUsers`, `app.scaling`).
 Rendered as a `global-values` ConfigMap in the namespace of each app, used by the HelmRelease of the app as `valuesFrom`.
 */}}
 {{- define "app-apps.globalValues" }}
@@ -32,4 +32,7 @@ app:
   name: {{ $name }}
   lldapdn: {{ $ldapdn }}
   lldapUsers: {{- $lldapUsers | toYaml | nindent 4 }}
+  {{- with $config.scaling }}
+  scaling: {{- . | toYaml | nindent 4 }}
+  {{- end }}
 {{- end }}

@@ -470,6 +470,7 @@ spec:
       lldap:
         matchLabels:
           app.kubernetes.io/name: lldap
+    instances: 2
     postgresql:
       parameters:
         max_slot_wal_keep_size: 500MB

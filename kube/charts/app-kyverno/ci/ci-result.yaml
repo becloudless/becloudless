@@ -126,7 +126,7 @@ spec:
       retryInterval: 5m
   values:
     admissionController:
-      replicas: 3
+      replicas: 1
 ---
 # Source: app-kyverno/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

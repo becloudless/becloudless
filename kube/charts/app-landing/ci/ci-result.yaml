@@ -84,7 +84,7 @@ spec:
               </html>
       deployments:
         landing:
-          replicas: 2
+          replicas: 1
           selector:
             matchLabels:
               app.kubernetes.io/name: landing

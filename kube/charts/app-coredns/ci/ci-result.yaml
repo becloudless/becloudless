@@ -79,7 +79,7 @@ spec:
       initialDelaySeconds: 0
     readinessProbe:
       initialDelaySeconds: 0
-    replicaCount: 2
+    replicaCount: 1
     servers:
     - plugins:
       - name: errors

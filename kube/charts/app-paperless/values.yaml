@@ -65,6 +65,7 @@ resources:
     paperless-postgresql:
       values:
         storageSize: 5Gi
+        instances: "{{ .Values.app.scaling.dbReplicas }}"
         clients:
           paperless:
             matchLabels: {app.kubernetes.io/name: paperless}

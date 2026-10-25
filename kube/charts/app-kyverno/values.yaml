@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 resources:
   fluxHelmRepositories:
@@ -76,7 +76,7 @@ resources:
                     value: false
       values:
         admissionController:
-          replicas: 3
+          replicas: "{{ .Values.app.scaling.replicas }}"
 
     # The ClusterPolicies (files/policies, see templates/_policies.tpl) need the Kyverno CRDs, so they are installed once kyverno is ready
     kyverno-post:

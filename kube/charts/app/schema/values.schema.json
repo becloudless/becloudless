@@ -21,6 +21,23 @@
         "name": {
           "description": "The name of the cluster.",
           "type": "string"
+        },
+        "scaling": {
+          "additionalProperties": false,
+          "description": "The scale of the apps. Used in the values of the app charts as `\"{{ .Values.app.scaling.replicas }}\"`, which is replaced by an integer.",
+          "properties": {
+            "dbReplicas": {
+              "description": "The number of instances of the databases (the `instances` of the postgresql chart).",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "replicas": {
+              "description": "The number of replicas of the stateless parts (the pods that have no volume and no state of their own).",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "type": "object"
         }
       },
       "type": "object"

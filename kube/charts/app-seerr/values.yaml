@@ -76,6 +76,7 @@ resources:
     # the cluster is named after the release, which is the name of this HelmRelease
     seerr-postgresql:
       values:
+        instances: "{{ .Values.app.scaling.dbReplicas }}"
         clients:
           seerr:
             matchLabels: {app.kubernetes.io/name: seerr}

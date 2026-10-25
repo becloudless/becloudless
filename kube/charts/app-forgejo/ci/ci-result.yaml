@@ -271,6 +271,7 @@ spec:
       forgejo:
         matchLabels:
           app.kubernetes.io/name: forgejo
+    instances: 2
 ---
 # Source: app-forgejo/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

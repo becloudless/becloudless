@@ -760,6 +760,7 @@ spec:
       authelia:
         matchLabels:
           app.kubernetes.io/name: authelia
+    instances: 2
 ---
 # Source: app-authelia/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

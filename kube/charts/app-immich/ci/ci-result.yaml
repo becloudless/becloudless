@@ -391,6 +391,7 @@ spec:
         matchLabels:
           app.kubernetes.io/instance: immich
           app.kubernetes.io/name: server
+    instances: 2
     postgresql:
       parameters:
         max_connections: "400"

@@ -13,3 +13,7 @@ app:
 
   # the users of the cluster (the key is the user id), created in lldap by `lldap-post`
   lldapUsers: {}
+
+  scaling:
+    replicas: 2
+    dbReplicas: 2

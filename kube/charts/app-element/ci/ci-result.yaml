@@ -75,7 +75,7 @@ spec:
               }
       deployments:
         element:
-          replicas: 2
+          replicas: 1
           selector:
             matchLabels:
               app.kubernetes.io/name: element

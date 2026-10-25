@@ -49,6 +49,7 @@ resources:
     # the cluster is named after the release, which is the name of this HelmRelease
     firefox-sync-postgresql:
       values:
+        instances: "{{ .Values.app.scaling.dbReplicas }}"
         clients:
           firefox-sync:
             matchLabels: {app.kubernetes.io/name: firefox-sync}

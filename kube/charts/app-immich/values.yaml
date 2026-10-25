@@ -129,6 +129,7 @@ resources:
           namespace: longhorn-system
       values:
         storageSize: 5Gi
+        instances: "{{ .Values.app.scaling.dbReplicas }}"
         clients:
           server:
             matchLabels: {app.kubernetes.io/instance: immich, app.kubernetes.io/name: server}

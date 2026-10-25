@@ -37,7 +37,7 @@ resources:
         kubeProxyReplacement: true
 
         operator:
-          replicas: 1
+          replicas: "{{ .Values.app.scaling.replicas }}"
           # The operator and the envoy are the network of the cluster, they run as root with a writable root filesystem (the envoy
           # has the capabilities NET_ADMIN and SYS_ADMIN): opted out of the audit policies of app-kyverno.
           podAnnotations:

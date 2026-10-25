@@ -19,6 +19,7 @@ clients: {}
 
 # values of the public chart: https://github.com/valkey-io/valkey-helm/blob/main/valkey/values.yaml
 valkey:
+  # TODO replicas from `app.scaling.dbReplicas`: it is a single standalone instance for now (the volume is ReadWriteOnce)
   dataStorage:
     enabled: true
     requestedSize: 1Gi
