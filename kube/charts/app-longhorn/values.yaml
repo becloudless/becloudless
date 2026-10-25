@@ -66,13 +66,12 @@ resources:
               matchLabels: {longhorn.io/component: share-manager}
           toPorts:
             grpc: {ports: {p9600: {port: "9600", protocol: TCP}}}
-        backup-target: # the backup target (`defaultBackupStore`) is a CIFS share of the LAN, the name is resolved with the search domains
-          toFQDNs:
-            backupstore: {matchName: backupstore}
-            backupstore-svc: {matchName: backupstore.longhorn-system.svc.cluster.local}
-            backupstore-domain: {matchName: "backupstore.{{ .Values.app.domain }}"}
+        backup-target: # the backup target is a bucket of garage (`longhorn-backup` of app-garage), its S3 API
+          toEndpoints:
+            garage:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": garage, "k8s:app.kubernetes.io/name": garage}
           toPorts:
-            cifs: {ports: {p445: {port: "445", protocol: TCP}}}
+            s3: {ports: {p3900: {port: "3900", protocol: TCP}}}
 
     longhorn-global-manager:
       endpointSelector:
@@ -137,12 +136,11 @@ resources:
           toPorts:
             api: {ports: {p9500: {port: "9500", protocol: TCP}}}
         backup-target:
-          toFQDNs:
-            backupstore: {matchName: backupstore}
-            backupstore-svc: {matchName: backupstore.longhorn-system.svc.cluster.local}
-            backupstore-domain: {matchName: "backupstore.{{ .Values.app.domain }}"}
+          toEndpoints:
+            garage:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": garage, "k8s:app.kubernetes.io/name": garage}
           toPorts:
-            cifs: {ports: {p445: {port: "445", protocol: TCP}}}
+            s3: {ports: {p3900: {port: "3900", protocol: TCP}}}
 
     longhorn-share-manager: # the NFS server of the ReadWriteMany volumes
       endpointSelector:
@@ -426,8 +424,6 @@ resources:
           allowCollectingLonghornUsageMetrics: false
 
         defaultBackupStore:
-          backupTarget: cifs://backupstore/backupstore
-          backupTargetCredentialSecret: backupstore
           pollInterval: 180
 
         # the UI has no authentication of its own: it is served by the Cilium Gateway with Authelia forward auth (see httpRoutes)

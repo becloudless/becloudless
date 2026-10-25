@@ -23,6 +23,7 @@
 # The layout (which node has which zone and capacity) is applied once by `garage-post`: one zone per node, the capacity of the
 # data volume. Another node (a bigger `dbReplicas`) is added to the layout by the same job when its spec changes (the `1` of
 # its name below); removing a node from the layout is made by hand (`/garage layout remove`).
+# It is the backup target of longhorn (`longhorn-backup`): the bucket `longhorn-backups`, and its key, are created by `garage-layout`.
 
 resources:
 
@@ -42,6 +43,14 @@ resources:
               matchLabels: {app.kubernetes.io/name: garage}
           toPorts:
             rpc: {ports: {p3901: {port: "3901", protocol: TCP}}}
+        longhorn: # the S3 API, for the backups of the volumes (the managers list and restore, the instance managers write)
+          fromEndpoints:
+            manager:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": longhorn-system, "k8s:app": longhorn-manager}
+            instance-manager:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": longhorn-system, "k8s:longhorn.io/component": instance-manager}
+          toPorts:
+            s3: {ports: {p3900: {port: "3900", protocol: TCP}}}
         layout: # the admin API
           fromEndpoints:
             layout:
@@ -97,6 +106,43 @@ resources:
                   fieldName: admin-token
                   encoding: hex
                   length: "64"
+
+            # the access key of the backups of longhorn (see `longhorn-backup`): it is imported in Garage by `garage-layout`, and
+            # copied in the namespace of longhorn with the names that its backup target reads (the `AWS_*` variables)
+            garage-longhorn:
+              data:
+                AWS_ENDPOINTS: http://garage.garage.svc.cluster.local:3900
+              fields:
+                access-key-id:
+                  fieldName: AWS_ACCESS_KEY_ID
+                  encoding: hex
+                  length: "32"
+                secret-access-key:
+                  fieldName: AWS_SECRET_ACCESS_KEY
+                  encoding: hex
+                  length: "64"
+
+          # lets the `garage-reader` service account of longhorn, used by the SecretStore of `longhorn-backup`, read the
+          # `garage-longhorn` secret of this namespace, and only this one
+          roles:
+            longhorn-secrets-reader:
+              rules:
+                secrets:
+                  apiGroups: [ "" ]
+                  resources: [ secrets ]
+                  resourceNames: [ garage-longhorn ]
+                  verbs: [ get ]
+          roleBindings:
+            longhorn-secrets-reader:
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: Role
+                name: longhorn-secrets-reader
+              subjects:
+                garage-reader:
+                  kind: ServiceAccount
+                  name: garage-reader
+                  namespace: longhorn-system
 
     garage:
       dependsOn:
@@ -340,7 +386,7 @@ resources:
         resources:
           jobs:
             garage-layout:
-              fullNameOverride: 'garage-layout-{{ list 1 .Values.app.domain .Values.app.scaling.dbReplicas | toJson | sha256sum | trunc 10 }}' # change the 1 when the spec of the Job changes (immutable fields)
+              fullNameOverride: 'garage-layout-{{ list 2 .Values.app.domain .Values.app.scaling.dbReplicas | toJson | sha256sum | trunc 10 }}' # change the 1 when the spec of the Job changes (immutable fields)
               backoffLimit: 0
               activeDeadlineSeconds: 900
               template:
@@ -361,12 +407,15 @@ resources:
                       command: [ sh, -ec ]
                       # The admin API of the first node (it knows the others) with the busybox `wget`, nothing else is needed: the
                       # image of Garage has no shell. The layout is only given to the nodes without a role, one zone per node.
+                      # Then the bucket `longhorn-backups` and the key of longhorn, which can read and write in it, are created when
+                      # they are missing.
                       args:
                         - |
                           replicas=$(sed -n 's/^replication_factor = //p' /etc/garage/garage.toml)
                           api=http://garage-0.garage-headless:3903/v2
                           get() { wget -qO- --header "Authorization: Bearer $ADMIN_TOKEN" "$api/$1"; }
                           post() { wget -qO- --header "Authorization: Bearer $ADMIN_TOKEN" --header 'Content-Type: application/json' --post-data "$2" "$api/$1"; }
+                          retry() { n=0; until "$@" > /dev/null; do n=$((n + 1)); [ "$n" -lt 30 ] || exit 1; sleep 2; done; }
                           until status=$(get GetClusterStatus) && [ "$(echo "$status" | grep -o '"isUp": *true' | wc -l)" -ge "$replicas" ]; do
                             echo 'waiting for the nodes'; sleep 5
                           done
@@ -378,16 +427,31 @@ resources:
                             zone=$((zone + 1))
                             roles="$roles${roles:+,}{\"id\":\"$id\",\"zone\":\"z$zone\",\"capacity\":$CAPACITY,\"tags\":[]}"
                           done
-                          if [ -z "$roles" ]; then echo 'every node has a role'; exit 0; fi
-                          post UpdateClusterLayout "{\"roles\":[$roles]}"
-                          version=$(echo "$status" | grep -o '"layoutVersion": *[0-9]*' | cut -d: -f2)
-                          post ApplyClusterLayout "{\"version\":$((version + 1))}"
-                          echo 'the layout is applied'
+                          if [ -n "$roles" ]; then
+                            post UpdateClusterLayout "{\"roles\":[$roles]}"
+                            version=$(echo "$status" | grep -o '"layoutVersion": *[0-9]*' | cut -d: -f2)
+                            post ApplyClusterLayout "{\"version\":$((version + 1))}"
+                            echo 'the layout is applied'
+                          fi
+                          bucket=longhorn-backups
+                          get "GetBucketInfo?globalAlias=$bucket" > /dev/null 2>&1 || retry post CreateBucket "{\"globalAlias\":\"$bucket\"}"
+                          bucket_id=$(get "GetBucketInfo?globalAlias=$bucket" | grep -o '"id": *"[0-9a-f]*"' | head -n 1 | cut -d'"' -f4)
+                          get "GetKeyInfo?id=$AWS_ACCESS_KEY_ID" > /dev/null 2>&1 || retry post ImportKey "{\"accessKeyId\":\"$AWS_ACCESS_KEY_ID\",\"secretAccessKey\":\"$AWS_SECRET_ACCESS_KEY\",\"name\":\"longhorn\"}"
+                          post AllowBucketKey "{\"bucketId\":\"$bucket_id\",\"accessKeyId\":\"$AWS_ACCESS_KEY_ID\",\"permissions\":{\"read\":true,\"write\":true,\"owner\":false}}" > /dev/null
+                          echo 'the bucket and the key of longhorn are ready'
                       env:
                         ADMIN_TOKEN:
                           secretKeyRef:
                             name: garage
                             key: admin-token
+                        AWS_ACCESS_KEY_ID:
+                          secretKeyRef:
+                            name: garage-longhorn
+                            key: AWS_ACCESS_KEY_ID
+                        AWS_SECRET_ACCESS_KEY:
+                          secretKeyRef:
+                            name: garage-longhorn
+                            key: AWS_SECRET_ACCESS_KEY
                         CAPACITY: "10737418240" # the size of `garage-data` (10Gi), in bytes
                       securityContext:
                         allowPrivilegeEscalation: false
@@ -410,6 +474,74 @@ resources:
                       name: config
                       configMap:
                         name: garage-config
+
+    # The backup target of longhorn: the bucket `longhorn-backups` of Garage, with the key made by `garage-layout`. It is here and not
+    # in app-longhorn because the volumes of Garage are longhorn ones: longhorn can not wait for Garage. The release object is in
+    # this namespace (where `flux-garage` is allowed to create it), and installs in `longhorn-system`.
+    # The target `default` is created by longhorn: the first time, it has to be adopted by the release,
+    #    kubectl -n longhorn-system label backuptarget default app.kubernetes.io/managed-by=Helm
+    #    kubectl -n longhorn-system annotate backuptarget default meta.helm.sh/release-name=longhorn-backup meta.helm.sh/release-namespace=longhorn-system
+    # and the backups of the CIFS share (secret `backupstore`) are not seen anymore (the data is still in the share).
+    # Longhorn backs up into a bucket of this same cluster, on volumes of this same cluster: it protects from the loss of a volume or
+    # of a node, not of the cluster. The volumes of Garage are backed up too (they are in the `default` group of recurring jobs).
+    longhorn-backup:
+      targetNamespace: longhorn-system
+      releaseName: longhorn-backup
+      dependsOn:
+        garage-post: # the bucket and the key
+          name: garage-post
+        external-secrets:
+          name: app-external-secrets
+          namespace: external-secrets
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          serviceAccounts:
+            garage-reader:
+              automountServiceAccountToken: false # only used by external-secrets to get a token
+
+          secretStores:
+            garage:
+              provider:
+                kubernetes:
+                  remoteNamespace: garage
+                  server:
+                    caProvider:
+                      type: ConfigMap
+                      name: kube-root-ca.crt
+                      key: ca.crt
+                  auth:
+                    serviceAccount:
+                      name: garage-reader
+
+          # the `AWS_*` variables read by the backup target of longhorn
+          externalSecrets:
+            garage-backup:
+              refreshInterval: 1h
+              secretStoreRef:
+                kind: SecretStore
+                name: garage
+              dataFrom:
+                all:
+                  extract:
+                    key: garage-longhorn
+
+          # Longhorn creates the target `default` and refuses to delete it, so helm must never delete it
+          longhornBackupTargets:
+            default:
+              fullNameOverride: default
+              annotations:
+                helm.sh/resource-policy: keep
+              backupTargetURL: s3://longhorn-backups@garage/ # the region of Garage is `garage`
+              credentialSecret: garage-backup
+              pollInterval: 3m0s
 
     # the public exposure, applied once the nodes have their layout and not waited for
     garage-integration:

@@ -255,6 +255,11 @@ resources:
       url: https://raw.githubusercontent.com/longhorn/longhorn/master/deploy/longhorn.yaml
       crdVersion: v1beta2
       kind: RecurringJob
+  - name: longhornBackupTargets
+    sourceCRD:
+      url: https://raw.githubusercontent.com/longhorn/longhorn/master/deploy/longhorn.yaml
+      crdVersion: v1beta2
+      kind: BackupTarget
   - name: longhornSettings
     sourceCRD:
       url: https://raw.githubusercontent.com/longhorn/longhorn/master/deploy/longhorn.yaml

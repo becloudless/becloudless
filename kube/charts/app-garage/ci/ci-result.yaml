@@ -42,6 +42,17 @@ spec:
     - ports:
       - port: "3903"
         protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        k8s:io.kubernetes.pod.namespace: longhorn-system
+        k8s:longhorn.io/component: instance-manager
+    - matchLabels:
+        k8s:app: longhorn-manager
+        k8s:io.kubernetes.pod.namespace: longhorn-system
+    toPorts:
+    - ports:
+      - port: "3900"
+        protocol: TCP
 ---
 # Source: app-garage/templates/loader.yaml
 apiVersion: cilium.io/v2
@@ -432,7 +443,7 @@ spec:
         garage-layout:
           activeDeadlineSeconds: 900
           backoffLimit: 0
-          fullNameOverride: garage-layout-90458b34f7
+          fullNameOverride: garage-layout-8594c40cd2
           template:
             metadata:
               labels:
@@ -446,6 +457,7 @@ spec:
                     api=http://garage-0.garage-headless:3903/v2
                     get() { wget -qO- --header "Authorization: Bearer $ADMIN_TOKEN" "$api/$1"; }
                     post() { wget -qO- --header "Authorization: Bearer $ADMIN_TOKEN" --header 'Content-Type: application/json' --post-data "$2" "$api/$1"; }
+                    retry() { n=0; until "$@" > /dev/null; do n=$((n + 1)); [ "$n" -lt 30 ] || exit 1; sleep 2; done; }
                     until status=$(get GetClusterStatus) && [ "$(echo "$status" | grep -o '"isUp": *true' | wc -l)" -ge "$replicas" ]; do
                       echo 'waiting for the nodes'; sleep 5
                     done
@@ -457,11 +469,18 @@ spec:
                       zone=$((zone + 1))
                       roles="$roles${roles:+,}{\"id\":\"$id\",\"zone\":\"z$zone\",\"capacity\":$CAPACITY,\"tags\":[]}"
                     done
-                    if [ -z "$roles" ]; then echo 'every node has a role'; exit 0; fi
-                    post UpdateClusterLayout "{\"roles\":[$roles]}"
-                    version=$(echo "$status" | grep -o '"layoutVersion": *[0-9]*' | cut -d: -f2)
-                    post ApplyClusterLayout "{\"version\":$((version + 1))}"
-                    echo 'the layout is applied'
+                    if [ -n "$roles" ]; then
+                      post UpdateClusterLayout "{\"roles\":[$roles]}"
+                      version=$(echo "$status" | grep -o '"layoutVersion": *[0-9]*' | cut -d: -f2)
+                      post ApplyClusterLayout "{\"version\":$((version + 1))}"
+                      echo 'the layout is applied'
+                    fi
+                    bucket=longhorn-backups
+                    get "GetBucketInfo?globalAlias=$bucket" > /dev/null 2>&1 || retry post CreateBucket "{\"globalAlias\":\"$bucket\"}"
+                    bucket_id=$(get "GetBucketInfo?globalAlias=$bucket" | grep -o '"id": *"[0-9a-f]*"' | head -n 1 | cut -d'"' -f4)
+                    get "GetKeyInfo?id=$AWS_ACCESS_KEY_ID" > /dev/null 2>&1 || retry post ImportKey "{\"accessKeyId\":\"$AWS_ACCESS_KEY_ID\",\"secretAccessKey\":\"$AWS_SECRET_ACCESS_KEY\",\"name\":\"longhorn\"}"
+                    post AllowBucketKey "{\"bucketId\":\"$bucket_id\",\"accessKeyId\":\"$AWS_ACCESS_KEY_ID\",\"permissions\":{\"read\":true,\"write\":true,\"owner\":false}}" > /dev/null
+                    echo 'the bucket and the key of longhorn are ready'
                   command:
                   - sh
                   - -ec
@@ -470,6 +489,14 @@ spec:
                       secretKeyRef:
                         key: admin-token
                         name: garage
+                    AWS_ACCESS_KEY_ID:
+                      secretKeyRef:
+                        key: AWS_ACCESS_KEY_ID
+                        name: garage-longhorn
+                    AWS_SECRET_ACCESS_KEY:
+                      secretKeyRef:
+                        key: AWS_SECRET_ACCESS_KEY
+                        name: garage-longhorn
                     CAPACITY: "10737418240"
                   image: docker.io/library/alpine:3.24.3
                   name: layout
@@ -535,6 +562,29 @@ spec:
       retryInterval: 5m
   values:
     resources:
+      roleBindings:
+        longhorn-secrets-reader:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: longhorn-secrets-reader
+          subjects:
+            garage-reader:
+              kind: ServiceAccount
+              name: garage-reader
+              namespace: longhorn-system
+      roles:
+        longhorn-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - garage-longhorn
+              resources:
+              - secrets
+              verbs:
+              - get
       stringSecrets:
         garage:
           fields:
@@ -546,3 +596,87 @@ spec:
               encoding: hex
               fieldName: rpc-secret
               length: "64"
+        garage-longhorn:
+          data:
+            AWS_ENDPOINTS: http://garage.garage.svc.cluster.local:3900
+          fields:
+            access-key-id:
+              encoding: hex
+              fieldName: AWS_ACCESS_KEY_ID
+              length: "32"
+            secret-access-key:
+              encoding: hex
+              fieldName: AWS_SECRET_ACCESS_KEY
+              length: "64"
+---
+# Source: app-garage/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: longhorn-backup
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-external-secrets
+    namespace: external-secrets
+  - name: garage-post
+  driftDetection:
+    mode: enabled
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  releaseName: longhorn-backup
+  targetNamespace: longhorn-system
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      externalSecrets:
+        garage-backup:
+          dataFrom:
+            all:
+              extract:
+                key: garage-longhorn
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: SecretStore
+            name: garage
+      longhornBackupTargets:
+        default:
+          annotations:
+            helm.sh/resource-policy: keep
+          backupTargetURL: s3://longhorn-backups@garage/
+          credentialSecret: garage-backup
+          fullNameOverride: default
+          pollInterval: 3m0s
+      secretStores:
+        garage:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: garage-reader
+              remoteNamespace: garage
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        garage-reader:
+          automountServiceAccountToken: false

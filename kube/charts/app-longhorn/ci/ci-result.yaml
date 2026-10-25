@@ -131,13 +131,13 @@ metadata:
   namespace: default
 spec:
   egress:
-  - toFQDNs:
-    - matchName: backupstore
-    - matchName: backupstore.test.com
-    - matchName: backupstore.longhorn-system.svc.cluster.local
+  - toEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/name: garage
+        k8s:io.kubernetes.pod.namespace: garage
     toPorts:
     - ports:
-      - port: "445"
+      - port: "3900"
         protocol: TCP
   - toEndpoints:
     - matchLabels:
@@ -194,13 +194,13 @@ metadata:
   namespace: default
 spec:
   egress:
-  - toFQDNs:
-    - matchName: backupstore
-    - matchName: backupstore.test.com
-    - matchName: backupstore.longhorn-system.svc.cluster.local
+  - toEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/name: garage
+        k8s:io.kubernetes.pod.namespace: garage
     toPorts:
     - ports:
-      - port: "445"
+      - port: "3900"
         protocol: TCP
   - toEndpoints:
     - matchLabels:
@@ -367,8 +367,6 @@ spec:
     csi:
       kubeletRootDir: /var/lib/kubelet
     defaultBackupStore:
-      backupTarget: cifs://backupstore/backupstore
-      backupTargetCredentialSecret: backupstore
       pollInterval: 180
     defaultSettings:
       allowCollectingLonghornUsageMetrics: false

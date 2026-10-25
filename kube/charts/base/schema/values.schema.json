@@ -167,6 +167,9 @@
             "listenerSets": {
               "$ref": "./resources/listenerSets.json"
             },
+            "longhornBackupTargets": {
+              "$ref": "./resources/longhornBackupTargets.json"
+            },
             "longhornRecurringJobs": {
               "$ref": "./resources/longhornRecurringJobs.json"
             },
@@ -549,6 +552,13 @@
             "$ref": "./resources/listenerSets.json"
           },
           "description": "ListenerSet instances, keyed by id.",
+          "type": "object"
+        },
+        "longhornBackupTargets": {
+          "additionalProperties": {
+            "$ref": "./resources/longhornBackupTargets.json"
+          },
+          "description": "BackupTarget instances, keyed by id.",
           "type": "object"
         },
         "longhornRecurringJobs": {

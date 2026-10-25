@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=../schema/values.schema.json
+
+resources:
+  longhornBackupTargets:
+    main:
+      backupTargetURL: s3://backups@garage/
+      credentialSecret: backupstore
+      pollInterval: 3m0s
