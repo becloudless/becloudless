@@ -109,6 +109,15 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   interval: 10m
+  postRenderers:
+  - kustomize:
+      patches:
+      - patch: |-
+          - op: add
+            path: /spec/template/spec/hostUsers
+            value: false
+        target:
+          kind: Deployment
   timeout: 10m
   upgrade:
     cleanupOnFail: true

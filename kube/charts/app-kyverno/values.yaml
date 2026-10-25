@@ -61,6 +61,19 @@ resources:
           sourceRef:
             kind: HelmRepository
             name: kyverno
+      # Kyverno excludes its own namespace from its webhooks, so the `pods-user-namespace` policy can not set `hostUsers` on its
+      # pods, and the chart has no value for it.
+      postRenderers:
+        user-namespace:
+          kustomize:
+            patches:
+              deployments:
+                target:
+                  kind: Deployment
+                patch: |
+                  - op: add
+                    path: /spec/template/spec/hostUsers
+                    value: false
       values:
         admissionController:
           replicas: 3
