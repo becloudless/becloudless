@@ -404,6 +404,14 @@ spec:
       name: allow-webhooks
       namespace: flux-system
   - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+    target:
+      kind: Deployment
+      name: (helm-controller|kustomize-controller|notification-controller)
+      namespace: flux-system
+  - patch: |-
       apiVersion: apps/v1
       kind: Deployment
       metadata:

@@ -15,7 +15,7 @@ resources:
         matchLabels:
           acme.cert-manager.io/http01-solver: "true"
       ingress:
-       something: {}
+       XXX: {}
 
   # on top of the default deny of app-cilium, which waits for this release: without these rules Flux could not reconcile anything anymore.
   # One policy for each controller (the `app` label), the selectors are in the namespace of the release. The NetworkPolicies bundled
@@ -353,6 +353,23 @@ resources:
             - op: add
               path: /spec/template/spec/containers/0/args/-
               value: --helm-index-max-size=102428800
+
+        # The controllers that elect a leader run `app.scaling.replicas` pods: one reconciles, the others take over when it is gone.
+        # It is availability, not throughput (see `--concurrent`). Their readiness probe (`/readyz`) does not wait for the lease, so the
+        # standby pods are Ready.
+        # TODO source-controller and source-watcher: a standby could rebuild its own artifacts when it becomes the leader (as a restart
+        # does, from their emptyDir), but they only start their artifact server (the readiness probe, `/`) once elected: a standby is
+        # never Ready, and the `flux` Kustomization waits for its Deployments. It needs the probe to be changed (to the health port,
+        # `/readyz`) before they can be scaled.
+        replicas:
+          target:
+            kind: Deployment
+            name: (helm-controller|kustomize-controller|notification-controller)
+            namespace: flux-system
+          patch: |
+            - op: replace
+              path: /spec/replicas
+              value: {{ .Values.app.scaling.replicas }}
 
         kustomizeControllerConcurrent:
           target:
