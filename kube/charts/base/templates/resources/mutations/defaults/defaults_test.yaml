@@ -401,3 +401,60 @@ tests:
     asserts:
       - notExists:
           path: spec
+
+  - it: merges the tmp volume and mount of the defaults with the ones of the resource, and keeps the other ones
+    set:
+      defaults:
+        pod:
+          volumes:
+            tmp:
+              name: tmp
+              emptyDir: {}
+        container:
+          volumeMounts:
+            tmp:
+              name: tmp
+              mountPath: /tmp
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                containers:
+                  web:
+                    name: web
+                    image: myimage:latest
+                    volumeMounts:
+                      data:
+                        name: data
+                        mountPath: /data
+                volumes:
+                  data:
+                    name: data
+                    emptyDir: {}
+                  tmp:
+                    name: tmp
+                    emptyDir:
+                      medium: Memory
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts
+          value:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      - equal:
+          path: spec.template.spec.volumes
+          value:
+            - name: data
+              emptyDir: {}
+            - name: tmp
+              emptyDir:
+                medium: Memory

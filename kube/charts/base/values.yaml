@@ -20,6 +20,11 @@ defaults:
       runAsNonRoot: true
       seccompProfile:
         type: RuntimeDefault
+    # the root filesystem is read only: a writable /tmp for every container, see `container.volumeMounts`
+    volumes:
+      tmp:
+        name: tmp
+        emptyDir: {}
 
   # applied to every container and initContainer of the deployments, statefulSets, daemonSets, jobs and cronJobs
   container:
@@ -27,6 +32,13 @@ defaults:
       readOnlyRootFilesystem: true
       # the API rejects `false` with `privileged: true` or the capability `SYS_ADMIN`: such a container sets `true`
       allowPrivilegeEscalation: false
+    # The volumes and the mounts are maps keyed by id: a resource that has its own `tmp` volume or mount (e.g. an emptyDir in
+    # memory) is merged with these, and the ones it does not name are kept. A container that mounts another volume on /tmp must
+    # name it `tmp` too, or the pod has two mounts on /tmp.
+    volumeMounts:
+      tmp:
+        name: tmp
+        mountPath: /tmp
 
   resources:
 

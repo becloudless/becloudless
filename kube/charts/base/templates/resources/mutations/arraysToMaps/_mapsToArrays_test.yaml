@@ -92,11 +92,17 @@ tests:
               securityContext:
                 allowPrivilegeEscalation: false # defaults.container of the chart
                 readOnlyRootFilesystem: true
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
             - name: web
               image: nginx:1.27
               securityContext:
                 allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
               command:
                 - sh
                 - -c
@@ -163,6 +169,8 @@ tests:
               name: cache
             - mountPath: /data
               name: data
+            - mountPath: /tmp # defaults.container of the chart
+              name: tmp
 
   - it: leaves nested maps untouched for kinds with no configured arrayPaths at all (ConfigMap.binaryData)
     set:
