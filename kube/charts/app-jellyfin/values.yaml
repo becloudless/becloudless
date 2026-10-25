@@ -314,6 +314,9 @@ resources:
                           version=4.0.0.4
                           md5=1e7908585ebee256203a0869dcdfbaf8
                           dir=/config/plugins/sso-authentication_$version
+                          # the mount of `network.xml` in the jellyfin container is in this directory: when it does not exist, the
+                          # container runtime creates it as root, and jellyfin can not write its own files in it
+                          mkdir -p /config/config
                           if [ ! -f $dir/.installed ]; then
                             wget -q -O /tmp/plugin.zip https://github.com/9p4/jellyfin-plugin-sso/releases/download/v$version/sso-authentication_$version.zip
                             echo "$md5  /tmp/plugin.zip" | md5sum -c -
