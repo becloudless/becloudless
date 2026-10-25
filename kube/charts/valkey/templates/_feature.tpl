@@ -14,28 +14,36 @@ Everything is returned as a default: set `resources.<kind>.<id>...` to override 
 {{- $values := $rootContext.Values }}
 {{- $name := $rootContext.Release.Name }}
 {{- $auth := ($values.valkey | default dict).auth | default dict }}
+{{- $users := keys ($auth.aclUsers | default dict) | sortAlpha }}
 
-{{- $fields := dict }}
-{{- range $user := keys ($auth.aclUsers | default dict) | sortAlpha }}
-  {{- $_ := set $fields $user (dict "fieldName" $user) }}
+{{- if or $users $values.clients }}
+resources:
+  {{- if $users }}
+  stringSecrets:
+    main:
+      fields:
+        {{- range $user := $users }}
+        {{ $user }}:
+          fieldName: {{ $user }}
+        {{- end }}
+  {{- end }}
+  {{- if $values.clients }}
+  ciliumNetworkPolicies:
+    main:
+      {{- /* the labels of the pods of the public chart */}}
+      endpointSelector:
+        matchLabels:
+          app.kubernetes.io/name: valkey
+          app.kubernetes.io/instance: {{ $name }}
+      ingress:
+        clients:
+          fromEndpoints: {{- $values.clients | toYaml | nindent 12 }}
+          toPorts:
+            valkey:
+              ports:
+                valkey:
+                  port: "6379"
+                  protocol: TCP
+  {{- end }}
 {{- end }}
-
-{{- $secrets := dict }}
-{{- if $fields }}
-  {{- $_ := set $secrets "main" (dict "fields" $fields) }}
-{{- end }}
-
-{{- $policies := dict }}
-{{- if $values.clients }}
-  {{- /* the labels of the pods of the public chart */}}
-  {{- $_ := set $policies "main" (dict
-        "endpointSelector" (dict "matchLabels" (dict "app.kubernetes.io/name" "valkey" "app.kubernetes.io/instance" $name))
-        "ingress" (dict "clients" (dict
-          "fromEndpoints" $values.clients
-          "toPorts" (dict "valkey" (dict "ports" (dict "valkey" (dict "port" "6379" "protocol" "TCP"))))))) }}
-{{- end }}
-
-{{- dict "resources" (dict
-      "stringSecrets" $secrets
-      "ciliumNetworkPolicies" $policies) | toYaml }}
 {{- end }}

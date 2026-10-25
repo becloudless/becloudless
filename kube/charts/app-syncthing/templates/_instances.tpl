@@ -11,27 +11,51 @@ Set `resources.fluxHelmReleases.syncthing-<user>.values` in the cluster to confi
 {{- $rootContext := .rootContext }}
 {{- $app := $rootContext.Values.app }}
 
-{{- $helmReleases := dict }}
+{{- $ids := list }}
 {{- range $id, $user := ($app.lldapUsers | default dict) }}
   {{- if has "app_syncthing" (($user | default dict).groups | default list) }}
-  {{- if not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" $id) }}
-    {{- fail (printf "the lldap user %q cannot have a Syncthing instance: its id must be a valid DNS label (lowercase letters, digits and `-`)" $id) }}
-  {{- end }}
-  {{- $_ := set $helmReleases (printf "syncthing-%s" $id) (dict
-        "install" (dict "disableWait" true)
-        "upgrade" (dict "disableWait" true)
-        "dependsOn" (dict
-          "longhorn" (dict "name" "app-longhorn" "namespace" "longhorn-system")
-          "cert-manager" (dict "name" "app-cert-manager" "namespace" "cert-manager")
-          "syncthing-pre" (dict "name" "syncthing-pre")
-          "gateway-api" (dict "name" "app-gateway-api" "namespace" "gateway-api"))
-        "chart" (dict "spec" (dict
-          "chart" "./kube/charts/syncthing"
-          "reconcileStrategy" "Revision"
-          "sourceRef" (dict "kind" "GitRepository" "name" "bcl" "namespace" "apps")))
-        "values" (dict "user" $id "app" (dict "domain" $app.domain "name" $app.name "lldapdn" $app.lldapdn))) }}
+    {{- if not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" $id) }}
+      {{- fail (printf "the lldap user %q cannot have a Syncthing instance: its id must be a valid DNS label (lowercase letters, digits and `-`)" $id) }}
+    {{- end }}
+    {{- $ids = append $ids $id }}
   {{- end }}
 {{- end }}
 
-{{- dict "resources" (dict "fluxHelmReleases" $helmReleases) | toYaml }}
+{{- if $ids }}
+resources:
+  fluxHelmReleases:
+    {{- range $id := $ids }}
+    syncthing-{{ $id }}:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        longhorn:
+          name: app-longhorn
+          namespace: longhorn-system
+        cert-manager:
+          name: app-cert-manager
+          namespace: cert-manager
+        syncthing-pre:
+          name: syncthing-pre
+        gateway-api:
+          name: app-gateway-api
+          namespace: gateway-api
+      chart:
+        spec:
+          chart: ./kube/charts/syncthing
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        user: {{ $id }}
+        app:
+          domain: {{ $app.domain }}
+          name: {{ $app.name }}
+          lldapdn: {{ $app.lldapdn }}
+    {{- end }}
+{{- end }}
 {{- end }}

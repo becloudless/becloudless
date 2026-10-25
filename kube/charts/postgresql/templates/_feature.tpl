@@ -23,94 +23,147 @@ deadlocks (https://github.com/cloudnative-pg/cloudnative-pg/issues/10433). Only 
 {{- $globalMetadata := tpl (toYaml (($values.defaults | default dict).metadata | default dict)) $rootContext | fromYaml }}
 {{- $namespace := $globalMetadata.namespace | default $rootContext.Release.Namespace }}
 
-{{- $dnsNames := list }}
-{{- range $service := list "rw" "r" "ro" }}
-  {{- $host := printf "%s-%s" $name $service }}
-  {{- $dnsNames = concat $dnsNames (list $host (printf "%s.%s" $host $namespace) (printf "%s.%s.svc" $host $namespace) (printf "%s.%s.svc.cluster.local" $host $namespace)) }}
-{{- end }}
-
-{{- $reload := dict "labels" (dict "cnpg.io/reload" "") }}
-{{- $issuerRef := dict "name" $name "kind" "Issuer" }}
-
-{{- $certificates := dict
-      "ca" (dict
-        "isCA" true
-        "commonName" (printf "%s-ca" $name)
-        "secretName" (printf "%s-ca" $name)
-        "privateKey" (dict "algorithm" "ECDSA" "size" 256 "rotationPolicy" "Never") 
-        "issuerRef" (dict "name" $values.issuer "kind" "ClusterIssuer"))
-      "main" (dict
-        "secretName" (printf "%s-tls" $name)
-        "secretTemplate" $reload
-        "dnsNames" $dnsNames
-        "issuerRef" $issuerRef)
-      "app" (dict
-        "secretName" (printf "%s-app-tls" $name)
-        "secretTemplate" $reload
-        "usages" (list "client auth")
-        "commonName" "app"
-        "issuerRef" $issuerRef)
-      "replication" (dict
-        "secretName" (printf "%s-replication-tls" $name)
-        "secretTemplate" $reload
-        "usages" (list "client auth")
-        "commonName" "streaming_replica"
-        "issuerRef" $issuerRef) }}
-
 {{- $postgresql := deepCopy ($values.postgresql | default dict) }}
 {{- if and $values.clientCertAuth (not (hasKey $postgresql "pg_hba")) }}
   {{- /* https://cloudnative-pg.io/docs/1.28/ssl_connections */}}
   {{- $_ := set $postgresql "pg_hba" (list "hostssl app all all cert") }}
 {{- end }}
 
-{{- $cluster := dict
-      "instances" $values.instances
-      "certificates" (dict
-        "clientCASecret" (printf "%s-ca" $name)
-        "replicationTLSSecret" (printf "%s-replication-tls" $name)
-        "serverTLSSecret" (printf "%s-tls" $name)
-        "serverCASecret" (printf "%s-tls" $name))
-      "storage" (dict "size" $values.storageSize) }}
-{{- if $postgresql }}
-  {{- $_ := set $cluster "postgresql" $postgresql }}
-{{- end }}
+resources:
+  certManagerCertificates:
+    ca:
+      isCA: true
+      commonName: {{ $name }}-ca
+      secretName: {{ $name }}-ca
+      privateKey:
+        algorithm: ECDSA
+        size: 256
+        rotationPolicy: Never
+      issuerRef:
+        name: {{ $values.issuer }}
+        kind: ClusterIssuer
+    main:
+      secretName: {{ $name }}-tls
+      secretTemplate:
+        labels:
+          cnpg.io/reload: ""
+      dnsNames:
+        {{- range $service := list "rw" "r" "ro" }}
+        {{- $host := printf "%s-%s" $name $service }}
+        - {{ $host }}
+        - {{ $host }}.{{ $namespace }}
+        - {{ $host }}.{{ $namespace }}.svc
+        - {{ $host }}.{{ $namespace }}.svc.cluster.local
+        {{- end }}
+      issuerRef:
+        name: {{ $name }}
+        kind: Issuer
+    app:
+      secretName: {{ $name }}-app-tls
+      secretTemplate:
+        labels:
+          cnpg.io/reload: ""
+      usages:
+        - client auth
+      commonName: app
+      issuerRef:
+        name: {{ $name }}
+        kind: Issuer
+    replication:
+      secretName: {{ $name }}-replication-tls
+      secretTemplate:
+        labels:
+          cnpg.io/reload: ""
+      usages:
+        - client auth
+      commonName: streaming_replica
+      issuerRef:
+        name: {{ $name }}
+        kind: Issuer
 
-{{- $scheduledBackups := dict }}
-{{- if $backup.enabled }}
-  {{- /* snapshotOwnerReference: removing the Backup object removes the VolumeSnapshot */}}
-  {{- $_ := set $cluster "backup" (dict "volumeSnapshot" (dict
-        "className" $backup.snapshotClass
-        "snapshotOwnerReference" "backup")) }}
+  certManagerIssuers:
+    main:
+      ca:
+        secretName: {{ $name }}-ca
 
-  {{- /* backupOwnerReference: removing the schedule removes the Backup object */}}
-  {{- $_ := set $scheduledBackups "main" (dict
-        "schedule" $backup.schedule
-        "backupOwnerReference" "self"
-        "immediate" true
-        "method" "volumeSnapshot"
-        "cluster" (dict "name" $name)) }}
-{{- end }}
+  cnpgClusters:
+    main:
+      instances: {{ $values.instances }}
+      certificates:
+        clientCASecret: {{ $name }}-ca
+        replicationTLSSecret: {{ $name }}-replication-tls
+        serverTLSSecret: {{ $name }}-tls
+        serverCASecret: {{ $name }}-tls
+      storage:
+        size: {{ $values.storageSize }}
+      {{- if $postgresql }}
+      postgresql: {{- $postgresql | toYaml | nindent 8 }}
+      {{- end }}
+      {{- if $backup.enabled }}
+      backup:
+        volumeSnapshot:
+          className: {{ $backup.snapshotClass }}
+          {{- /* snapshotOwnerReference: removing the Backup object removes the VolumeSnapshot */}}
+          snapshotOwnerReference: backup
+      {{- end }}
 
-{{- /* The instances talk to each other (replication on 5432, status API of the instance manager on 8000) and to the clients.
-The operator and the API server are allowed for every cluster by the cluster wide policy of app-cnpg. */}}
-{{- $instances := dict "matchLabels" (dict "cnpg.io/cluster" $name) }}
-{{- $postgres := dict "ports" (dict "postgres" (dict "port" "5432" "protocol" "TCP")) }}
-{{- $peers := dict "ports" (dict "postgres" (dict "port" "5432" "protocol" "TCP") "status" (dict "port" "8000" "protocol" "TCP")) }}
-{{- $policy := dict
-      "endpointSelector" $instances
-      "ingress" (dict
-        "instances" (dict "fromEndpoints" (dict "instances" $instances) "toPorts" (dict "postgres" $peers))
-        "clients" (dict "fromEndpoints" ($values.clients | default dict) "toPorts" (dict "postgres" $postgres)))
-      "egress" (dict
-        "instances" (dict "toEndpoints" (dict "instances" $instances) "toPorts" (dict "postgres" $peers))) }}
-{{- if not $values.clients }}
-  {{- $_ := unset $policy.ingress "clients" }}
-{{- end }}
+  {{- if $backup.enabled }}
+  cnpgScheduledBackups:
+    main:
+      schedule: {{ $backup.schedule | quote }}
+      {{- /* backupOwnerReference: removing the schedule removes the Backup object */}}
+      backupOwnerReference: self
+      immediate: true
+      method: volumeSnapshot
+      cluster:
+        name: {{ $name }}
+  {{- end }}
 
-{{- dict "resources" (dict
-      "certManagerCertificates" $certificates
-      "certManagerIssuers" (dict "main" (dict "ca" (dict "secretName" (printf "%s-ca" $name))))
-      "cnpgClusters" (dict "main" $cluster)
-      "cnpgScheduledBackups" $scheduledBackups
-      "ciliumNetworkPolicies" (dict "main" $policy)) | toYaml }}
+  {{- /* The instances talk to each other (replication on 5432, status API of the instance manager on 8000) and to the clients.
+  The operator and the API server are allowed for every cluster by the cluster wide policy of app-cnpg. */}}
+  ciliumNetworkPolicies:
+    main:
+      endpointSelector:
+        matchLabels:
+          cnpg.io/cluster: {{ $name }}
+      ingress:
+        instances:
+          fromEndpoints:
+            instances:
+              matchLabels:
+                cnpg.io/cluster: {{ $name }}
+          toPorts:
+            postgres:
+              ports:
+                postgres:
+                  port: "5432"
+                  protocol: TCP
+                status:
+                  port: "8000"
+                  protocol: TCP
+        {{- if $values.clients }}
+        clients:
+          fromEndpoints: {{- $values.clients | toYaml | nindent 12 }}
+          toPorts:
+            postgres:
+              ports:
+                postgres:
+                  port: "5432"
+                  protocol: TCP
+        {{- end }}
+      egress:
+        instances:
+          toEndpoints:
+            instances:
+              matchLabels:
+                cnpg.io/cluster: {{ $name }}
+          toPorts:
+            postgres:
+              ports:
+                postgres:
+                  port: "5432"
+                  protocol: TCP
+                status:
+                  port: "8000"
+                  protocol: TCP
 {{- end }}
