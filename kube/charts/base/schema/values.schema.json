@@ -9,6 +9,10 @@
     "defaults": {
       "additionalProperties": false,
       "properties": {
+        "container": {
+          "$ref": "./resources/deployments.json#/properties/template/properties/spec/properties/containers/additionalProperties",
+          "description": "Defaults of every container and initContainer of the deployments, statefulSets, daemonSets, jobs and cronJobs. The fields set by a container win, even `false` or `0`."
+        },
         "metadata": {
           "additionalProperties": false,
           "properties": {
@@ -32,6 +36,10 @@
             }
           },
           "type": "object"
+        },
+        "pod": {
+          "$ref": "./resources/deployments.json#/properties/template/properties/spec",
+          "description": "Defaults of the pod spec of the deployments, statefulSets, daemonSets, jobs and cronJobs. The fields set by the resource win, even `false` or `0`."
         },
         "resources": {
           "additionalProperties": false,

@@ -13,6 +13,8 @@ spec:
           containers:
           - image: myimage:latest
             name: myapp
+            securityContext:
+              readOnlyRootFilesystem: true
           enableServiceLinks: false
           restartPolicy: Never
           securityContext:

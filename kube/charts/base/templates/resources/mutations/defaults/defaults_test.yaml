@@ -153,3 +153,250 @@ tests:
       - equal:
           path: metadata.namespace
           value: custom-ns
+
+  - it: lets a resource field that is false override a default that is true
+    set:
+      defaults:
+        resources:
+          deployments:
+            template:
+              spec:
+                securityContext:
+                  runAsNonRoot: true
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                securityContext:
+                  runAsNonRoot: false
+                containers:
+                  - name: myapp
+                    image: myimage:latest
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: false
+
+  - it: applies defaults.container to the containers and the initContainers, given as a map or as a list
+    set:
+      defaults:
+        container:
+          securityContext:
+            readOnlyRootFilesystem: true
+          imagePullPolicy: IfNotPresent
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                containers:
+                  web:
+                    name: web
+                    image: myimage:latest
+                    securityContext:
+                      runAsUser: 1000
+                initContainers:
+                  - name: init
+                    image: myimage:latest
+        cronJobs:
+          mycron:
+            schedule: "* * * * *"
+            jobTemplate:
+              spec:
+                template:
+                  spec:
+                    restartPolicy: Never
+                    containers:
+                      - name: job
+                        image: myimage:latest
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            readOnlyRootFilesystem: true
+            runAsUser: 1000
+        documentSelector:
+          path: kind
+          value: Deployment
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: IfNotPresent
+        documentSelector:
+          path: kind
+          value: Deployment
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.readOnlyRootFilesystem
+          value: true
+        documentSelector:
+          path: kind
+          value: Deployment
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+        documentSelector:
+          path: kind
+          value: CronJob
+
+  - it: lets a container opt out of defaults.container with a false value
+    set:
+      defaults:
+        container:
+          securityContext:
+            readOnlyRootFilesystem: true
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                containers:
+                  web:
+                    name: web
+                    image: myimage:latest
+                    securityContext:
+                      readOnlyRootFilesystem: false
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: false
+
+  - it: applies defaults.pod to the pod spec of every kind with a pod template, below defaults.resources.<kind>
+    set:
+      defaults:
+        pod:
+          priorityClassName: from-pod
+          securityContext:
+            runAsNonRoot: true
+        resources:
+          statefulSets:
+            template:
+              spec:
+                priorityClassName: from-kind
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                containers:
+                  - name: myapp
+                    image: myimage:latest
+        statefulSets:
+          mydb:
+            serviceName: mydb
+            selector:
+              matchLabels:
+                app: mydb
+            template:
+              metadata:
+                labels:
+                  app: mydb
+              spec:
+                containers:
+                  - name: mydb
+                    image: myimage:latest
+        cronJobs:
+          mycron:
+            schedule: "* * * * *"
+            jobTemplate:
+              spec:
+                template:
+                  spec:
+                    restartPolicy: Never
+                    containers:
+                      - name: job
+                        image: myimage:latest
+    asserts:
+      - equal:
+          path: spec.template.spec.priorityClassName
+          value: from-pod
+        documentSelector:
+          path: kind
+          value: Deployment
+      - equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+        documentSelector:
+          path: kind
+          value: Deployment
+      - equal:
+          path: spec.template.spec.priorityClassName
+          value: from-kind
+        documentSelector:
+          path: kind
+          value: StatefulSet
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.securityContext.runAsNonRoot
+          value: true
+        documentSelector:
+          path: kind
+          value: CronJob
+
+  - it: lets the pod spec of a resource override defaults.pod with a false value
+    set:
+      defaults:
+        pod:
+          enableServiceLinks: false
+          securityContext:
+            runAsNonRoot: true
+      resources:
+        deployments:
+          myapp:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              metadata:
+                labels:
+                  app: myapp
+              spec:
+                enableServiceLinks: true
+                securityContext:
+                  runAsNonRoot: false
+                containers:
+                  - name: myapp
+                    image: myimage:latest
+    asserts:
+      - equal:
+          path: spec.template.spec.enableServiceLinks
+          value: true
+      - equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: false
+
+  - it: does not apply defaults.pod to the kinds without a pod template
+    set:
+      defaults:
+        pod:
+          enableServiceLinks: false
+      resources:
+        configMaps:
+          plain:
+            data:
+              key: value
+    asserts:
+      - notExists:
+          path: spec

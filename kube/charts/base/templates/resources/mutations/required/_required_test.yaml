@@ -81,6 +81,12 @@ tests:
 
   - it: fails on the nested field when the parent object is only created by defaults.resources (template.spec.containers)
     set:
+      defaults:
+        resources:
+          deployments:
+            template:
+              spec:
+                enableServiceLinks: false
       resources:
         deployments:
           myapp:
