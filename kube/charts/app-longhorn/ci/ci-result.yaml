@@ -108,6 +108,25 @@ spec:
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
+  name: longhorn-hooks
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  endpointSelector:
+    matchExpressions:
+    - key: job-name
+      operator: In
+      values:
+      - longhorn-post-upgrade
+      - longhorn-pre-upgrade
+      - longhorn-uninstall
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
   name: longhorn-instance-manager
   namespace: default
 spec:
@@ -646,6 +665,8 @@ spec:
                   - Pod
                   namespaces:
                   - longhorn-system
+                  operations:
+                  - CREATE
                   selector:
                     matchLabels:
                       longhorn.io/component: instance-manager
@@ -654,6 +675,8 @@ spec:
                   - Pod
                   namespaces:
                   - longhorn-system
+                  operations:
+                  - CREATE
                   selector:
                     matchLabels:
                       longhorn.io/component: engine-image
@@ -662,6 +685,8 @@ spec:
                   - Pod
                   namespaces:
                   - longhorn-system
+                  operations:
+                  - CREATE
                   selector:
                     matchExpressions:
                     - key: app
@@ -677,6 +702,8 @@ spec:
                   - Pod
                   namespaces:
                   - longhorn-system
+                  operations:
+                  - CREATE
                   selector:
                     matchExpressions:
                     - key: job-name

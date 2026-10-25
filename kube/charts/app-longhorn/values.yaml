@@ -231,6 +231,17 @@ resources:
           toPorts:
             api: {ports: {p9500: {port: "9500", protocol: TCP}}}
 
+    longhorn-hooks: # the Helm hook jobs of the chart, they only talk to the API server (settings and CRs)
+      endpointSelector:
+        matchExpressions:
+          job-name:
+            key: job-name
+            operator: In
+            values: {longhorn-pre-upgrade: longhorn-pre-upgrade, longhorn-post-upgrade: longhorn-post-upgrade, longhorn-uninstall: longhorn-uninstall}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+
   fluxHelmReleases:
     # the policy adding the PATH of NixOS to the pods, created before they start
     longhorn-pre:
@@ -298,9 +309,12 @@ resources:
                 - name: pod-set-host-users
                   match:
                     any:
+                      # CREATE only: `hostUsers` can not be changed once the pod exists, an update (finalizer removal, status...) would be rejected
                       - resources:
                           kinds:
                             - Pod
+                          operations:
+                            - CREATE
                           namespaces:
                             - longhorn-system
                           selector:
@@ -309,6 +323,8 @@ resources:
                       - resources:
                           kinds:
                             - Pod
+                          operations:
+                            - CREATE
                           namespaces:
                             - longhorn-system
                           selector:
@@ -317,6 +333,8 @@ resources:
                       - resources:
                           kinds:
                             - Pod
+                          operations:
+                            - CREATE
                           namespaces:
                             - longhorn-system
                           selector:
@@ -332,6 +350,8 @@ resources:
                       - resources: # the hook jobs of the chart mount /host/proc
                           kinds:
                             - Pod
+                          operations:
+                            - CREATE
                           namespaces:
                             - longhorn-system
                           selector:
