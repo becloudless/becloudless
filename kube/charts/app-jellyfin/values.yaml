@@ -293,6 +293,14 @@ resources:
                   labels:
                     app.kubernetes.io/name: jellyfin
                 spec:
+                  # the images of alpine and jellyfin run as root: every container runs as 1000, which owns the volume (`fsGroup`)
+                  securityContext:
+                    runAsNonRoot: true
+                    runAsUser: 1000
+                    runAsGroup: 1000
+                    fsGroup: 1000
+                    seccompProfile:
+                      type: RuntimeDefault
                   # installs the SSO plugin in the volume (jellyfin loads the plugins at its start), pinned and checked by the checksum of
                   # https://raw.githubusercontent.com/9p4/jellyfin-plugin-sso/manifest-release/manifest.json
                   initContainers:
@@ -374,6 +382,7 @@ resources:
                           containerPort: 8096
                       env:
                         TZ: Europe/Paris
+                        JELLYFIN_CACHE_DIR: /tmp/jellyfin # the root filesystem is read only (`/cache` of the image)
                         JELLYFIN_PublishedServerUrl: https://jellyfin.{{ .Values.app.domain }}
                       startupProbe:
                         httpGet:

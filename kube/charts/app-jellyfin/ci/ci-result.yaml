@@ -255,6 +255,7 @@ spec:
                       readOnly: true
                 jellyfin:
                   env:
+                    JELLYFIN_CACHE_DIR: /tmp/jellyfin
                     JELLYFIN_PublishedServerUrl: https://jellyfin.test.com
                     TZ: Europe/Paris
                   image: ghcr.io/jellyfin/jellyfin:10.11.11
@@ -322,6 +323,13 @@ spec:
                     config:
                       mountPath: /config
                       name: config
+              securityContext:
+                fsGroup: 1000
+                runAsGroup: 1000
+                runAsNonRoot: true
+                runAsUser: 1000
+                seccompProfile:
+                  type: RuntimeDefault
               volumes:
                 config:
                   name: config
@@ -345,7 +353,7 @@ spec:
           resources:
             requests:
               storage: 10Gi
-          storageClassName: longhorn-db
+          storageClassName: longhorn-files
       services:
         jellyfin:
           ports:
