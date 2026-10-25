@@ -343,6 +343,8 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    annotations:
+      bcl/hostUsers: "true"
     csi:
       kubeletRootDir: /var/lib/kubelet
     defaultBackupStore:
@@ -634,6 +636,48 @@ spec:
                     - configMapRef:
                         name: longhorn-nixos-path
             name: add-env-vars
+        longhorn-host-users:
+          failurePolicy: Ignore
+          rules:
+          - match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+                  namespaces:
+                  - longhorn-system
+                  selector:
+                    matchLabels:
+                      longhorn.io/component: instance-manager
+              - resources:
+                  kinds:
+                  - Pod
+                  namespaces:
+                  - longhorn-system
+                  selector:
+                    matchLabels:
+                      longhorn.io/component: engine-image
+              - resources:
+                  kinds:
+                  - Pod
+                  namespaces:
+                  - longhorn-system
+                  selector:
+                    matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                      - longhorn-csi-plugin
+                      - csi-attacher
+                      - csi-provisioner
+                      - csi-resizer
+                      - csi-snapshotter
+            mutate:
+              patchStrategicMerge:
+                metadata:
+                  annotations:
+                    bcl/hostUsers: "true"
+            name: annotate-host-users
 ---
 # Source: app-longhorn/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

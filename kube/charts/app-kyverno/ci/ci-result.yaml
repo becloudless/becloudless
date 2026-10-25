@@ -168,26 +168,6 @@ spec:
           - exclude:
               any:
               - resources:
-                  selector:
-                    matchLabels:
-                      longhorn.io/component: engine-image
-              - resources:
-                  selector:
-                    matchLabels:
-                      longhorn.io/component: instance-manager
-              - resources:
-                  selector:
-                    matchExpressions:
-                    - key: app
-                      operator: In
-                      values:
-                      - longhorn-manager
-                      - longhorn-csi-plugin
-                      - csi-attacher
-                      - csi-provisioner
-                      - csi-resizer
-                      - csi-snapshotter
-              - resources:
                   annotations:
                     bcl/hostUsers: "true"
             match:

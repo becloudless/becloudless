@@ -5,10 +5,10 @@
 # Not applied to:
 #  - the pods using the host namespaces (`hostNetwork`, `hostPID`, `hostIPC`), the API server rejects them with `hostUsers: false`
 #    (static pods of the control plane, cilium, ...);
-#  - the longhorn components that are privileged or use host paths (manager, instance-manager, engine-image, csi plugin and
-#    csi sidecars), they need the host users;
 #  - the pods using raw block devices (`volumeDevices`), not supported with user namespaces;
-#  - the pods with the annotation `bcl/hostUsers: "true"`, to opt out an app that does not work with it.
+#  - the pods with the annotation `bcl/hostUsers: "true"`, to opt out an app that does not work with it (each app chart
+#    sets it for its own pods, see app-longhorn). It must be set before this policy runs, the policies are applied in alphabetical
+#    order.
 # `Ignore`: a Kyverno outage must not block the creation of pods.
 failurePolicy: Ignore
 rules:
@@ -22,26 +22,6 @@ rules:
               - CREATE
     exclude:
       any:
-        - resources:
-            selector:
-              matchLabels:
-                longhorn.io/component: engine-image
-        - resources:
-            selector:
-              matchLabels:
-                longhorn.io/component: instance-manager
-        - resources:
-            selector:
-              matchExpressions:
-                - key: app
-                  operator: In
-                  values:
-                    - longhorn-manager
-                    - longhorn-csi-plugin
-                    - csi-attacher
-                    - csi-provisioner
-                    - csi-resizer
-                    - csi-snapshotter
         - resources:
             annotations:
               bcl/hostUsers: "true"

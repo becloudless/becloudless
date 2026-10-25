@@ -288,6 +288,52 @@ resources:
                               - configMapRef:
                                   name: longhorn-nixos-path
 
+            # The pods created by Longhorn itself (not by its chart) are privileged or mount host paths, they need the host users.
+            # The policy of app-kyverno skips them with this annotation. The name sorts before `pods-user-namespace`, the policies
+            # are applied in alphabetical order. The longhorn-manager pods are annotated by the chart (`annotations`).
+            longhorn-host-users:
+              failurePolicy: Ignore
+              rules:
+                - name: annotate-host-users
+                  match:
+                    any:
+                      - resources:
+                          kinds:
+                            - Pod
+                          namespaces:
+                            - longhorn-system
+                          selector:
+                            matchLabels:
+                              longhorn.io/component: instance-manager
+                      - resources:
+                          kinds:
+                            - Pod
+                          namespaces:
+                            - longhorn-system
+                          selector:
+                            matchLabels:
+                              longhorn.io/component: engine-image
+                      - resources:
+                          kinds:
+                            - Pod
+                          namespaces:
+                            - longhorn-system
+                          selector:
+                            matchExpressions:
+                              - key: app
+                                operator: In
+                                values:
+                                  - longhorn-csi-plugin
+                                  - csi-attacher
+                                  - csi-provisioner
+                                  - csi-resizer
+                                  - csi-snapshotter
+                  mutate:
+                    patchStrategicMerge:
+                      metadata:
+                        annotations:
+                          bcl/hostUsers: "true"
+
     longhorn:
       chart:
         spec:
@@ -304,6 +350,10 @@ resources:
           name: longhorn-pre
       values:
         enablePSP: false
+
+        # the pods of the managers are privileged and mount host paths, they need the host users (see app-kyverno)
+        annotations:
+          bcl/hostUsers: "true"
 
         csi:
           kubeletRootDir: /var/lib/kubelet
