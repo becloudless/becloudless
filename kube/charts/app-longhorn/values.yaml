@@ -328,6 +328,18 @@ resources:
                                   - csi-provisioner
                                   - csi-resizer
                                   - csi-snapshotter
+                      - resources: # the hook jobs of the chart mount /host/proc
+                          kinds:
+                            - Pod
+                          namespaces:
+                            - longhorn-system
+                          selector:
+                            matchExpressions:
+                              - key: job-name
+                                operator: In
+                                values:
+                                  - longhorn-pre-upgrade
+                                  - longhorn-uninstall
                   mutate:
                     patchStrategicMerge:
                       metadata:

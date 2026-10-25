@@ -672,6 +672,18 @@ spec:
                       - csi-provisioner
                       - csi-resizer
                       - csi-snapshotter
+              - resources:
+                  kinds:
+                  - Pod
+                  namespaces:
+                  - longhorn-system
+                  selector:
+                    matchExpressions:
+                    - key: job-name
+                      operator: In
+                      values:
+                      - longhorn-pre-upgrade
+                      - longhorn-uninstall
             mutate:
               patchStrategicMerge:
                 metadata:
