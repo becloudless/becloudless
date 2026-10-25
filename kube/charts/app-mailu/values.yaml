@@ -527,7 +527,7 @@ resources:
         existingSecret: mailu
 
         global:
-          storageClass: longhorn
+          storageClass: longhorn-db
           database:
             roundcube:
               database: roundcube
@@ -592,6 +592,7 @@ resources:
                 value: roundcube
             persistence:
               enabled: true
+              storageClass: longhorn-db
 
         admin:
           updateStrategy:
@@ -602,6 +603,8 @@ resources:
             type: Recreate
 
         dovecot:
+          persistence:
+            storageClass: longhorn-files
           # on crio, root is needed to have the SYS_CHROOT capability, required by dovecot to run properly
           # https://github.com/Mailu/Mailu/issues/1714
           containerSecurityContext:
@@ -633,6 +636,8 @@ resources:
               cpu: 1
 
         clamav:
+          persistence:
+            storageClass: longhorn-files
           resources:
             requests:
               memory: 1.5Gi

@@ -96,6 +96,7 @@ resources:
         serverCASecret: {{ $name }}-tls
       storage:
         size: {{ $values.storageSize }}
+        storageClass: {{ $values.storageClass }}
       {{- if $postgresql }}
       postgresql: {{- $postgresql | toYaml | nindent 8 }}
       {{- end }}

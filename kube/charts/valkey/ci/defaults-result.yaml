@@ -143,6 +143,7 @@ spec:
   resources:
     requests:
       storage: 1Gi
+  storageClassName: longhorn-db
 ---
 # Source: valkey/charts/valkey/templates/service.yaml
 apiVersion: v1

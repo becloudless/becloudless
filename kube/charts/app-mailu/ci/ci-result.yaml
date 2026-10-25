@@ -610,6 +610,8 @@ spec:
       updateStrategy:
         type: Recreate
     clamav:
+      persistence:
+        storageClass: longhorn-files
       resources:
         limits:
           cpu: 1
@@ -625,6 +627,8 @@ spec:
           - SYS_CHROOT
         enabled: true
         runAsUser: 0
+      persistence:
+        storageClass: longhorn-files
       resources:
         limits:
           cpu: 2
@@ -654,7 +658,7 @@ spec:
           database: roundcube
           existingSecret: mailu-roundcube
           existingSecretPasswordKey: password
-      storageClass: longhorn
+      storageClass: longhorn-db
     hostnames:
     - mail.test.com
     - imap.test.com
@@ -690,6 +694,7 @@ spec:
           value: roundcube
         persistence:
           enabled: true
+          storageClass: longhorn-db
     permanentSessionLifetime: 31536000
     persistence:
       single_pvc: false

@@ -17,7 +17,7 @@ resources:
     immich-data:
       accessModes:
         - ReadWriteMany
-      storageClassName: longhorn
+      storageClassName: longhorn-files
       resources:
         requests:
           storage: 10Gi
@@ -321,7 +321,7 @@ resources:
             cache:
               type: persistentVolumeClaim
               accessMode: ReadWriteMany
-              storageClass: longhorn
+              storageClass: longhorn-files
 
     # The web UI shows the registration of the first admin until an admin exists, and the OAuth login is on the login page that
     # it redirects from: an account of immich has to exist before anyone can log in with authelia. It is created here through the API,

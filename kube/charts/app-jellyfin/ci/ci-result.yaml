@@ -345,7 +345,7 @@ spec:
           resources:
             requests:
               storage: 10Gi
-          storageClassName: longhorn
+          storageClassName: longhorn-db
       services:
         jellyfin:
           ports:

@@ -46,11 +46,19 @@ spec:
             drop:
             - ALL
           readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
       enableServiceLinks: false
       securityContext:
         runAsGroup: 65534
         runAsNonRoot: true
         runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+      - emptyDir: {}
+        name: tmp
 ---
 # Source: app-prometheus/templates/loader.yaml
 apiVersion: cilium.io/v2
@@ -293,7 +301,7 @@ spec:
               resources:
                 requests:
                   storage: 1Gi
-              storageClassName: longhorn
+              storageClassName: longhorn-db
       config:
         global:
           resolve_timeout: 5m
@@ -509,7 +517,7 @@ spec:
               resources:
                 requests:
                   storage: 10Gi
-              storageClassName: longhorn
+              storageClassName: longhorn-db
     prometheusOperator:
       kubeletService:
         enabled: false

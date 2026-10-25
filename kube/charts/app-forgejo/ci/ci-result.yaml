@@ -139,7 +139,7 @@ spec:
       claimName: forgejo-shared-storage
       enabled: true
       size: 10Gi
-      storageClass: longhorn
+      storageClass: longhorn-files
     replicaCount: 1
     test:
       enabled: false

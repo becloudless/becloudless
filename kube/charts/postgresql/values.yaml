@@ -5,6 +5,8 @@ prefixNamesWithRelease: true
 instances: 2
 storageSize: 1Gi
 
+storageClass: longhorn-db
+
 # ClusterIssuer signing the CA of the cluster
 issuer: self-signed
 

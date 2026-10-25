@@ -275,7 +275,7 @@ resources:
             jellyfin-config:
               accessModes:
                 - ReadWriteOnce
-              storageClassName: longhorn
+              storageClassName: longhorn-files
               resources:
                 requests:
                   storage: 10Gi

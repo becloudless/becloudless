@@ -120,7 +120,7 @@ resources:
             tuwunel-data:
               accessModes:
                 - ReadWriteOnce
-              storageClassName: longhorn
+              storageClassName: longhorn-db
               resources:
                 requests:
                   storage: 10Gi

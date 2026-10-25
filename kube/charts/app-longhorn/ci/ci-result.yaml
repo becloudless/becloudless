@@ -380,6 +380,8 @@ spec:
     enablePSP: false
     ingress:
       enabled: false
+    persistence:
+      defaultClass: false
 ---
 # Source: app-longhorn/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -548,6 +550,30 @@ spec:
             helm.sh/resource-policy: keep
           value: "false"
       storageClasses:
+        longhorn-db:
+          allowVolumeExpansion: true
+          annotations:
+            storageclass.kubernetes.io/is-default-class: "false"
+          parameters:
+            backupBlockSize: 2Mi
+            fsType: ext4
+            numberOfReplicas: "2"
+            staleReplicaTimeout: "60"
+          provisioner: driver.longhorn.io
+          reclaimPolicy: Delete
+          volumeBindingMode: Immediate
+        longhorn-files:
+          allowVolumeExpansion: true
+          annotations:
+            storageclass.kubernetes.io/is-default-class: "false"
+          parameters:
+            backupBlockSize: 16Mi
+            fsType: ext4
+            numberOfReplicas: "2"
+            staleReplicaTimeout: "60"
+          provisioner: driver.longhorn.io
+          reclaimPolicy: Delete
+          volumeBindingMode: Immediate
         longhorn-single-local-replica:
           allowVolumeExpansion: true
           annotations:

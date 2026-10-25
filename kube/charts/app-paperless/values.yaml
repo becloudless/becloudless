@@ -196,7 +196,7 @@ resources:
             paperless-data:
               accessModes:
                 - ReadWriteOnce
-              storageClassName: longhorn
+              storageClassName: longhorn-files
               resources:
                 requests:
                   storage: 20Gi

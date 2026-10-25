@@ -414,9 +414,6 @@ spec:
                       mountPath: /setup
                       name: setup
                       readOnly: true
-                    tmp:
-                      mountPath: /tmp
-                      name: tmp
               restartPolicy: Never
               securityContext:
                 runAsGroup: 1000
@@ -430,9 +427,6 @@ spec:
                   configMap:
                     name: lldap-bootstrap
                   name: setup
-                tmp:
-                  emptyDir: {}
-                  name: tmp
 ---
 # Source: app-lldap/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

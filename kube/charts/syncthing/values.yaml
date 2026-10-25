@@ -21,7 +21,7 @@ host: ""
 
 image: docker.io/syncthing/syncthing:2.1.7 # renovate: versioning=loose
 
-storageClassName: longhorn
+storageClassName: longhorn-files
 storageSize: 10Gi
 
 # the Gateway the web UI is exposed by, and the ClusterIssuer of its certificate

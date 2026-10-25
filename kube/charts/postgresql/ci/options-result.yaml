@@ -146,6 +146,7 @@ spec:
     - hostssl app all all cert
   storage:
     size: 5Gi
+    storageClass: longhorn-db
 ---
 # Source: postgresql/templates/loader.yaml
 apiVersion: cert-manager.io/v1

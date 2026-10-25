@@ -156,7 +156,7 @@ resources:
             seafile-mariadb:
               accessModes:
                 - ReadWriteOnce
-              storageClassName: longhorn
+              storageClassName: longhorn-db
               resources:
                 requests:
                   storage: 5Gi
@@ -322,7 +322,7 @@ resources:
             seafile-data:
               accessModes:
                 - ReadWriteOnce
-              storageClassName: longhorn
+              storageClassName: longhorn-files
               resources:
                 requests:
                   storage: 20Gi

@@ -275,7 +275,7 @@ spec:
           resources:
             requests:
               storage: 20Gi
-          storageClassName: longhorn
+          storageClassName: longhorn-files
       services:
         seafile:
           ports:
@@ -471,7 +471,7 @@ spec:
           resources:
             requests:
               storage: 5Gi
-          storageClassName: longhorn
+          storageClassName: longhorn-db
       services:
         seafile-mariadb:
           ports:

@@ -132,6 +132,7 @@ spec:
   instances: 2
   storage:
     size: 1Gi
+    storageClass: longhorn-db
 ---
 # Source: postgresql/templates/loader.yaml
 apiVersion: cert-manager.io/v1

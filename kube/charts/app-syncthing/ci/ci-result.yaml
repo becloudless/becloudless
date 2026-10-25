@@ -62,6 +62,7 @@ spec:
       domain: test.com
       lldapdn: dc=test,dc=com
       name: test
+    storageClassName: longhorn-files
     user: n0rad
 ---
 # Source: app-syncthing/templates/loader.yaml

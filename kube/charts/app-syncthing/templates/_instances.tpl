@@ -52,6 +52,7 @@ resources:
             namespace: apps
       values:
         user: {{ $id }}
+        storageClassName: longhorn-files
         app:
           domain: {{ $app.domain }}
           name: {{ $app.name }}

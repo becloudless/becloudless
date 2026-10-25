@@ -22,6 +22,7 @@ valkey:
   dataStorage:
     enabled: true
     requestedSize: 1Gi
+    className: longhorn-db
 
   auth:
     enabled: true

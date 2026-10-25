@@ -11,7 +11,7 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  storageClassName: longhorn
+  storageClassName: longhorn-files
 ---
 # Source: app-immich/templates/loader.yaml
 apiVersion: cilium.io/v2
@@ -194,7 +194,7 @@ spec:
       persistence:
         cache:
           accessMode: ReadWriteMany
-          storageClass: longhorn
+          storageClass: longhorn-files
           type: persistentVolumeClaim
 ---
 # Source: app-immich/templates/loader.yaml

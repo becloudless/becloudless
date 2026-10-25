@@ -274,7 +274,7 @@ resources:
             storage:
               volumeClaimTemplate:
                 spec:
-                  storageClassName: longhorn
+                  storageClassName: longhorn-db
                   accessModes:
                     - ReadWriteOnce
                   resources:
@@ -483,7 +483,7 @@ resources:
             storageSpec:
               volumeClaimTemplate:
                 spec:
-                  storageClassName: longhorn
+                  storageClassName: longhorn-db
                   accessModes:
                     - ReadWriteOnce
                   resources:

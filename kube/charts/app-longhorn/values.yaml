@@ -413,6 +413,10 @@ resources:
         csi:
           kubeletRootDir: /var/lib/kubelet
 
+        # the `longhorn` StorageClass stays, but it is not the default one: the PVCs have to ask for a class
+        persistence:
+          defaultClass: false
+
         defaultSettings:
           autoDeletePodWhenVolumeDetachedUnexpectedly: true
           nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
@@ -478,7 +482,36 @@ resources:
               value: "16"
 
           storageClasses:
-            longhorn-single-local-replica:
+            # for the databases: 2 replicas, and small backup blocks (2Mi) so that the incremental backups of the
+            # random writes of a database are small
+            longhorn-db:
+              annotations:
+                storageclass.kubernetes.io/is-default-class: "false"
+              provisioner: driver.longhorn.io
+              allowVolumeExpansion: true
+              volumeBindingMode: Immediate
+              reclaimPolicy: Delete
+              parameters:
+                numberOfReplicas: "2"
+                staleReplicaTimeout: "60" # 1h
+                fsType: ext4
+                backupBlockSize: 2Mi
+
+            # for the files: 2 replicas, and big backup blocks (16Mi), the files are written sequentially and rarely modified
+            longhorn-files:
+              annotations:
+                storageclass.kubernetes.io/is-default-class: "false"
+              provisioner: driver.longhorn.io
+              allowVolumeExpansion: true
+              volumeBindingMode: Immediate
+              reclaimPolicy: Delete
+              parameters:
+                numberOfReplicas: "2"
+                staleReplicaTimeout: "60" # 1h
+                fsType: ext4
+                backupBlockSize: 16Mi
+
+            longhorn-single-local-replica: # TODO drop?
               annotations:
                 storageclass.kubernetes.io/is-default-class: "false"
               provisioner: driver.longhorn.io

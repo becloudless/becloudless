@@ -198,12 +198,11 @@ resources:
             namespace: apps
       values:
         resources:
-          # settings and database of seerr
           persistentVolumeClaims:
             seerr-config:
               accessModes:
                 - ReadWriteOnce
-              storageClassName: longhorn
+              storageClassName: longhorn-files
               resources:
                 requests:
                   storage: 5Gi
