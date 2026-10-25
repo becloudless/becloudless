@@ -72,5 +72,6 @@ Any other key set next to these (ex: `interval`) is merged over the HelmRelease 
   {{- end }}
 {{- end }}
 
-{{- dict "resources" (dict "fluxHelmReleases" $helmReleases) | toYaml }}
+resources:
+  fluxHelmReleases: {{- $helmReleases | toYaml | nindent 4 }}
 {{- end }}

@@ -65,10 +65,10 @@ The leftovers must be deleted by hand once the release is gone.
   {{- end }}
 {{- end }}
 
-{{- dict "resources" (dict
-      "namespaces" $namespaces
-      "serviceAccounts" $serviceAccounts
-      "roleBindings" $roleBindings
-      "clusterRoleBindings" $clusterRoleBindings
-      "configMaps" $configMaps) | toYaml }}
+resources:
+  namespaces: {{- $namespaces | toYaml | nindent 4 }}
+  serviceAccounts: {{- $serviceAccounts | toYaml | nindent 4 }}
+  roleBindings: {{- $roleBindings | toYaml | nindent 4 }}
+  clusterRoleBindings: {{- $clusterRoleBindings | toYaml | nindent 4 }}
+  configMaps: {{- $configMaps | toYaml | nindent 4 }}
 {{- end }}

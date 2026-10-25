@@ -10,24 +10,26 @@ The account and its binding are kept (`helm.sh/resource-policy: keep`), the rele
 {{- define "app-apps.features.appsServiceAccount" }}
 {{- $rootContext := .rootContext }}
 
-{{- $name := "flux-apps" }}
 {{- $namespace := $rootContext.Release.Namespace }}
 
-{{- /* keep SA and bindings so flux can uninstall the release */}}
-{{- $keep := dict "helm.sh/resource-policy" "keep" }}
-
-{{- dict "resources" (dict
-      "serviceAccounts" (dict $name (dict
-        "namespace" $namespace
-        "annotations" $keep))
-      "clusterRoleBindings" (dict $name (dict
-        "annotations" $keep
-        "roleRef" (dict
-          "apiGroup" "rbac.authorization.k8s.io"
-          "kind" "ClusterRole"
-          "name" "cluster-admin")
-        "subjects" (dict $name (dict
-          "kind" "ServiceAccount"
-          "name" $name
-          "namespace" $namespace))))) | toYaml }}
+{{- /* keep SA and bindings (`helm.sh/resource-policy: keep`) so flux can uninstall the release */ -}}
+resources:
+  serviceAccounts:
+    flux-apps:
+      namespace: {{ $namespace }}
+      annotations:
+        helm.sh/resource-policy: keep
+  clusterRoleBindings:
+    flux-apps:
+      annotations:
+        helm.sh/resource-policy: keep
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: cluster-admin
+      subjects:
+        flux-apps:
+          kind: ServiceAccount
+          name: flux-apps
+          namespace: {{ $namespace }}
 {{- end }}

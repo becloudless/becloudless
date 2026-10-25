@@ -24,5 +24,5 @@ The result is used as a default: an explicit `apps.<name>.enabled` set by the us
   {{- end }}
 {{- end }}
 
-{{- dict "apps" $apps | toYaml }}
+apps: {{- $apps | toYaml | nindent 2 }}
 {{- end }}

@@ -25,5 +25,10 @@ Rendered as a `global-values` ConfigMap in the namespace of each app, used by th
   {{- $ldapdn = join "," $dcs }}
 {{- end }}
 
-{{- dict "global" (dict "domain" $domain "name" $name "ldapdn" $ldapdn "lldapUsers" ($config.lldapUsers | default dict)) | toYaml }}
+{{- $lldapUsers := $config.lldapUsers | default dict }}
+global:
+  domain: {{ $domain }}
+  name: {{ $name }}
+  ldapdn: {{ $ldapdn }}
+  lldapUsers: {{- $lldapUsers | toYaml | nindent 4 }}
 {{- end }}
