@@ -209,7 +209,7 @@ resources:
                     # Leave only a "items" key if not using group (group name, icon & tagstyle are optional, section separation will not be displayed).
                     services:
                       - name: "Media"
-                        icon: "fas fa-heartbeat"
+                        icon: "fas fa-photo-video"
                         items:
                           - name: Jellyfin
                             subtitle: Media player
@@ -223,64 +223,62 @@ resources:
                             subtitle: Photos management
                             logo: https://immich.{{ .Values.app.domain }}/favicon.ico
                             url: https://immich.{{ .Values.app.domain }}
-                      - name: "Applications"
-                        icon: "fas fa-heartbeat"
+                      - name: "Personal"
+                        icon: "fas fa-user"
                         items:
-                          - name: Gitea
-                            subtitle: Source code management
-                            logo: https://gitea.{{ .Values.app.domain }}/assets/img/favicon.png
-                            url: https://gitea.{{ .Values.app.domain }}
-                          - name: RuTorrent
-                            subtitle: Torrent downloader
-                            logo: https://rutorrent.{{ .Values.app.domain }}/images/favicon.ico
-                            url: https://rutorrent.{{ .Values.app.domain }}
-                          - name: Mailu
-                            subtitle: Emails
-                            logo: https://mail.{{ .Values.app.domain }}/favicon.ico
-                            url: https://mail.{{ .Values.app.domain }}
                           - name: Seafile
                             subtitle: Files hosting
                             logo: https://seafile.{{ .Values.app.domain }}/media/favicons/favicon.png
                             url: https://seafile.{{ .Values.app.domain }}
-                      - name: "System"
-                        #                    - name: Paperless
-                        #                      subtitle: Document management
-                        #                      logo: https://paperless.{{ .Values.app.domain }}/favicon.ico
-                        #                      url: https://paperless.{{ .Values.app.domain }}
-
+                          - name: Paperless
+                            subtitle: Document management
+                            icon: "fas fa-file-alt"
+                            url: https://paperless.{{ .Values.app.domain }}
+                          - name: Mailu
+                            subtitle: Emails
+                            logo: https://mail.{{ .Values.app.domain }}/favicon.ico
+                            url: https://mail.{{ .Values.app.domain }}
+                          - name: Element
+                            subtitle: Chat (Matrix)
+                            logo: https://element.{{ .Values.app.domain }}/favicon.ico
+                            url: https://element.{{ .Values.app.domain }}
+                      - name: "Development"
                         icon: "fas fa-code-branch"
                         items:
-                          - name: Longhorn
-                            subtitle: Distributed cluster storage
-                            logo: https://longhorn.{{ .Values.app.domain }}/favicon.ico
-                            url: https://longhorn.{{ .Values.app.domain }}
+                          - name: Forgejo
+                            subtitle: Source code management
+                            logo: https://forgejo.{{ .Values.app.domain }}/assets/img/favicon.png
+                            url: https://forgejo.{{ .Values.app.domain }}
+                      - name: "System"
+                        icon: "fas fa-cogs"
+                        items:
                           - name: Authelia
                             subtitle: Login portal
                             logo: https://authelia.{{ .Values.app.domain }}/favicon.ico
                             url: https://authelia.{{ .Values.app.domain }}
                           - name: Lldap
                             subtitle: Accounts management
+                            icon: "fas fa-users"
                             url: https://lldap.{{ .Values.app.domain }}
+                          - name: Longhorn
+                            subtitle: Distributed cluster storage
+                            logo: https://longhorn.{{ .Values.app.domain }}/favicon.ico
+                            url: https://longhorn.{{ .Values.app.domain }}
                           - name: WhoAmI
                             subtitle: Info about current connection
+                            icon: "fas fa-id-card"
                             url: https://whoami.{{ .Values.app.domain }}
                       - name: "Observability"
-                        icon: "fas fa-network-wired"
+                        icon: "fas fa-chart-line"
                         items:
                           - name: Grafana
-                            subtitle: Graph dashbards
+                            subtitle: Graph dashboards
                             logo: https://grafana.{{ .Values.app.domain }}/public/build/img/fav32.png
                             url: https://grafana.{{ .Values.app.domain }}
-                          - name: "Prometheus"
+                          - name: Prometheus
                             subtitle: Metrics monitoring
                             logo: https://prometheus.{{ .Values.app.domain }}/favicon.svg
-                            # subtitle: "Network-wide Ad Blocking" # optional, if no subtitle is defined, PiHole statistics will be shown
-                            tag: "other"
-                            url: "https://prometheus.{{ .Values.app.domain }}"
-                            type: "PiHole" # optional, loads a specific component that provides extra features. MUST MATCH a file name (without file extension) available in `src/components/services`
-                            target: "_blank" # optional html a tag target attribute
-                            # class: "green" # optional custom CSS class for card, useful with custom stylesheet
-                            # background: red # optional color for card to set color directly without custom stylesheet
+                            url: https://prometheus.{{ .Values.app.domain }}
                           - name: AlertManager
                             subtitle: Alerting
                             logo: https://alertmanager.{{ .Values.app.domain }}/favicon.ico

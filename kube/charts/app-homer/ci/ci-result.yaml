@@ -121,7 +121,7 @@ spec:
               # Leave only a "items" key if not using group (group name, icon & tagstyle are optional, section separation will not be displayed).
               services:
                 - name: "Media"
-                  icon: "fas fa-heartbeat"
+                  icon: "fas fa-photo-video"
                   items:
                     - name: Jellyfin
                       subtitle: Media player
@@ -135,64 +135,62 @@ spec:
                       subtitle: Photos management
                       logo: https://immich.test.com/favicon.ico
                       url: https://immich.test.com
-                - name: "Applications"
-                  icon: "fas fa-heartbeat"
+                - name: "Personal"
+                  icon: "fas fa-user"
                   items:
-                    - name: Gitea
-                      subtitle: Source code management
-                      logo: https://gitea.test.com/assets/img/favicon.png
-                      url: https://gitea.test.com
-                    - name: RuTorrent
-                      subtitle: Torrent downloader
-                      logo: https://rutorrent.test.com/images/favicon.ico
-                      url: https://rutorrent.test.com
-                    - name: Mailu
-                      subtitle: Emails
-                      logo: https://mail.test.com/favicon.ico
-                      url: https://mail.test.com
                     - name: Seafile
                       subtitle: Files hosting
                       logo: https://seafile.test.com/media/favicons/favicon.png
                       url: https://seafile.test.com
-                - name: "System"
-                  #                    - name: Paperless
-                  #                      subtitle: Document management
-                  #                      logo: https://paperless.test.com/favicon.ico
-                  #                      url: https://paperless.test.com
-
+                    - name: Paperless
+                      subtitle: Document management
+                      icon: "fas fa-file-alt"
+                      url: https://paperless.test.com
+                    - name: Mailu
+                      subtitle: Emails
+                      logo: https://mail.test.com/favicon.ico
+                      url: https://mail.test.com
+                    - name: Element
+                      subtitle: Chat (Matrix)
+                      logo: https://element.test.com/favicon.ico
+                      url: https://element.test.com
+                - name: "Development"
                   icon: "fas fa-code-branch"
                   items:
-                    - name: Longhorn
-                      subtitle: Distributed cluster storage
-                      logo: https://longhorn.test.com/favicon.ico
-                      url: https://longhorn.test.com
+                    - name: Forgejo
+                      subtitle: Source code management
+                      logo: https://forgejo.test.com/assets/img/favicon.png
+                      url: https://forgejo.test.com
+                - name: "System"
+                  icon: "fas fa-cogs"
+                  items:
                     - name: Authelia
                       subtitle: Login portal
                       logo: https://authelia.test.com/favicon.ico
                       url: https://authelia.test.com
                     - name: Lldap
                       subtitle: Accounts management
+                      icon: "fas fa-users"
                       url: https://lldap.test.com
+                    - name: Longhorn
+                      subtitle: Distributed cluster storage
+                      logo: https://longhorn.test.com/favicon.ico
+                      url: https://longhorn.test.com
                     - name: WhoAmI
                       subtitle: Info about current connection
+                      icon: "fas fa-id-card"
                       url: https://whoami.test.com
                 - name: "Observability"
-                  icon: "fas fa-network-wired"
+                  icon: "fas fa-chart-line"
                   items:
                     - name: Grafana
-                      subtitle: Graph dashbards
+                      subtitle: Graph dashboards
                       logo: https://grafana.test.com/public/build/img/fav32.png
                       url: https://grafana.test.com
-                    - name: "Prometheus"
+                    - name: Prometheus
                       subtitle: Metrics monitoring
                       logo: https://prometheus.test.com/favicon.svg
-                      # subtitle: "Network-wide Ad Blocking" # optional, if no subtitle is defined, PiHole statistics will be shown
-                      tag: "other"
-                      url: "https://prometheus.test.com"
-                      type: "PiHole" # optional, loads a specific component that provides extra features. MUST MATCH a file name (without file extension) available in `src/components/services`
-                      target: "_blank" # optional html a tag target attribute
-                      # class: "green" # optional custom CSS class for card, useful with custom stylesheet
-                      # background: red # optional color for card to set color directly without custom stylesheet
+                      url: https://prometheus.test.com
                     - name: AlertManager
                       subtitle: Alerting
                       logo: https://alertmanager.test.com/favicon.ico
