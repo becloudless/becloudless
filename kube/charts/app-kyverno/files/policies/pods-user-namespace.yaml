@@ -3,8 +3,10 @@
 # Every pod runs in a user namespace (https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/): root of the
 # container is an unprivileged user of the host. A `hostUsers` already set on the pod is kept.
 # Not applied to:
-#  - kube-system and longhorn-system: static pods, cilium and longhorn need the host users;
-#  - the pods using the host namespaces (`hostNetwork`, `hostPID`, `hostIPC`), the API server rejects them with `hostUsers: false`;
+#  - the pods using the host namespaces (`hostNetwork`, `hostPID`, `hostIPC`), the API server rejects them with `hostUsers: false`
+#    (static pods of the control plane, cilium, ...);
+#  - the longhorn components that are privileged or use host paths (manager, instance-manager, engine-image, csi plugin and
+#    csi sidecars), they need the host users;
 #  - the pods using raw block devices (`volumeDevices`), not supported with user namespaces;
 #  - the pods with the annotation `bcl/hostUsers: "true"`, to opt out an app that does not work with it.
 # `Ignore`: a Kyverno outage must not block the creation of pods.
@@ -21,9 +23,25 @@ rules:
     exclude:
       any:
         - resources:
-            namespaces:
-              - kube-system
-              - longhorn-system
+            selector:
+              matchLabels:
+                longhorn.io/component: engine-image
+        - resources:
+            selector:
+              matchLabels:
+                longhorn.io/component: instance-manager
+        - resources:
+            selector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - longhorn-manager
+                    - longhorn-csi-plugin
+                    - csi-attacher
+                    - csi-provisioner
+                    - csi-resizer
+                    - csi-snapshotter
         - resources:
             annotations:
               bcl/hostUsers: "true"
