@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=../../../base/schema/resources/kyvernoClusterPolicies.json
+
+# The containers must not run as root (`runAsNonRoot: true`, on the pod or on every container, and never `false` on a
+# container). With user namespaces (see pod-set-host-users) root is not root on the host, but it keeps all the capabilities in the
+# container, which is a bigger kernel attack surface, and it can modify what the image contains.
+# `Audit`: the violations are in the PolicyReports (`kubectl get polr -A`), the pods are not blocked. Switch to `Enforce` once
+# the apps that are not compliant are fixed.
+# Not applied to:
+#  - the pods with a privileged container, they are the components that need the host (longhorn, ...);
+#  - the static pods (mirror pods), only the kubelet manages them;
+#  - the pods with the annotation `policy.bcl/skipContainerRequireRunAsNonRoot: "true"`, to opt out an app that does not work with it.
+failurePolicy: Ignore
+validationFailureAction: Audit
+background: true
+rules:
+  - name: container-require-run-as-non-root
+    match:
+      any:
+        - resources:
+            kinds:
+              - Pod
+            operations:
+              - CREATE
+              - UPDATE
+    exclude:
+      any:
+        - resources:
+            annotations:
+              kubernetes.io/config.mirror: "?*"
+        - resources:
+            annotations:
+              policy.bcl/skipContainerRequireRunAsNonRoot: "true"
+    preconditions:
+      all:
+        - key: "{{ request.object.spec.[containers, initContainers][] | [?securityContext.privileged == `true`] | length(@) }}"
+          operator: Equals
+          value: 0
+    validate:
+      message: the containers must set `runAsNonRoot` to `true`, on the pod or on every container
+      anyPattern:
+        # on the pod, a container can only turn it off with an explicit `false`
+        - spec:
+            securityContext:
+              runAsNonRoot: true
+            =(initContainers):
+              - =(securityContext):
+                  =(runAsNonRoot): true
+            containers:
+              - =(securityContext):
+                  =(runAsNonRoot): true
+        # a user other than root on the pod, a container can only change it for another user
+        - spec:
+            securityContext:
+              runAsUser: ">0"
+            =(initContainers):
+              - =(securityContext):
+                  =(runAsUser): ">0"
+            containers:
+              - =(securityContext):
+                  =(runAsUser): ">0"
+        # on every container
+        - spec:
+            =(initContainers):
+              - securityContext:
+                  runAsNonRoot: true
+            containers:
+              - securityContext:
+                  runAsNonRoot: true

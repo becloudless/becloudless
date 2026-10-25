@@ -344,7 +344,7 @@ spec:
       retryInterval: 5m
   values:
     annotations:
-      bcl/hostUsers: "true"
+      policy.bcl/skipPodSetHostUsers: "true"
     csi:
       kubeletRootDir: /var/lib/kubelet
     defaultBackupStore:
@@ -635,7 +635,7 @@ spec:
                     envFrom:
                     - configMapRef:
                         name: longhorn-nixos-path
-            name: add-env-vars
+            name: container-add-env-vars
         longhorn-host-users:
           failurePolicy: Ignore
           rules:
@@ -686,10 +686,9 @@ spec:
                       - longhorn-uninstall
             mutate:
               patchStrategicMerge:
-                metadata:
-                  annotations:
-                    bcl/hostUsers: "true"
-            name: annotate-host-users
+                spec:
+                  hostUsers: true
+            name: pod-set-host-users
 ---
 # Source: app-longhorn/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

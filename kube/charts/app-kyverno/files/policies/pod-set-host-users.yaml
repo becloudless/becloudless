@@ -6,13 +6,13 @@
 #  - the pods using the host namespaces (`hostNetwork`, `hostPID`, `hostIPC`), the API server rejects them with `hostUsers: false`
 #    (static pods of the control plane, cilium, ...);
 #  - the pods using raw block devices (`volumeDevices`), not supported with user namespaces;
-#  - the pods with the annotation `bcl/hostUsers: "true"`, to opt out an app that does not work with it (each app chart
-#    sets it for its own pods, see app-longhorn). It must be set before this policy runs, the policies are applied in alphabetical
-#    order.
+#  - the pods with the annotation `policy.bcl/skipPodSetHostUsers: "true"`, to opt out an app that does not work with it (set in the pod
+#    template, for the pods of a chart). For the pods an operator creates, a policy of the app sets `spec.hostUsers: true`
+#    (see app-longhorn), as the order of the mutate policies is not guaranteed.
 # `Ignore`: a Kyverno outage must not block the creation of pods.
 failurePolicy: Ignore
 rules:
-  - name: set-host-users
+  - name: pod-set-host-users
     match:
       any:
         - resources:
@@ -24,7 +24,7 @@ rules:
       any:
         - resources:
             annotations:
-              bcl/hostUsers: "true"
+              policy.bcl/skipPodSetHostUsers: "true"
     preconditions:
       all:
         - key: "{{ request.object.spec.hostNetwork || `false` }}"

@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=../../../base/schema/resources/kyvernoClusterPolicies.json
+
+# The containers must have a read-only root filesystem (`securityContext.readOnlyRootFilesystem: true`): a compromised process can
+# not modify the binaries or the configuration of the image. The paths the app writes to are `emptyDir` or volumes.
+# `Audit`: the violations are in the PolicyReports (`kubectl get polr -A`), the pods are not blocked. Switch to `Enforce` once
+# the apps that are not compliant are fixed.
+# Not applied to:
+#  - the pods with a privileged container, they are the components that need the host (longhorn, ...);
+#  - the static pods (mirror pods), only the kubelet manages them;
+#  - the pods with the annotation `policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"`, to opt out an app that does not work with it.
+failurePolicy: Ignore
+validationFailureAction: Audit
+background: true
+rules:
+  - name: container-require-read-only-root-filesystem
+    match:
+      any:
+        - resources:
+            kinds:
+              - Pod
+            operations:
+              - CREATE
+              - UPDATE
+    exclude:
+      any:
+        - resources:
+            annotations:
+              kubernetes.io/config.mirror: "?*"
+        - resources:
+            annotations:
+              policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
+    preconditions:
+      all:
+        - key: "{{ request.object.spec.[containers, initContainers][] | [?securityContext.privileged == `true`] | length(@) }}"
+          operator: Equals
+          value: 0
+    validate:
+      message: the containers must set `securityContext.readOnlyRootFilesystem` to `true`
+      pattern:
+        spec:
+          =(initContainers):
+            - securityContext:
+                readOnlyRootFilesystem: true
+          containers:
+            - securityContext:
+                readOnlyRootFilesystem: true

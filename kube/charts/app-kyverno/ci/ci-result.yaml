@@ -162,14 +162,241 @@ spec:
   values:
     resources:
       kyvernoClusterPolicies:
-        pods-user-namespace:
+        container-disallow-latest-tag:
+          failurePolicy: Ignore
+          rules:
+          - match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+                  operations:
+                  - CREATE
+            name: container-require-image-tag
+            validate:
+              message: the images must have a tag or a digest
+              pattern:
+                spec:
+                  =(initContainers):
+                  - image: '*:*'
+                  containers:
+                  - image: '*:*'
+          - match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+                  operations:
+                  - CREATE
+            name: container-disallow-latest-tag
+            validate:
+              message: the images must not use the `latest` tag
+              pattern:
+                spec:
+                  =(initContainers):
+                  - image: '!*:latest'
+                  containers:
+                  - image: '!*:latest'
+          validationFailureAction: Enforce
+        container-require-read-only-root-filesystem:
+          background: true
           failurePolicy: Ignore
           rules:
           - exclude:
               any:
               - resources:
                   annotations:
-                    bcl/hostUsers: "true"
+                    kubernetes.io/config.mirror: ?*
+              - resources:
+                  annotations:
+                    policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
+            match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+                  operations:
+                  - CREATE
+                  - UPDATE
+            name: container-require-read-only-root-filesystem
+            preconditions:
+              all:
+              - key: '{{"{{"}} request.object.spec.[containers, initContainers][]
+                  | [?securityContext.privileged == `true`] | length(@) {{"}}"}}'
+                operator: Equals
+                value: 0
+            validate:
+              message: the containers must set `securityContext.readOnlyRootFilesystem`
+                to `true`
+              pattern:
+                spec:
+                  =(initContainers):
+                  - securityContext:
+                      readOnlyRootFilesystem: true
+                  containers:
+                  - securityContext:
+                      readOnlyRootFilesystem: true
+          validationFailureAction: Audit
+        container-require-run-as-non-root:
+          background: true
+          failurePolicy: Ignore
+          rules:
+          - exclude:
+              any:
+              - resources:
+                  annotations:
+                    kubernetes.io/config.mirror: ?*
+              - resources:
+                  annotations:
+                    policy.bcl/skipContainerRequireRunAsNonRoot: "true"
+            match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+                  operations:
+                  - CREATE
+                  - UPDATE
+            name: container-require-run-as-non-root
+            preconditions:
+              all:
+              - key: '{{"{{"}} request.object.spec.[containers, initContainers][]
+                  | [?securityContext.privileged == `true`] | length(@) {{"}}"}}'
+                operator: Equals
+                value: 0
+            validate:
+              anyPattern:
+              - spec:
+                  =(initContainers):
+                  - =(securityContext):
+                      =(runAsNonRoot): true
+                  containers:
+                  - =(securityContext):
+                      =(runAsNonRoot): true
+                  securityContext:
+                    runAsNonRoot: true
+              - spec:
+                  =(initContainers):
+                  - =(securityContext):
+                      =(runAsUser): '>0'
+                  containers:
+                  - =(securityContext):
+                      =(runAsUser): '>0'
+                  securityContext:
+                    runAsUser: '>0'
+              - spec:
+                  =(initContainers):
+                  - securityContext:
+                      runAsNonRoot: true
+                  containers:
+                  - securityContext:
+                      runAsNonRoot: true
+              message: the containers must set `runAsNonRoot` to `true`, on the pod
+                or on every container
+          validationFailureAction: Audit
+        container-set-image-pull-policy:
+          rules:
+          - match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+            mutate:
+              patchStrategicMerge:
+                spec:
+                  containers:
+                  - (image): '*'
+                    imagePullPolicy: IfNotPresent
+            name: container-set-image-pull-policy
+        container-set-no-privilege-escalation:
+          failurePolicy: Ignore
+          rules:
+          - exclude:
+              any:
+              - resources:
+                  annotations:
+                    kubernetes.io/config.mirror: ?*
+              - resources:
+                  annotations:
+                    policy.bcl/skipContainerSetNoPrivilegeEscalation: "true"
+            match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+                  operations:
+                  - CREATE
+            mutate:
+              patchStrategicMerge:
+                spec:
+                  containers:
+                  - (name): '*'
+                    securityContext:
+                      +(allowPrivilegeEscalation): false
+                  initContainers:
+                  - (name): '*'
+                    securityContext:
+                      +(allowPrivilegeEscalation): false
+            name: container-set-no-privilege-escalation
+            preconditions:
+              all:
+              - key: '{{"{{"}} request.object.spec.[containers, initContainers][]
+                  | [?securityContext.privileged == `true`] | length(@) {{"}}"}}'
+                operator: Equals
+                value: 0
+              - key: '{{"{{"}} request.object.spec.[containers, initContainers][]
+                  | [?contains(securityContext.capabilities.add || `[]`, ''SYS_ADMIN'')]
+                  | length(@) {{"}}"}}'
+                operator: Equals
+                value: 0
+        hr-ks-require-service-account:
+          failurePolicy: Ignore
+          rules:
+          - match:
+              any:
+              - resources:
+                  kinds:
+                  - helm.toolkit.fluxcd.io/v2/HelmRelease
+                  - kustomize.toolkit.fluxcd.io/v1/Kustomization
+            name: hr-ks-require-service-account
+            validate:
+              message: spec.serviceAccountName is required, the resource would run
+                with the permissions of the flux controller
+              pattern:
+                spec:
+                  serviceAccountName: ?*
+          validationFailureAction: Enforce
+        pod-disable-service-links:
+          failurePolicy: Ignore
+          rules:
+          - exclude:
+              any:
+              - resources:
+                  annotations:
+                    kubernetes.io/config.mirror: ?*
+              - resources:
+                  annotations:
+                    policy.bcl/skipPodDisableServiceLinks: "true"
+            match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+                  operations:
+                  - CREATE
+            mutate:
+              patchStrategicMerge:
+                spec:
+                  +(enableServiceLinks): false
+            name: pod-disable-service-links
+        pod-set-host-users:
+          failurePolicy: Ignore
+          rules:
+          - exclude:
+              any:
+              - resources:
+                  annotations:
+                    policy.bcl/skipPodSetHostUsers: "true"
             match:
               any:
               - resources:
@@ -181,7 +408,7 @@ spec:
               patchStrategicMerge:
                 spec:
                   +(hostUsers): false
-            name: set-host-users
+            name: pod-set-host-users
             preconditions:
               all:
               - key: '{{"{{"}} request.object.spec.hostNetwork || `false` {{"}}"}}'
@@ -197,37 +424,42 @@ spec:
                   {{"}}"}}'
                 operator: Equals
                 value: 0
-        require-flux-service-account:
+        pod-set-seccomp-profile:
           failurePolicy: Ignore
           rules:
-          - match:
+          - exclude:
               any:
               - resources:
-                  kinds:
-                  - helm.toolkit.fluxcd.io/v2/HelmRelease
-                  - kustomize.toolkit.fluxcd.io/v1/Kustomization
-            name: require-service-account
-            validate:
-              message: spec.serviceAccountName is required, the resource would run
-                with the permissions of the flux controller
-              pattern:
-                spec:
-                  serviceAccountName: ?*
-          validationFailureAction: Enforce
-        set-image-pull-policy:
-          rules:
-          - match:
+                  annotations:
+                    kubernetes.io/config.mirror: ?*
+              - resources:
+                  annotations:
+                    policy.bcl/skipPodSetSeccompProfile: "true"
+            match:
               any:
               - resources:
                   kinds:
                   - Pod
+                  operations:
+                  - CREATE
             mutate:
               patchStrategicMerge:
                 spec:
-                  containers:
-                  - (image): '*'
-                    imagePullPolicy: IfNotPresent
-            name: set-image-pull-policy
+                  securityContext:
+                    +(seccompProfile):
+                      type: RuntimeDefault
+            name: pod-set-seccomp-profile
+            preconditions:
+              all:
+              - key: '{{"{{"}} request.object.spec.[containers, initContainers][]
+                  | [?securityContext.privileged == `true`] | length(@) {{"}}"}}'
+                operator: Equals
+                value: 0
+              - key: '{{"{{"}} request.object.spec.[containers, initContainers][]
+                  | [?contains(securityContext.capabilities.add || `[]`, ''SYS_ADMIN'')]
+                  | length(@) {{"}}"}}'
+                operator: Equals
+                value: 0
 ---
 # Source: app-kyverno/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

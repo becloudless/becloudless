@@ -4,7 +4,7 @@ the `flux-<name>` service account (see the namespaces feature).
 The HelmReleases and Kustomizations created by the chart of the app get the same service account by default
 (`defaults.resources` of its values). This is only a default: the enforcement is the `--default-service-account` flag of the flux
 controllers (app-flux), which makes a resource without service account run as the unprivileged `default` one, and the
-`require-flux-service-account` policy (app-kyverno).
+`helmrelease-kustomization-require-service-account` policy (app-kyverno).
 
 Per app:
   - `namespace`: namespace of the app, `<name>` by default
