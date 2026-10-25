@@ -153,41 +153,76 @@ spec:
   values:
     resources:
       kyvernoClusterPolicies:
+        pods-user-namespace:
+          failurePolicy: Ignore
+          rules:
+          - exclude:
+              any:
+              - resources:
+                  namespaces:
+                  - kube-system
+                  - longhorn-system
+              - resources:
+                  annotations:
+                    bcl/hostUsers: "true"
+            match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+                  operations:
+                  - CREATE
+            mutate:
+              patchStrategicMerge:
+                spec:
+                  +(hostUsers): false
+            name: set-host-users
+            preconditions:
+              all:
+              - key: '{{"{{"}} request.object.spec.hostNetwork || `false` {{"}}"}}'
+                operator: Equals
+                value: false
+              - key: '{{"{{"}} request.object.spec.hostPID || `false` {{"}}"}}'
+                operator: Equals
+                value: false
+              - key: '{{"{{"}} request.object.spec.hostIPC || `false` {{"}}"}}'
+                operator: Equals
+                value: false
+              - key: '{{"{{"}} length(request.object.spec.containers[?volumeDevices])
+                  {{"}}"}}'
+                operator: Equals
+                value: 0
         require-flux-service-account:
           failurePolicy: Ignore
           rules:
-            require-service-account:
-              match:
-                any:
-                  flux:
-                    resources:
-                      kinds:
-                      - helm.toolkit.fluxcd.io/v2/HelmRelease
-                      - kustomize.toolkit.fluxcd.io/v1/Kustomization
-              name: require-service-account
-              validate:
-                message: spec.serviceAccountName is required, the resource would run
-                  with the permissions of the flux controller
-                pattern:
-                  spec:
-                    serviceAccountName: ?*
+          - match:
+              any:
+              - resources:
+                  kinds:
+                  - helm.toolkit.fluxcd.io/v2/HelmRelease
+                  - kustomize.toolkit.fluxcd.io/v1/Kustomization
+            name: require-service-account
+            validate:
+              message: spec.serviceAccountName is required, the resource would run
+                with the permissions of the flux controller
+              pattern:
+                spec:
+                  serviceAccountName: ?*
           validationFailureAction: Enforce
         set-image-pull-policy:
           rules:
-            set-image-pull-policy:
-              match:
-                any:
-                  pods:
-                    resources:
-                      kinds:
-                      - Pod
-              mutate:
-                patchStrategicMerge:
-                  spec:
-                    containers:
-                    - (image): '*'
-                      imagePullPolicy: IfNotPresent
-              name: set-image-pull-policy
+          - match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+            mutate:
+              patchStrategicMerge:
+                spec:
+                  containers:
+                  - (image): '*'
+                    imagePullPolicy: IfNotPresent
+            name: set-image-pull-policy
 ---
 # Source: app-kyverno/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

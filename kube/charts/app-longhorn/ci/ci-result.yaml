@@ -614,27 +614,26 @@ spec:
             policies.kyverno.io/title: Add Environment Variables from ConfigMap
           failurePolicy: Fail
           rules:
-            add-env-vars:
-              match:
-                resources:
-                  kinds:
-                  - Pod
-                  namespaces:
-                  - longhorn-system
-              mutate:
-                patchStrategicMerge:
-                  spec:
-                    containers:
-                    - (name): '*'
-                      envFrom:
-                      - configMapRef:
-                          name: longhorn-nixos-path
-                    initContainers:
-                    - (name): '*'
-                      envFrom:
-                      - configMapRef:
-                          name: longhorn-nixos-path
-              name: add-env-vars
+          - match:
+              resources:
+                kinds:
+                - Pod
+                namespaces:
+                - longhorn-system
+            mutate:
+              patchStrategicMerge:
+                spec:
+                  containers:
+                  - (name): '*'
+                    envFrom:
+                    - configMapRef:
+                        name: longhorn-nixos-path
+                  initContainers:
+                  - (name): '*'
+                    envFrom:
+                    - configMapRef:
+                        name: longhorn-nixos-path
+            name: add-env-vars
 ---
 # Source: app-longhorn/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

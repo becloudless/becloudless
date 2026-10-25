@@ -247,6 +247,9 @@ resources:
     sourceCRD:
       url: https://raw.githubusercontent.com/kyverno/kyverno/main/config/crds/kyverno/kyverno.io_clusterpolicies.yaml
       crdVersion: v1
+    mutations:
+      arraysToMaps:
+        disabled: true
   - name: longhornRecurringJobs
     sourceCRD:
       url: https://raw.githubusercontent.com/longhorn/longhorn/master/deploy/longhorn.yaml

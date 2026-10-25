@@ -267,8 +267,7 @@ resources:
                   NixOS based systems.
               failurePolicy: Fail
               rules:
-                add-env-vars:
-                  name: add-env-vars
+                - name: add-env-vars
                   match:
                     resources:
                       kinds:
