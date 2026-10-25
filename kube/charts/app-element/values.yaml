@@ -1,7 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
-  name:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 # Element Web (https://element.io): the web client of Matrix, for the homeserver of `app-tuwunel` (`matrix.<domain>`), on
 # `element.<domain>`. It is a static application that runs in the browser: the only thing the pods do is to serve the files and the
@@ -45,8 +42,8 @@ resources:
                   {
                     "default_server_config": {
                       "m.homeserver": {
-                        "base_url": "https://matrix.{{ .Values.global.domain }}",
-                        "server_name": "matrix.{{ .Values.global.domain }}"
+                        "base_url": "https://matrix.{{ .Values.app.domain }}",
+                        "server_name": "matrix.{{ .Values.app.domain }}"
                       }
                     },
                     "disable_custom_urls": true,
@@ -56,7 +53,7 @@ resources:
                       "on_welcome_page": true
                     },
                     "room_directory": {
-                      "servers": ["matrix.{{ .Values.global.domain }}"]
+                      "servers": ["matrix.{{ .Values.app.domain }}"]
                     },
                     "brand": "Element",
                     "show_labs_settings": false
@@ -167,7 +164,7 @@ resources:
             element-gateway:
               secretName: tls-element-gateway
               dnsNames:
-                element: element.{{ .Values.global.domain }}
+                element: element.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -184,7 +181,7 @@ resources:
               listeners:
                 https:
                   name: https
-                  hostname: element.{{ .Values.global.domain }}
+                  hostname: element.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -204,7 +201,7 @@ resources:
                   kind: ListenerSet
                   name: element
               hostnames:
-                element: element.{{ .Values.global.domain }}
+                element: element.{{ .Values.app.domain }}
               rules:
                 root:
                   backendRefs:

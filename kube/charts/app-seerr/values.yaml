@@ -1,7 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
-  name:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 # Nothing has to be done in the web UI: seerr has no way to be configured by environment, so the `configure` init container writes
 # `settings.json` (created if missing) at each start, the setup wizard is skipped:
@@ -43,7 +40,7 @@ resources:
             postgresql: {ports: {p5432: {port: "5432", protocol: TCP}}}
         authelia: # the OIDC issuer is the public address of authelia
           toFQDNs:
-            authelia: {matchName: "authelia.{{ .Values.global.domain }}"}
+            authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
           toPorts:
             https: {ports: {p443: {port: "443", protocol: TCP}}}
         gateway: # the public addresses of the cluster are the gateway for the pods (jellyfin by its public address)
@@ -413,8 +410,8 @@ resources:
                       image: ghcr.io/seerr-team/seerr:preview-new-oidc@sha256:28744b1ced522beb7af8e5c966b73c6e46b1dc2c4c8cb497ad2f12d3139699a3
                       command: [ node, /scripts/configure.js ]
                       env:
-                        APP_URL: https://seerr.{{ .Values.global.domain }}
-                        ISSUER_URL: https://authelia.{{ .Values.global.domain }}
+                        APP_URL: https://seerr.{{ .Values.app.domain }}
+                        ISSUER_URL: https://authelia.{{ .Values.app.domain }}
                         CLIENT_ID:
                           secretKeyRef:
                             name: seerr-oidc
@@ -426,7 +423,7 @@ resources:
                         JELLYFIN_URL: http://jellyfin.jellyfin:8096 # by its service, the one of the policy
                         JELLYFIN_HOST: jellyfin.jellyfin
                         JELLYFIN_PORT: "8096"
-                        JELLYFIN_EXTERNAL_URL: https://jellyfin.{{ .Values.global.domain }}
+                        JELLYFIN_EXTERNAL_URL: https://jellyfin.{{ .Values.app.domain }}
                         JELLYFIN_USER: admin
                         JELLYFIN_PASSWORD:
                           secretKeyRef:
@@ -515,7 +512,7 @@ resources:
                           secretKeyRef:
                             name: seerr-jellyfin
                             key: password
-                        ADMIN_EMAIL: admin@{{ .Values.global.domain }}
+                        ADMIN_EMAIL: admin@{{ .Values.app.domain }}
                       securityContext:
                         allowPrivilegeEscalation: false
                         readOnlyRootFilesystem: true
@@ -583,7 +580,7 @@ resources:
             seerr-gateway:
               secretName: tls-seerr-gateway
               dnsNames:
-                seerr: seerr.{{ .Values.global.domain }}
+                seerr: seerr.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -600,7 +597,7 @@ resources:
               listeners:
                 https:
                   name: https
-                  hostname: seerr.{{ .Values.global.domain }}
+                  hostname: seerr.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -620,7 +617,7 @@ resources:
                   kind: ListenerSet
                   name: seerr
               hostnames:
-                seerr: seerr.{{ .Values.global.domain }}
+                seerr: seerr.{{ .Values.app.domain }}
               rules:
                 root:
                   backendRefs:

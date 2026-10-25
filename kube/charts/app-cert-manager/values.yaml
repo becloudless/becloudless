@@ -1,6 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 resources:
   fluxHelmRepositories:
@@ -23,8 +21,8 @@ resources:
             https: {ports: {p443: {port: "443", protocol: TCP}}}
         self-check: # the self check of the http-01 challenge: the names of the domain served by an external address (mail)
           toFQDNs:
-            domain: {matchName: "{{ .Values.global.domain }}"}
-            subdomains: {matchPattern: "**.{{ .Values.global.domain }}"}
+            domain: {matchName: "{{ .Values.app.domain }}"}
+            subdomains: {matchPattern: "**.{{ .Values.app.domain }}"}
           toPorts:
             web:
               ports:
@@ -111,7 +109,7 @@ resources:
           certManagerClusterIssuers:
             letsencrypt-prod:
               acme:
-                email: admin@{{ .Values.global.domain }}
+                email: admin@{{ .Values.app.domain }}
                 server: https://acme-v02.api.letsencrypt.org/directory
                 privateKeySecretRef:
                   name: letsencrypt-prod
@@ -127,7 +125,7 @@ resources:
 
             letsencrypt-staging:
               acme:
-                email: admin@{{ .Values.global.domain }}
+                email: admin@{{ .Values.app.domain }}
                 server: https://acme-staging-v02.api.letsencrypt.org/directory
                 privateKeySecretRef:
                   name: letsencrypt-staging

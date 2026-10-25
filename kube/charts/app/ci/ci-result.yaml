@@ -1,0 +1,11 @@
+---
+# Source: app-test/templates/loader.yaml
+apiVersion: v1
+data:
+  domain: test.com
+  lldapdn: dc=test,dc=com
+  name: test
+kind: ConfigMap
+metadata:
+  name: app
+  namespace: default

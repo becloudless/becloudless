@@ -1,11 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
-  name:
-
-  # the users of the cluster (the key is the user id), the ones of the group `app_syncthing` get an instance, see `templates/_instances.tpl`.
-  # Declared by the cluster as `config.lldapUsers` of `apps`, shared with lldap (`lldap-post`) through the global values.
-  lldapUsers: {}
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 # Syncthing (https://syncthing.net): continuous file synchronization.
 #

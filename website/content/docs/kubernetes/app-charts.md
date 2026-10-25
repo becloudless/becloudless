@@ -21,6 +21,28 @@ The `apps` chart (`kube/charts/apps`) has a registry of apps in its `apps` value
 The resources of the chart are created in the namespace of its `HelmRelease`, so charts do not set a default
 namespace. Resource names are the id of the resource: `prefixNamesWithRelease` is `false` by default in `base`.
 
+## App values
+
+The cluster values every app needs are the `app` values of the `app` library chart (`kube/charts/app`), which
+inherits from `base`:
+
+| Value | Description |
+|---|---|
+| `app.domain` | domain of the cluster |
+| `app.name` | name of the cluster, deduced from the domain by default |
+| `app.lldapdn` | base DN of lldap, deduced from the domain by default (`dc=example,dc=com`) |
+| `app.lldapUsers` | users of the cluster, created in lldap and given an instance by some apps |
+
+The `apps` chart computes them from its `config` and gives them to each app as a `global-values` ConfigMap in the
+namespace of the app, used as `valuesFrom` of the `HelmRelease`. In an app chart they are read with `.Values.app.domain`,
+`.Values.app.name`... and are required (`checkRequiredValues`).
+
+An app chart declares both `app` and `base` in its `dependencies`, uses `app.loader.all` (or `app.loader.init` to
+render with its own templates) instead of `base.loader.all`, and gets its default values merged with those of `app`
+and `base`. Its editor schema (`schema/values.schema.json`) references `../app/schema/values.schema.json`, where the
+`app` schema lives. A chart that does not use the cluster values (`app-external-secrets`, `app-gateway-api`) stays
+on `base.loader.all`.
+
 ## Sub-HRs
 
 A chart does not create everything in its own release. A resource that needs something that does not exist yet

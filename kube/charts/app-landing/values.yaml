@@ -1,6 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 resources:
 
@@ -37,7 +35,7 @@ resources:
                   <head>
                     <meta charset="utf-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1">
-                    <title>{{ .Values.global.domain }}</title>
+                    <title>{{ .Values.app.domain }}</title>
                     <style>
                       html, body { height: 100%; margin: 0; }
                       body {
@@ -55,7 +53,7 @@ resources:
                   </head>
                   <body>
                     <main>
-                      <h1>{{ .Values.global.domain }}</h1>
+                      <h1>{{ .Values.app.domain }}</h1>
                       <p>Nothing to see here.</p>
                     </main>
                   </body>
@@ -154,7 +152,7 @@ resources:
             landing:
               secretName: tls-landing
               dnsNames:
-                apex: "{{ .Values.global.domain }}"
+                apex: "{{ .Values.app.domain }}"
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -169,7 +167,7 @@ resources:
               listeners:
                 https:
                   name: https
-                  hostname: "{{ .Values.global.domain }}"
+                  hostname: "{{ .Values.app.domain }}"
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -189,7 +187,7 @@ resources:
                   kind: ListenerSet
                   name: landing
               hostnames:
-                apex: "{{ .Values.global.domain }}"
+                apex: "{{ .Values.app.domain }}"
               rules:
                 root:
                   backendRefs:

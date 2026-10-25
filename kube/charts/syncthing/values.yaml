@@ -1,6 +1,6 @@
 # One Syncthing instance (https://syncthing.net), named after the release: install it once for each user.
 #
-#  - the web UI is `https://<user>.syncthing.<global.domain>` on the Cilium Gateway `shared`, behind the forward auth of authelia. The
+#  - the web UI is `https://<user>.syncthing.<app.domain>` on the Cilium Gateway `shared`, behind the forward auth of authelia. The
 #    access control of authelia (`domain_regex` with a `User` named group) only lets the user in. The UI has no authentication of its own, the
 #    pod only accepts the connections of the Gateway;
 #  - the pod is not exposed for the synchronization, and it cannot go out of the cluster (default deny of app-cilium) but to the relay
@@ -13,13 +13,10 @@
 
 prefixNamesWithRelease: true
 
-global:
-  domain:
-
 # the owner of the instance, required: the id of its LDAP user
 user:
 
-# `<user>.syncthing.<global.domain>` by default
+# `<user>.syncthing.<app.domain>` by default
 host: ""
 
 image: docker.io/syncthing/syncthing:2.1.7 # renovate: versioning=loose

@@ -1,2 +1,4 @@
-global:
+app:
   domain: test.com
+  name: test
+  lldapdn: dc=test,dc=com

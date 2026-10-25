@@ -102,10 +102,10 @@ metadata:
 apiVersion: v1
 data:
   values.yaml: |-
-    global:
+    app:
       domain: test.com
-      ldapdn: dc=test,dc=com
       lldapUsers: {}
+      lldapdn: dc=test,dc=com
       name: test
 kind: ConfigMap
 metadata:
@@ -116,10 +116,10 @@ metadata:
 apiVersion: v1
 data:
   values.yaml: |-
-    global:
+    app:
       domain: test.com
-      ldapdn: dc=test,dc=com
       lldapUsers: {}
+      lldapdn: dc=test,dc=com
       name: test
 kind: ConfigMap
 metadata:
@@ -130,10 +130,10 @@ metadata:
 apiVersion: v1
 data:
   values.yaml: |-
-    global:
+    app:
       domain: test.com
-      ldapdn: dc=test,dc=com
       lldapUsers: {}
+      lldapdn: dc=test,dc=com
       name: test
 kind: ConfigMap
 metadata:
@@ -144,10 +144,10 @@ metadata:
 apiVersion: v1
 data:
   values.yaml: |-
-    global:
+    app:
       domain: test.com
-      ldapdn: dc=test,dc=com
       lldapUsers: {}
+      lldapdn: dc=test,dc=com
       name: test
 kind: ConfigMap
 metadata:
@@ -158,10 +158,10 @@ metadata:
 apiVersion: v1
 data:
   values.yaml: |-
-    global:
+    app:
       domain: test.com
-      ldapdn: dc=test,dc=com
       lldapUsers: {}
+      lldapdn: dc=test,dc=com
       name: test
 kind: ConfigMap
 metadata:

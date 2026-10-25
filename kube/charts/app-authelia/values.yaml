@@ -1,9 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
-  name:
-  ldapdn:
-
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 resources:
 
@@ -490,9 +485,9 @@ resources:
             disable_startup_check: false # in case of emergency
             smtp:
               enabled: false
-              address: submissions://mail.{{ .Values.global.domain }}:465
-              sender: '{{ .Values.global.name }} Authelia <authelia@{{ .Values.global.domain }}>'
-              username: authelia@{{ .Values.global.domain }}
+              address: submissions://mail.{{ .Values.app.domain }}:465
+              sender: '{{ .Values.app.name }} Authelia <authelia@{{ .Values.app.domain }}>'
+              username: authelia@{{ .Values.app.domain }}
               password: {}
 
           authentication_backend:
@@ -503,15 +498,15 @@ resources:
               implementation: lldap
               # the service of lldap, with the name of the publicly trusted certificate of its ldaps listener (`tls-lldaps`)
               address: ldaps://lldap.lldap.svc.cluster.local:6360
-              base_dn: "{{ .Values.global.ldapdn }}"
+              base_dn: "{{ .Values.app.lldapdn }}"
               # created by `lldap-post`, its password is copied from the lldap namespace by the ExternalSecret `authelia-ldap`
-              user: 'UID=authelia,OU=people,{{ .Values.global.ldapdn }}'
+              user: 'UID=authelia,OU=people,{{ .Values.app.lldapdn }}'
               password:
                 secret_name: authelia-ldap
                 value: password
                 path: password
               tls:
-                server_name: lldaps.{{ .Values.global.domain }}
+                server_name: lldaps.{{ .Values.app.domain }}
                 skip_verify: false
                 minimum_version: TLS1.2
               attributes:
@@ -538,7 +533,7 @@ resources:
                 value: authelia
                 path: authelia
             cookies:
-              - domain: "{{ .Values.global.domain }}"
+              - domain: "{{ .Values.app.domain }}"
                 subdomain: authelia
             encryption_key:
               secret_name: authelia-generated
@@ -549,73 +544,73 @@ resources:
               min_score: 4
 
           totp:
-            issuer: "{{ .Values.global.name }} Authelia"
+            issuer: "{{ .Values.app.name }} Authelia"
           webauthn:
-            display_name: "{{ .Values.global.name }} Authelia"
+            display_name: "{{ .Values.app.name }} Authelia"
 
           access_control:
             default_policy: deny
             rules:
               - domain:
-                  - forgejo.{{ .Values.global.domain }}
-                  - homer.{{ .Values.global.domain }}
-                  - lldap.{{ .Values.global.domain }}
-                  - longhorn.{{ .Values.global.domain }}
-                  - mail.{{ .Values.global.domain }}
-                  - grafana.{{ .Values.global.domain }}
-                  - alertmanager.{{ .Values.global.domain }}
-                  - prometheus.{{ .Values.global.domain }}
-                  - fluxwebhook.{{ .Values.global.domain }}
-                  - rutorrent.{{ .Values.global.domain }}
+                  - forgejo.{{ .Values.app.domain }}
+                  - homer.{{ .Values.app.domain }}
+                  - lldap.{{ .Values.app.domain }}
+                  - longhorn.{{ .Values.app.domain }}
+                  - mail.{{ .Values.app.domain }}
+                  - grafana.{{ .Values.app.domain }}
+                  - alertmanager.{{ .Values.app.domain }}
+                  - prometheus.{{ .Values.app.domain }}
+                  - fluxwebhook.{{ .Values.app.domain }}
+                  - rutorrent.{{ .Values.app.domain }}
                 subject:
                   - [ 'group:role_admin' ]
                 policy: two_factor
               - domain_regex: # the Syncthing instance of a user (app-syncthing): the `User` named group has to be the username (no subject needed)
-                  - '^(?P<User>[a-z0-9-]+)\.syncthing\.{{ regexQuoteMeta .Values.global.domain }}$'
+                  - '^(?P<User>[a-z0-9-]+)\.syncthing\.{{ regexQuoteMeta .Values.app.domain }}$'
                 policy: two_factor
               - domain:
-                  - homer.{{ .Values.global.domain }}
+                  - homer.{{ .Values.app.domain }}
                 subject:
                   - [ 'group:role_user' ]
                   - [ 'group:role_admin' ]
                 policy: one_factor
               - domain:
-                  - seerr.{{ .Values.global.domain }}
+                  - seerr.{{ .Values.app.domain }}
                 subject:
                   - [ 'group:app_seerr' ]
                   - [ 'group:role_admin' ]
                 policy: two_factor
               - domain:
-                  - jellyfin.{{ .Values.global.domain }}
+                  - jellyfin.{{ .Values.app.domain }}
                 subject:
                   - [ 'group:app_jellyfin' ]
                   - [ 'group:role_admin' ]
                 policy: two_factor
               - domain:
-                  - forgejo.{{ .Values.global.domain }}
+                  - forgejo.{{ .Values.app.domain }}
                 subject:
                   - [ 'group:app_forgejo' ]
                   - [ 'group:role_admin' ]
                 policy: two_factor
               - domain:
-                  - pushprox.{{ .Values.global.domain }}
+                  - pushprox.{{ .Values.app.domain }}
                 subject:
                   - [ 'group:app_pushprox' ]
                   - [ 'group:role_admin' ]
                 policy: one_factor
               - domain:
-                  - immich.{{ .Values.global.domain }}
+                  - immich.{{ .Values.app.domain }}
                 subject:
                   - [ 'group:app_immich' ]
                   - [ 'group:role_admin' ]
                 policy: two_factor
               - domain:
-                  - immich.{{ .Values.global.domain }}
+                  - immich.{{ .Values.app.domain }}
                 subject:
                   - [ 'group:app_immich_one_factor' ]
                 policy: one_factor
               - domain:
-                  - whoami.{{ .Values.global.domain }}
+                  - whoami.{{ .Values.app.domain }}
                 policy: one_factor
 
           identity_validation:
@@ -712,7 +707,7 @@ resources:
               # generate a client_secret
               # docker run --rm authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
               clients:
-                  # forgejo admin auth add-oauth --provider=openidConnect --name=authelia --key=<client id> --secret=<client secret> --auto-discover-url=https://authelia.{{ .Values.global.domain }}/.well-known/openid-configuration --scopes='openid email profile'
+                  # forgejo admin auth add-oauth --provider=openidConnect --name=authelia --key=<client id> --secret=<client secret> --auto-discover-url=https://authelia.{{ .Values.app.domain }}/.well-known/openid-configuration --scopes='openid email profile'
                 - client_id: '{{ `{{ secret "/secrets/authelia-oidc-forgejo/client-id" }}` }}'
                   client_name: Forgejo
                   client_secret:
@@ -723,7 +718,7 @@ resources:
                   pkce_challenge_method: ''
                   pre_configured_consent_duration: 1 year
                   redirect_uris:
-                    - 'https://forgejo.{{ .Values.global.domain }}/user/oauth2/authelia/callback'
+                    - 'https://forgejo.{{ .Values.app.domain }}/user/oauth2/authelia/callback'
                   scopes:
                     - 'openid'
                     - 'email'
@@ -747,7 +742,7 @@ resources:
                   pkce_challenge_method: 'S256'
                   pre_configured_consent_duration: 1 year
                   redirect_uris:
-                    - 'https://grafana.{{ .Values.global.domain }}/login/generic_oauth'
+                    - 'https://grafana.{{ .Values.app.domain }}/login/generic_oauth'
                   scopes:
                     - 'openid'
                     - 'profile'
@@ -771,7 +766,7 @@ resources:
                   pkce_challenge_method: 'S256'
                   pre_configured_consent_duration: 1 year
                   redirect_uris:
-                    - 'https://jellyfin.{{ .Values.global.domain }}/sso/OID/redirect/authelia'
+                    - 'https://jellyfin.{{ .Values.app.domain }}/sso/OID/redirect/authelia'
                   scopes:
                     - 'openid'
                     - 'profile'
@@ -794,8 +789,8 @@ resources:
                   pkce_challenge_method: ''
                   pre_configured_consent_duration: 1 year
                   redirect_uris:
-                    - 'https://immich.{{ .Values.global.domain }}/auth/login'
-                    - 'https://immich.{{ .Values.global.domain }}/user-settings'
+                    - 'https://immich.{{ .Values.app.domain }}/auth/login'
+                    - 'https://immich.{{ .Values.app.domain }}/user-settings'
                     - 'app.immich:///oauth-callback'
                   scopes:
                     - 'openid'
@@ -823,8 +818,8 @@ resources:
                   pkce_challenge_method: 'S256'
                   pre_configured_consent_duration: 1 year
                   redirect_uris:
-                    - 'https://seerr.{{ .Values.global.domain }}/login'
-                    - 'https://seerr.{{ .Values.global.domain }}/profile/settings/linked-accounts'
+                    - 'https://seerr.{{ .Values.app.domain }}/login'
+                    - 'https://seerr.{{ .Values.app.domain }}/profile/settings/linked-accounts'
                   scopes:
                     - 'openid'
                     - 'profile'
@@ -849,7 +844,7 @@ resources:
                   pkce_challenge_method: ''
                   pre_configured_consent_duration: 1 year
                   redirect_uris:
-                    - 'https://seafile.{{ .Values.global.domain }}/oauth/callback/'
+                    - 'https://seafile.{{ .Values.app.domain }}/oauth/callback/'
                   scopes:
                     - 'openid'
                     - 'profile'
@@ -874,7 +869,7 @@ resources:
                   pkce_challenge_method: 'S256'
                   pre_configured_consent_duration: 1 year
                   redirect_uris:
-                    - 'https://paperless.{{ .Values.global.domain }}/accounts/oidc/authelia/login/callback/'
+                    - 'https://paperless.{{ .Values.app.domain }}/accounts/oidc/authelia/login/callback/'
                   scopes:
                     - 'openid'
                     - 'profile'
@@ -901,7 +896,7 @@ resources:
                   pkce_challenge_method: ''
                   pre_configured_consent_duration: 1 year
                   redirect_uris:
-                    - 'https://matrix.{{ .Values.global.domain }}/_matrix/client/unstable/login/sso/callback/{{ `{{ secret "/secrets/authelia-oidc-tuwunel/client-id" }}` }}'
+                    - 'https://matrix.{{ .Values.app.domain }}/_matrix/client/unstable/login/sso/callback/{{ `{{ secret "/secrets/authelia-oidc-tuwunel/client-id" }}` }}'
                   scopes:
                     - 'openid'
                     - 'profile'
@@ -949,7 +944,7 @@ resources:
             authelia-gateway:
               secretName: tls-authelia-gateway
               dnsNames:
-                authelia: authelia.{{ .Values.global.domain }}
+                authelia: authelia.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -1000,7 +995,7 @@ resources:
               listeners:
                 https:
                   name: https
-                  hostname: authelia.{{ .Values.global.domain }}
+                  hostname: authelia.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -1020,7 +1015,7 @@ resources:
                   kind: ListenerSet
                   name: authelia
               hostnames:
-                authelia: authelia.{{ .Values.global.domain }}
+                authelia: authelia.{{ .Values.app.domain }}
               rules:
                 root:
                   backendRefs:

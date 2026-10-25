@@ -1,7 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
-  name:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 # Tiny HTTP server that echoes the request (headers, IP, ...). Useful to check the Gateway, the TLS termination and what
 # the Authelia forward auth passes to the upstream (remote-user, remote-groups, ...). Protected by Authelia forward auth.
@@ -126,7 +123,7 @@ resources:
             whoami-gateway:
               secretName: tls-whoami-gateway
               dnsNames:
-                whoami: whoami.{{ .Values.global.domain }}
+                whoami: whoami.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -143,7 +140,7 @@ resources:
               listeners:
                 https:
                   name: https
-                  hostname: whoami.{{ .Values.global.domain }}
+                  hostname: whoami.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -163,7 +160,7 @@ resources:
                   kind: ListenerSet
                   name: whoami
               hostnames:
-                whoami: whoami.{{ .Values.global.domain }}
+                whoami: whoami.{{ .Values.app.domain }}
               rules:
                 root:
                   filters:

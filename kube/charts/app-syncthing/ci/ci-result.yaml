@@ -58,8 +58,10 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
-    global:
+    app:
       domain: test.com
+      lldapdn: dc=test,dc=com
+      name: test
     user: n0rad
 ---
 # Source: app-syncthing/templates/loader.yaml

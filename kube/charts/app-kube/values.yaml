@@ -1,7 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-
-global:
-  domain:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 # Kubernetes own objects that the cluster needs and that nothing else installs.
 
@@ -82,7 +79,7 @@ resources:
               listeners:
                 apiserver:
                   name: apiserver
-                  hostname: kube.{{ .Values.global.domain }}
+                  hostname: kube.{{ .Values.app.domain }}
                   port: 443
                   protocol: TLS
                   tls:
@@ -100,7 +97,7 @@ resources:
                   name: kube
                   sectionName: apiserver
               hostnames:
-                kube: kube.{{ .Values.global.domain }}
+                kube: kube.{{ .Values.app.domain }}
               rules:
                 apiserver:
                   backendRefs:

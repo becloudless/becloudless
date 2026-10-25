@@ -1,7 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
-  name:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 resources:
 
@@ -145,10 +142,10 @@ resources:
 
                 # https://github.com/bastienwirtz/homer/blob/main/docs/configuration.md
                 config.yml: |
-                    documentTitle: "{{ .Values.global.domain }} - Home"
+                    documentTitle: "{{ .Values.app.domain }} - Home"
                     logo: "assets/logo.png"
                     # Alternatively a fa icon can be provided:
-                    icon: https://gitea.{{ .Values.global.domain }}/{{ .Values.global.name }}/{{ .Values.global.domain }}/src/branch/master/docs/logo/v2/favicon.ico
+                    icon: https://gitea.{{ .Values.app.domain }}/{{ .Values.app.name }}/{{ .Values.app.domain }}/src/branch/master/docs/logo/v2/favicon.ico
                     header: false
                     footer: false
                     columns: "4" # "auto" or number (must be a factor of 12: 1, 2, 3, 4, 6, 12)
@@ -217,77 +214,77 @@ resources:
                           - name: Jellyfin
                             subtitle: Media player
                             logo: https://jellyfin.org/images/favicon.ico # assets on the service are hashed, so we cannot use them directly
-                            url: https://jellyfin.{{ .Values.global.domain }}
+                            url: https://jellyfin.{{ .Values.app.domain }}
                           - name: Seerr
                             subtitle: Media discovery
-                            logo: https://seerr.{{ .Values.global.domain }}/favicon.ico
-                            url: https://seerr.{{ .Values.global.domain }}
+                            logo: https://seerr.{{ .Values.app.domain }}/favicon.ico
+                            url: https://seerr.{{ .Values.app.domain }}
                           - name: Immich
                             subtitle: Photos management
-                            logo: https://immich.{{ .Values.global.domain }}/favicon.ico
-                            url: https://immich.{{ .Values.global.domain }}
+                            logo: https://immich.{{ .Values.app.domain }}/favicon.ico
+                            url: https://immich.{{ .Values.app.domain }}
                       - name: "Applications"
                         icon: "fas fa-heartbeat"
                         items:
                           - name: Gitea
                             subtitle: Source code management
-                            logo: https://gitea.{{ .Values.global.domain }}/assets/img/favicon.png
-                            url: https://gitea.{{ .Values.global.domain }}
+                            logo: https://gitea.{{ .Values.app.domain }}/assets/img/favicon.png
+                            url: https://gitea.{{ .Values.app.domain }}
                           - name: RuTorrent
                             subtitle: Torrent downloader
-                            logo: https://rutorrent.{{ .Values.global.domain }}/images/favicon.ico
-                            url: https://rutorrent.{{ .Values.global.domain }}
+                            logo: https://rutorrent.{{ .Values.app.domain }}/images/favicon.ico
+                            url: https://rutorrent.{{ .Values.app.domain }}
                           - name: Mailu
                             subtitle: Emails
-                            logo: https://mail.{{ .Values.global.domain }}/favicon.ico
-                            url: https://mail.{{ .Values.global.domain }}
+                            logo: https://mail.{{ .Values.app.domain }}/favicon.ico
+                            url: https://mail.{{ .Values.app.domain }}
                           - name: Seafile
                             subtitle: Files hosting
-                            logo: https://seafile.{{ .Values.global.domain }}/media/favicons/favicon.png
-                            url: https://seafile.{{ .Values.global.domain }}
+                            logo: https://seafile.{{ .Values.app.domain }}/media/favicons/favicon.png
+                            url: https://seafile.{{ .Values.app.domain }}
                       - name: "System"
                         #                    - name: Paperless
                         #                      subtitle: Document management
-                        #                      logo: https://paperless.{{ .Values.global.domain }}/favicon.ico
-                        #                      url: https://paperless.{{ .Values.global.domain }}
+                        #                      logo: https://paperless.{{ .Values.app.domain }}/favicon.ico
+                        #                      url: https://paperless.{{ .Values.app.domain }}
 
                         icon: "fas fa-code-branch"
                         items:
                           - name: Longhorn
                             subtitle: Distributed cluster storage
-                            logo: https://longhorn.{{ .Values.global.domain }}/favicon.ico
-                            url: https://longhorn.{{ .Values.global.domain }}
+                            logo: https://longhorn.{{ .Values.app.domain }}/favicon.ico
+                            url: https://longhorn.{{ .Values.app.domain }}
                           - name: Authelia
                             subtitle: Login portal
-                            logo: https://authelia.{{ .Values.global.domain }}/favicon.ico
-                            url: https://authelia.{{ .Values.global.domain }}
+                            logo: https://authelia.{{ .Values.app.domain }}/favicon.ico
+                            url: https://authelia.{{ .Values.app.domain }}
                           - name: Lldap
                             subtitle: Accounts management
-                            url: https://lldap.{{ .Values.global.domain }}
+                            url: https://lldap.{{ .Values.app.domain }}
                           - name: WhoAmI
                             subtitle: Info about current connection
-                            url: https://whoami.{{ .Values.global.domain }}
+                            url: https://whoami.{{ .Values.app.domain }}
                       - name: "Observability"
                         icon: "fas fa-network-wired"
                         items:
                           - name: Grafana
                             subtitle: Graph dashbards
-                            logo: https://grafana.{{ .Values.global.domain }}/public/build/img/fav32.png
-                            url: https://grafana.{{ .Values.global.domain }}
+                            logo: https://grafana.{{ .Values.app.domain }}/public/build/img/fav32.png
+                            url: https://grafana.{{ .Values.app.domain }}
                           - name: "Prometheus"
                             subtitle: Metrics monitoring
-                            logo: https://prometheus.{{ .Values.global.domain }}/favicon.svg
+                            logo: https://prometheus.{{ .Values.app.domain }}/favicon.svg
                             # subtitle: "Network-wide Ad Blocking" # optional, if no subtitle is defined, PiHole statistics will be shown
                             tag: "other"
-                            url: "https://prometheus.{{ .Values.global.domain }}"
+                            url: "https://prometheus.{{ .Values.app.domain }}"
                             type: "PiHole" # optional, loads a specific component that provides extra features. MUST MATCH a file name (without file extension) available in `src/components/services`
                             target: "_blank" # optional html a tag target attribute
                             # class: "green" # optional custom CSS class for card, useful with custom stylesheet
                             # background: red # optional color for card to set color directly without custom stylesheet
                           - name: AlertManager
                             subtitle: Alerting
-                            logo: https://alertmanager.{{ .Values.global.domain }}/favicon.ico
-                            url: https://alertmanager.{{ .Values.global.domain }}
+                            logo: https://alertmanager.{{ .Values.app.domain }}/favicon.ico
+                            url: https://alertmanager.{{ .Values.app.domain }}
 
           deployments:
             homer:
@@ -380,7 +377,7 @@ resources:
             homer:
               secretName: tls-homer
               dnsNames:
-                homer: homer.{{ .Values.global.domain }}
+                homer: homer.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -395,7 +392,7 @@ resources:
               listeners:
                 https:
                   name: https
-                  hostname: homer.{{ .Values.global.domain }}
+                  hostname: homer.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -415,7 +412,7 @@ resources:
                   kind: ListenerSet
                   name: homer
               hostnames:
-                homer: homer.{{ .Values.global.domain }}
+                homer: homer.{{ .Values.app.domain }}
               rules:
                 root:
                   filters:

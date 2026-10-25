@@ -1,4 +1,4 @@
-{{- include "base.loader.init" $ }}
+{{- include "app.loader.init" $ }}
 
 {{- /* The resources of the instance are prepared by default, values set by the user take precedence. */}}
 {{- $featureValues := include "syncthing.feature" (dict "rootContext" $) | fromYaml }}

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "app": {
+      "$ref": "../../app/schema/values.schema.json#/properties/app"
+    },
+    "lldapBootstrap": {
+      "additionalProperties": false,
+      "description": "The setup applied to lldap by `lldap-post`.",
+      "properties": {
+        "revision": {
+          "description": "Part of the name of the Job: bump it when the spec of the Job changes (immutable fields).",
+          "type": "integer"
+        },
+        "image": {
+          "description": "The image of lldap, which holds the bootstrap script.",
+          "type": "string"
+        },
+        "groups": {
+          "description": "The groups the apps authorize (see the access control of authelia and the roles of the apps).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "userSchema": {
+          "description": "The custom attributes of the users, used by the OIDC claims of authelia.",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "checkRequiredValues": {
+      "$ref": "../../base/schema/values.schema.json#/properties/checkRequiredValues"
+    },
+    "prefixNamesWithRelease": {
+      "$ref": "../../base/schema/values.schema.json#/properties/prefixNamesWithRelease"
+    },
+    "defaults": {
+      "$ref": "../../base/schema/values.schema.json#/properties/defaults"
+    },
+    "resources": {
+      "$ref": "../../base/schema/values.schema.json#/properties/resources"
+    }
+  },
+  "type": "object"
+}

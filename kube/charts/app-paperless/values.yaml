@@ -1,7 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
-  name:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 # Paperless-ngx (https://docs.paperless-ngx.com): document management, with OCR and full text search.
 #
@@ -54,7 +51,7 @@ resources:
             valkey: {ports: {p6379: {port: "6379", protocol: TCP}}}
         authelia: # the OIDC issuer is the public address of authelia
           toFQDNs:
-            authelia: {matchName: "authelia.{{ .Values.global.domain }}"}
+            authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
           toPorts:
             https: {ports: {p443: {port: "443", protocol: TCP}}}
         gateway: # the public addresses of the cluster are the gateway for the pods
@@ -242,7 +239,7 @@ resources:
                           secretKeyRef:
                             name: paperless-oidc
                             key: secret
-                        PAPERLESS_URL: https://paperless.{{ .Values.global.domain }}
+                        PAPERLESS_URL: https://paperless.{{ .Values.app.domain }}
                         PAPERLESS_PROXY_SSL_HEADER: '["HTTP_X_FORWARDED_PROTO", "https"]' # the gateway terminates the TLS
                         PAPERLESS_TIME_ZONE: Europe/Paris
                         PAPERLESS_OCR_LANGUAGE: fra+eng
@@ -263,14 +260,14 @@ resources:
                         PAPERLESS_REDIS: redis://:$(BROKER_PASSWORD)@paperless-valkey:6379
                         # the local administrator, created at the start if it does not exist
                         PAPERLESS_ADMIN_USER: paperless_admin
-                        PAPERLESS_ADMIN_MAIL: paperless_admin@{{ .Values.global.domain }}
+                        PAPERLESS_ADMIN_MAIL: paperless_admin@{{ .Values.app.domain }}
                         PAPERLESS_ADMIN_PASSWORD:
                           secretKeyRef:
                             name: paperless-generated
                             key: admin-password
                         # SSO with authelia: the `authelia` provider, the callback is /accounts/oidc/authelia/login/callback/
                         PAPERLESS_APPS: allauth.socialaccount.providers.openid_connect
-                        PAPERLESS_SOCIALACCOUNT_PROVIDERS: '{"openid_connect":{"SCOPE":["openid","profile","email","groups"],"OAUTH_PKCE_ENABLED":true,"APPS":[{"provider_id":"authelia","name":"Authelia","client_id":"$(OIDC_CLIENT_ID)","secret":"$(OIDC_CLIENT_SECRET)","settings":{"server_url":"https://authelia.{{ .Values.global.domain }}","token_auth_method":"client_secret_basic"}}]}}'
+                        PAPERLESS_SOCIALACCOUNT_PROVIDERS: '{"openid_connect":{"SCOPE":["openid","profile","email","groups"],"OAUTH_PKCE_ENABLED":true,"APPS":[{"provider_id":"authelia","name":"Authelia","client_id":"$(OIDC_CLIENT_ID)","secret":"$(OIDC_CLIENT_SECRET)","settings":{"server_url":"https://authelia.{{ .Values.app.domain }}","token_auth_method":"client_secret_basic"}}]}}'
                         PAPERLESS_SOCIAL_AUTO_SIGNUP: "true"
                         PAPERLESS_SOCIAL_ACCOUNT_SYNC_GROUPS: "true"
                         PAPERLESS_SOCIAL_ACCOUNT_SYNC_SUPERUSER_GROUP: role_admin
@@ -366,7 +363,7 @@ resources:
             paperless-gateway:
               secretName: tls-paperless-gateway
               dnsNames:
-                paperless: paperless.{{ .Values.global.domain }}
+                paperless: paperless.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -384,7 +381,7 @@ resources:
               listeners:
                 https:
                   name: https
-                  hostname: paperless.{{ .Values.global.domain }}
+                  hostname: paperless.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -404,7 +401,7 @@ resources:
                   kind: ListenerSet
                   name: paperless
               hostnames:
-                paperless: paperless.{{ .Values.global.domain }}
+                paperless: paperless.{{ .Values.app.domain }}
               rules:
                 root:
                   backendRefs:

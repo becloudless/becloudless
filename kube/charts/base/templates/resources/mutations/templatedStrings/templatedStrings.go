@@ -3,7 +3,7 @@ package templatedStrings
 import "github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations"
 
 // TemplatePattern matches a string holding at least one Go template action,
-// e.g. "{{ .Values.global.domain }}" or "https://{{ .Values.name }}/path".
+// e.g. "{{ .Values.app.domain }}" or "https://{{ .Values.name }}/path".
 // [\s\S] is used instead of "." so multi-line templates match too.
 const TemplatePattern = `\{\{[\s\S]*\}\}`
 

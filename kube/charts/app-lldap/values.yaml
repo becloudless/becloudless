@@ -1,42 +1,36 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
-  ldapdn:
+# yaml-language-server: $schema=./schema/values.schema.json
 
-  # users of the cluster, see `lldap-post`
-  lldapUsers: {}
-
-  # setup applied to lldap by `lldap-post`
-  lldapBootstrap:
-    revision: 5 # part of the name of the Job: bump it when the spec of the Job changes (immutable fields), see `lldap-post`
-    image: lldap/lldap:2026-09-22-debian-rootless # renovate: versioning=loose
-    # the groups the apps authorize (see the access control of authelia and the roles of the apps)
-    groups:
-      - role_admin
-      - role_user
-      - role_editor
-      - app_forgejo
-      - app_immich
-      - app_immich_one_factor
-      - app_jellyfin
-      - app_paperless
-      - app_pushprox
-      - app_seafile
-      - app_seerr
-      - app_syncthing
-      - app_tuwunel
-    # the custom attributes of the users, used by the OIDC claims of authelia
-    userSchema:
-      - name: immichquota
-        attributeType: INTEGER
-        isEditable: false
-        isList: false
-        isVisible: true
-      - name: immichrole
-        attributeType: STRING
-        isEditable: false
-        isList: false
-        isVisible: true
+# setup applied to lldap by `lldap-post`
+lldapBootstrap:
+  revision: 5 # part of the name of the Job: bump it when the spec of the Job changes (immutable fields), see `lldap-post`
+  image: lldap/lldap:2026-09-22-debian-rootless # renovate: versioning=loose
+  # the groups the apps authorize (see the access control of authelia and the roles of the apps)
+  groups:
+    - role_admin
+    - role_user
+    - role_editor
+    - app_forgejo
+    - app_immich
+    - app_immich_one_factor
+    - app_jellyfin
+    - app_paperless
+    - app_pushprox
+    - app_seafile
+    - app_seerr
+    - app_syncthing
+    - app_tuwunel
+  # the custom attributes of the users, used by the OIDC claims of authelia
+  userSchema:
+    - name: immichquota
+      attributeType: INTEGER
+      isEditable: false
+      isList: false
+      isVisible: true
+    - name: immichrole
+      attributeType: STRING
+      isEditable: false
+      isList: false
+      isVisible: true
 
 resources:
 
@@ -186,7 +180,7 @@ resources:
             tls-lldaps:
               secretName: tls-lldaps
               dnsNames:
-                lldaps: lldaps.{{ .Values.global.domain }}
+                lldaps: lldaps.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -213,9 +207,9 @@ resources:
                 # https://github.com/lldap/lldap/blob/main/lldap_config.docker_template.toml
                 lldap_config.toml: |
                   # verbose = false
-                  http_url = "https://lldap.{{ .Values.global.domain }}"
+                  http_url = "https://lldap.{{ .Values.app.domain }}"
                   database_url = "postgres://"
-                  ldap_base_dn = "{{ .Values.global.ldapdn }}"
+                  ldap_base_dn = "{{ .Values.app.lldapdn }}"
                   key_file = ""
 
                   [ldap_options]
@@ -319,16 +313,16 @@ resources:
     # script, and Helm deletes the previous one. The release waits for the Job: a failing script fails `lldap-post` (and
     # blocks `lldap-integration`). To run it again, delete the Job: it is recreated by the next reconciliation.
     #  - the groups the apps authorize (see the access control of authelia) and the custom attributes of the users:
-    #    `global.lldapBootstrap`, in the values of this chart
-    #  - the users: declared by the cluster in `global.lldapUsers` (`apps.lldap.values.global.lldapUsers` in the cluster),
-    #    their groups must be declared in `global.lldapBootstrap.groups`
+    #    `lldapBootstrap`, in the values of this chart
+    #  - the users: declared by the cluster in `app.lldapUsers` (`config.lldapUsers` of `apps` in the cluster),
+    #    their groups must be declared in `lldapBootstrap.groups`
     #  - the `authelia` user, always declared here: the account authelia binds with (members of `lldap_password_manager` and
     #    `lldap_strict_readonly`), its password is the generated `lldap-authelia` secret
     # The groups and users that are not declared are deleted (`DO_CLEANUP`), the `admin` user is kept.
     #
-    # global.lldapUsers: the key is the user id. The attributes are the ones of the bootstrap script, see
+    # app.lldapUsers: the key is the user id. The attributes are the ones of the bootstrap script, see
     # https://github.com/lldap/lldap/blob/main/example_configs/bootstrap/bootstrap.md, and the custom attributes declared in
-    # `global.lldapBootstrap.userSchema`.
+    # `lldapBootstrap.userSchema`.
     #   lldapUsers:
     #     n0rad:
     #       displayName: n0rad
@@ -358,19 +352,19 @@ resources:
             lldap-bootstrap:
               data:
                 groups.json: | # one JSON object per group, as the script reads the top-level values
-                  {{- range $name := .Values.global.lldapBootstrap.groups }}
+                  {{- range $name := .Values.lldapBootstrap.groups }}
                   {{ toJson (dict "name" $name) }}
                   {{- end }}
                 users.json: | # one JSON object per user
-                  {{ toJson (dict "id" "authelia" "displayName" "Authelia" "email" (printf "authelia@%s" .Values.global.domain) "password_file" "/secrets/authelia/password" "groups" (list "lldap_password_manager" "lldap_strict_readonly")) }}
-                  {{- range $id, $user := (.Values.global.lldapUsers | default dict) }}
+                  {{ toJson (dict "id" "authelia" "displayName" "Authelia" "email" (printf "authelia@%s" .Values.app.domain) "password_file" "/secrets/authelia/password" "groups" (list "lldap_password_manager" "lldap_strict_readonly")) }}
+                  {{- range $id, $user := (.Values.app.lldapUsers | default dict) }}
                   {{ toJson (merge (dict "id" $id) ($user | default dict)) }}
                   {{- end }}
-                users-schema.json: '{{ toJson .Values.global.lldapBootstrap.userSchema }}'
+                users-schema.json: '{{ toJson .Values.lldapBootstrap.userSchema }}'
 
           jobs:
             lldap-bootstrap:
-              fullNameOverride: 'lldap-bootstrap-{{ list .Values.global.lldapBootstrap (.Values.global.lldapUsers | default dict) | toJson | sha256sum | trunc 10 }}'
+              fullNameOverride: 'lldap-bootstrap-{{ list .Values.lldapBootstrap (.Values.app.lldapUsers | default dict) | toJson | sha256sum | trunc 10 }}'
               backoffLimit: 0 # no retry: the script waits for lldap itself, and a Job of an old setup retrying would apply it again over the new one
               activeDeadlineSeconds: 600
               template:
@@ -382,7 +376,7 @@ resources:
                   containers:
                     bootstrap:
                       name: bootstrap
-                      image: '{{ .Values.global.lldapBootstrap.image }}'
+                      image: '{{ .Values.lldapBootstrap.image }}'
                       command: [ /usr/bin/env, bash ]
                       args:
                         - -c
@@ -455,7 +449,7 @@ resources:
             lldap-gateway:
               secretName: tls-lldap-gateway
               dnsNames:
-                lldap: lldap.{{ .Values.global.domain }}
+                lldap: lldap.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -473,7 +467,7 @@ resources:
               listeners:
                 https:
                   name: https
-                  hostname: lldap.{{ .Values.global.domain }}
+                  hostname: lldap.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -486,7 +480,7 @@ resources:
                       from: Same
                 ldaps:
                   name: ldaps
-                  hostname: lldaps.{{ .Values.global.domain }}
+                  hostname: lldaps.{{ .Values.app.domain }}
                   port: 443
                   protocol: TLS
                   tls:
@@ -504,7 +498,7 @@ resources:
                   name: lldap
                   sectionName: https
               hostnames:
-                lldap: lldap.{{ .Values.global.domain }}
+                lldap: lldap.{{ .Values.app.domain }}
               rules:
                 root:
                   backendRefs:
@@ -521,7 +515,7 @@ resources:
                   name: lldap
                   sectionName: ldaps
               hostnames:
-                lldaps: lldaps.{{ .Values.global.domain }}
+                lldaps: lldaps.{{ .Values.app.domain }}
               rules:
                 ldaps:
                   backendRefs:

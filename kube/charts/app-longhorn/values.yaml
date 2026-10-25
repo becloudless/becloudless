@@ -1,6 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 resources:
 
@@ -72,7 +70,7 @@ resources:
           toFQDNs:
             backupstore: {matchName: backupstore}
             backupstore-svc: {matchName: backupstore.longhorn-system.svc.cluster.local}
-            backupstore-domain: {matchName: "backupstore.{{ .Values.global.domain }}"}
+            backupstore-domain: {matchName: "backupstore.{{ .Values.app.domain }}"}
           toPorts:
             cifs: {ports: {p445: {port: "445", protocol: TCP}}}
 
@@ -142,7 +140,7 @@ resources:
           toFQDNs:
             backupstore: {matchName: backupstore}
             backupstore-svc: {matchName: backupstore.longhorn-system.svc.cluster.local}
-            backupstore-domain: {matchName: "backupstore.{{ .Values.global.domain }}"}
+            backupstore-domain: {matchName: "backupstore.{{ .Values.app.domain }}"}
           toPorts:
             cifs: {ports: {p445: {port: "445", protocol: TCP}}}
 
@@ -447,7 +445,7 @@ resources:
             longhorn-ui:
               secretName: tls-longhorn
               dnsNames:
-                ui: longhorn.{{ .Values.global.domain }}
+                ui: longhorn.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -462,7 +460,7 @@ resources:
               listeners:
                 https:
                   name: https
-                  hostname: longhorn.{{ .Values.global.domain }}
+                  hostname: longhorn.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -482,7 +480,7 @@ resources:
                   kind: ListenerSet
                   name: longhorn
               hostnames:
-                ui: longhorn.{{ .Values.global.domain }}
+                ui: longhorn.{{ .Values.app.domain }}
               rules:
                 ui:
                   filters:

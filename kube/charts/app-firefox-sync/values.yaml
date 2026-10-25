@@ -1,7 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
-  name:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 # Firefox Sync: the sync storage and the token server of Mozilla (https://github.com/mozilla-services/syncstorage-rs), in one process.
 #
@@ -154,7 +151,7 @@ resources:
                         SYNC_TOKENSERVER__NODE_TYPE: postgres
                         SYNC_TOKENSERVER__RUN_MIGRATIONS: "true"
                         # the node the clients are sent to, inserted in the database at the start
-                        SYNC_TOKENSERVER__INIT_NODE_URL: https://firefox-sync.{{ .Values.global.domain }}
+                        SYNC_TOKENSERVER__INIT_NODE_URL: https://firefox-sync.{{ .Values.app.domain }}
                         # Mozilla accounts
                         SYNC_TOKENSERVER__FXA_EMAIL_DOMAIN: api.accounts.firefox.com
                         SYNC_TOKENSERVER__FXA_OAUTH_SERVER_URL: https://oauth.accounts.firefox.com
@@ -231,7 +228,7 @@ resources:
             firefox-sync-gateway:
               secretName: tls-firefox-sync-gateway
               dnsNames:
-                firefox-sync: firefox-sync.{{ .Values.global.domain }}
+                firefox-sync: firefox-sync.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -248,7 +245,7 @@ resources:
               listeners:
                 https:
                   name: https
-                  hostname: firefox-sync.{{ .Values.global.domain }}
+                  hostname: firefox-sync.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -268,7 +265,7 @@ resources:
                   kind: ListenerSet
                   name: firefox-sync
               hostnames:
-                firefox-sync: firefox-sync.{{ .Values.global.domain }}
+                firefox-sync: firefox-sync.{{ .Values.app.domain }}
               rules:
                 root:
                   backendRefs:

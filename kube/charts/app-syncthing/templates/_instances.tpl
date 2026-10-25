@@ -1,6 +1,6 @@
 {{- /*
-Prepare one Flux HelmRelease `syncthing-<user>` per user of `global.lldapUsers` that is a member of the `app_syncthing` group,
-installing the `syncthing` chart (one instance, see its values) with the id of the user and the domain. The HelmReleases are created in
+Prepare one Flux HelmRelease `syncthing-<user>` per user of `app.lldapUsers` that is a member of the `app_syncthing` group,
+installing the `syncthing` chart (one instance, see its values) with the id of the user and the `app` values (domain, name and base DN). The HelmReleases are created in
 the namespace of the release and run as the same service account as the other ones of the app (`defaults.resources` of the apps chart).
 
 The id of the user is the name of the resources, so it must be a valid DNS label (lowercase letters, digits and `-`).
@@ -9,11 +9,10 @@ Set `resources.fluxHelmReleases.syncthing-<user>.values` in the cluster to confi
 */}}
 {{- define "app-syncthing.features.instances" }}
 {{- $rootContext := .rootContext }}
-{{- $global := $rootContext.Values.global | default dict }}
-{{- $domain := required "`global.domain` is required" $global.domain }}
+{{- $app := $rootContext.Values.app }}
 
 {{- $helmReleases := dict }}
-{{- range $id, $user := ($global.lldapUsers | default dict) }}
+{{- range $id, $user := ($app.lldapUsers | default dict) }}
   {{- if has "app_syncthing" (($user | default dict).groups | default list) }}
   {{- if not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" $id) }}
     {{- fail (printf "the lldap user %q cannot have a Syncthing instance: its id must be a valid DNS label (lowercase letters, digits and `-`)" $id) }}
@@ -30,7 +29,7 @@ Set `resources.fluxHelmReleases.syncthing-<user>.values` in the cluster to confi
           "chart" "./kube/charts/syncthing"
           "reconcileStrategy" "Revision"
           "sourceRef" (dict "kind" "GitRepository" "name" "bcl" "namespace" "apps")))
-        "values" (dict "user" $id "global" (dict "domain" $domain))) }}
+        "values" (dict "user" $id "app" (dict "domain" $app.domain "name" $app.name "lldapdn" $app.lldapdn))) }}
   {{- end }}
 {{- end }}
 

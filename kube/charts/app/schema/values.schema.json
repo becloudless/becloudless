@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "app": {
+      "additionalProperties": false,
+      "description": "The values shared by every app chart (library chart `app`), set by the cluster for all the apps with the `global-values` ConfigMap of the `apps` chart.",
+      "properties": {
+        "domain": {
+          "description": "The domain of the cluster.",
+          "type": "string"
+        },
+        "lldapUsers": {
+          "description": "The users of the cluster, the key is the user id.",
+          "type": "object"
+        },
+        "lldapdn": {
+          "description": "The base DN of the LDAP directory of lldap.",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name of the cluster.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "checkRequiredValues": {
+      "$ref": "../../base/schema/values.schema.json#/properties/checkRequiredValues"
+    },
+    "prefixNamesWithRelease": {
+      "$ref": "../../base/schema/values.schema.json#/properties/prefixNamesWithRelease"
+    },
+    "defaults": {
+      "$ref": "../../base/schema/values.schema.json#/properties/defaults"
+    },
+    "resources": {
+      "$ref": "../../base/schema/values.schema.json#/properties/resources"
+    }
+  },
+  "type": "object"
+}

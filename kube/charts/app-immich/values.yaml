@@ -1,6 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 # Nothing has to be created by hand:
 #  - the database is a CloudNativePG cluster (with the vectorchord extension), the password of its `app` user is created by CNPG (`immich-postgresql-app`)
@@ -67,7 +65,7 @@ resources:
             http: {ports: {p3003: {port: "3003", protocol: TCP}}}
         authelia: # the OIDC issuer is the public address of authelia
           toFQDNs:
-            authelia: {matchName: "authelia.{{ .Values.global.domain }}"}
+            authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
           toPorts:
             https: {ports: {p443: {port: "443", protocol: TCP}}}
         gateway: # the public addresses of the cluster are the gateway for the pods
@@ -212,7 +210,7 @@ resources:
                     immich-config.yaml: |
                       oauth:
                         enabled: true
-                        issuerUrl: https://authelia.{{ .Values.global.domain }}
+                        issuerUrl: https://authelia.{{ .Values.app.domain }}
                         clientId: {{ "{{ \"{{ .clientId }}\" }}" }}
                         clientSecret: {{ "{{ \"{{ .secret }}\" }}" }}
                         scope: openid profile email immich_scope
@@ -349,7 +347,7 @@ resources:
         resources:
           jobs:
             immich-bootstrap:
-              fullNameOverride: 'immich-bootstrap-{{ list 1 .Values.global.domain | toJson | sha256sum | trunc 10 }}' # change the 1 when the spec of the Job changes (immutable fields)
+              fullNameOverride: 'immich-bootstrap-{{ list 1 .Values.app.domain | toJson | sha256sum | trunc 10 }}' # change the 1 when the spec of the Job changes (immutable fields)
               backoffLimit: 0
               activeDeadlineSeconds: 900
               template:
@@ -371,7 +369,7 @@ resources:
                           curl -fsS -X POST http://immich-server:2283/api/auth/admin-sign-up -H 'Content-Type: application/json' \
                             -d "{\"email\":\"$ADMIN_EMAIL\",\"name\":\"immich admin\",\"password\":\"$password\"}"
                       env:
-                        ADMIN_EMAIL: immich-admin@{{ .Values.global.domain }}
+                        ADMIN_EMAIL: immich-admin@{{ .Values.app.domain }}
                         ADMIN_PASSWORD:
                           secretKeyRef:
                             name: immich-admin
@@ -407,7 +405,7 @@ resources:
             immich-gateway:
               secretName: tls-immich-gateway
               dnsNames:
-                immich: immich.{{ .Values.global.domain }}
+                immich: immich.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -424,7 +422,7 @@ resources:
               listeners:
                 https:
                   name: https
-                  hostname: immich.{{ .Values.global.domain }}
+                  hostname: immich.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -444,7 +442,7 @@ resources:
                   kind: ListenerSet
                   name: immich
               hostnames:
-                immich: immich.{{ .Values.global.domain }}
+                immich: immich.{{ .Values.app.domain }}
               rules:
                 root:
                   backendRefs:

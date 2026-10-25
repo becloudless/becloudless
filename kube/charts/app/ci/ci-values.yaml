@@ -1,0 +1,15 @@
+app:
+  domain: test.com
+  name: test
+  lldapdn: dc=test,dc=com
+  lldapUsers:
+    n0rad:
+      displayName: n0rad
+
+resources:
+  configMaps:
+    app:
+      data:
+        domain: "{{ .Values.app.domain }}"
+        name: "{{ .Values.app.name }}"
+        lldapdn: "{{ .Values.app.lldapdn }}"

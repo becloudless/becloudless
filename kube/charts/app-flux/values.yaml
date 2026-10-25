@@ -1,7 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-
-global:
-  domain:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 resources:
   fluxOCIRepositories:
@@ -277,7 +274,7 @@ resources:
             flux-webhook-gateway:
               secretName: tls-flux-webhook-gateway
               dnsNames:
-                webhook: flux-webhook.{{ .Values.global.domain }}
+                webhook: flux-webhook.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -292,7 +289,7 @@ resources:
               listeners:
                 https:
                   name: https
-                  hostname: flux-webhook.{{ .Values.global.domain }}
+                  hostname: flux-webhook.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -312,7 +309,7 @@ resources:
                   kind: ListenerSet
                   name: flux-webhook
               hostnames:
-                webhook: flux-webhook.{{ .Values.global.domain }}
+                webhook: flux-webhook.{{ .Values.app.domain }}
               rules:
                 root:
                   backendRefs:

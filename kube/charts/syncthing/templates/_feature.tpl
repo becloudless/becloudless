@@ -13,7 +13,7 @@ the relay is computed from its certificate (`relay.certSecret`) and the token co
 {{- $values := $rootContext.Values }}
 {{- $name := $rootContext.Release.Name }}
 {{- $user := required "`user` is required" $values.user }}
-{{- $domain := required "`global.domain` is required" (($values.global | default dict).domain) }}
+{{- $domain := required "`app.domain` is required" ($values.app | default dict).domain }}
 {{- $host := $values.host | default (printf "%s.syncthing.%s" $user $domain) }}
 {{- $tls := printf "tls-%s" $name }}
 {{- $relay := $values.relay | default dict }}

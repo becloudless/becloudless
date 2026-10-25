@@ -1,6 +1,7 @@
-global:
+app:
   domain: test.com
-  ldapdn: dc=test,dc=com
+  name: test
+  lldapdn: dc=test,dc=com
   lldapUsers:
     n0rad:
       displayName: n0rad

@@ -1,7 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
-  name:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 # Nothing has to be created by hand:
 #  - prometheus, alertmanager and pushprox are protected by the Authelia forward auth of the Cilium Gateway
@@ -131,7 +128,7 @@ resources:
             http: {ports: {p9093: {port: "9093", protocol: TCP}}}
         authelia: # the OIDC issuer is the public address of authelia
           toFQDNs:
-            authelia: {matchName: "authelia.{{ .Values.global.domain }}"}
+            authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
           toPorts:
             https: {ports: {p443: {port: "443", protocol: TCP}}}
         gateway: # the public addresses of the cluster are the gateway for the pods
@@ -272,7 +269,7 @@ resources:
             enabled: false
           alertmanagerSpec:
             podAntiAffinity: hard
-            externalUrl: https://alertmanager.{{ .Values.global.domain }}
+            externalUrl: https://alertmanager.{{ .Values.app.domain }}
             replicas: 1
             storage:
               volumeClaimTemplate:
@@ -314,7 +311,7 @@ resources:
             enabled: false # the dashboards come from the sidecar and the grafana.com downloads
           grafana.ini:
             server:
-              root_url: https://grafana.{{ .Values.global.domain }}
+              root_url: https://grafana.{{ .Values.app.domain }}
             # SSO with Authelia: the `grafana` OIDC client of authelia, its secret is in the `grafana-oidc` secret (see `prometheus-pre`)
             auth.generic_oauth:
               enabled: true
@@ -322,9 +319,9 @@ resources:
               icon: signin
               scopes: openid profile email groups
               empty_scopes: false
-              auth_url: https://authelia.{{ .Values.global.domain }}/api/oidc/authorization
-              token_url: https://authelia.{{ .Values.global.domain }}/api/oidc/token
-              api_url: https://authelia.{{ .Values.global.domain }}/api/oidc/userinfo
+              auth_url: https://authelia.{{ .Values.app.domain }}/api/oidc/authorization
+              token_url: https://authelia.{{ .Values.app.domain }}/api/oidc/token
+              api_url: https://authelia.{{ .Values.app.domain }}/api/oidc/userinfo
               login_attribute_path: preferred_username
               groups_attribute_path: groups
               name_attribute_path: name
@@ -468,7 +465,7 @@ resources:
           prometheusSpec:
             podAntiAffinity: hard
             replicas: 1
-            externalUrl: https://prometheus.{{ .Values.global.domain }}/
+            externalUrl: https://prometheus.{{ .Values.app.domain }}/
             scrapeInterval: 30s
             evaluationInterval: 30s
             retentionSize: "20GB"
@@ -482,7 +479,7 @@ resources:
               - action: labeldrop
                 regex: replica
             externalLabels:
-              kubernetes_cluster: "{{ .Values.global.name }}"
+              kubernetes_cluster: "{{ .Values.app.name }}"
             storageSpec:
               volumeClaimTemplate:
                 spec:
@@ -527,28 +524,28 @@ resources:
             prometheus-gateway:
               secretName: tls-prometheus-gateway
               dnsNames:
-                prometheus: prometheus.{{ .Values.global.domain }}
+                prometheus: prometheus.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
             alertmanager-gateway:
               secretName: tls-alertmanager-gateway
               dnsNames:
-                alertmanager: alertmanager.{{ .Values.global.domain }}
+                alertmanager: alertmanager.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
             grafana-gateway:
               secretName: tls-grafana-gateway
               dnsNames:
-                grafana: grafana.{{ .Values.global.domain }}
+                grafana: grafana.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
             pushprox-gateway:
               secretName: tls-pushprox-gateway
               dnsNames:
-                pushprox: pushprox.{{ .Values.global.domain }}
+                pushprox: pushprox.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -564,7 +561,7 @@ resources:
               listeners:
                 prometheus:
                   name: prometheus
-                  hostname: prometheus.{{ .Values.global.domain }}
+                  hostname: prometheus.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -577,7 +574,7 @@ resources:
                       from: Same
                 alertmanager:
                   name: alertmanager
-                  hostname: alertmanager.{{ .Values.global.domain }}
+                  hostname: alertmanager.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -590,7 +587,7 @@ resources:
                       from: Same
                 grafana:
                   name: grafana
-                  hostname: grafana.{{ .Values.global.domain }}
+                  hostname: grafana.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -603,7 +600,7 @@ resources:
                       from: Same
                 pushprox:
                   name: pushprox
-                  hostname: pushprox.{{ .Values.global.domain }}
+                  hostname: pushprox.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -626,7 +623,7 @@ resources:
                   name: prometheus
                   sectionName: prometheus
               hostnames:
-                prometheus: prometheus.{{ .Values.global.domain }}
+                prometheus: prometheus.{{ .Values.app.domain }}
               rules:
                 ui:
                   filters:
@@ -664,7 +661,7 @@ resources:
                   name: prometheus
                   sectionName: alertmanager
               hostnames:
-                alertmanager: alertmanager.{{ .Values.global.domain }}
+                alertmanager: alertmanager.{{ .Values.app.domain }}
               rules:
                 ui:
                   filters:
@@ -702,7 +699,7 @@ resources:
                   name: prometheus
                   sectionName: grafana
               hostnames:
-                grafana: grafana.{{ .Values.global.domain }}
+                grafana: grafana.{{ .Values.app.domain }}
               rules:
                 ui:
                   backendRefs:
@@ -718,7 +715,7 @@ resources:
                   name: prometheus
                   sectionName: pushprox
               hostnames:
-                pushprox: pushprox.{{ .Values.global.domain }}
+                pushprox: pushprox.{{ .Values.app.domain }}
               rules:
                 proxy:
                   filters:

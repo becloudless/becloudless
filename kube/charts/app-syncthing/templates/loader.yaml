@@ -1,4 +1,4 @@
-{{- include "base.loader.init" $ }}
+{{- include "app.loader.init" $ }}
 
 {{- /* The instances are prepared as resources by default, values set by the cluster take precedence. */}}
 {{- $featureValues := include "app-syncthing.features.instances" (dict "rootContext" $) | fromYaml }}

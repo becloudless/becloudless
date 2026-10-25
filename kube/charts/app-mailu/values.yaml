@@ -1,7 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
-  name:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 # Generated: the secret key of mailu, the passwords of mariadb and of the roundcube database (`mailu`, `mailu-mariadb` and
 # `mailu-roundcube` secrets).
@@ -412,8 +409,8 @@ resources:
             mailu:
               secretName: tls-mailu
               dnsNames:
-                mail: mail.{{ .Values.global.domain }}
-                imap: imap.{{ .Values.global.domain }}
+                mail: mail.{{ .Values.app.domain }}
+                imap: imap.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -519,11 +516,11 @@ resources:
                             secretName: mailu-postfix-vpn
                             defaultMode: 0400
       values:
-        domain: "{{ .Values.global.domain }}"
+        domain: "{{ .Values.app.domain }}"
         subnet: 10.42.0.0/16 # the pods of the cluster
         hostnames:
-          - mail.{{ .Values.global.domain }}
-          - imap.{{ .Values.global.domain }}
+          - mail.{{ .Values.app.domain }}
+          - imap.{{ .Values.app.domain }}
         timezone: Europe/Paris
         sessionTimeout: 259201 # 3d
         permanentSessionLifetime: 31536000 # 1y
@@ -698,7 +695,7 @@ resources:
               listeners:
                 https:
                   name: https
-                  hostname: mail.{{ .Values.global.domain }}
+                  hostname: mail.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -718,7 +715,7 @@ resources:
                   kind: ListenerSet
                   name: mailu
               hostnames:
-                mail: mail.{{ .Values.global.domain }}
+                mail: mail.{{ .Values.app.domain }}
               rules:
                 root:
                   backendRefs:

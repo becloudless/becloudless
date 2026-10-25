@@ -1,7 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
-  name:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 # Tuwunel (https://github.com/matrix-construct/tuwunel): a Matrix homeserver (chat, in the Element client of `app-element`), written in
 # Rust, with its own embedded database (RocksDB), so there is no postgresql here.
@@ -37,7 +34,7 @@ resources:
       egress:
         authelia: # the OIDC issuer is the public address of authelia
           toFQDNs:
-            authelia: {matchName: "authelia.{{ .Values.global.domain }}"}
+            authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
           toPorts:
             https: {ports: {p443: {port: "443", protocol: TCP}}}
         gateway: # the public addresses of the cluster are the gateway for the pods
@@ -161,7 +158,7 @@ resources:
                           secretKeyRef:
                             name: tuwunel-oidc
                             key: client-id
-                        TUWUNEL_SERVER_NAME: matrix.{{ .Values.global.domain }} # can not be changed
+                        TUWUNEL_SERVER_NAME: matrix.{{ .Values.app.domain }} # can not be changed
                         TUWUNEL_ADDRESS: 0.0.0.0
                         # the subdirectory of the volume, the root has a `lost+found` directory
                         TUWUNEL_DATABASE_PATH: /var/lib/tuwunel/data
@@ -169,19 +166,19 @@ resources:
                         TUWUNEL_LOGIN_WITH_PASSWORD: "false" # the registration is disabled by default
                         TUWUNEL_NEW_USER_DISPLAYNAME_SUFFIX: "" # the default is an emoji
                         # the client well-known (the address of the server for the clients) also enables the built in OIDC server
-                        TUWUNEL_WELL_KNOWN__CLIENT: https://matrix.{{ .Values.global.domain }}
+                        TUWUNEL_WELL_KNOWN__CLIENT: https://matrix.{{ .Values.app.domain }}
                         # the clients that can sign in without the approval page: Element (`app-element`), and Element X on the phones
-                        TUWUNEL_OIDC_REGISTRATION_ALLOWED_REDIRECT_HOSTS: '["element.{{ .Values.global.domain }}", "io.element.android"]'
+                        TUWUNEL_OIDC_REGISTRATION_ALLOWED_REDIRECT_HOSTS: '["element.{{ .Values.app.domain }}", "io.element.android"]'
                         # SSO with authelia: the callback is /_matrix/client/unstable/login/sso/callback/<client id>
                         TUWUNEL_IDENTITY_PROVIDER__0__BRAND: Authelia
                         TUWUNEL_IDENTITY_PROVIDER__0__NAME: Authelia
-                        TUWUNEL_IDENTITY_PROVIDER__0__ISSUER_URL: https://authelia.{{ .Values.global.domain }}
+                        TUWUNEL_IDENTITY_PROVIDER__0__ISSUER_URL: https://authelia.{{ .Values.app.domain }}
                         TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_ID: $(OIDC_CLIENT_ID)
                         TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_SECRET:
                           secretKeyRef:
                             name: tuwunel-oidc
                             key: secret
-                        TUWUNEL_IDENTITY_PROVIDER__0__CALLBACK_URL: https://matrix.{{ .Values.global.domain }}/_matrix/client/unstable/login/sso/callback/$(OIDC_CLIENT_ID)
+                        TUWUNEL_IDENTITY_PROVIDER__0__CALLBACK_URL: https://matrix.{{ .Values.app.domain }}/_matrix/client/unstable/login/sso/callback/$(OIDC_CLIENT_ID)
                         # the user is the `preferred_username` of authelia: no random name when it is taken, the login fails
                         TUWUNEL_IDENTITY_PROVIDER__0__UNIQUE_ID_FALLBACKS: "false"
                       startupProbe:
@@ -261,7 +258,7 @@ resources:
             tuwunel-gateway:
               secretName: tls-tuwunel-gateway
               dnsNames:
-                matrix: matrix.{{ .Values.global.domain }}
+                matrix: matrix.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -279,7 +276,7 @@ resources:
               listeners:
                 https:
                   name: https
-                  hostname: matrix.{{ .Values.global.domain }}
+                  hostname: matrix.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -299,7 +296,7 @@ resources:
                   kind: ListenerSet
                   name: tuwunel
               hostnames:
-                matrix: matrix.{{ .Values.global.domain }}
+                matrix: matrix.{{ .Values.app.domain }}
               rules:
                 root:
                   backendRefs:

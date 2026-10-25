@@ -1,7 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-global:
-  domain:
-  name:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 # Seafile (community edition, https://www.seafile.com): file sync and share.
 #
@@ -50,7 +47,7 @@ resources:
             valkey: {ports: {p6379: {port: "6379", protocol: TCP}}}
         authelia: # the OIDC issuer is the public address of authelia
           toFQDNs:
-            authelia: {matchName: "authelia.{{ .Values.global.domain }}"}
+            authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
           toPorts:
             https: {ports: {p443: {port: "443", protocol: TCP}}}
         gateway: # the public addresses of the cluster are the gateway for the pods
@@ -361,7 +358,7 @@ resources:
                       env:
                         TIME_ZONE: Europe/Paris
                         SEAFILE_LOG_TO_STDOUT: "true"
-                        SEAFILE_SERVER_HOSTNAME: seafile.{{ .Values.global.domain }}
+                        SEAFILE_SERVER_HOSTNAME: seafile.{{ .Values.app.domain }}
                         SEAFILE_SERVER_PROTOCOL: https # the gateway terminates the TLS
                         JWT_PRIVATE_KEY:
                           secretKeyRef:
@@ -390,13 +387,13 @@ resources:
                             name: seafile-valkey
                             key: default
                         # the local administrator, created at the first start
-                        INIT_SEAFILE_ADMIN_EMAIL: admin@{{ .Values.global.domain }}
+                        INIT_SEAFILE_ADMIN_EMAIL: admin@{{ .Values.app.domain }}
                         INIT_SEAFILE_ADMIN_PASSWORD:
                           secretKeyRef:
                             name: seafile-generated
                             key: admin-password
                         # used by `local_settings.py`
-                        OAUTH_ISSUER_URL: https://authelia.{{ .Values.global.domain }}
+                        OAUTH_ISSUER_URL: https://authelia.{{ .Values.app.domain }}
                         OAUTH_CLIENT_ID:
                           secretKeyRef:
                             name: seafile-oidc
@@ -500,7 +497,7 @@ resources:
             seafile-gateway:
               secretName: tls-seafile-gateway
               dnsNames:
-                seafile: seafile.{{ .Values.global.domain }}
+                seafile: seafile.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -517,7 +514,7 @@ resources:
               listeners:
                 https:
                   name: https
-                  hostname: seafile.{{ .Values.global.domain }}
+                  hostname: seafile.{{ .Values.app.domain }}
                   port: 443
                   protocol: HTTPS
                   tls:
@@ -537,7 +534,7 @@ resources:
                   kind: ListenerSet
                   name: seafile
               hostnames:
-                seafile: seafile.{{ .Values.global.domain }}
+                seafile: seafile.{{ .Values.app.domain }}
               rules:
                 root:
                   backendRefs:

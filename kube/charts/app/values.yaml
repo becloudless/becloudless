@@ -1,0 +1,15 @@
+# The values shared by every app chart, in `.Values.app` (`app.domain`, `app.name`, `app.lldapdn`).
+# The cluster sets them for all the apps with the `global-values` ConfigMap of the `apps` chart (`valuesFrom` of the HelmRelease of
+# each app), from its `config`. They are required: an app chart does not render without them.
+app:
+  # the domain of the cluster, ex: example.com
+  domain:
+
+  # the name of the cluster, ex: example
+  name:
+
+  # the base DN of the LDAP directory of lldap, ex: dc=example,dc=com
+  lldapdn:
+
+  # the users of the cluster (the key is the user id), created in lldap by `lldap-post`
+  lldapUsers: {}
