@@ -3,14 +3,14 @@
 # The containers must not run as root (`runAsNonRoot: true`, on the pod or on every container, and never `false` on a
 # container). With user namespaces (see pod-set-host-users) root is not root on the host, but it keeps all the capabilities in the
 # container, which is a bigger kernel attack surface, and it can modify what the image contains.
-# `Audit`: the violations are in the PolicyReports (`kubectl get polr -A`), the pods are not blocked. Switch to `Enforce` once
-# the apps that are not compliant are fixed.
+# `Enforce`: the pods that are not compliant are rejected at creation. The pods that already exist are only reported in the
+# PolicyReports (`kubectl get polr -A`).
 # Not applied to:
 #  - the pods with a privileged container, they are the components that need the host (longhorn, ...);
 #  - the static pods (mirror pods), only the kubelet manages them;
 #  - the pods with the annotation `policy.bcl/skipContainerRequireRunAsNonRoot: "true"`, to opt out an app that does not work with it.
 failurePolicy: Ignore
-validationFailureAction: Audit
+validationFailureAction: Enforce
 background: true
 rules:
   - name: container-require-run-as-non-root

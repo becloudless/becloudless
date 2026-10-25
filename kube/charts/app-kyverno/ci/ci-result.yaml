@@ -236,7 +236,7 @@ spec:
                   containers:
                   - securityContext:
                       readOnlyRootFilesystem: true
-          validationFailureAction: Audit
+          validationFailureAction: Enforce
         container-require-run-as-non-root:
           background: true
           failurePolicy: Ignore
@@ -293,7 +293,7 @@ spec:
                       runAsNonRoot: true
               message: the containers must set `runAsNonRoot` to `true`, on the pod
                 or on every container
-          validationFailureAction: Audit
+          validationFailureAction: Enforce
         container-set-image-pull-policy:
           rules:
           - match:
