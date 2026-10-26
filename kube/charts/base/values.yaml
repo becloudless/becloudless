@@ -80,9 +80,6 @@ defaults:
 
     fluxKustomizations:
       interval: 10m
-      # a failed reconciliation (even one that only failed to write its status, ex: a connection reset by the API server) is retried
-      # at this interval and not at `interval`: a Kustomization with a long `interval` (24h) stays `Unknown` for a day otherwise,
-      # and the HelmRelease waiting for it (`wait`) with it
-      retryInterval: 1m
+      retryInterval: 1m # fail reconcile do not retry until interval without it
       prune: true
       wait: true
