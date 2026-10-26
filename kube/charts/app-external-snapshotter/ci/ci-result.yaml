@@ -62,6 +62,7 @@ spec:
       name: snapshot-controller
   path: ./deploy/kubernetes/snapshot-controller
   prune: false
+  retryInterval: 1m
   sourceRef:
     kind: GitRepository
     name: external-snapshotter
@@ -78,6 +79,7 @@ spec:
   interval: 24h
   path: ./client/config/crd
   prune: false
+  retryInterval: 1m
   sourceRef:
     kind: GitRepository
     name: external-snapshotter

@@ -70,12 +70,13 @@ defaults:
           retryInterval: 5m
       driftDetection:
         mode: enabled
-      # TODO a degraded CNPG cluster (e.g. a replica being rebuilt) must not fail the release: the primary is enough
-      # healthCheckExprs:
-      #   cnpg-cluster:
-      #     apiVersion: postgresql.cnpg.io/v1
-      #     kind: Cluster
-      #     current: has(status.readyInstances) && status.readyInstances >= 1
+      # kstatus ignores the `Ready` condition of custom resources, a CNPG Cluster is `Current` as soon as it exists.
+      # Wait for the primary only: a replica being rebuilt must not block (or fail) the release.
+      healthCheckExprs:
+        cnpg-cluster:
+          apiVersion: postgresql.cnpg.io/v1
+          kind: Cluster
+          current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary) && status.currentPrimary != ''
 
     fluxKustomizations:
       interval: 10m
