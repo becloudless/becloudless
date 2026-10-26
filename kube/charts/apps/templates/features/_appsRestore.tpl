@@ -12,8 +12,8 @@ It waits for Longhorn (`app-longhorn`) and for the backup target of Garage (the 
 apps are enabled: do not set `restore` on `garage` or `longhorn`, their volumes can not be restored before they run.
 Nothing is created when Longhorn is not enabled.
 
-Only the volumes holding all the state of an app are to be restored: the files of an app whose database is a CloudNativePG cluster
-would not match the new empty database.
+Only for the apps keeping all their state in their PVCs and CloudNativePG databases (both are restored, see the chart
+`longhorn-restore`). The secrets are generated again, so not for an app whose data is encrypted with one.
 */}}
 {{- define "app-apps.restore.enabled" }}
   {{- $app := get .apps .name | default dict }}

@@ -14,9 +14,16 @@
 # Nothing is done when no backup target is configured, or when there is no backup of the namespace (a new app starts empty). The
 # PVCs that an app does not use anymore but are in the backups are restored too (a PV for a claim that never comes, delete it).
 #
+# The volumes of a CloudNativePG cluster (Longhorn saves the workload of the PVC, of type `Cluster`) are restored as the first
+# instance only: the most recent backup of any of its instances, as the PVC `<cluster>-1`, created by the job with the labels and
+# annotations of CloudNativePG (a PVC created by the operator would be initialised empty). The operator adopts it when the `Cluster`
+# is created, promotes it, and the other instances are cloned from it. The cluster is not restored when any of its PVCs exists.
+# The password of the `app` user is the one of the new secret of the cluster: the operator sets it in the database.
+#
 # The capacity of the PV is the size of the volume at the time of the backup: it is the size of the PVC when it was not resized,
 # and a PVC asking for more than this stays pending.
-# The data is the one of a crash-consistent snapshot: the databases recover like after a crash.
+# The data is the one of a crash-consistent snapshot: the databases recover like after a crash. There is no WAL archive: the
+# transactions after the last backup are lost.
 
 restore:
   namespace: "" # the namespace of the app, where the PVCs are
@@ -24,7 +31,7 @@ restore:
 resources:
   jobs:
     longhorn-restore:
-      fullNameOverride: 'restore-{{ .Values.restore.namespace | trunc 30 | trimSuffix "-" }}-{{ list 2 .Values.restore | toJson | sha256sum | trunc 10 }}' # change the 2 when the spec of the Job changes (immutable fields)
+      fullNameOverride: 'restore-{{ .Values.restore.namespace | trunc 30 | trimSuffix "-" }}-{{ list 3 .Values.restore | toJson | sha256sum | trunc 10 }}' # change the 3 when the spec of the Job changes (immutable fields)
       backoffLimit: 2
       activeDeadlineSeconds: 3000
       template:
@@ -51,24 +58,33 @@ resources:
                   log() { echo "$(date -u +%H:%M:%S) $*"; }
                   volume_name() { echo "restore-$(printf '%s/%s' "$NAMESPACE" "$1" | sha256sum | cut -c1-16)"; }
 
-                  # the last completed backup of each PVC of the namespace, one JSON per line
+                  # the last completed backup of each PVC of the namespace, one JSON per line. The instances of a CloudNativePG cluster
+                  # (`cluster`) are one PVC, `<cluster>-1`, with the last backup of any of them (not the ones of the WAL volumes)
                   latest() {
                     kubectl -n "$LH" get backups.longhorn.io -o json | jq -c --arg ns "$NAMESPACE" '
                       [.items[]
                         | select(.status.state == "Completed")
                         | (.status.labels.KubernetesStatus // "{}" | try fromjson catch {}) as $k
                         | select($k.namespace == $ns and ($k.pvcName // "") != "")
-                        | {pvc: $k.pvcName, volume: .status.volumeName, url: .status.url, size: .status.volumeSize, createdAt: .status.backupCreatedAt,
+                        | ([$k.workloadsStatus[]? | select(.workloadType == "Cluster") | .workloadName] | first // "") as $cluster
+                        | select($cluster == "" or ($k.pvcName | test("-wal$") | not))
+                        | {pvc: (if $cluster == "" then $k.pvcName else $cluster + "-1" end), cluster: $cluster, volume: .status.volumeName, url: .status.url,
+                           size: .status.volumeSize, createdAt: .status.backupCreatedAt,
                            mode: (.status.labels["longhorn.io/volume-access-mode"] // "rwo")}]
                       | group_by(.pvc) | map(sort_by(.createdAt) | last) | .[]'
                   }
-                  # ... without PVC, and without volume already restored for it
+                  # ... without PVC (any instance for a cluster), and without volume already restored for it
                   missing() {
                     while read -r b; do
                       [ -n "$b" ] || continue
                       pvc=$(echo "$b" | jq -r .pvc)
-                      [ -z "$(kubectl -n "$NAMESPACE" get pvc "$pvc" -o name --ignore-not-found)" ] || continue
-                      [ -z "$(kubectl get pv "$(volume_name "$pvc")" -o name --ignore-not-found)" ] || continue
+                      cluster=$(echo "$b" | jq -r .cluster)
+                      if [ -n "$cluster" ]; then
+                        [ -z "$(kubectl -n "$NAMESPACE" get pvc -l "cnpg.io/cluster=$cluster" -o name)" ] || continue
+                      else
+                        [ -z "$(kubectl -n "$NAMESPACE" get pvc "$pvc" -o name --ignore-not-found)" ] || continue
+                        [ -z "$(kubectl get pv "$(volume_name "$pvc")" -o name --ignore-not-found)" ] || continue
+                      fi
                       echo "$b"
                     done <<< "$(latest)"
                   }
@@ -100,6 +116,7 @@ resources:
 
                   while read -r b; do
                     pvc=$(echo "$b" | jq -r .pvc)
+                    cluster=$(echo "$b" | jq -r .cluster)
                     volume=$(echo "$b" | jq -r .volume)
                     size=$(echo "$b" | jq -r .size)
                     url=$(echo "$b" | jq -r .url)
@@ -150,6 +167,20 @@ resources:
                               csi: {driver: "driver.longhorn.io", fsType: "ext4", volumeHandle: $name,
                                     volumeAttributes: {numberOfReplicas: $replicas, staleReplicaTimeout: $stale}}}}' |
                       kubectl apply -f -
+
+                    # the instance of a CloudNativePG cluster: the operator only adopts a PVC that is ready and has its labels, and
+                    # creates an empty one otherwise
+                    if [ -n "$cluster" ] && [ -z "$(kubectl -n "$NAMESPACE" get pvc "$pvc" -o name --ignore-not-found)" ]; then
+                      jq -n --arg name "$name" --arg size "$size" --arg class "$class" --arg ns "$NAMESPACE" --arg pvc "$pvc" --arg cluster "$cluster" '
+                        {apiVersion: "v1", kind: "PersistentVolumeClaim",
+                         metadata: {name: $pvc, namespace: $ns,
+                                    labels: {"cnpg.io/cluster": $cluster, "cnpg.io/instanceName": $pvc, "cnpg.io/pvcRole": "PG_DATA",
+                                             "app.kubernetes.io/component": "database", "app.kubernetes.io/managed-by": "cloudnative-pg",
+                                             "app.kubernetes.io/name": "postgresql"},
+                                    annotations: {"cnpg.io/nodeSerial": "1", "cnpg.io/pvcStatus": "ready"}},
+                         spec: {accessModes: ["ReadWriteOnce"], storageClassName: $class, resources: {requests: {storage: $size}}, volumeName: $name}}' |
+                        kubectl create -f -
+                    fi
                     log "$pvc: restored in the volume $name"
                   done <<< "$todo"
               env:

@@ -186,6 +186,7 @@ apps:
       extra: true
     appChart:
       name: app-forgejo
+    restore: true
 
   jellyfin:
     groups:
@@ -199,6 +200,7 @@ apps:
       extra: true
     appChart:
       name: app-seerr
+    restore: true
 
   seafile:
     groups:
@@ -212,6 +214,7 @@ apps:
       extra: true
     appChart:
       name: app-paperless
+    restore: true
 
   tuwunel:
     groups:
@@ -249,6 +252,7 @@ apps:
       extra: true
     appChart:
       name: app-immich
+    restore: true
 
   garage:
     groups:

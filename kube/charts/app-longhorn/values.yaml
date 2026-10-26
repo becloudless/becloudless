@@ -291,7 +291,7 @@ resources:
         pvcs:
           apiGroups: [ "" ]
           resources: [ persistentvolumeclaims ]
-          verbs: [ get, list ]
+          verbs: [ get, list, create ] # create: the instance of a CloudNativePG cluster (the operator adopts it)
         storageclasses:
           apiGroups: [ storage.k8s.io ]
           resources: [ storageclasses ]

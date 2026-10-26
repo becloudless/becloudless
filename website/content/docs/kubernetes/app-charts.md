@@ -67,8 +67,13 @@ app waits, the job is retried) when the target is not reachable.
 - The claim of the app has to use the same name, storage class and access mode as when it was backed up, and not ask for more than the size
   of the volume at that time. A PVC the app does not use anymore but that is in the backups is restored too: delete its PV.
 - It is the flag that opts in, because the job needs rights on the whole cluster (PVs): they are given to the job, not to the apps.
-- Only for the apps that keep all their state in these volumes: the files of an app with a CloudNativePG database would not match its
-  new empty database. Not for `garage` (it holds the backups) nor `longhorn`.
+- A CloudNativePG cluster is restored too (Longhorn saves the workload of the PVC in the backup). Its instances are one PVC: the job takes
+  the most recent backup of any instance and creates it as `<cluster>-1`, with the labels and annotations of the operator (a PVC created
+  by the operator would be initialised empty). When the `Cluster` is created the operator adopts the PVC, promotes it, sets the password of
+  the `app` user from the new secret, and clones the other instances from it. Nothing is restored when a PVC of the cluster exists. There
+  is no WAL archive: the transactions after the backup are lost.
+- Only for the apps that keep all their state in their PVCs and databases, and not in the secrets: they are generated again, so an app
+  whose data is encrypted with one (`authelia`, `lldap`) does not get it back. Not for `garage` (it holds the backups) nor `longhorn`.
 - The backups are in the cluster itself (the bucket of Garage is on Longhorn volumes), so this restores an app that was removed or whose
   volume was lost, not a lost cluster.
 
