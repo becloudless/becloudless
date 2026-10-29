@@ -240,12 +240,18 @@ resources:
         kube-apiserver:
           toEntities: {apiserver: kube-apiserver}
 
-    longhorn-restore: # the jobs of the `longhorn-restore` chart, they only talk to the API server (backups, volumes and PVs)
+    longhorn-restore: # the jobs of the `longhorn-restore` chart: the API server (backups, volumes, PVs, secrets) and the S3 API (secrets)
       endpointSelector:
         matchLabels: {app.kubernetes.io/name: longhorn-restore}
       egress:
         kube-apiserver:
           toEntities: {apiserver: kube-apiserver}
+        backup-target: # the bucket of the backup target (garage), where the secrets of the apps are saved
+          toEndpoints:
+            garage:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": garage, "k8s:app.kubernetes.io/name": garage}
+          toPorts:
+            s3: {ports: {p3900: {port: "3900", protocol: TCP}}}
 
   # The jobs restoring the volumes of the apps from the backups (chart `longhorn-restore`, `restore` of the apps): they read the
   # backups, create the volumes restored from them and the PVs with a claim, which the PVC of the app is bound to. They are here
