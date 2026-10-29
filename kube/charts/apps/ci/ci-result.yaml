@@ -14,6 +14,15 @@ kind: Namespace
 metadata:
   annotations:
     helm.sh/resource-policy: keep
+  name: backup-restore
+spec: {}
+---
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-system
 spec: {}
 ---
@@ -61,6 +70,15 @@ metadata:
     helm.sh/resource-policy: keep
   name: flux-apps
   namespace: apps
+---
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-backup-restore
+  namespace: backup-restore
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: v1
@@ -147,6 +165,20 @@ kind: ConfigMap
 metadata:
   name: global-values
   namespace: apps
+---
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    app:
+      domain: test.com
+      lldapUsers: {}
+      lldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: backup-restore
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: v1
@@ -247,6 +279,22 @@ subjects:
 - kind: ServiceAccount
   name: flux-apps
   namespace: apps
+---
+# Source: apps/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-backup-restore
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-backup-restore
+  namespace: backup-restore
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -397,7 +445,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: backup-restore
-  namespace: longhorn-system
+  namespace: backup-restore
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -427,6 +475,58 @@ spec:
   ref:
     branch: n0/kube-proxy
   url: https://github.com/becloudless/becloudless.git
+---
+# Source: apps/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-backup-restore
+  namespace: backup-restore
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-backup-restore
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  dependsOn:
+  - name: app-garage
+    namespace: garage
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    timeout: 20m
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-backup-restore
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-backup-restore
+        fluxKustomizations:
+          serviceAccountName: flux-backup-restore
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -788,7 +888,7 @@ spec:
         namespace: default
   dependsOn:
   - name: restore-something
-    namespace: longhorn-system
+    namespace: backup-restore
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -832,7 +932,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: restore-something
-  namespace: longhorn-system
+  namespace: backup-restore
 spec:
   chart:
     spec:
@@ -843,6 +943,10 @@ spec:
         name: bcl
         namespace: default
   dependsOn:
+  - name: app-backup-restore
+    namespace: backup-restore
+  - name: backup-restore-pre
+    namespace: backup-restore
   - name: longhorn-backup
     namespace: garage
   - name: app-longhorn
@@ -863,7 +967,7 @@ spec:
   interval: 1h
   rollback:
     cleanupOnFail: true
-  serviceAccountName: flux-longhorn
+  serviceAccountName: flux-backup-restore
   timeout: 1h
   upgrade:
     cleanupOnFail: true

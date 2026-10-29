@@ -1,0 +1,128 @@
+# yaml-language-server: $schema=../app/schema/values.schema.json
+
+# Everything that gets the data of the apps back is in this namespace: the jobs that restore the volumes and the generated secrets of
+# the apps (chart `longhorn-restore`, started by the `restore: true` of an app in the `apps` chart), the account they run as, and the
+# access to the bucket of the secrets. Longhorn keeps what is its own in `longhorn-system` (backup target, recurring jobs, volumes).
+#
+# The rights of the account of the jobs (`backup-restore`), none of them is given to the apps or to Flux:
+#  - Longhorn: read the backups, create the volumes restored from them, ask for a sync of the backup target;
+#  - the cluster: create the PVs and the PVCs of the restored volumes, read the storage classes;
+#  - the namespace of each app with `restore: true`: its secrets and `StringSecret`s (created by the `apps` chart).
+# `flux-backup-restore` is cluster-admin to create the cluster-wide rights: only the jobs run as the account `backup-restore`, which has the
+# rights above and nothing else.
+#
+# The secrets of the apps are saved in the bucket `secrets-backups` of Garage with its own key (`garage-secrets-backup`, see app-garage),
+# which can not read the volumes saved by Longhorn in `longhorn-backups`, as the key of Longhorn can not read the secrets. It is copied
+# here as `s3-secrets` by external-secrets (`backup-restore-pre`). The secrets are stored as they are in the cluster: the bucket is as sensitive
+# as the secrets of the apps.
+# Needs Longhorn and Garage (the backup target and the bucket of the secrets).
+
+resources:
+
+  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
+  ciliumNetworkPolicies:
+    longhorn-restore: # the jobs of the chart `longhorn-restore`
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: longhorn-restore}
+      egress:
+        kube-apiserver: # the backups, volumes, PVs, PVCs and secrets
+          toEntities: {apiserver: kube-apiserver}
+        garage: # the S3 API, for the secrets (the matching ingress is in app-garage)
+          toEndpoints:
+            garage:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": garage, "k8s:app.kubernetes.io/name": garage}
+          toPorts:
+            s3: {ports: {p3900: {port: "3900", protocol: TCP}}}
+
+  serviceAccounts:
+    backup-restore:
+      automountServiceAccountToken: true # the API server
+
+  clusterRoles:
+    backup-restore:
+      rules:
+        backups: # Longhorn lives in one namespace, `longhorn-system`: the jobs only use it
+          apiGroups: [ longhorn.io ]
+          resources: [ backups, backupvolumes ]
+          verbs: [ get, list ]
+        backuptargets:
+          apiGroups: [ longhorn.io ]
+          resources: [ backuptargets ]
+          verbs: [ get, patch ] # patch: ask for a sync
+        volumes:
+          apiGroups: [ longhorn.io ]
+          resources: [ volumes ]
+          verbs: [ get, list, create ]
+        pvs:
+          apiGroups: [ "" ]
+          resources: [ persistentvolumes ]
+          verbs: [ get, list, create ]
+        pvcs:
+          apiGroups: [ "" ]
+          resources: [ persistentvolumeclaims ]
+          verbs: [ get, list, create ] # create: the instance of a CloudNativePG cluster (the operator adopts it)
+        storageclasses:
+          apiGroups: [ storage.k8s.io ]
+          resources: [ storageclasses ]
+          verbs: [ get ]
+  clusterRoleBindings:
+    backup-restore:
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: backup-restore
+      subjects:
+        backup-restore:
+          kind: ServiceAccount
+          name: backup-restore
+          namespace: backup-restore
+
+  fluxHelmReleases:
+    # the access key of the bucket of the secrets, copied from Garage before the jobs run
+    backup-restore-pre:
+      dependsOn:
+        external-secrets:
+          name: app-external-secrets
+          namespace: external-secrets
+        garage-pre: # the key, and the right to read it
+          name: garage-pre
+          namespace: garage
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          reconcileStrategy: Revision
+          sourceRef:
+            kind: GitRepository
+            name: bcl
+            namespace: apps
+      values:
+        resources:
+          serviceAccounts:
+            garage-reader:
+              automountServiceAccountToken: false # only used by external-secrets to get a token
+
+          secretStores:
+            garage:
+              provider:
+                kubernetes:
+                  remoteNamespace: garage
+                  server:
+                    caProvider:
+                      type: ConfigMap
+                      name: kube-root-ca.crt
+                      key: ca.crt
+                  auth:
+                    serviceAccount:
+                      name: garage-reader
+
+          # `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_ENDPOINTS`, read by the jobs
+          externalSecrets:
+            s3-secrets:
+              refreshInterval: 1h
+              secretStoreRef:
+                kind: SecretStore
+                name: garage
+              dataFrom:
+                all:
+                  extract:
+                    key: garage-secrets-backup

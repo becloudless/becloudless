@@ -22,6 +22,14 @@ spec:
   ingress:
   - fromEndpoints:
     - matchLabels:
+        k8s:app.kubernetes.io/name: longhorn-restore
+        k8s:io.kubernetes.pod.namespace: backup-restore
+    toPorts:
+    - ports:
+      - port: "3900"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
         app.kubernetes.io/name: garage
     toPorts:
     - ports:
@@ -48,9 +56,6 @@ spec:
         k8s:longhorn.io/component: instance-manager
     - matchLabels:
         k8s:app: longhorn-manager
-        k8s:io.kubernetes.pod.namespace: longhorn-system
-    - matchLabels:
-        k8s:app.kubernetes.io/name: longhorn-restore
         k8s:io.kubernetes.pod.namespace: longhorn-system
     toPorts:
     - ports:
@@ -461,7 +466,7 @@ spec:
         garage-layout:
           activeDeadlineSeconds: 900
           backoffLimit: 0
-          fullNameOverride: garage-layout-8594c40cd2
+          fullNameOverride: garage-layout-657750cded
           template:
             metadata:
               labels:
@@ -493,12 +498,16 @@ spec:
                       post ApplyClusterLayout "{\"version\":$((version + 1))}"
                       echo 'the layout is applied'
                     fi
-                    bucket=longhorn-backups
-                    get "GetBucketInfo?globalAlias=$bucket" > /dev/null 2>&1 || retry post CreateBucket "{\"globalAlias\":\"$bucket\"}"
-                    bucket_id=$(get "GetBucketInfo?globalAlias=$bucket" | grep -o '"id": *"[0-9a-f]*"' | head -n 1 | cut -d'"' -f4)
-                    get "GetKeyInfo?id=$AWS_ACCESS_KEY_ID" > /dev/null 2>&1 || retry post ImportKey "{\"accessKeyId\":\"$AWS_ACCESS_KEY_ID\",\"secretAccessKey\":\"$AWS_SECRET_ACCESS_KEY\",\"name\":\"longhorn\"}"
-                    post AllowBucketKey "{\"bucketId\":\"$bucket_id\",\"accessKeyId\":\"$AWS_ACCESS_KEY_ID\",\"permissions\":{\"read\":true,\"write\":true,\"owner\":false}}" > /dev/null
-                    echo 'the bucket and the key of longhorn are ready'
+                    # bucket, access key id, secret access key, name of the key
+                    bucket_and_key() {
+                      get "GetBucketInfo?globalAlias=$1" > /dev/null 2>&1 || retry post CreateBucket "{\"globalAlias\":\"$1\"}"
+                      bucket_id=$(get "GetBucketInfo?globalAlias=$1" | grep -o '"id": *"[0-9a-f]*"' | head -n 1 | cut -d'"' -f4)
+                      get "GetKeyInfo?id=$2" > /dev/null 2>&1 || retry post ImportKey "{\"accessKeyId\":\"$2\",\"secretAccessKey\":\"$3\",\"name\":\"$4\"}"
+                      post AllowBucketKey "{\"bucketId\":\"$bucket_id\",\"accessKeyId\":\"$2\",\"permissions\":{\"read\":true,\"write\":true,\"owner\":false}}" > /dev/null
+                      echo "the bucket $1 and the key $4 are ready"
+                    }
+                    bucket_and_key longhorn-backups "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" longhorn
+                    bucket_and_key secrets-backups "$SECRETS_ACCESS_KEY_ID" "$SECRETS_SECRET_ACCESS_KEY" secrets-backup
                   command:
                   - sh
                   - -ec
@@ -516,6 +525,14 @@ spec:
                         key: AWS_SECRET_ACCESS_KEY
                         name: garage-longhorn
                     CAPACITY: "10737418240"
+                    SECRETS_ACCESS_KEY_ID:
+                      secretKeyRef:
+                        key: AWS_ACCESS_KEY_ID
+                        name: garage-secrets-backup
+                    SECRETS_SECRET_ACCESS_KEY:
+                      secretKeyRef:
+                        key: AWS_SECRET_ACCESS_KEY
+                        name: garage-secrets-backup
                   image: docker.io/library/alpine:3.24.3
                   name: layout
                   securityContext:
@@ -586,6 +603,16 @@ spec:
   values:
     resources:
       roleBindings:
+        backup-secrets-reader:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: backup-secrets-reader
+          subjects:
+            garage-reader:
+              kind: ServiceAccount
+              name: garage-reader
+              namespace: backup-restore
         longhorn-secrets-reader:
           roleRef:
             apiGroup: rbac.authorization.k8s.io
@@ -597,6 +624,17 @@ spec:
               name: garage-reader
               namespace: longhorn-system
       roles:
+        backup-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - garage-secrets-backup
+              resources:
+              - secrets
+              verbs:
+              - get
         longhorn-secrets-reader:
           rules:
             secrets:
@@ -620,6 +658,18 @@ spec:
               fieldName: rpc-secret
               length: "64"
         garage-longhorn:
+          data:
+            AWS_ENDPOINTS: http://garage.garage.svc.cluster.local:3900
+          fields:
+            access-key-id:
+              encoding: hex
+              fieldName: AWS_ACCESS_KEY_ID
+              length: "32"
+            secret-access-key:
+              encoding: hex
+              fieldName: AWS_SECRET_ACCESS_KEY
+              length: "64"
+        garage-secrets-backup:
           data:
             AWS_ENDPOINTS: http://garage.garage.svc.cluster.local:3900
           fields:

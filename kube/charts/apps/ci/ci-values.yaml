@@ -7,6 +7,8 @@ apps:
     enabled: true
   garage:
     enabled: true
+  backup-restore:
+    enabled: true
   something:
     namespace: something
     appChart:

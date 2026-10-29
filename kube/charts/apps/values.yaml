@@ -260,3 +260,12 @@ apps:
     clusterAdmin: true # the CRD and the ClusterRole of the discovery of the nodes
     appChart:
       name: app-garage
+
+  backup-restore: # the jobs restoring the volumes and the secrets of the apps with `restore: true`, needs `longhorn` and `garage`
+    groups:
+      extra: true
+    clusterAdmin: true # the ClusterRole of the restore jobs
+    dependsOn:
+      garage: true
+    appChart:
+      name: app-backup-restore

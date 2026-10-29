@@ -24,6 +24,8 @@
 # data volume. Another node (a bigger `dbReplicas`) is added to the layout by the same job when its spec changes (the `1` of
 # its name below); removing a node from the layout is made by hand (`/garage layout remove`).
 # It is the backup target of longhorn (`longhorn-backup`): the bucket `longhorn-backups`, and its key, are created by `garage-layout`.
+# The bucket `secrets-backups` and its own key hold the secrets of the apps (see app-backup-restore): each key can only use its bucket, there is
+# no way to limit a key of Garage to a part of a bucket.
 
 resources:
 
@@ -49,8 +51,12 @@ resources:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": longhorn-system, "k8s:app": longhorn-manager}
             instance-manager:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": longhorn-system, "k8s:longhorn.io/component": instance-manager}
-            restore: # the jobs saving and restoring the secrets of the apps (chart `longhorn-restore`), in the same bucket
-              matchLabels: {"k8s:io.kubernetes.pod.namespace": longhorn-system, "k8s:app.kubernetes.io/name": longhorn-restore}
+          toPorts:
+            s3: {ports: {p3900: {port: "3900", protocol: TCP}}}
+        backup-restore: # the S3 API, for the jobs saving and restoring the secrets of the apps (chart `longhorn-restore`, see app-backup-restore)
+          fromEndpoints:
+            restore:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": backup-restore, "k8s:app.kubernetes.io/name": longhorn-restore}
           toPorts:
             s3: {ports: {p3900: {port: "3900", protocol: TCP}}}
         layout: # the admin API
@@ -124,8 +130,24 @@ resources:
                   encoding: hex
                   length: "64"
 
+            # the access key of the bucket of the secrets of the apps (see app-backup-restore): it is imported in Garage by `garage-layout`, and
+            # copied in the namespace `backup-restore` by the `backup-restore-pre` release of app-backup-restore
+            garage-secrets-backup:
+              data:
+                AWS_ENDPOINTS: http://garage.garage.svc.cluster.local:3900
+              fields:
+                access-key-id:
+                  fieldName: AWS_ACCESS_KEY_ID
+                  encoding: hex
+                  length: "32"
+                secret-access-key:
+                  fieldName: AWS_SECRET_ACCESS_KEY
+                  encoding: hex
+                  length: "64"
+
           # lets the `garage-reader` service account of longhorn, used by the SecretStore of `longhorn-backup`, read the
-          # `garage-longhorn` secret of this namespace, and only this one
+          # `garage-longhorn` secret of this namespace, and only this one. The same for the one of the namespace `backup-restore`
+          # (`backup-restore-pre` of app-backup-restore) and `garage-secrets-backup`
           roles:
             longhorn-secrets-reader:
               rules:
@@ -133,6 +155,13 @@ resources:
                   apiGroups: [ "" ]
                   resources: [ secrets ]
                   resourceNames: [ garage-longhorn ]
+                  verbs: [ get ]
+            backup-secrets-reader:
+              rules:
+                secrets:
+                  apiGroups: [ "" ]
+                  resources: [ secrets ]
+                  resourceNames: [ garage-secrets-backup ]
                   verbs: [ get ]
           roleBindings:
             longhorn-secrets-reader:
@@ -145,6 +174,16 @@ resources:
                   kind: ServiceAccount
                   name: garage-reader
                   namespace: longhorn-system
+            backup-secrets-reader:
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: Role
+                name: backup-secrets-reader
+              subjects:
+                garage-reader:
+                  kind: ServiceAccount
+                  name: garage-reader
+                  namespace: backup-restore
 
     garage:
       dependsOn:
@@ -388,7 +427,7 @@ resources:
         resources:
           jobs:
             garage-layout:
-              fullNameOverride: 'garage-layout-{{ list 2 .Values.app.domain .Values.app.scaling.dbReplicas | toJson | sha256sum | trunc 10 }}' # change the 1 when the spec of the Job changes (immutable fields)
+              fullNameOverride: 'garage-layout-{{ list 3 .Values.app.domain .Values.app.scaling.dbReplicas | toJson | sha256sum | trunc 10 }}' # change the 3 when the spec of the Job changes (immutable fields)
               backoffLimit: 0
               activeDeadlineSeconds: 900
               template:
@@ -409,8 +448,8 @@ resources:
                       command: [ sh, -ec ]
                       # The admin API of the first node (it knows the others) with the busybox `wget`, nothing else is needed: the
                       # image of Garage has no shell. The layout is only given to the nodes without a role, one zone per node.
-                      # Then the bucket `longhorn-backups` and the key of longhorn, which can read and write in it, are created when
-                      # they are missing.
+                      # Then the buckets `longhorn-backups` and `secrets-backups`, and the key of longhorn and the one of the backups of
+                      # the secrets (each one can read and write in its bucket only), are created when they are missing.
                       args:
                         - |
                           replicas=$(sed -n 's/^replication_factor = //p' /etc/garage/garage.toml)
@@ -435,12 +474,16 @@ resources:
                             post ApplyClusterLayout "{\"version\":$((version + 1))}"
                             echo 'the layout is applied'
                           fi
-                          bucket=longhorn-backups
-                          get "GetBucketInfo?globalAlias=$bucket" > /dev/null 2>&1 || retry post CreateBucket "{\"globalAlias\":\"$bucket\"}"
-                          bucket_id=$(get "GetBucketInfo?globalAlias=$bucket" | grep -o '"id": *"[0-9a-f]*"' | head -n 1 | cut -d'"' -f4)
-                          get "GetKeyInfo?id=$AWS_ACCESS_KEY_ID" > /dev/null 2>&1 || retry post ImportKey "{\"accessKeyId\":\"$AWS_ACCESS_KEY_ID\",\"secretAccessKey\":\"$AWS_SECRET_ACCESS_KEY\",\"name\":\"longhorn\"}"
-                          post AllowBucketKey "{\"bucketId\":\"$bucket_id\",\"accessKeyId\":\"$AWS_ACCESS_KEY_ID\",\"permissions\":{\"read\":true,\"write\":true,\"owner\":false}}" > /dev/null
-                          echo 'the bucket and the key of longhorn are ready'
+                          # bucket, access key id, secret access key, name of the key
+                          bucket_and_key() {
+                            get "GetBucketInfo?globalAlias=$1" > /dev/null 2>&1 || retry post CreateBucket "{\"globalAlias\":\"$1\"}"
+                            bucket_id=$(get "GetBucketInfo?globalAlias=$1" | grep -o '"id": *"[0-9a-f]*"' | head -n 1 | cut -d'"' -f4)
+                            get "GetKeyInfo?id=$2" > /dev/null 2>&1 || retry post ImportKey "{\"accessKeyId\":\"$2\",\"secretAccessKey\":\"$3\",\"name\":\"$4\"}"
+                            post AllowBucketKey "{\"bucketId\":\"$bucket_id\",\"accessKeyId\":\"$2\",\"permissions\":{\"read\":true,\"write\":true,\"owner\":false}}" > /dev/null
+                            echo "the bucket $1 and the key $4 are ready"
+                          }
+                          bucket_and_key longhorn-backups "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" longhorn
+                          bucket_and_key secrets-backups "$SECRETS_ACCESS_KEY_ID" "$SECRETS_SECRET_ACCESS_KEY" secrets-backup
                       env:
                         ADMIN_TOKEN:
                           secretKeyRef:
@@ -453,6 +496,14 @@ resources:
                         AWS_SECRET_ACCESS_KEY:
                           secretKeyRef:
                             name: garage-longhorn
+                            key: AWS_SECRET_ACCESS_KEY
+                        SECRETS_ACCESS_KEY_ID:
+                          secretKeyRef:
+                            name: garage-secrets-backup
+                            key: AWS_ACCESS_KEY_ID
+                        SECRETS_SECRET_ACCESS_KEY:
+                          secretKeyRef:
+                            name: garage-secrets-backup
                             key: AWS_SECRET_ACCESS_KEY
                         CAPACITY: "10737418240" # the size of `garage-data` (10Gi), in bytes
                       securityContext:

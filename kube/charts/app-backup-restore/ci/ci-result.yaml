@@ -1,0 +1,164 @@
+---
+# Source: app-backup-restore/templates/loader.yaml
+apiVersion: v1
+automountServiceAccountToken: true
+kind: ServiceAccount
+metadata:
+  name: backup-restore
+  namespace: default
+---
+# Source: app-backup-restore/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backup-restore
+rules:
+- apiGroups:
+  - longhorn.io
+  resources:
+  - backups
+  - backupvolumes
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - longhorn.io
+  resources:
+  - backuptargets
+  verbs:
+  - get
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - get
+  - list
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumes
+  verbs:
+  - get
+  - list
+  - create
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - storageclasses
+  verbs:
+  - get
+- apiGroups:
+  - longhorn.io
+  resources:
+  - volumes
+  verbs:
+  - get
+  - list
+  - create
+---
+# Source: app-backup-restore/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backup-restore
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: backup-restore
+subjects:
+- kind: ServiceAccount
+  name: backup-restore
+  namespace: backup-restore
+---
+# Source: app-backup-restore/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-restore
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/name: garage
+        k8s:io.kubernetes.pod.namespace: garage
+    toPorts:
+    - ports:
+      - port: "3900"
+        protocol: TCP
+  - toEntities:
+    - kube-apiserver
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: longhorn-restore
+---
+# Source: app-backup-restore/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: backup-restore-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-external-secrets
+    namespace: external-secrets
+  - name: garage-pre
+    namespace: garage
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    resources:
+      externalSecrets:
+        s3-secrets:
+          dataFrom:
+            all:
+              extract:
+                key: garage-secrets-backup
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: SecretStore
+            name: garage
+      secretStores:
+        garage:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: garage-reader
+              remoteNamespace: garage
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        garage-reader:
+          automountServiceAccountToken: false

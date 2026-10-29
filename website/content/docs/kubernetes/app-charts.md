@@ -57,8 +57,9 @@ apps:
     restore: true
 ```
 
-For such an app the `apps` chart also creates the HelmRelease `restore-<name>` (in `longhorn-system`, it waits for `app-longhorn` and
-for the backup target of Garage), and `app-<name>` waits for it. Its job (`kube/charts/longhorn-restore`), for each PVC that does not
+For such an app the `apps` chart also creates the HelmRelease `restore-<name>` in the namespace `backup-restore` (the app `backup-restore`, `app-backup-restore`,
+must be enabled next to `longhorn` and `garage`; it waits for them, and for the backup target of Garage), and `app-<name>` waits for it.
+Its job (`kube/charts/longhorn-restore`), for each PVC that does not
 exist yet: syncs the backup target, finds the last completed backup of the PVC (Longhorn saves its namespace and name in the backup),
 creates a Longhorn volume restored from it and the PV of this volume with a `claimRef` to the PVC, so the PVC of the app is bound to it
 when it is created. It does nothing when the PVC exists, when there is no backup target or backup (the app starts empty), and fails (the
@@ -72,8 +73,18 @@ app waits, the job is retried) when the target is not reachable.
   by the operator would be initialised empty). When the `Cluster` is created the operator adopts the PVC, promotes it, sets the password of
   the `app` user from the new secret, and clones the other instances from it. Nothing is restored when a PVC of the cluster exists. There
   is no WAL archive: the transactions after the backup are lost.
-- Only for the apps that keep all their state in their PVCs and databases, and not in the secrets: they are generated again, so an app
-  whose data is encrypted with one (`authelia`, `lldap`) does not get it back. Not for `garage` (it holds the backups) nor `longhorn`.
+- The secrets generated for the app (the ones owned by a `StringSecret` of secret-generator: a database encryption key, the password of an
+  administrator stored in the database) are saved too, hourly, by a CronJob of the namespace `backup-restore`, in the bucket `secrets-backups` of
+  Garage (`<namespace>/<secret>/<date>.json`, one object by change, the previous values are kept). The bucket has its own key, which
+  can not read the volumes saved by Longhorn (`longhorn-backups`), as the key of Longhorn can not read the secrets. The job restores the
+  last version of each secret before the volumes, when the app never ran (it has no `StringSecret` yet): secret-generator does not touch a
+  secret it does not own, so the app finds them as they were, and owns them from the next run of the CronJob. The secrets are stored as
+  they are in the cluster, the bucket is as sensitive as them. Only what was saved by a CronJob can be restored: a secret generated before
+  the first run is lost.
+- Only for the apps that keep all their state in their PVCs, databases and generated secrets. Not for `garage` (it holds the backups) nor
+  `longhorn`.
+- Everything that restores is in the namespace `backup-restore`: its account `backup-restore` is the only one with the rights (create PVs and PVCs,
+  the volumes of Longhorn, the secrets of the apps), and `flux-backup-restore` is cluster-admin to create them.
 - The backups are in the cluster itself (the bucket of Garage is on Longhorn volumes), so this restores an app that was removed or whose
   volume was lost, not a lost cluster.
 
