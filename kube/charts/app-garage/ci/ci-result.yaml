@@ -466,7 +466,7 @@ spec:
         garage-layout:
           activeDeadlineSeconds: 900
           backoffLimit: 0
-          fullNameOverride: garage-layout-657750cded
+          fullNameOverride: garage-layout-df58faa3dc
           template:
             metadata:
               labels:
@@ -507,7 +507,6 @@ spec:
                       echo "the bucket $1 and the key $4 are ready"
                     }
                     bucket_and_key longhorn-backups "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" longhorn
-                    bucket_and_key secrets-backups "$SECRETS_ACCESS_KEY_ID" "$SECRETS_SECRET_ACCESS_KEY" secrets-backup
                   command:
                   - sh
                   - -ec
@@ -525,14 +524,6 @@ spec:
                         key: AWS_SECRET_ACCESS_KEY
                         name: garage-longhorn
                     CAPACITY: "10737418240"
-                    SECRETS_ACCESS_KEY_ID:
-                      secretKeyRef:
-                        key: AWS_ACCESS_KEY_ID
-                        name: garage-secrets-backup
-                    SECRETS_SECRET_ACCESS_KEY:
-                      secretKeyRef:
-                        key: AWS_SECRET_ACCESS_KEY
-                        name: garage-secrets-backup
                   image: docker.io/library/alpine:3.24.3
                   name: layout
                   securityContext:
@@ -603,38 +594,21 @@ spec:
   values:
     resources:
       roleBindings:
-        backup-secrets-reader:
-          roleRef:
-            apiGroup: rbac.authorization.k8s.io
-            kind: Role
-            name: backup-secrets-reader
-          subjects:
-            garage-reader:
-              kind: ServiceAccount
-              name: garage-reader
-              namespace: backup-restore
         longhorn-secrets-reader:
           roleRef:
             apiGroup: rbac.authorization.k8s.io
             kind: Role
             name: longhorn-secrets-reader
           subjects:
+            backup-restore-garage-reader:
+              kind: ServiceAccount
+              name: garage-reader
+              namespace: backup-restore
             garage-reader:
               kind: ServiceAccount
               name: garage-reader
               namespace: longhorn-system
       roles:
-        backup-secrets-reader:
-          rules:
-            secrets:
-              apiGroups:
-              - ""
-              resourceNames:
-              - garage-secrets-backup
-              resources:
-              - secrets
-              verbs:
-              - get
         longhorn-secrets-reader:
           rules:
             secrets:
@@ -658,18 +632,6 @@ spec:
               fieldName: rpc-secret
               length: "64"
         garage-longhorn:
-          data:
-            AWS_ENDPOINTS: http://garage.garage.svc.cluster.local:3900
-          fields:
-            access-key-id:
-              encoding: hex
-              fieldName: AWS_ACCESS_KEY_ID
-              length: "32"
-            secret-access-key:
-              encoding: hex
-              fieldName: AWS_SECRET_ACCESS_KEY
-              length: "64"
-        garage-secrets-backup:
           data:
             AWS_ENDPOINTS: http://garage.garage.svc.cluster.local:3900
           fields:

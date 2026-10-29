@@ -491,9 +491,6 @@ spec:
         kind: GitRepository
         name: bcl
         namespace: default
-  dependsOn:
-  - name: app-garage
-    namespace: garage
   driftDetection:
     mode: enabled
   healthCheckExprs:

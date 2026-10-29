@@ -13,8 +13,8 @@ target of Garage (the HelmRelease `longhorn-backup` of app-garage) when the apps
 `backup-restore` or `longhorn`, their volumes can not be restored before they run. Nothing is created when Longhorn or `backup-restore` is not enabled.
 
 Only for the apps keeping all their state in their PVCs and CloudNativePG databases (both are restored, see the chart
-`longhorn-restore`), and the secrets that secret-generator generated for them: the chart saves them (hourly, in the bucket
-`secrets-backups` of Garage), and the job restores them with the volumes, before the app generates new ones that would not match the
+`longhorn-restore`), and the secrets that secret-generator generated for them: the chart saves them (hourly, in the bucket of the
+backup target, under `secrets/`), and the job restores them with the volumes, before the app generates new ones that would not match the
 restored data. For this, the `backup-restore` account of the jobs gets a Role in the namespace of the app: it reads, creates and
 patches (the ownership of a restored secret) its secrets, and reads its `StringSecret`. The account of the app has no part in it.
 */}}

@@ -74,9 +74,9 @@ app waits, the job is retried) when the target is not reachable.
   the `app` user from the new secret, and clones the other instances from it. Nothing is restored when a PVC of the cluster exists. There
   is no WAL archive: the transactions after the backup are lost.
 - The secrets generated for the app (the ones owned by a `StringSecret` of secret-generator: a database encryption key, the password of an
-  administrator stored in the database) are saved too, hourly, by a CronJob of the namespace `backup-restore`, in the bucket `secrets-backups` of
-  Garage (`<namespace>/<secret>/<date>.json`, one object by change, the previous values are kept). The bucket has its own key, which
-  can not read the volumes saved by Longhorn (`longhorn-backups`), as the key of Longhorn can not read the secrets. The job restores the
+  administrator stored in the database) are saved too, hourly, by a CronJob of the namespace `backup-restore`, in the bucket of the backup target (`longhorn-backups` of
+  Garage, under `secrets/<namespace>/<secret>/<date>.json`, one object by change, the previous values are kept). The key is the one of
+  Longhorn, which uses `backupstore/` only. The job restores the
   last version of each secret before the volumes, when the app never ran (it has no `StringSecret` yet): secret-generator does not touch a
   secret it does not own, so the app finds them as they were, and owns them from the next run of the CronJob. The secrets are stored as
   they are in the cluster, the bucket is as sensitive as them. Only what was saved by a CronJob can be restored: a secret generated before

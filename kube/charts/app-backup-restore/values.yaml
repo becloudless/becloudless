@@ -11,11 +11,11 @@
 # `flux-backup-restore` is cluster-admin to create the cluster-wide rights: only the jobs run as the account `backup-restore`, which has the
 # rights above and nothing else.
 #
-# The secrets of the apps are saved in the bucket `secrets-backups` of Garage with its own key (`garage-secrets-backup`, see app-garage),
-# which can not read the volumes saved by Longhorn in `longhorn-backups`, as the key of Longhorn can not read the secrets. It is copied
-# here as `s3-secrets` by external-secrets (`backup-restore-pre`). The secrets are stored as they are in the cluster: the bucket is as sensitive
-# as the secrets of the apps.
-# Needs Longhorn and Garage (the backup target and the bucket of the secrets).
+# The secrets of the apps are saved in the bucket of the backup target (`longhorn-backups` of Garage), under `secrets/` (Longhorn only
+# uses `backupstore/`), with the key of Longhorn: it is copied here as `s3-secrets` by external-secrets (`backup-restore-pre`). The
+# secrets are stored as they are in the cluster: the bucket is as sensitive as the secrets of the apps. TODO: a bucket and a key of
+# their own, created here, so Longhorn and the jobs can not read each other's data.
+# Needs Longhorn and Garage (the backup target and its bucket).
 
 resources:
 
@@ -125,4 +125,4 @@ resources:
               dataFrom:
                 all:
                   extract:
-                    key: garage-secrets-backup
+                    key: garage-longhorn

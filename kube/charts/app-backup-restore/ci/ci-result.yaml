@@ -141,7 +141,7 @@ spec:
           dataFrom:
             all:
               extract:
-                key: garage-secrets-backup
+                key: garage-longhorn
           refreshInterval: 1h
           secretStoreRef:
             kind: SecretStore
