@@ -36,6 +36,11 @@ resources:
               matchLabels: {longhorn.io/component: instance-manager}
             share-manager:
               matchLabels: {longhorn.io/component: share-manager}
+            recurring-jobs: # the pods of the RecurringJobs (backups, snapshots...)
+              matchExpressions:
+                recurring-job:
+                  key: recurring-job.longhorn.io
+                  operator: Exists
           toPorts:
             api: {ports: {p9500: {port: "9500", protocol: TCP}}}
         webhooks: # the API server is host networked, it is seen as the host or a remote node
@@ -219,6 +224,22 @@ resources:
     longhorn-driver-deployer: # deploys the CSI components
       endpointSelector:
         matchLabels: {app: longhorn-driver-deployer}
+      egress:
+        kube-apiserver:
+          toEntities: {apiserver: kube-apiserver}
+        managers:
+          toEndpoints:
+            managers:
+              matchLabels: {app: longhorn-manager}
+          toPorts:
+            api: {ports: {p9500: {port: "9500", protocol: TCP}}}
+
+    longhorn-recurring-jobs: # the pods of the RecurringJobs (backups, snapshots...): they call the API of the managers and the API server
+      endpointSelector:
+        matchExpressions:
+          recurring-job:
+            key: recurring-job.longhorn.io
+            operator: Exists
       egress:
         kube-apiserver:
           toEntities: {apiserver: kube-apiserver}

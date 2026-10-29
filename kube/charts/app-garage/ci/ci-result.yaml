@@ -22,7 +22,7 @@ spec:
   ingress:
   - fromEndpoints:
     - matchLabels:
-        k8s:app.kubernetes.io/name: longhorn-restore
+        k8s:app.kubernetes.io/name: restore-app
         k8s:io.kubernetes.pod.namespace: backup-restore
     toPorts:
     - ports:

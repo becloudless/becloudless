@@ -51,14 +51,14 @@ restore:
 
 resources:
   jobs:
-    longhorn-restore:
+    restore-app:
       fullNameOverride: 'restore-{{ .Values.restore.namespace | trunc 30 | trimSuffix "-" }}-{{ list 7 .Values.restore | toJson | sha256sum | trunc 10 }}' # the hash of the script is in `.Values.restore` (see the loader); change the 7 when the spec of the Job changes (immutable fields)
       backoffLimit: 2
       activeDeadlineSeconds: 3000
       template: &template # the pod of the CronJob of the secrets is the same, it runs the same script in another `MODE`
         metadata:
           labels:
-            app.kubernetes.io/name: longhorn-restore # selected by the network policy of app-backup-restore and the one of app-garage
+            app.kubernetes.io/name: restore-app # selected by the network policy of app-backup-restore and the one of app-garage
         spec: &spec
           restartPolicy: Never
           serviceAccountName: backup-restore # see app-backup-restore

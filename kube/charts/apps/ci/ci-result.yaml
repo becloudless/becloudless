@@ -933,7 +933,7 @@ metadata:
 spec:
   chart:
     spec:
-      chart: ./kube/charts/longhorn-restore
+      chart: ./kube/charts/restore-app
       reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository

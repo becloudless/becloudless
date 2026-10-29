@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../app/schema/values.schema.json
 
 # Everything that gets the data of the apps back is in this namespace: the jobs that restore the volumes and the generated secrets of
-# the apps (chart `longhorn-restore`, started by the `restore: true` of an app in the `apps` chart), the account they run as, and the
+# the apps (chart `restore-app`, started by the `restore: true` of an app in the `apps` chart), the account they run as, and the
 # access to the bucket of the secrets. Longhorn keeps what is its own in `longhorn-system` (backup target, recurring jobs, volumes).
 #
 # The rights of the account of the jobs (`backup-restore`), none of them is given to the apps or to Flux:
@@ -21,9 +21,9 @@ resources:
 
   # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
-    longhorn-restore: # the jobs of the chart `longhorn-restore`
+    restore-app: # the jobs of the chart `restore-app`
       endpointSelector:
-        matchLabels: {app.kubernetes.io/name: longhorn-restore}
+        matchLabels: {app.kubernetes.io/name: restore-app}
       egress:
         kube-apiserver: # the backups, volumes, PVs, PVCs and secrets
           toEntities: {apiserver: kube-apiserver}

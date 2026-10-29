@@ -53,10 +53,10 @@ resources:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": longhorn-system, "k8s:longhorn.io/component": instance-manager}
           toPorts:
             s3: {ports: {p3900: {port: "3900", protocol: TCP}}}
-        backup-restore: # the S3 API, for the jobs saving and restoring the secrets of the apps (chart `longhorn-restore`, see app-backup-restore)
+        backup-restore: # the S3 API, for the jobs saving and restoring the secrets of the apps (chart `restore-app`, see app-backup-restore)
           fromEndpoints:
             restore:
-              matchLabels: {"k8s:io.kubernetes.pod.namespace": backup-restore, "k8s:app.kubernetes.io/name": longhorn-restore}
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": backup-restore, "k8s:app.kubernetes.io/name": restore-app}
           toPorts:
             s3: {ports: {p3900: {port: "3900", protocol: TCP}}}
         layout: # the admin API

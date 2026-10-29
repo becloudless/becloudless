@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Restores the volumes and the generated secrets of an app from the backups, or saves its secrets (`MODE=backup-secrets`).
-# See the header of values.yaml. It runs in the Job `longhorn-restore` and the CronJob `secrets-backup`, from the ConfigMap `restore-script`.
+# See the header of values.yaml. It runs in the Job `restore-app` and the CronJob `secrets-backup`, from the ConfigMap `restore-script`.
 set -eo pipefail
 LH=longhorn-system
 log() { echo "$(date -u +%H:%M:%S) $*"; }

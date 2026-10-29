@@ -246,6 +246,9 @@ spec:
         - longhorn-ui
     - matchLabels:
         longhorn.io/component: instance-manager
+    - matchExpressions:
+      - key: recurring-job.longhorn.io
+        operator: Exists
     - matchLabels:
         longhorn.io/component: share-manager
     toPorts:
@@ -262,6 +265,28 @@ spec:
         protocol: TCP
       - port: "9503"
         protocol: TCP
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-recurring-jobs
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  endpointSelector:
+    matchExpressions:
+    - key: recurring-job.longhorn.io
+      operator: Exists
 ---
 # Source: app-longhorn/templates/loader.yaml
 apiVersion: cilium.io/v2
@@ -545,13 +570,6 @@ spec:
           - default
           retain: 2
           task: backup
-        daily-system-backup:
-          concurrency: 1
-          cron: 0 5 * * *
-          parameters:
-            volume-backup-policy: if-not-present
-          retain: 3
-          task: system-backup
       longhornSettings:
         allow-collecting-longhorn-usage-metrics:
           annotations:

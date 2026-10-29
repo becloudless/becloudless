@@ -3,7 +3,7 @@ Restore the volumes of the enabled apps from the Longhorn backups, before they s
 
 Per app, `restore: true` opts in. The PVCs are not listed: the job finds those of the namespace in the backups.
 
-The HelmRelease `restore-<name>`, in the namespace of the `backup-restore` app (app-backup-restore), installs the chart `longhorn-restore`, and
+The HelmRelease `restore-<name>`, in the namespace of the `backup-restore` app (app-backup-restore), installs the chart `restore-app`, and
 `app-<name>` waits for it. The job of the chart restores the last backup of each PVC that does not exist yet, as a Longhorn volume and
 a PV bound to the PVC of the app: it does nothing for an app that already has its volumes, or when there is no backup. It runs as the
 `flux-backup-restore` account in the namespace of `backup-restore`, the jobs run as the account `backup-restore` of app-backup-restore, which has the rights.
@@ -13,7 +13,7 @@ target of Garage (the HelmRelease `longhorn-backup` of app-garage) when the apps
 `backup-restore` or `longhorn`, their volumes can not be restored before they run. Nothing is created when Longhorn or `backup-restore` is not enabled.
 
 Only for the apps keeping all their state in their PVCs and CloudNativePG databases (both are restored, see the chart
-`longhorn-restore`), and the secrets that secret-generator generated for them: the chart saves them (hourly, in the bucket of the
+`restore-app`), and the secrets that secret-generator generated for them: the chart saves them (hourly, in the bucket of the
 backup target, under `secrets/`), and the job restores them with the volumes, before the app generates new ones that would not match the
 restored data. For this, the `backup-restore` account of the jobs gets a Role in the namespace of the app: it reads, creates and
 patches (the ownership of a restored secret) its secrets, and reads its `StringSecret`. The account of the app has no part in it.
@@ -69,7 +69,7 @@ patches (the ownership of a restored secret) its secrets, and reads its `StringS
           "rollback" (dict "cleanupOnFail" true)
           "dependsOn" $dependsOn
           "chart" (dict "spec" (dict
-            "chart" "./kube/charts/longhorn-restore"
+            "chart" "./kube/charts/restore-app"
             "reconcileStrategy" "Revision"
             "sourceRef" (dict "kind" "GitRepository" "name" "bcl" "namespace" $bclNamespace)))
           "values" (dict "restore" (dict "namespace" $namespace))) }}

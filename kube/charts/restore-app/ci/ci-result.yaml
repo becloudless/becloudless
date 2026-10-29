@@ -1,11 +1,11 @@
 ---
-# Source: longhorn-restore/templates/loader.yaml
+# Source: restore-app/templates/loader.yaml
 apiVersion: v1
 data:
   restore.sh: |-
     #!/usr/bin/env bash
     # Restores the volumes and the generated secrets of an app from the backups, or saves its secrets (`MODE=backup-secrets`).
-    # See the header of values.yaml. It runs in the Job `longhorn-restore` and the CronJob `secrets-backup`, from the ConfigMap `restore-script`.
+    # See the header of values.yaml. It runs in the Job `restore-app` and the CronJob `secrets-backup`, from the ConfigMap `restore-script`.
     set -eo pipefail
     LH=longhorn-system
     log() { echo "$(date -u +%H:%M:%S) $*"; }
@@ -214,11 +214,11 @@ metadata:
   name: restore-script-test
   namespace: default
 ---
-# Source: longhorn-restore/templates/loader.yaml
+# Source: restore-app/templates/loader.yaml
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: restore-test-4a4e89011e
+  name: restore-test-ccf9f39e49
   namespace: default
 spec:
   activeDeadlineSeconds: 3000
@@ -226,7 +226,7 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: longhorn-restore
+        app.kubernetes.io/name: restore-app
     spec:
       containers:
       - command:
@@ -277,7 +277,7 @@ spec:
       - emptyDir: {}
         name: tmp
 ---
-# Source: longhorn-restore/templates/loader.yaml
+# Source: restore-app/templates/loader.yaml
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -293,7 +293,7 @@ spec:
       template:
         metadata:
           labels:
-            app.kubernetes.io/name: longhorn-restore
+            app.kubernetes.io/name: restore-app
         spec:
           containers:
           - command:

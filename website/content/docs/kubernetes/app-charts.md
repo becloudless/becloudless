@@ -59,7 +59,7 @@ apps:
 
 For such an app the `apps` chart also creates the HelmRelease `restore-<name>` in the namespace `backup-restore` (the app `backup-restore`, `app-backup-restore`,
 must be enabled next to `longhorn` and `garage`; it waits for them, and for the backup target of Garage), and `app-<name>` waits for it.
-Its job (`kube/charts/longhorn-restore`), for each PVC that does not
+Its job (`kube/charts/restore-app`), for each PVC that does not
 exist yet: syncs the backup target, finds the last completed backup of the PVC (Longhorn saves its namespace and name in the backup),
 creates a Longhorn volume restored from it and the PV of this volume with a `claimRef` to the PVC, so the PVC of the app is bound to it
 when it is created. It does nothing when the PVC exists, when there is no backup target or backup (the app starts empty), and fails (the
