@@ -35,6 +35,13 @@ apps:
   apps:
     clusterAdmin: true
 
+  backup-restore: # the jobs restoring the volumes and the secrets of the apps with `restore: true`, needs `longhorn` and `garage`
+    groups:
+      minimal: true
+    clusterAdmin: true # the ClusterRole of the restore jobs
+    appChart:
+      name: app-backup-restore
+
   # minimal
   gateway-api:
     groups:
@@ -261,11 +268,3 @@ apps:
     appChart:
       name: app-garage
 
-  backup-restore: # the jobs restoring the volumes and the secrets of the apps with `restore: true`, needs `longhorn` and `garage`
-    groups:
-      extra: true
-    clusterAdmin: true # the ClusterRole of the restore jobs
-    dependsOn:
-      garage: true
-    appChart:
-      name: app-backup-restore
