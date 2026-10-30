@@ -65,11 +65,6 @@ resources:
             artworks: {matchName: artworks.thetvdb.com}
           toPorts:
             https: {ports: {p443: {port: "443", protocol: TCP}}}
-        github: # the check of the new versions
-          toFQDNs:
-            api: {matchName: api.github.com}
-          toPorts:
-            https: {ports: {p443: {port: "443", protocol: TCP}}}
 
   fluxHelmReleases:
     # the database is prepared by the postgresql chart (certificates, issuer, cluster and backups)

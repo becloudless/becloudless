@@ -19,12 +19,6 @@ spec:
     - ports:
       - port: "443"
         protocol: TCP
-  - toFQDNs:
-    - matchName: api.github.com
-    toPorts:
-    - ports:
-      - port: "443"
-        protocol: TCP
   - toEndpoints:
     - matchLabels:
         k8s:app.kubernetes.io/component: jellyfin
