@@ -109,31 +109,22 @@ spec:
                       path: /
                       port: 8080
                   securityContext:
-                    allowPrivilegeEscalation: false
                     capabilities:
                       drop:
                         all: ALL
-                    readOnlyRootFilesystem: true
                   volumeMounts:
                     html:
                       mountPath: /usr/share/nginx/html
                       name: html
                       readOnly: true
-                    tmp:
-                      mountPath: /tmp
-                      name: tmp
               securityContext:
                 runAsGroup: 101
-                runAsNonRoot: true
                 runAsUser: 101
               volumes:
                 html:
                   configMap:
                     name: landing-html
                   name: html
-                tmp:
-                  emptyDir: {}
-                  name: tmp
       services:
         landing:
           ports:

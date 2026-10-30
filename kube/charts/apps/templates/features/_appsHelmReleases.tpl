@@ -59,10 +59,7 @@ Any other key set next to these (ex: `interval`) is merged over the HelmRelease 
     {{- $hr := dict
           "namespace" $namespace
           "serviceAccountName" $fluxName
-          "interval" "10m"
-          "timeout" "10m"
           "rollback" (dict "cleanupOnFail" true)
-          "driftDetection" (dict "mode" "enabled")
           "chart" (dict "spec" (dict
             "chart" (printf "./kube/charts/%s" $chartName)
             "reconcileStrategy" "Revision"

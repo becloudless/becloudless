@@ -50,6 +50,11 @@ spec:
       version: 1.48.2
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -79,7 +84,7 @@ spec:
       initialDelaySeconds: 0
     readinessProbe:
       initialDelaySeconds: 0
-    replicaCount: 1
+    replicaCount: 2
     servers:
     - plugins:
       - name: errors

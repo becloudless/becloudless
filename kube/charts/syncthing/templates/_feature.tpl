@@ -44,7 +44,6 @@ resources:
         type: Recreate # the volume is ReadWriteOnce
       template:
         spec:
-          enableServiceLinks: false # the `SYNCTHING_*` variables of the services would conflict
           securityContext:
             fsGroup: 1000 # the `syncthing` user of the image
           containers:
@@ -77,15 +76,11 @@ resources:
                 failureThreshold: 6
               # started as the user, the entrypoint of the image does not need root then (it only changes the owner of the volume)
               securityContext:
-                allowPrivilegeEscalation: false
-                runAsNonRoot: true
                 runAsUser: 1000
                 runAsGroup: 1000
                 capabilities:
                   drop:
                     all: ALL
-                seccompProfile:
-                  type: RuntimeDefault
               volumeMounts:
                 data:
                   name: data
@@ -104,16 +99,11 @@ resources:
                     name: {{ $relay.tokenSecret.name | quote }}
                     key: {{ $relay.tokenSecret.key | quote }}
               securityContext:
-                allowPrivilegeEscalation: false
-                readOnlyRootFilesystem: true
-                runAsNonRoot: true
                 runAsUser: 1000
                 runAsGroup: 1000
                 capabilities:
                   drop:
                     all: ALL
-                seccompProfile:
-                  type: RuntimeDefault
               volumeMounts:
                 data:
                   name: data

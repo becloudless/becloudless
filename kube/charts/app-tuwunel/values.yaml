@@ -132,8 +132,6 @@ resources:
                 type: Recreate # the volume is ReadWriteOnce, and the database is locked by its server
               template:
                 spec:
-                  # the service named `tuwunel` would give a `TUWUNEL_PORT=tcp://...` variable, which is the option of the listening port
-                  enableServiceLinks: false
                   securityContext:
                     fsGroup: 1000 # the volume is writable by the user of the container
                   containers:
@@ -194,16 +192,11 @@ resources:
                         timeoutSeconds: 10
                         failureThreshold: 6
                       securityContext:
-                        allowPrivilegeEscalation: false
-                        readOnlyRootFilesystem: true # everything is written in the volume
-                        runAsNonRoot: true
                         runAsUser: 1000
                         runAsGroup: 1000
                         capabilities:
                           drop:
                             all: ALL
-                        seccompProfile:
-                          type: RuntimeDefault
                       volumeMounts:
                         data:
                           name: data

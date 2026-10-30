@@ -419,16 +419,11 @@ resources:
                             name: seerr-jellyfin
                             key: password
                       securityContext:
-                        allowPrivilegeEscalation: false
-                        readOnlyRootFilesystem: true
-                        runAsNonRoot: true
                         runAsUser: 1000
                         runAsGroup: 1000
                         capabilities:
                           drop:
                             all: ALL
-                        seccompProfile:
-                          type: RuntimeDefault
                       volumeMounts:
                         config:
                           name: config
@@ -461,7 +456,6 @@ resources:
                         httpGet:
                           path: /api/v1/settings/public
                           port: 5055
-                        periodSeconds: 10
                         failureThreshold: 30
                       readinessProbe:
                         httpGet:
@@ -476,15 +470,11 @@ resources:
                         periodSeconds: 15
                         timeoutSeconds: 3
                       securityContext:
-                        allowPrivilegeEscalation: false
-                        runAsNonRoot: true
                         runAsUser: 1000
                         runAsGroup: 1000
                         capabilities:
                           drop:
                             all: ALL
-                        seccompProfile:
-                          type: RuntimeDefault
                       volumeMounts:
                         config:
                           name: config
@@ -503,16 +493,11 @@ resources:
                             key: password
                         ADMIN_EMAIL: admin@{{ .Values.app.domain }}
                       securityContext:
-                        allowPrivilegeEscalation: false
-                        readOnlyRootFilesystem: true
-                        runAsNonRoot: true
                         runAsUser: 1000
                         runAsGroup: 1000
                         capabilities:
                           drop:
                             all: ALL
-                        seccompProfile:
-                          type: RuntimeDefault
                       volumeMounts:
                         config:
                           name: config

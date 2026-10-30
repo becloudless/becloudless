@@ -209,7 +209,6 @@ resources:
                 type: Recreate # the volume is ReadWriteOnce
               template:
                 spec:
-                  enableServiceLinks: false # the `PAPERLESS_*` variables of the services would conflict
                   securityContext:
                     fsGroup: 1000 # the `paperless` user of the image
                   containers:
@@ -296,15 +295,11 @@ resources:
                         failureThreshold: 6
                       # the image supports to run without root
                       securityContext:
-                        allowPrivilegeEscalation: false
-                        runAsNonRoot: true
                         runAsUser: 1000
                         runAsGroup: 1000
                         capabilities:
                           drop:
                             all: ALL
-                        seccompProfile:
-                          type: RuntimeDefault
                       volumeMounts:
                         data:
                           name: data

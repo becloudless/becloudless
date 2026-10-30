@@ -102,13 +102,9 @@ spec:
                       path: /
                       port: 8080
                   securityContext:
-                    allowPrivilegeEscalation: false
                     capabilities:
                       drop:
                         all: ALL
-                    readOnlyRootFilesystem: true
-                    seccompProfile:
-                      type: RuntimeDefault
                   volumeMounts:
                     config:
                       mountPath: /app/config.json
@@ -118,13 +114,9 @@ spec:
                     nginx-conf:
                       mountPath: /etc/nginx/conf.d
                       name: nginx-conf
-                    tmp:
-                      mountPath: /tmp
-                      name: tmp
               securityContext:
                 fsGroup: 101
                 runAsGroup: 101
-                runAsNonRoot: true
                 runAsUser: 101
               volumes:
                 config:
@@ -134,9 +126,6 @@ spec:
                 nginx-conf:
                   emptyDir: {}
                   name: nginx-conf
-                tmp:
-                  emptyDir: {}
-                  name: tmp
       services:
         element:
           ports:

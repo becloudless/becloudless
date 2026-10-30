@@ -90,16 +90,11 @@ spec:
                       cpu: 10m
                       memory: 16Mi
                   securityContext:
-                    allowPrivilegeEscalation: false
                     capabilities:
                       drop:
                         all: ALL
-                    readOnlyRootFilesystem: true
                     runAsGroup: 1000
-                    runAsNonRoot: true
                     runAsUser: 1000
-                    seccompProfile:
-                      type: RuntimeDefault
                   startupProbe:
                     failureThreshold: 12
                     httpGet:

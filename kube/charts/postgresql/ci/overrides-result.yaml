@@ -8,7 +8,6 @@ metadata:
 spec:
   commonName: app
   issuerRef:
-    kind: Issuer
     name: test-release
   secretName: test-release-app-tls
   secretTemplate:
@@ -57,7 +56,6 @@ spec:
   - test-release-ro.myapp.svc
   - test-release-ro.myapp.svc.cluster.local
   issuerRef:
-    kind: Issuer
     name: test-release
   secretName: test-release-tls
   secretTemplate:
@@ -73,7 +71,6 @@ metadata:
 spec:
   commonName: streaming_replica
   issuerRef:
-    kind: Issuer
     name: test-release
   secretName: test-release-replication-tls
   secretTemplate:

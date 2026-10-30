@@ -228,7 +228,6 @@ spec:
                       port: 80
                     timeoutSeconds: 5
                   securityContext:
-                    allowPrivilegeEscalation: false
                     capabilities:
                       add:
                       - CHOWN
@@ -240,8 +239,6 @@ spec:
                       - NET_BIND_SERVICE
                       drop:
                         all: ALL
-                    seccompProfile:
-                      type: RuntimeDefault
                   startupProbe:
                     failureThreshold: 120
                     httpGet:
@@ -261,7 +258,6 @@ spec:
                       name: config
                       readOnly: true
                       subPath: login.html
-              enableServiceLinks: false
               volumes:
                 config:
                   configMap:
@@ -443,15 +439,11 @@ spec:
                     tcpSocket:
                       port: 3306
                   securityContext:
-                    allowPrivilegeEscalation: false
                     capabilities:
                       drop:
                         all: ALL
                     runAsGroup: 999
-                    runAsNonRoot: true
                     runAsUser: 999
-                    seccompProfile:
-                      type: RuntimeDefault
                   startupProbe:
                     failureThreshold: 60
                     periodSeconds: 5

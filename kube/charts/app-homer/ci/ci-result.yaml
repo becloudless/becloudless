@@ -334,11 +334,9 @@ spec:
                       path: /
                       port: 8080
                   securityContext:
-                    allowPrivilegeEscalation: false
                     capabilities:
                       drop:
                         all: ALL
-                    readOnlyRootFilesystem: true
                   volumeMounts:
                     config:
                       mountPath: /www/assets/config.yml
@@ -350,21 +348,14 @@ spec:
                       name: config
                       readOnly: true
                       subPath: custom.css
-                    tmp:
-                      mountPath: /tmp
-                      name: tmp
               securityContext:
                 runAsGroup: 1000
-                runAsNonRoot: true
                 runAsUser: 1000
               volumes:
                 config:
                   configMap:
                     name: homer-config
                   name: config
-                tmp:
-                  emptyDir: {}
-                  name: tmp
       services:
         homer:
           ports:

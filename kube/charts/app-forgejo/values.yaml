@@ -133,7 +133,6 @@ resources:
                     property: secret
 
     forgejo:
-      timeout: 10m # the pod waits for the database
       dependsOn:
         forgejo-postgresql:
           name: forgejo-postgresql

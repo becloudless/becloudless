@@ -290,7 +290,6 @@ resources:
               template:
                 spec:
                   securityContext:
-                    runAsNonRoot: true
                     runAsUser: 1000
                     runAsGroup: 1000
                   containers:
@@ -311,15 +310,10 @@ resources:
                           path: /
                           port: 8080
                       securityContext:
-                        allowPrivilegeEscalation: false
-                        readOnlyRootFilesystem: true
                         capabilities:
                           drop:
                             all: ALL
                       volumeMounts:
-                        tmp:
-                          name: tmp
-                          mountPath: /tmp
                         config:
                           name: config
                           mountPath: /www/assets/config.yml
@@ -331,9 +325,6 @@ resources:
                           subPath: custom.css
                           readOnly: true
                   volumes:
-                    tmp:
-                      name: tmp
-                      emptyDir: {}
                     config:
                       name: config
                       configMap:

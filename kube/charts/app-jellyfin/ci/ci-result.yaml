@@ -239,16 +239,11 @@ spec:
                   image: docker.io/library/node:22.23.4-alpine
                   name: configure
                   securityContext:
-                    allowPrivilegeEscalation: false
                     capabilities:
                       drop:
                         all: ALL
-                    readOnlyRootFilesystem: true
                     runAsGroup: 1000
-                    runAsNonRoot: true
                     runAsUser: 1000
-                    seccompProfile:
-                      type: RuntimeDefault
                   volumeMounts:
                     scripts:
                       mountPath: /scripts
@@ -273,7 +268,6 @@ spec:
                       path: /health
                       port: 8096
                   securityContext:
-                    allowPrivilegeEscalation: false
                     capabilities:
                       drop:
                         all: ALL
@@ -282,7 +276,6 @@ spec:
                     httpGet:
                       path: /health
                       port: 8096
-                    periodSeconds: 10
                   volumeMounts:
                     config:
                       mountPath: /config
@@ -319,7 +312,6 @@ spec:
                   image: docker.io/library/alpine:3.24.3
                   name: sso-plugin
                   securityContext:
-                    allowPrivilegeEscalation: false
                     capabilities:
                       drop:
                         all: ALL
@@ -330,10 +322,7 @@ spec:
               securityContext:
                 fsGroup: 1000
                 runAsGroup: 1000
-                runAsNonRoot: true
                 runAsUser: 1000
-                seccompProfile:
-                  type: RuntimeDefault
               volumes:
                 config:
                   name: config

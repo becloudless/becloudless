@@ -97,7 +97,6 @@ resources:
                   fieldName: metrics-hash-secret
 
     firefox-sync:
-      timeout: 10m # the pod waits for the database
       dependsOn:
         firefox-sync-postgresql: # the database
           name: firefox-sync-postgresql
@@ -175,15 +174,11 @@ resources:
                         periodSeconds: 15
                         timeoutSeconds: 3
                       securityContext:
-                        allowPrivilegeEscalation: false
-                        runAsNonRoot: true
                         runAsUser: 10001
                         runAsGroup: 10001
                         capabilities:
                           drop:
                             all: ALL
-                        seccompProfile:
-                          type: RuntimeDefault
 
           services:
             firefox-sync:

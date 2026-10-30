@@ -276,9 +276,7 @@ resources:
               template:
                 spec:
                   serviceAccountName: garage
-                  enableServiceLinks: false
                   securityContext:
-                    runAsNonRoot: true
                     runAsUser: 1000
                     runAsGroup: 1000
                     fsGroup: 1000 # the volumes are writable by the user of the container
@@ -329,16 +327,11 @@ resources:
                         timeoutSeconds: 10
                         failureThreshold: 6
                       securityContext:
-                        allowPrivilegeEscalation: false
-                        readOnlyRootFilesystem: true # everything is written in the volumes
-                        runAsNonRoot: true
                         runAsUser: 1000
                         runAsGroup: 1000
                         capabilities:
                           drop:
                             all: ALL
-                        seccompProfile:
-                          type: RuntimeDefault
                       volumeMounts:
                         config:
                           name: config
@@ -393,15 +386,13 @@ resources:
         resources:
           jobs:
             garage-layout:
-              fullNameOverride: 'garage-layout-{{ list 4 .Values.app.domain .Values.app.scaling.dbReplicas | toJson | sha256sum | trunc 10 }}' # change the 4 when the spec of the Job changes (immutable fields)
+              fullNameOverride: 'garage-layout-{{ list 5 .Values.app.domain .Values.app.scaling.dbReplicas | toJson | sha256sum | trunc 10 }}' # change the 5 when the spec of the Job changes (immutable fields)
               backoffLimit: 0
               activeDeadlineSeconds: 900
               template:
                 spec:
                   restartPolicy: Never
-                  enableServiceLinks: false
                   securityContext:
-                    runAsNonRoot: true
                     runAsUser: 65534
                     runAsGroup: 65534
                   containers:
@@ -461,16 +452,11 @@ resources:
                             key: AWS_SECRET_ACCESS_KEY
                         CAPACITY: "10737418240" # the size of `garage-data` (10Gi), in bytes
                       securityContext:
-                        allowPrivilegeEscalation: false
-                        readOnlyRootFilesystem: true
-                        runAsNonRoot: true
                         runAsUser: 65534
                         runAsGroup: 65534
                         capabilities:
                           drop:
                             all: ALL
-                        seccompProfile:
-                          type: RuntimeDefault
                       volumeMounts:
                         config:
                           name: config

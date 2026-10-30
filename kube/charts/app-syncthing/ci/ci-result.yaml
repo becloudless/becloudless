@@ -202,16 +202,11 @@ spec:
                     tcpSocket:
                       port: 22067
                   securityContext:
-                    allowPrivilegeEscalation: false
                     capabilities:
                       drop:
                         all: ALL
-                    readOnlyRootFilesystem: true
                     runAsGroup: 1000
-                    runAsNonRoot: true
                     runAsUser: 1000
-                    seccompProfile:
-                      type: RuntimeDefault
                   startupProbe:
                     failureThreshold: 30
                     periodSeconds: 5
@@ -222,7 +217,6 @@ spec:
                       mountPath: /var/strelaysrv
                       name: keys
                       readOnly: true
-              enableServiceLinks: false
               securityContext:
                 fsGroup: 1000
               volumes:

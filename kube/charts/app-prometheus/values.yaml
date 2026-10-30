@@ -20,7 +20,6 @@ resources:
       template:
         spec:
           securityContext:
-            runAsNonRoot: true
             runAsUser: 65534
             runAsGroup: 65534
           containers:
@@ -37,8 +36,6 @@ resources:
                 tcpSocket:
                   port: 8080
               securityContext:
-                allowPrivilegeEscalation: false
-                readOnlyRootFilesystem: true
                 capabilities:
                   drop:
                     all: ALL
@@ -233,7 +230,6 @@ resources:
 
     # the release is named `prometheus`, which gives the service names used by the httpRoutes
     prometheus:
-      timeout: 10m # the chart is large and the CRDs are big
       dependsOn: # the volumes, the secret of the OIDC client
         longhorn:
           name: app-longhorn

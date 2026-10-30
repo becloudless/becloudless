@@ -197,15 +197,11 @@ resources:
                         periodSeconds: 20
                         failureThreshold: 6
                       securityContext:
-                        allowPrivilegeEscalation: false
-                        runAsNonRoot: true
                         runAsUser: 999
                         runAsGroup: 999
                         capabilities:
                           drop:
                             all: ALL
-                        seccompProfile:
-                          type: RuntimeDefault
                       volumeMounts:
                         data:
                           name: data
@@ -326,7 +322,6 @@ resources:
                 type: Recreate # the volume is ReadWriteOnce
               template:
                 spec:
-                  enableServiceLinks: false # the `SEAFILE_*` variables of the services would conflict
                   containers:
                     seafile:
                       name: seafile
@@ -408,7 +403,6 @@ resources:
                         failureThreshold: 6
                       # the image runs as root (nginx, cron, the init of the files of the volume): only the capabilities it uses are kept
                       securityContext:
-                        allowPrivilegeEscalation: false
                         capabilities:
                           drop:
                             all: ALL
@@ -420,8 +414,6 @@ resources:
                             - SETUID
                             - KILL
                             - NET_BIND_SERVICE
-                        seccompProfile:
-                          type: RuntimeDefault
                       volumeMounts:
                         data:
                           name: data

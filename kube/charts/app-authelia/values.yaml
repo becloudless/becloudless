@@ -366,7 +366,6 @@ resources:
                 permissions: "~* &* +@all"
 
     authelia:
-      timeout: 10m # the pods wait for the database
       dependsOn:
         authelia-pre: # the generated secrets
           name: authelia-pre

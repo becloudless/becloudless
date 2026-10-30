@@ -65,7 +65,6 @@ resources:
               template:
                 spec:
                   securityContext:
-                    runAsNonRoot: true
                     runAsUser: 101
                     runAsGroup: 101
                     fsGroup: 101
@@ -87,22 +86,15 @@ resources:
                           path: /
                           port: 8080
                       securityContext:
-                        allowPrivilegeEscalation: false
-                        readOnlyRootFilesystem: true
                         capabilities:
                           drop:
                             all: ALL
-                        seccompProfile:
-                          type: RuntimeDefault
                       volumeMounts:
                         config:
                           name: config
                           mountPath: /app/config.json
                           subPath: config.json
                           readOnly: true
-                        tmp:
-                          name: tmp
-                          mountPath: /tmp
                         # the entrypoint writes the configuration of nginx from its template
                         nginx-conf:
                           name: nginx-conf
@@ -112,9 +104,6 @@ resources:
                       name: config
                       configMap:
                         name: element-config
-                    tmp:
-                      name: tmp
-                      emptyDir: {}
                     nginx-conf:
                       name: nginx-conf
                       emptyDir: {}

@@ -24,7 +24,6 @@ resources:
       timeout: 1m
       path: ./client/config/crd
       prune: false
-      wait: true
       sourceRef:
         kind: GitRepository
         name: external-snapshotter
@@ -35,7 +34,6 @@ resources:
       timeout: 1m
       path: ./deploy/kubernetes/snapshot-controller
       prune: false
-      wait: true
       sourceRef:
         kind: GitRepository
         name: external-snapshotter

@@ -17,7 +17,6 @@ resources:
       timeout: 1m
       path: ./config/crd/experimental
       prune: false
-      wait: true
       sourceRef:
         kind: GitRepository
         name: gateway-api

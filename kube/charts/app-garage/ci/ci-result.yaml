@@ -261,16 +261,11 @@ spec:
                     tcpSocket:
                       port: 3903
                   securityContext:
-                    allowPrivilegeEscalation: false
                     capabilities:
                       drop:
                         all: ALL
-                    readOnlyRootFilesystem: true
                     runAsGroup: 1000
-                    runAsNonRoot: true
                     runAsUser: 1000
-                    seccompProfile:
-                      type: RuntimeDefault
                   startupProbe:
                     failureThreshold: 60
                     periodSeconds: 5
@@ -288,12 +283,10 @@ spec:
                     meta:
                       mountPath: /var/lib/garage/meta
                       name: garage-meta
-              enableServiceLinks: false
               securityContext:
                 fsGroup: 1000
                 fsGroupChangePolicy: OnRootMismatch
                 runAsGroup: 1000
-                runAsNonRoot: true
                 runAsUser: 1000
               serviceAccountName: garage
               topologySpreadConstraints:
@@ -465,7 +458,7 @@ spec:
         garage-layout:
           activeDeadlineSeconds: 900
           backoffLimit: 0
-          fullNameOverride: garage-layout-df58faa3dc
+          fullNameOverride: garage-layout-91e427ff8c
           template:
             spec:
               containers:
@@ -523,26 +516,19 @@ spec:
                   image: docker.io/library/alpine:3.24.3
                   name: layout
                   securityContext:
-                    allowPrivilegeEscalation: false
                     capabilities:
                       drop:
                         all: ALL
-                    readOnlyRootFilesystem: true
                     runAsGroup: 65534
-                    runAsNonRoot: true
                     runAsUser: 65534
-                    seccompProfile:
-                      type: RuntimeDefault
                   volumeMounts:
                     config:
                       mountPath: /etc/garage
                       name: config
                       readOnly: true
-              enableServiceLinks: false
               restartPolicy: Never
               securityContext:
                 runAsGroup: 65534
-                runAsNonRoot: true
                 runAsUser: 65534
               volumes:
                 config:

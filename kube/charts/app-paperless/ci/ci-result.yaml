@@ -168,15 +168,11 @@ spec:
                       port: 8000
                     timeoutSeconds: 5
                   securityContext:
-                    allowPrivilegeEscalation: false
                     capabilities:
                       drop:
                         all: ALL
                     runAsGroup: 1000
-                    runAsNonRoot: true
                     runAsUser: 1000
-                    seccompProfile:
-                      type: RuntimeDefault
                   startupProbe:
                     failureThreshold: 120
                     httpGet:
@@ -196,7 +192,6 @@ spec:
                       mountPath: /usr/src/paperless/media
                       name: data
                       subPath: media
-              enableServiceLinks: false
               securityContext:
                 fsGroup: 1000
               volumes:

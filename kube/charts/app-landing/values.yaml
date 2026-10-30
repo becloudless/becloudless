@@ -65,7 +65,6 @@ resources:
               template:
                 spec:
                   securityContext:
-                    runAsNonRoot: true
                     runAsUser: 101
                     runAsGroup: 101
                   containers:
@@ -84,8 +83,6 @@ resources:
                           path: /
                           port: 8080
                       securityContext:
-                        allowPrivilegeEscalation: false
-                        readOnlyRootFilesystem: true
                         capabilities:
                           drop:
                             all: ALL
@@ -94,17 +91,11 @@ resources:
                           name: html
                           mountPath: /usr/share/nginx/html
                           readOnly: true
-                        tmp:
-                          name: tmp
-                          mountPath: /tmp
                   volumes:
                     html:
                       name: html
                       configMap:
                         name: landing-html
-                    tmp:
-                      name: tmp
-                      emptyDir: {}
 
           services:
             landing:

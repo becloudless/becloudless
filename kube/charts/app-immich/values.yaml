@@ -265,7 +265,6 @@ resources:
                 permissions: "~* &* +@all"
 
     immich:
-      timeout: 10m # the pods wait for the database
       dependsOn:
         immich-pre:
           name: immich-pre

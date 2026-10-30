@@ -35,7 +35,6 @@ resources:
 
   fluxHelmReleases:
     coredns:
-      interval: 10m
       chart:
         spec:
           chart: coredns

@@ -98,7 +98,6 @@ resources:
               replicas: 1
               template:
                 spec:
-                  enableServiceLinks: false
                   securityContext:
                     fsGroup: 1000 # the group of the files of the key pair
                   containers:
@@ -132,16 +131,11 @@ resources:
                           port: 22067
                         periodSeconds: 30
                       securityContext:
-                        allowPrivilegeEscalation: false
-                        readOnlyRootFilesystem: true
-                        runAsNonRoot: true
                         runAsUser: 1000
                         runAsGroup: 1000
                         capabilities:
                           drop:
                             all: ALL
-                        seccompProfile:
-                          type: RuntimeDefault
                       volumeMounts:
                         keys:
                           name: keys

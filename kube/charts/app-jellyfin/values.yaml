@@ -289,12 +289,9 @@ resources:
                 spec:
                   # the images of alpine and jellyfin run as root: every container runs as 1000, which owns the volume (`fsGroup`)
                   securityContext:
-                    runAsNonRoot: true
                     runAsUser: 1000
                     runAsGroup: 1000
                     fsGroup: 1000
-                    seccompProfile:
-                      type: RuntimeDefault
                   # installs the SSO plugin in the volume (jellyfin loads the plugins at its start), pinned and checked by the checksum of
                   # https://raw.githubusercontent.com/9p4/jellyfin-plugin-sso/manifest-release/manifest.json
                   initContainers:
@@ -320,7 +317,6 @@ resources:
                             touch $dir/.installed
                           fi
                       securityContext:
-                        allowPrivilegeEscalation: false
                         capabilities:
                           drop:
                             all: ALL
@@ -356,16 +352,11 @@ resources:
                             name: jellyfin-oidc
                             key: secret
                       securityContext:
-                        allowPrivilegeEscalation: false
-                        readOnlyRootFilesystem: true
-                        runAsNonRoot: true
                         runAsUser: 1000
                         runAsGroup: 1000
                         capabilities:
                           drop:
                             all: ALL
-                        seccompProfile:
-                          type: RuntimeDefault
                       volumeMounts:
                         scripts:
                           name: scripts
@@ -385,7 +376,6 @@ resources:
                         httpGet:
                           path: /health
                           port: 8096
-                        periodSeconds: 10
                         failureThreshold: 60 # 10min, a huge library on low hardware can be slow to start
                       readinessProbe:
                         httpGet:
@@ -396,7 +386,6 @@ resources:
                           path: /health
                           port: 8096
                       securityContext:
-                        allowPrivilegeEscalation: false
                         capabilities:
                           drop:
                             all: ALL

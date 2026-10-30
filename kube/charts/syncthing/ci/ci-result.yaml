@@ -180,10 +180,7 @@ spec:
             - ALL
           readOnlyRootFilesystem: true
           runAsGroup: 1000
-          runAsNonRoot: true
           runAsUser: 1000
-          seccompProfile:
-            type: RuntimeDefault
         volumeMounts:
         - mountPath: /var/syncthing
           name: data
@@ -226,10 +223,7 @@ spec:
             - ALL
           readOnlyRootFilesystem: true
           runAsGroup: 1000
-          runAsNonRoot: true
           runAsUser: 1000
-          seccompProfile:
-            type: RuntimeDefault
         startupProbe:
           failureThreshold: 60
           httpGet:

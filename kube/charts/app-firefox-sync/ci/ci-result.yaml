@@ -123,15 +123,11 @@ spec:
                     periodSeconds: 15
                     timeoutSeconds: 5
                   securityContext:
-                    allowPrivilegeEscalation: false
                     capabilities:
                       drop:
                         all: ALL
                     runAsGroup: 10001
-                    runAsNonRoot: true
                     runAsUser: 10001
-                    seccompProfile:
-                      type: RuntimeDefault
                   startupProbe:
                     failureThreshold: 60
                     httpGet:

@@ -57,7 +57,6 @@ resources:
         {{- end }}
       issuerRef:
         name: {{ $name }}
-        kind: Issuer
     app:
       secretName: {{ $name }}-app-tls
       secretTemplate:
@@ -68,7 +67,6 @@ resources:
       commonName: app
       issuerRef:
         name: {{ $name }}
-        kind: Issuer
     replication:
       secretName: {{ $name }}-replication-tls
       secretTemplate:
@@ -79,7 +77,6 @@ resources:
       commonName: streaming_replica
       issuerRef:
         name: {{ $name }}
-        kind: Issuer
 
   certManagerIssuers:
     main:
