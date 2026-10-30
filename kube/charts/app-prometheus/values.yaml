@@ -17,13 +17,7 @@ resources:
   deployments:
     pushprox:
       replicas: 1 # multiple pushprox pods makes connection lost in proxy
-      selector:
-        matchLabels:
-          app.kubernetes.io/name: pushprox
       template:
-        metadata:
-          labels:
-            app.kubernetes.io/name: pushprox
         spec:
           securityContext:
             runAsNonRoot: true
@@ -51,8 +45,6 @@ resources:
 
   services:
     pushprox:
-      selector:
-        app.kubernetes.io/name: pushprox
       ports:
         http:
           port: 8080
@@ -164,7 +156,7 @@ resources:
 
     pushprox: # relays the scrapes of the control plane, that is host networked
       endpointSelector:
-        matchLabels: {app.kubernetes.io/name: pushprox}
+        matchLabels: {app.kubernetes.io/instance: app-prometheus, app.kubernetes.io/component: pushprox}
       ingress:
         gateway:
           fromEntities: {ingress: ingress, host: host, remote-node: remote-node}

@@ -8,7 +8,8 @@ metadata:
 spec:
   endpointSelector:
     matchLabels:
-      app.kubernetes.io/name: element
+      app.kubernetes.io/component: element
+      app.kubernetes.io/instance: element
   ingress:
   - fromEntities:
     - host
@@ -36,6 +37,11 @@ spec:
         namespace: apps
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -75,14 +81,8 @@ spec:
               }
       deployments:
         element:
-          replicas: 1
-          selector:
-            matchLabels:
-              app.kubernetes.io/name: element
+          replicas: 2
           template:
-            metadata:
-              labels:
-                app.kubernetes.io/name: element
             spec:
               containers:
                 element:
@@ -143,8 +143,6 @@ spec:
             http:
               port: 80
               targetPort: 8080
-          selector:
-            app.kubernetes.io/name: element
 ---
 # Source: app-element/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -169,6 +167,11 @@ spec:
     namespace: gateway-api
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     disableWait: true

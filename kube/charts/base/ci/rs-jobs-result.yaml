@@ -3,10 +3,19 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
+  labels:
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: base-test
   name: test-release
   namespace: default
 spec:
   template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: main
+        app.kubernetes.io/instance: test-release
+        app.kubernetes.io/name: base-test
     spec:
       containers:
       - image: myimage:latest

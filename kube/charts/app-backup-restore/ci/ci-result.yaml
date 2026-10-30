@@ -83,7 +83,8 @@ spec:
   egress:
   - toEndpoints:
     - matchLabels:
-        k8s:app.kubernetes.io/name: garage
+        k8s:app.kubernetes.io/component: garage
+        k8s:app.kubernetes.io/instance: garage
         k8s:io.kubernetes.pod.namespace: garage
     toPorts:
     - ports:

@@ -108,12 +108,16 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  storageClassName: longhorn
+  storageClassName: longhorn-files
 ---
 # Source: syncthing/templates/loader.yaml
 apiVersion: v1
 kind: Service
 metadata:
+  labels:
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: syncthing
   name: test-release
   namespace: default
 spec:
@@ -121,6 +125,7 @@ spec:
   - name: http
     port: 8384
   selector:
+    app.kubernetes.io/component: main
     app.kubernetes.io/instance: test-release
     app.kubernetes.io/name: syncthing
 ---
@@ -128,12 +133,17 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  labels:
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: syncthing
   name: test-release
   namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
+      app.kubernetes.io/component: main
       app.kubernetes.io/instance: test-release
       app.kubernetes.io/name: syncthing
   strategy:
@@ -143,6 +153,7 @@ spec:
       annotations:
         checksum/configmaps: 10e57883b345d3449827a4dec4b579b1b319027c34e191bd86d280fbb503bce5
       labels:
+        app.kubernetes.io/component: main
         app.kubernetes.io/instance: test-release
         app.kubernetes.io/name: syncthing
     spec:
@@ -184,6 +195,8 @@ spec:
         - mountPath: /scripts
           name: scripts
           readOnly: true
+        - mountPath: /tmp
+          name: tmp
       - env:
         - name: STNODEFAULTFOLDER
           value: "1"
@@ -211,6 +224,7 @@ spec:
           capabilities:
             drop:
             - ALL
+          readOnlyRootFilesystem: true
           runAsGroup: 1000
           runAsNonRoot: true
           runAsUser: 1000
@@ -226,9 +240,14 @@ spec:
         - mountPath: /var/syncthing
           name: data
           subPath: data
+        - mountPath: /tmp
+          name: tmp
       enableServiceLinks: false
       securityContext:
         fsGroup: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
       - name: data
         persistentVolumeClaim:
@@ -242,6 +261,8 @@ spec:
       - configMap:
           name: test-release
         name: scripts
+      - emptyDir: {}
+        name: tmp
 ---
 # Source: syncthing/templates/loader.yaml
 apiVersion: cert-manager.io/v1
@@ -267,15 +288,16 @@ spec:
   egress:
   - toEndpoints:
     - matchLabels:
-        app.kubernetes.io/name: syncthing-relay
+        app.kubernetes.io/component: syncthing-relay
+        app.kubernetes.io/instance: syncthing-relay
     toPorts:
     - ports:
       - port: "22067"
         protocol: TCP
   endpointSelector:
     matchLabels:
+      app.kubernetes.io/component: main
       app.kubernetes.io/instance: test-release
-      app.kubernetes.io/name: syncthing
   ingress:
   - fromEntities:
     - host

@@ -30,7 +30,7 @@ resources:
         garage: # the S3 API, for the secrets (the matching ingress is in app-garage)
           toEndpoints:
             garage:
-              matchLabels: {"k8s:io.kubernetes.pod.namespace": garage, "k8s:app.kubernetes.io/name": garage}
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": garage, "k8s:app.kubernetes.io/instance": garage, "k8s:app.kubernetes.io/component": garage}
           toPorts:
             s3: {ports: {p3900: {port: "3900", protocol: TCP}}}
 

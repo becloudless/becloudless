@@ -8,7 +8,8 @@ metadata:
 spec:
   endpointSelector:
     matchLabels:
-      app.kubernetes.io/name: landing
+      app.kubernetes.io/component: landing
+      app.kubernetes.io/instance: landing
   ingress:
   - fromEntities:
     - host
@@ -36,6 +37,11 @@ spec:
         namespace: apps
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -84,14 +90,8 @@ spec:
               </html>
       deployments:
         landing:
-          replicas: 1
-          selector:
-            matchLabels:
-              app.kubernetes.io/name: landing
+          replicas: 2
           template:
-            metadata:
-              labels:
-                app.kubernetes.io/name: landing
             spec:
               containers:
                 nginx:
@@ -140,8 +140,6 @@ spec:
             http:
               port: 80
               targetPort: 8080
-          selector:
-            app.kubernetes.io/name: landing
 ---
 # Source: app-landing/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -166,6 +164,11 @@ spec:
   - name: landing
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     disableWait: true

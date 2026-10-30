@@ -21,7 +21,8 @@ spec:
         protocol: TCP
   - toEndpoints:
     - matchLabels:
-        app.kubernetes.io/name: seafile-mariadb
+        app.kubernetes.io/component: seafile-mariadb
+        app.kubernetes.io/instance: seafile-mariadb
     toPorts:
     - ports:
       - port: "3306"
@@ -35,7 +36,8 @@ spec:
         protocol: TCP
   endpointSelector:
     matchLabels:
-      app.kubernetes.io/name: seafile
+      app.kubernetes.io/component: seafile
+      app.kubernetes.io/instance: seafile
   ingress:
   - fromEntities:
     - host
@@ -55,11 +57,13 @@ metadata:
 spec:
   endpointSelector:
     matchLabels:
-      app.kubernetes.io/name: seafile-mariadb
+      app.kubernetes.io/component: seafile-mariadb
+      app.kubernetes.io/instance: seafile-mariadb
   ingress:
   - fromEndpoints:
     - matchLabels:
-        app.kubernetes.io/name: seafile
+        app.kubernetes.io/component: seafile
+        app.kubernetes.io/instance: seafile
     toPorts:
     - ports:
       - port: "3306"
@@ -86,6 +90,11 @@ spec:
   - name: seafile-valkey
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -145,15 +154,9 @@ spec:
       deployments:
         seafile:
           replicas: 1
-          selector:
-            matchLabels:
-              app.kubernetes.io/name: seafile
           strategy:
             type: Recreate
           template:
-            metadata:
-              labels:
-                app.kubernetes.io/name: seafile
             spec:
               containers:
                 seafile:
@@ -281,8 +284,6 @@ spec:
           ports:
             http:
               port: 80
-          selector:
-            app.kubernetes.io/name: seafile
 ---
 # Source: app-seafile/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -307,6 +308,11 @@ spec:
   - name: seafile
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     disableWait: true
@@ -389,6 +395,11 @@ spec:
   - name: seafile-pre
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -406,15 +417,9 @@ spec:
       deployments:
         seafile-mariadb:
           replicas: 1
-          selector:
-            matchLabels:
-              app.kubernetes.io/name: seafile-mariadb
           strategy:
             type: Recreate
           template:
-            metadata:
-              labels:
-                app.kubernetes.io/name: seafile-mariadb
             spec:
               containers:
                 mariadb:
@@ -477,8 +482,6 @@ spec:
           ports:
             mysql:
               port: 3306
-          selector:
-            app.kubernetes.io/name: seafile-mariadb
 ---
 # Source: app-seafile/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -504,6 +507,11 @@ spec:
     namespace: secret-generator
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -583,6 +591,11 @@ spec:
     namespace: secret-generator
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -599,4 +612,5 @@ spec:
     clients:
       seafile:
         matchLabels:
-          app.kubernetes.io/name: seafile
+          app.kubernetes.io/component: seafile
+          app.kubernetes.io/instance: seafile

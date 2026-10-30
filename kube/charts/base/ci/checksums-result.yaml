@@ -66,18 +66,28 @@ metadata:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
+  labels:
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: base-test
   name: test-release
   namespace: default
 spec:
   selector:
     matchLabels:
       app: daemon
+      app.kubernetes.io/component: main
+      app.kubernetes.io/instance: test-release
+      app.kubernetes.io/name: base-test
   template:
     metadata:
       annotations:
         checksum/secrets: e63354bdb9fcdf403e5580e9f14a78f6aaaae51092ba1e426006fb22f6bed0ee
       labels:
         app: daemon
+        app.kubernetes.io/component: main
+        app.kubernetes.io/instance: test-release
+        app.kubernetes.io/name: base-test
     spec:
       containers:
       - envFrom:
@@ -104,12 +114,19 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  labels:
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: base-test
   name: test-release
   namespace: default
 spec:
   selector:
     matchLabels:
       app: myapp
+      app.kubernetes.io/component: main
+      app.kubernetes.io/instance: test-release
+      app.kubernetes.io/name: base-test
   template:
     metadata:
       annotations:
@@ -117,6 +134,9 @@ spec:
         checksum/secrets: 15305634748b067bd8900a11bf06f44874d22f3b6ea30b61f17f603dad881aca
       labels:
         app: myapp
+        app.kubernetes.io/component: main
+        app.kubernetes.io/instance: test-release
+        app.kubernetes.io/name: base-test
     spec:
       containers:
       - env:
@@ -166,18 +186,28 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  labels:
+    app.kubernetes.io/component: manual
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: base-test
   name: manual
   namespace: default
 spec:
   selector:
     matchLabels:
       app: manual
+      app.kubernetes.io/component: manual
+      app.kubernetes.io/instance: test-release
+      app.kubernetes.io/name: base-test
   template:
     metadata:
       annotations:
         checksum/configmaps: mine
       labels:
         app: manual
+        app.kubernetes.io/component: manual
+        app.kubernetes.io/instance: test-release
+        app.kubernetes.io/name: base-test
     spec:
       containers:
       - envFrom:
@@ -204,18 +234,28 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  labels:
+    app.kubernetes.io/component: other
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: base-test
   name: other
   namespace: default
 spec:
   selector:
     matchLabels:
       app: other
+      app.kubernetes.io/component: other
+      app.kubernetes.io/instance: test-release
+      app.kubernetes.io/name: base-test
   template:
     metadata:
       annotations:
         mine: kept
       labels:
         app: other
+        app.kubernetes.io/component: other
+        app.kubernetes.io/instance: test-release
+        app.kubernetes.io/name: base-test
     spec:
       containers:
       - envFrom:
@@ -242,18 +282,28 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
+  labels:
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: base-test
   name: test-release
   namespace: default
 spec:
   selector:
     matchLabels:
       app: stateful
+      app.kubernetes.io/component: main
+      app.kubernetes.io/instance: test-release
+      app.kubernetes.io/name: base-test
   template:
     metadata:
       annotations:
         checksum/configmaps: ace306f4ad209088181d4f95eadc5f87a288c133ab8fac4cf91a8f3ac6f87fd2
       labels:
         app: stateful
+        app.kubernetes.io/component: main
+        app.kubernetes.io/instance: test-release
+        app.kubernetes.io/name: base-test
     spec:
       containers:
       - image: myimage:latest

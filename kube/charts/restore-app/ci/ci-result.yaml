@@ -218,6 +218,10 @@ metadata:
 apiVersion: batch/v1
 kind: Job
 metadata:
+  labels:
+    app.kubernetes.io/component: restore-app
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: restore-app
   name: restore-test-ccf9f39e49
   namespace: default
 spec:
@@ -226,6 +230,8 @@ spec:
   template:
     metadata:
       labels:
+        app.kubernetes.io/component: restore-app
+        app.kubernetes.io/instance: test-release
         app.kubernetes.io/name: restore-app
     spec:
       containers:
@@ -281,6 +287,10 @@ spec:
 apiVersion: batch/v1
 kind: CronJob
 metadata:
+  labels:
+    app.kubernetes.io/component: secrets-backup
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: restore-app
   name: secrets-backup-test
   namespace: default
 spec:
@@ -293,6 +303,8 @@ spec:
       template:
         metadata:
           labels:
+            app.kubernetes.io/component: secrets-backup
+            app.kubernetes.io/instance: test-release
             app.kubernetes.io/name: restore-app
         spec:
           containers:

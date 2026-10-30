@@ -25,8 +25,7 @@ resources:
   ciliumNetworkPolicies:
     seerr:
       endpointSelector:
-        matchLabels: {app.kubernetes.io/name: seerr}
-      ingress:
+        matchLabels: {app.kubernetes.io/instance: seerr, app.kubernetes.io/component: seerr}
         gateway:
           fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
           toPorts:
@@ -50,7 +49,7 @@ resources:
         jellyfin: # jellyfin by its service (`jellyfin.jellyfin:8096`)
           toEndpoints:
             jellyfin:
-              matchLabels: {"k8s:io.kubernetes.pod.namespace": jellyfin, "k8s:app.kubernetes.io/name": jellyfin}
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": jellyfin, "k8s:app.kubernetes.io/instance": jellyfin, "k8s:app.kubernetes.io/component": jellyfin}
           toPorts:
             http: {ports: {p8096: {port: "8096", protocol: TCP}}}
         tmdb: # the metadata (api) and the posters (images, when the image cache is enabled)
@@ -79,7 +78,7 @@ resources:
         instances: "{{ .Values.app.scaling.dbReplicas }}"
         clients:
           seerr:
-            matchLabels: {app.kubernetes.io/name: seerr}
+            matchLabels: {app.kubernetes.io/instance: seerr, app.kubernetes.io/component: seerr}
       dependsOn: # the certificates, the cluster and the volume snapshots
         cert-manager:
           name: app-cert-manager
@@ -392,13 +391,7 @@ resources:
               replicas: 1 # seerr is not HA ready
               strategy:
                 type: Recreate # the volume is ReadWriteOnce
-              selector:
-                matchLabels:
-                  app.kubernetes.io/name: seerr
               template:
-                metadata:
-                  labels:
-                    app.kubernetes.io/name: seerr
                 spec:
                   securityContext:
                     fsGroup: 1000
@@ -544,8 +537,6 @@ resources:
 
           services:
             seerr:
-              selector:
-                app.kubernetes.io/name: seerr
               ports:
                 http:
                   port: 5055

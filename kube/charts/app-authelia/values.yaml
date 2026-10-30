@@ -21,7 +21,7 @@ resources:
         lldap:
           toEndpoints:
             lldap:
-              matchLabels: {"k8s:io.kubernetes.pod.namespace": lldap, "k8s:app.kubernetes.io/name": lldap}
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": lldap, "k8s:app.kubernetes.io/instance": lldap, "k8s:app.kubernetes.io/component": lldap}
           toPorts:
             ldaps: {ports: {p6360: {port: "6360", protocol: TCP}}}
         valkey:

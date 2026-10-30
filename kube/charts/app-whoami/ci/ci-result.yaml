@@ -8,7 +8,8 @@ metadata:
 spec:
   endpointSelector:
     matchLabels:
-      app.kubernetes.io/name: whoami
+      app.kubernetes.io/component: whoami
+      app.kubernetes.io/instance: whoami
   ingress:
   - fromEntities:
     - host
@@ -36,6 +37,11 @@ spec:
         namespace: apps
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -52,14 +58,8 @@ spec:
     resources:
       deployments:
         whoami:
-          replicas: 1
-          selector:
-            matchLabels:
-              app.kubernetes.io/name: whoami
+          replicas: 2
           template:
-            metadata:
-              labels:
-                app.kubernetes.io/name: whoami
             spec:
               containers:
                 whoami:
@@ -111,8 +111,6 @@ spec:
           ports:
             http:
               port: 8080
-          selector:
-            app.kubernetes.io/name: whoami
 ---
 # Source: app-whoami/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -137,6 +135,11 @@ spec:
   - name: whoami
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     disableWait: true

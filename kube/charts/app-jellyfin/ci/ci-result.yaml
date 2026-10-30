@@ -28,25 +28,33 @@ spec:
       - port: "443"
         protocol: TCP
   endpointSelector:
+    gateway:
+      fromEntities:
+        host: host
+        ingress: ingress
+        remote-node: remote-node
+      toPorts:
+        http:
+          ports:
+            p8096:
+              port: "8096"
+              protocol: TCP
     matchLabels:
-      app.kubernetes.io/name: jellyfin
-  ingress:
-  - fromEntities:
-    - host
-    - ingress
-    - remote-node
-    toPorts:
-    - ports:
-      - port: "8096"
-        protocol: TCP
-  - fromEndpoints:
-    - matchLabels:
-        k8s:app.kubernetes.io/name: seerr
-        k8s:io.kubernetes.pod.namespace: seerr
-    toPorts:
-    - ports:
-      - port: "8096"
-        protocol: TCP
+      app.kubernetes.io/component: jellyfin
+      app.kubernetes.io/instance: jellyfin
+    seerr:
+      fromEndpoints:
+        seerr:
+          matchLabels:
+            k8s:app.kubernetes.io/component: seerr
+            k8s:app.kubernetes.io/instance: seerr
+            k8s:io.kubernetes.pod.namespace: seerr
+      toPorts:
+        http:
+          ports:
+            p8096:
+              port: "8096"
+              protocol: TCP
 ---
 # Source: app-jellyfin/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -67,6 +75,11 @@ spec:
   - name: jellyfin-pre
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -200,15 +213,9 @@ spec:
       deployments:
         jellyfin:
           replicas: 1
-          selector:
-            matchLabels:
-              app.kubernetes.io/name: jellyfin
           strategy:
             type: Recreate
           template:
-            metadata:
-              labels:
-                app.kubernetes.io/name: jellyfin
             spec:
               containers:
                 configure:
@@ -362,8 +369,6 @@ spec:
           ports:
             http:
               port: 8096
-          selector:
-            app.kubernetes.io/name: jellyfin
 ---
 # Source: app-jellyfin/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -388,6 +393,11 @@ spec:
   - name: jellyfin
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     disableWait: true
@@ -475,6 +485,11 @@ spec:
     namespace: secret-generator
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     strategy:

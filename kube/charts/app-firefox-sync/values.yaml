@@ -25,7 +25,7 @@ resources:
   ciliumNetworkPolicies:
     firefox-sync:
       endpointSelector:
-        matchLabels: {app.kubernetes.io/name: firefox-sync}
+        matchLabels: {app.kubernetes.io/instance: firefox-sync, app.kubernetes.io/component: firefox-sync}
       ingress:
         gateway:
           fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
@@ -52,7 +52,7 @@ resources:
         instances: "{{ .Values.app.scaling.dbReplicas }}"
         clients:
           firefox-sync:
-            matchLabels: {app.kubernetes.io/name: firefox-sync}
+            matchLabels: {app.kubernetes.io/instance: firefox-sync, app.kubernetes.io/component: firefox-sync}
       dependsOn: # the certificates, the cluster and the volume snapshots
         cert-manager:
           name: app-cert-manager
@@ -116,13 +116,7 @@ resources:
           deployments:
             firefox-sync:
               replicas: 1 # the schemas are migrated by the pod at its start
-              selector:
-                matchLabels:
-                  app.kubernetes.io/name: firefox-sync
               template:
-                metadata:
-                  labels:
-                    app.kubernetes.io/name: firefox-sync
                 spec:
                   nodeSelector:
                     kubernetes.io/arch: amd64 # the image is not published for arm64
@@ -193,8 +187,6 @@ resources:
 
           services:
             firefox-sync:
-              selector:
-                app.kubernetes.io/name: firefox-sync
               ports:
                 http:
                   port: 8000

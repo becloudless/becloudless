@@ -27,7 +27,7 @@ resources:
   ciliumNetworkPolicies:
     syncthing-relay:
       endpointSelector:
-        matchLabels: {app.kubernetes.io/name: syncthing-relay}
+        matchLabels: {app.kubernetes.io/instance: syncthing-relay, app.kubernetes.io/component: syncthing-relay}
       ingress:
         relay: # served by the Gateway service without Envoy: the source is the client itself (public, or in the cluster)
           fromEntities: {world: world, cluster: cluster}
@@ -96,13 +96,7 @@ resources:
           deployments:
             syncthing-relay:
               replicas: 1
-              selector:
-                matchLabels:
-                  app.kubernetes.io/name: syncthing-relay
               template:
-                metadata:
-                  labels:
-                    app.kubernetes.io/name: syncthing-relay
                 spec:
                   enableServiceLinks: false
                   securityContext:
@@ -169,8 +163,6 @@ resources:
 
           services:
             syncthing-relay:
-              selector:
-                app.kubernetes.io/name: syncthing-relay
               ports:
                 relay:
                   port: 22067

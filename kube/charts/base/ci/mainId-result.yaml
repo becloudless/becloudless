@@ -12,6 +12,10 @@ metadata:
 apiVersion: v1
 kind: Service
 metadata:
+  labels:
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: base-test
   name: test-release
   namespace: default
 spec:

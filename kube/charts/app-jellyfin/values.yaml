@@ -18,8 +18,7 @@ resources:
   ciliumNetworkPolicies:
     jellyfin:
       endpointSelector:
-        matchLabels: {app.kubernetes.io/name: jellyfin}
-      ingress:
+        matchLabels: {app.kubernetes.io/instance: jellyfin, app.kubernetes.io/component: jellyfin}
         gateway:
           fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
           toPorts:
@@ -27,7 +26,7 @@ resources:
         seerr:
           fromEndpoints:
             seerr:
-              matchLabels: {"k8s:io.kubernetes.pod.namespace": seerr, "k8s:app.kubernetes.io/name": seerr}
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": seerr, "k8s:app.kubernetes.io/instance": seerr, "k8s:app.kubernetes.io/component": seerr}
           toPorts:
             http: {ports: {p8096: {port: "8096", protocol: TCP}}}
       egress:
@@ -285,13 +284,7 @@ resources:
               replicas: 1 # jellyfin is not HA ready
               strategy:
                 type: Recreate # the volume is ReadWriteOnce
-              selector:
-                matchLabels:
-                  app.kubernetes.io/name: jellyfin
               template:
-                metadata:
-                  labels:
-                    app.kubernetes.io/name: jellyfin
                 spec:
                   # the images of alpine and jellyfin run as root: every container runs as 1000, which owns the volume (`fsGroup`)
                   securityContext:
@@ -438,8 +431,6 @@ resources:
 
           services:
             jellyfin:
-              selector:
-                app.kubernetes.io/name: jellyfin
               ports:
                 http:
                   port: 8096

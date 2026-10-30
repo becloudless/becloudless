@@ -5,7 +5,7 @@
 #   <app>-valkey:
 #     dependsOn: {secret-generator: {name: app-secret-generator, namespace: secret-generator}}
 #     values:
-#       clients: {<app>: {matchLabels: {app.kubernetes.io/name: <app>}}}
+#       clients: {<app>: {matchLabels: {app.kubernetes.io/instance: <app>, app.kubernetes.io/component: <app>}}}
 
 prefixNamesWithRelease: true
 
@@ -14,7 +14,7 @@ checkRequiredValues: false
 
 # The pods allowed to connect to valkey (the default deny of Cilium blocks everyone else), one `matchLabels` selector each. They are
 # in the namespace of valkey, or in another one with the `k8s:io.kubernetes.pod.namespace` label.
-# ex: `clients: {authelia: {matchLabels: {app.kubernetes.io/name: authelia}}}`
+# ex: `clients: {seerr: {matchLabels: {app.kubernetes.io/instance: seerr, app.kubernetes.io/component: seerr}}}`
 clients: {}
 
 # values of the public chart: https://github.com/valkey-io/valkey-helm/blob/main/valkey/values.yaml

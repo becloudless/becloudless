@@ -33,7 +33,7 @@ resources:
   ciliumNetworkPolicies:
     garage:
       endpointSelector:
-        matchLabels: {app.kubernetes.io/name: garage}
+        matchLabels: {app.kubernetes.io/instance: garage, app.kubernetes.io/component: garage}
       ingress:
         gateway: # the S3 API, through the Gateway
           fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
@@ -42,7 +42,7 @@ resources:
         garage: # the RPC between the nodes
           fromEndpoints:
             garage:
-              matchLabels: {app.kubernetes.io/name: garage}
+              matchLabels: {app.kubernetes.io/instance: garage, app.kubernetes.io/component: garage}
           toPorts:
             rpc: {ports: {p3901: {port: "3901", protocol: TCP}}}
         longhorn: # the S3 API, for the backups of the volumes (the managers list and restore, the instance managers write)
@@ -62,26 +62,26 @@ resources:
         layout: # the admin API
           fromEndpoints:
             layout:
-              matchLabels: {app.kubernetes.io/name: garage-layout}
+              matchLabels: {app.kubernetes.io/instance: garage-post, app.kubernetes.io/component: garage-layout}
           toPorts:
             admin: {ports: {p3903: {port: "3903", protocol: TCP}}}
       egress:
         garage:
           toEndpoints:
             garage:
-              matchLabels: {app.kubernetes.io/name: garage}
+              matchLabels: {app.kubernetes.io/instance: garage, app.kubernetes.io/component: garage}
           toPorts:
             rpc: {ports: {p3901: {port: "3901", protocol: TCP}}}
         kube-apiserver: # the discovery of the nodes (the `GarageNode` resources)
           toEntities: {apiserver: kube-apiserver}
     garage-layout:
       endpointSelector:
-        matchLabels: {app.kubernetes.io/name: garage-layout}
+        matchLabels: {app.kubernetes.io/instance: garage-post, app.kubernetes.io/component: garage-layout}
       egress:
         garage:
           toEndpoints:
             garage:
-              matchLabels: {app.kubernetes.io/name: garage}
+              matchLabels: {app.kubernetes.io/instance: garage, app.kubernetes.io/component: garage}
           toPorts:
             admin: {ports: {p3903: {port: "3903", protocol: TCP}}}
 
@@ -251,9 +251,6 @@ resources:
               replicas: "{{ .Values.app.scaling.dbReplicas }}"
               serviceName: garage-headless
               podManagementPolicy: Parallel # the nodes are ready without a layout, and they discover each other
-              selector:
-                matchLabels:
-                  app.kubernetes.io/name: garage
               # Sizes: the capacity of the nodes in the layout is the one of `garage-data` (`CAPACITY` of `garage-post`)
               volumeClaimTemplates:
                 garage-meta:
@@ -277,9 +274,6 @@ resources:
                       requests:
                         storage: 10Gi
               template:
-                metadata:
-                  labels:
-                    app.kubernetes.io/name: garage
                 spec:
                   serviceAccountName: garage
                   enableServiceLinks: false
@@ -296,7 +290,8 @@ resources:
                       whenUnsatisfiable: ScheduleAnyway
                       labelSelector:
                         matchLabels:
-                          app.kubernetes.io/name: garage
+                          app.kubernetes.io/instance: garage
+                          app.kubernetes.io/component: garage
                   containers:
                     garage:
                       name: garage
@@ -365,8 +360,6 @@ resources:
           services:
             # the S3 API, for the Gateway and the pods of the cluster
             garage:
-              selector:
-                app.kubernetes.io/name: garage
               ports:
                 s3:
                   port: 3900
@@ -374,7 +367,7 @@ resources:
             garage-headless:
               clusterIP: None
               selector:
-                app.kubernetes.io/name: garage
+                app.kubernetes.io/component: garage # the pods of the StatefulSet
               ports:
                 s3:
                   port: 3900
@@ -404,9 +397,6 @@ resources:
               backoffLimit: 0
               activeDeadlineSeconds: 900
               template:
-                metadata:
-                  labels:
-                    app.kubernetes.io/name: garage-layout
                 spec:
                   restartPolicy: Never
                   enableServiceLinks: false

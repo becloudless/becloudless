@@ -62,22 +62,15 @@ tests:
     asserts:
       - notFailedTemplate: {}
 
-  - it: fails with a clear error when a required field is missing (selector)
+  - it: fails with a clear error when a required field is missing (template, the selector is set by the standard labels)
     set:
       resources:
         deployments:
           myapp:
-            template:
-              metadata:
-                labels:
-                  app: myapp
-              spec:
-                containers:
-                  - name: myapp
-                    image: myimage:latest
+            replicas: 1
     asserts:
       - failedTemplate:
-          errorMessage: 'resources.deployments.myapp: "selector" is required'
+          errorMessage: 'resources.deployments.myapp: "template" is required'
 
   - it: fails on the nested field when the parent object is only created by defaults.resources (template.spec.containers)
     set:

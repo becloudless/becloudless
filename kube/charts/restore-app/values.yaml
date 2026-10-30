@@ -56,9 +56,8 @@ resources:
       backoffLimit: 2
       activeDeadlineSeconds: 3000
       template: &template # the pod of the CronJob of the secrets is the same, it runs the same script in another `MODE`
-        metadata:
-          labels:
-            app.kubernetes.io/name: restore-app # selected by the network policy of app-backup-restore and the one of app-garage
+        # the pods have the label `app.kubernetes.io/name: restore-app` (the name of the chart), selected by the network policy of
+        # app-backup-restore and the one of app-garage
         spec: &spec
           restartPolicy: Never
           serviceAccountName: backup-restore # see app-backup-restore

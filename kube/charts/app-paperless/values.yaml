@@ -30,7 +30,7 @@ resources:
   ciliumNetworkPolicies:
     paperless:
       endpointSelector:
-        matchLabels: {app.kubernetes.io/name: paperless}
+        matchLabels: {app.kubernetes.io/instance: paperless, app.kubernetes.io/component: paperless}
       ingress:
         gateway:
           fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
@@ -68,7 +68,7 @@ resources:
         instances: "{{ .Values.app.scaling.dbReplicas }}"
         clients:
           paperless:
-            matchLabels: {app.kubernetes.io/name: paperless}
+            matchLabels: {app.kubernetes.io/instance: paperless, app.kubernetes.io/component: paperless}
       dependsOn: # the certificates, the cluster and the volume snapshots
         cert-manager:
           name: app-cert-manager
@@ -171,7 +171,7 @@ resources:
       values:
         clients:
           paperless:
-            matchLabels: {app.kubernetes.io/name: paperless}
+            matchLabels: {app.kubernetes.io/instance: paperless, app.kubernetes.io/component: paperless}
 
     paperless:
       timeout: 15m # the first start migrates the database
@@ -207,13 +207,7 @@ resources:
               replicas: 1 # paperless is not HA ready
               strategy:
                 type: Recreate # the volume is ReadWriteOnce
-              selector:
-                matchLabels:
-                  app.kubernetes.io/name: paperless
               template:
-                metadata:
-                  labels:
-                    app.kubernetes.io/name: paperless
                 spec:
                   enableServiceLinks: false # the `PAPERLESS_*` variables of the services would conflict
                   securityContext:
@@ -328,8 +322,6 @@ resources:
 
           services:
             paperless:
-              selector:
-                app.kubernetes.io/name: paperless
               ports:
                 http:
                   port: 8000

@@ -132,6 +132,30 @@ flowchart LR
   svc -.-> integration
 ```
 
+## Labels and selectors
+
+The `base` chart gives the standard labels to the workloads and the services, nothing has to be written by hand:
+
+| Label | Value |
+|---|---|
+| `app.kubernetes.io/name` | the name of the chart (`base-loader` for the releases of `base-loader`, `restore-app`, `syncthing`...) |
+| `app.kubernetes.io/instance` | the name of the release (the name of the sub-HR) |
+| `app.kubernetes.io/component` | the id of the resource (`deployments.seerr` is the component `seerr`) |
+
+- `Deployment`, `StatefulSet`, `DaemonSet`: `metadata.labels`, `spec.selector.matchLabels` and the labels of the pods have the 3 labels.
+  Do not write `selector` or `template.metadata.labels`.
+- `Job` and `CronJob`: the labels of the resource and of its pods.
+- `Service`: `metadata.labels` and, when there is no `selector`, `spec.selector` with the 3 labels (the service of the workload of
+  the same id). A service for the workload of another id only gives `selector: {app.kubernetes.io/component: <id>}`, the other 2 labels
+  are added. Any other selector is kept (pods of another chart), as for `ExternalName` services that have none.
+- A label or a selector given in the values wins over the generated one.
+- A Cilium policy, a `clients` of `postgresql` and `valkey`... selecting these pods use the release and the id, in the namespace of the
+  release: `matchLabels: {app.kubernetes.io/instance: seerr, app.kubernetes.io/component: seerr}`. From another namespace, the keys are
+  prefixed with `k8s:` and `k8s:io.kubernetes.pod.namespace` is added. The pods of a public chart keep the labels of their chart.
+
+Changing the selector of an existing `Deployment`, `StatefulSet` or `DaemonSet` is refused by Kubernetes (`field is immutable`):
+delete it without its pods (`kubectl delete --cascade=orphan`) and let Flux recreate it. The volumes of a `StatefulSet` are kept.
+
 ## Example
 
 `app-lldap`:

@@ -8,7 +8,8 @@ metadata:
 spec:
   endpointSelector:
     matchLabels:
-      app.kubernetes.io/name: homer
+      app.kubernetes.io/component: homer
+      app.kubernetes.io/instance: homer
   ingress:
   - fromEntities:
     - host
@@ -36,6 +37,11 @@ spec:
         namespace: apps
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -307,14 +313,8 @@ spec:
               }
       deployments:
         homer:
-          replicas: 1
-          selector:
-            matchLabels:
-              app.kubernetes.io/name: homer
+          replicas: 2
           template:
-            metadata:
-              labels:
-                app.kubernetes.io/name: homer
             spec:
               containers:
                 homer:
@@ -370,8 +370,6 @@ spec:
           ports:
             http:
               port: 8080
-          selector:
-            app.kubernetes.io/name: homer
 ---
 # Source: app-homer/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -396,6 +394,11 @@ spec:
   - name: homer
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     disableWait: true

@@ -38,6 +38,10 @@ metadata:
 apiVersion: v1
 kind: Service
 metadata:
+  labels:
+    app.kubernetes.io/component: myservice
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: base-test
   name: fulloverride
   namespace: default
 spec:
@@ -52,6 +56,10 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  labels:
+    app.kubernetes.io/component: myapp
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: base-test
   name: myapp
   namespace: default
 spec:
@@ -59,10 +67,16 @@ spec:
   selector:
     matchLabels:
       app: myapp
+      app.kubernetes.io/component: myapp
+      app.kubernetes.io/instance: test-release
+      app.kubernetes.io/name: base-test
   template:
     metadata:
       labels:
         app: myapp
+        app.kubernetes.io/component: myapp
+        app.kubernetes.io/instance: test-release
+        app.kubernetes.io/name: base-test
     spec:
       containers:
       - image: myimage:latest

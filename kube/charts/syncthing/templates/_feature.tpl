@@ -1,7 +1,8 @@
 {{- /*
 Prepare the resources of the instance named after the release (see values.yaml). Every resource is the `main` of its kind, so it is
-named after the release (`prefixNamesWithRelease`), and the pods are selected by the `app.kubernetes.io/instance` label so that
-instances of the same namespace do not overlap.
+named after the release (`prefixNamesWithRelease`), and the pods are selected by the standard labels of the base chart
+(`app.kubernetes.io/instance` is the release, `app.kubernetes.io/component` is `main`) so that instances of the same namespace do not
+overlap.
 
 Everything is returned as a default: set `resources.<kind>.<id>...` to override or extend any generated field.
 
@@ -41,15 +42,7 @@ resources:
       replicas: 1 # one instance is one device
       strategy:
         type: Recreate # the volume is ReadWriteOnce
-      selector:
-        matchLabels:
-          app.kubernetes.io/name: syncthing
-          app.kubernetes.io/instance: {{ $name | quote }}
       template:
-        metadata:
-          labels:
-            app.kubernetes.io/name: syncthing
-            app.kubernetes.io/instance: {{ $name | quote }}
         spec:
           enableServiceLinks: false # the `SYNCTHING_*` variables of the services would conflict
           securityContext:
@@ -158,9 +151,6 @@ resources:
 
   services:
     main:
-      selector:
-        app.kubernetes.io/name: syncthing
-        app.kubernetes.io/instance: {{ $name | quote }}
       ports:
         http:
           port: 8384
@@ -169,8 +159,8 @@ resources:
     main:
       endpointSelector:
         matchLabels:
-          app.kubernetes.io/name: syncthing
           app.kubernetes.io/instance: {{ $name | quote }}
+          app.kubernetes.io/component: main
       ingress:
         gateway: # the web UI
           fromEntities: {ingress: ingress, host: host, remote-node: remote-node}

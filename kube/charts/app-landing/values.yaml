@@ -6,7 +6,7 @@ resources:
   ciliumNetworkPolicies:
     landing:
       endpointSelector:
-        matchLabels: {app.kubernetes.io/name: landing}
+        matchLabels: {app.kubernetes.io/instance: landing, app.kubernetes.io/component: landing}
       ingress:
         gateway:
           fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
@@ -62,13 +62,7 @@ resources:
           deployments:
             landing:
               replicas: "{{ .Values.app.scaling.replicas }}"
-              selector:
-                matchLabels:
-                  app.kubernetes.io/name: landing
               template:
-                metadata:
-                  labels:
-                    app.kubernetes.io/name: landing
                 spec:
                   securityContext:
                     runAsNonRoot: true
@@ -114,8 +108,6 @@ resources:
 
           services:
             landing:
-              selector:
-                app.kubernetes.io/name: landing
               ports:
                 http:
                   port: 80

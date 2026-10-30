@@ -26,7 +26,7 @@ resources:
   ciliumNetworkPolicies:
     seafile:
       endpointSelector:
-        matchLabels: {app.kubernetes.io/name: seafile}
+        matchLabels: {app.kubernetes.io/instance: seafile, app.kubernetes.io/component: seafile}
       ingress:
         gateway:
           fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
@@ -36,7 +36,7 @@ resources:
         mariadb:
           toEndpoints:
             mariadb:
-              matchLabels: {app.kubernetes.io/name: seafile-mariadb}
+              matchLabels: {app.kubernetes.io/instance: seafile-mariadb, app.kubernetes.io/component: seafile-mariadb}
           toPorts:
             mysql: {ports: {p3306: {port: "3306", protocol: TCP}}}
         valkey:
@@ -57,12 +57,12 @@ resources:
 
     seafile-mariadb:
       endpointSelector:
-        matchLabels: {app.kubernetes.io/name: seafile-mariadb}
+        matchLabels: {app.kubernetes.io/instance: seafile-mariadb, app.kubernetes.io/component: seafile-mariadb}
       ingress:
         seafile:
           fromEndpoints:
             seafile:
-              matchLabels: {app.kubernetes.io/name: seafile}
+              matchLabels: {app.kubernetes.io/instance: seafile, app.kubernetes.io/component: seafile}
           toPorts:
             mysql: {ports: {p3306: {port: "3306", protocol: TCP}}}
 
@@ -166,13 +166,7 @@ resources:
               replicas: 1
               strategy:
                 type: Recreate # the volume is ReadWriteOnce
-              selector:
-                matchLabels:
-                  app.kubernetes.io/name: seafile-mariadb
               template:
-                metadata:
-                  labels:
-                    app.kubernetes.io/name: seafile-mariadb
                 spec:
                   securityContext:
                     fsGroup: 999 # the `mysql` user of the image
@@ -225,8 +219,6 @@ resources:
 
           services:
             seafile-mariadb:
-              selector:
-                app.kubernetes.io/name: seafile-mariadb
               ports:
                 mysql:
                   port: 3306
@@ -248,7 +240,7 @@ resources:
       values:
         clients:
           seafile:
-            matchLabels: {app.kubernetes.io/name: seafile}
+            matchLabels: {app.kubernetes.io/instance: seafile, app.kubernetes.io/component: seafile}
 
     seafile:
       timeout: 15m # the first start creates the databases
@@ -332,13 +324,7 @@ resources:
               replicas: 1 # the community edition is not HA ready
               strategy:
                 type: Recreate # the volume is ReadWriteOnce
-              selector:
-                matchLabels:
-                  app.kubernetes.io/name: seafile
               template:
-                metadata:
-                  labels:
-                    app.kubernetes.io/name: seafile
                 spec:
                   enableServiceLinks: false # the `SEAFILE_*` variables of the services would conflict
                   containers:
@@ -461,8 +447,6 @@ resources:
 
           services:
             seafile:
-              selector:
-                app.kubernetes.io/name: seafile
               ports:
                 http:
                   port: 80

@@ -3,17 +3,27 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
+  labels:
+    app.kubernetes.io/component: main
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: base-test
   name: test-release
   namespace: default
 spec:
   selector:
     matchLabels:
       app: myapp
+      app.kubernetes.io/component: main
+      app.kubernetes.io/instance: test-release
+      app.kubernetes.io/name: base-test
   serviceName: myapp
   template:
     metadata:
       labels:
         app: myapp
+        app.kubernetes.io/component: main
+        app.kubernetes.io/instance: test-release
+        app.kubernetes.io/name: base-test
     spec:
       containers:
       - image: myimage:latest

@@ -18,7 +18,7 @@ postgresql: {}
 
 # The pods allowed to connect to the database (the default deny of Cilium blocks everyone else), one `matchLabels` selector
 # each. They are in the namespace of the cluster, or in another one with the `k8s:io.kubernetes.pod.namespace` label.
-# ex: `clients: {authelia: {matchLabels: {app.kubernetes.io/name: authelia}}}`
+# ex: `clients: {seerr: {matchLabels: {app.kubernetes.io/instance: seerr, app.kubernetes.io/component: seerr}}}`
 clients: {}
 
 backup:

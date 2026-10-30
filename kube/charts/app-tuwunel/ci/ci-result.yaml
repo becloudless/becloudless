@@ -20,17 +20,20 @@ spec:
       - port: "443"
         protocol: TCP
   endpointSelector:
+    gateway:
+      fromEntities:
+        host: host
+        ingress: ingress
+        remote-node: remote-node
+      toPorts:
+        http:
+          ports:
+            p8008:
+              port: "8008"
+              protocol: TCP
     matchLabels:
-      app.kubernetes.io/name: tuwunel
-  ingress:
-  - fromEntities:
-    - host
-    - ingress
-    - remote-node
-    toPorts:
-    - ports:
-      - port: "8008"
-        protocol: TCP
+      app.kubernetes.io/component: tuwunel
+      app.kubernetes.io/instance: tuwunel
 ---
 # Source: app-tuwunel/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -53,6 +56,11 @@ spec:
   - name: tuwunel-pre
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     strategy:
@@ -70,15 +78,9 @@ spec:
       deployments:
         tuwunel:
           replicas: 1
-          selector:
-            matchLabels:
-              app.kubernetes.io/name: tuwunel
           strategy:
             type: Recreate
           template:
-            metadata:
-              labels:
-                app.kubernetes.io/name: tuwunel
             spec:
               containers:
                 tuwunel:
@@ -165,8 +167,6 @@ spec:
           ports:
             http:
               port: 8008
-          selector:
-            app.kubernetes.io/name: tuwunel
 ---
 # Source: app-tuwunel/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -191,6 +191,11 @@ spec:
   - name: tuwunel
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     disableWait: true
@@ -276,6 +281,11 @@ spec:
     namespace: external-secrets
   driftDetection:
     mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
   install:
     crds: CreateReplace
     strategy:

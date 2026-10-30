@@ -74,7 +74,7 @@ resources:
         backup-target: # the backup target is a bucket of garage (`longhorn-backup` of app-garage), its S3 API
           toEndpoints:
             garage:
-              matchLabels: {"k8s:io.kubernetes.pod.namespace": garage, "k8s:app.kubernetes.io/name": garage}
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": garage, "k8s:app.kubernetes.io/instance": garage, "k8s:app.kubernetes.io/component": garage}
           toPorts:
             s3: {ports: {p3900: {port: "3900", protocol: TCP}}}
 
@@ -143,7 +143,7 @@ resources:
         backup-target:
           toEndpoints:
             garage:
-              matchLabels: {"k8s:io.kubernetes.pod.namespace": garage, "k8s:app.kubernetes.io/name": garage}
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": garage, "k8s:app.kubernetes.io/instance": garage, "k8s:app.kubernetes.io/component": garage}
           toPorts:
             s3: {ports: {p3900: {port: "3900", protocol: TCP}}}
 
