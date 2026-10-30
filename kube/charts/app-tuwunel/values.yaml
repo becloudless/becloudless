@@ -26,6 +26,7 @@ resources:
     tuwunel:
       endpointSelector:
         matchLabels: {app.kubernetes.io/instance: tuwunel, app.kubernetes.io/component: tuwunel}
+      ingress:
         gateway:
           fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
           toPorts:

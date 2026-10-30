@@ -19,6 +19,7 @@ resources:
     jellyfin:
       endpointSelector:
         matchLabels: {app.kubernetes.io/instance: jellyfin, app.kubernetes.io/component: jellyfin}
+      ingress:
         gateway:
           fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
           toPorts:

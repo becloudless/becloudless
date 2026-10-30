@@ -20,20 +20,18 @@ spec:
       - port: "443"
         protocol: TCP
   endpointSelector:
-    gateway:
-      fromEntities:
-        host: host
-        ingress: ingress
-        remote-node: remote-node
-      toPorts:
-        http:
-          ports:
-            p8008:
-              port: "8008"
-              protocol: TCP
     matchLabels:
       app.kubernetes.io/component: tuwunel
       app.kubernetes.io/instance: tuwunel
+  ingress:
+  - fromEntities:
+    - host
+    - ingress
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "8008"
+        protocol: TCP
 ---
 # Source: app-tuwunel/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
