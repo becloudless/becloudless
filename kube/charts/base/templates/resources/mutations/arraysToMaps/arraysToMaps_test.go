@@ -138,3 +138,51 @@ func TestArraysToMaps_DisabledKeepsEveryArray(t *testing.T) {
 		t.Errorf("arrayPaths = %q, want an empty list", got.TemplateArgs["arrayPaths"])
 	}
 }
+
+func keyFieldsSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"fields": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"fieldName": map[string]any{"type": "string"},
+					},
+				},
+			},
+		},
+	}
+}
+
+func TestArraysToMaps_KeyFieldsReportedAsTemplateArg(t *testing.T) {
+	got, err := (ArraysToMaps{KeyFields: map[string]string{"fields": "fieldName"}}).Mutate(keyFieldsSchema())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if want := `(dict "fields" "fieldName")`; got.TemplateArgs["keyFields"] != want {
+		t.Errorf("keyFields = %q, want %q", got.TemplateArgs["keyFields"], want)
+	}
+}
+
+func TestArraysToMaps_NoKeyFieldsReportsNoTemplateArg(t *testing.T) {
+	got, err := (ArraysToMaps{}).Mutate(keyFieldsSchema())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := got.TemplateArgs["keyFields"]; ok {
+		t.Errorf("keyFields should not be reported, got %q", got.TemplateArgs["keyFields"])
+	}
+}
+
+func TestArraysToMaps_KeyFieldsRejectsUnknownPathOrProperty(t *testing.T) {
+	for name, keyFields := range map[string]map[string]string{
+		"unknown path":     {"nope": "fieldName"},
+		"unknown property": {"fields": "nope"},
+	} {
+		if _, err := (ArraysToMaps{KeyFields: keyFields}).Mutate(keyFieldsSchema()); err == nil {
+			t.Errorf("%s: expected an error, got none", name)
+		}
+	}
+}

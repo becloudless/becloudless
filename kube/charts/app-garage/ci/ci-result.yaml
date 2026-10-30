@@ -605,11 +605,9 @@ spec:
           fields:
             admin-token:
               encoding: hex
-              fieldName: admin-token
               length: "64"
             rpc-secret:
               encoding: hex
-              fieldName: rpc-secret
               length: "64"
         garage-longhorn:
           data:

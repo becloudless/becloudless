@@ -107,52 +107,36 @@ resources:
             # them from the files of the secrets with its template filter (`X_AUTHELIA_CONFIG_FILTERS`).
             authelia-oidc-forgejo:
               fields:
-                client-id:
-                  fieldName: client-id
-                secret:
-                  fieldName: secret
+                client-id: {}
+                secret: {}
             authelia-oidc-grafana:
               fields:
-                client-id:
-                  fieldName: client-id
-                secret:
-                  fieldName: secret
+                client-id: {}
+                secret: {}
             authelia-oidc-jellyfin:
               fields:
-                client-id:
-                  fieldName: client-id
-                secret:
-                  fieldName: secret
+                client-id: {}
+                secret: {}
             authelia-oidc-immich:
               fields:
-                client-id:
-                  fieldName: client-id
-                secret:
-                  fieldName: secret
+                client-id: {}
+                secret: {}
             authelia-oidc-seerr:
               fields:
-                client-id:
-                  fieldName: client-id
-                secret:
-                  fieldName: secret
+                client-id: {}
+                secret: {}
             authelia-oidc-seafile:
               fields:
-                client-id:
-                  fieldName: client-id
-                secret:
-                  fieldName: secret
+                client-id: {}
+                secret: {}
             authelia-oidc-paperless:
               fields:
-                client-id:
-                  fieldName: client-id
-                secret:
-                  fieldName: secret
+                client-id: {}
+                secret: {}
             authelia-oidc-tuwunel:
               fields:
-                client-id:
-                  fieldName: client-id
-                secret:
-                  fieldName: secret
+                client-id: {}
+                secret: {}
 
           # key pair signing the OIDC tokens, mounted from /secrets/authelia-jwks
           certManagerCertificates:

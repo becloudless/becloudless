@@ -378,7 +378,6 @@ resources:
             mailu:
               fields:
                 secret-key:
-                  fieldName: secret-key
                   encoding: hex
                   length: "32"
 
@@ -400,7 +399,6 @@ resources:
             mailu-roundcube:
               fields:
                 password:
-                  fieldName: password
                   encoding: hex
                   length: "32"
 

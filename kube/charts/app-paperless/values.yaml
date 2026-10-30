@@ -113,10 +113,8 @@ resources:
           stringSecrets:
             paperless-generated:
               fields:
-                secret-key: # signs the sessions and the tokens
-                  fieldName: secret-key
-                admin-password: # the local administrator, created by paperless at its start
-                  fieldName: admin-password
+                secret-key: {} # signs the sessions and the tokens
+                admin-password: {} # the local administrator, created by paperless at its start
 
           serviceAccounts:
             authelia-reader:

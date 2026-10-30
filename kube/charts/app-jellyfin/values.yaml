@@ -75,8 +75,7 @@ resources:
           stringSecrets:
             jellyfin-admin:
               fields:
-                password:
-                  fieldName: password
+                password: {}
 
           # lets seerr (its SecretStore) read the password of the administrator, and only this secret
           roles:

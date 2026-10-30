@@ -176,8 +176,7 @@ resources:
             # password of the `immich-admin` account created by `immich-post`, only used if the password login is enabled again
             immich-admin:
               fields:
-                password:
-                  fieldName: password
+                password: {}
 
           serviceAccounts:
             authelia-reader:

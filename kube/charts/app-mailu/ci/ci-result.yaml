@@ -870,7 +870,6 @@ spec:
           fields:
             secret-key:
               encoding: hex
-              fieldName: secret-key
               length: "32"
         mailu-mariadb:
           fields:
@@ -890,7 +889,6 @@ spec:
           fields:
             password:
               encoding: hex
-              fieldName: password
               length: "32"
 ---
 # Source: app-mailu/templates/loader.yaml

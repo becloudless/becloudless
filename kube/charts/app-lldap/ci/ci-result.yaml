@@ -568,8 +568,7 @@ spec:
               fieldName: LLDAP_KEY_SEED
         lldap-authelia:
           fields:
-            password:
-              fieldName: password
+            password: {}
         lldap-generated:
           fields:
             jwt-secret:

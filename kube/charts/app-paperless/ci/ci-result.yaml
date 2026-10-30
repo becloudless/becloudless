@@ -430,10 +430,8 @@ spec:
       stringSecrets:
         paperless-generated:
           fields:
-            admin-password:
-              fieldName: admin-password
-            secret-key:
-              fieldName: secret-key
+            admin-password: {}
+            secret-key: {}
 ---
 # Source: app-paperless/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

@@ -353,6 +353,10 @@ resources:
     sourceCRD:
       url: https://raw.githubusercontent.com/mittwald/kubernetes-secret-generator/master/deploy/crds/secretgenerator.mittwald.de_stringsecrets_crd.yaml
       crdVersion: v1alpha1
+    mutations:
+      arraysToMaps:
+        keyFields:
+          fields: fieldName # `fields.password: {}` is `fields: [{fieldName: password}]`
   - name: traefikIngressRouteTCPs
     sourceCRD:
       url: https://raw.githubusercontent.com/traefik/traefik/master/docs/content/reference/dynamic-configuration/traefik.io_ingressroutetcps.yaml

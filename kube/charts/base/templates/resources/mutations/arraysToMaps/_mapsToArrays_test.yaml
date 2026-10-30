@@ -187,3 +187,25 @@ tests:
           path: binaryData.nested
           value:
             foo: bar
+
+  - it: sets the keyFields field (StringSecret fields.fieldName) to the key of the items that do not set it
+    set:
+      resources:
+        stringSecrets:
+          main:
+            fields:
+              password: {}
+              admin-token:
+                encoding: hex
+                length: "64"
+              jwt:
+                fieldName: LLDAP_JWT_SECRET
+    asserts:
+      - equal:
+          path: spec.fields
+          value:
+            - encoding: hex
+              fieldName: admin-token
+              length: "64"
+            - fieldName: LLDAP_JWT_SECRET
+            - fieldName: password

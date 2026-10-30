@@ -321,7 +321,5 @@ spec:
       stringSecrets:
         firefox-sync-generated:
           fields:
-            master-secret:
-              fieldName: master-secret
-            metrics-hash-secret:
-              fieldName: metrics-hash-secret
+            master-secret: {}
+            metrics-hash-secret: {}

@@ -1037,52 +1037,36 @@ spec:
               fieldName: session.encryption.key
         authelia-oidc-forgejo:
           fields:
-            client-id:
-              fieldName: client-id
-            secret:
-              fieldName: secret
+            client-id: {}
+            secret: {}
         authelia-oidc-grafana:
           fields:
-            client-id:
-              fieldName: client-id
-            secret:
-              fieldName: secret
+            client-id: {}
+            secret: {}
         authelia-oidc-immich:
           fields:
-            client-id:
-              fieldName: client-id
-            secret:
-              fieldName: secret
+            client-id: {}
+            secret: {}
         authelia-oidc-jellyfin:
           fields:
-            client-id:
-              fieldName: client-id
-            secret:
-              fieldName: secret
+            client-id: {}
+            secret: {}
         authelia-oidc-paperless:
           fields:
-            client-id:
-              fieldName: client-id
-            secret:
-              fieldName: secret
+            client-id: {}
+            secret: {}
         authelia-oidc-seafile:
           fields:
-            client-id:
-              fieldName: client-id
-            secret:
-              fieldName: secret
+            client-id: {}
+            secret: {}
         authelia-oidc-seerr:
           fields:
-            client-id:
-              fieldName: client-id
-            secret:
-              fieldName: secret
+            client-id: {}
+            secret: {}
         authelia-oidc-tuwunel:
           fields:
-            client-id:
-              fieldName: client-id
-            secret:
-              fieldName: secret
+            client-id: {}
+            secret: {}
 ---
 # Source: app-authelia/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

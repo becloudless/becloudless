@@ -107,11 +107,9 @@ resources:
               fields:
                 # the secret of the nodes of the cluster, 32 bytes in hexadecimal (64 characters)
                 rpc-secret:
-                  fieldName: rpc-secret
                   encoding: hex
                   length: "64"
                 admin-token:
-                  fieldName: admin-token
                   encoding: hex
                   length: "64"
 

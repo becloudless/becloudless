@@ -149,8 +149,7 @@ resources:
             # reset their password. Copied to the authelia namespace by external-secrets (see `authelia-pre`).
             lldap-authelia:
               fields:
-                password:
-                  fieldName: password
+                password: {}
 
           # lets the `lldap-reader` service account of the authelia namespace, used by the SecretStore of authelia, read the
           # `lldap-authelia` secret of this namespace, and only this one. external-secrets reads a secret by its name (`get`), and

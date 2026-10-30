@@ -560,14 +560,10 @@ spec:
       stringSecrets:
         seafile-generated:
           fields:
-            admin-password:
-              fieldName: admin-password
-            db-password:
-              fieldName: db-password
-            db-root-password:
-              fieldName: db-root-password
-            jwt-private-key:
-              fieldName: jwt-private-key
+            admin-password: {}
+            db-password: {}
+            db-root-password: {}
+            jwt-private-key: {}
 ---
 # Source: app-seafile/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

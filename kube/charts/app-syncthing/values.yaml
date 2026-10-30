@@ -58,8 +58,7 @@ resources:
           stringSecrets:
             syncthing-relay:
               fields:
-                token:
-                  fieldName: token
+                token: {}
 
           # key pair of the relay, mounted as `cert.pem` and `key.pem`. The ID of the relay is the device ID of the certificate, so it must
           # never be renewed (a duration of 100 years) nor get a new key.

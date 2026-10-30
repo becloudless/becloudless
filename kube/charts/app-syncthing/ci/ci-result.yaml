@@ -127,8 +127,7 @@ spec:
       stringSecrets:
         syncthing-relay:
           fields:
-            token:
-              fieldName: token
+            token: {}
 ---
 # Source: app-syncthing/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

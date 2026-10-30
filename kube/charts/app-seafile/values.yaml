@@ -93,14 +93,10 @@ resources:
             # hex (the default of the generator): the passwords go through the environment, the configuration files and the SQL of seafile
             seafile-generated:
               fields:
-                jwt-private-key: # signs the tokens, at least 32 characters
-                  fieldName: jwt-private-key
-                db-root-password: # created by mariadb, used by seafile to create its databases
-                  fieldName: db-root-password
-                db-password: # the `seafile` user of the databases, created by seafile
-                  fieldName: db-password
-                admin-password: # the local administrator, created by seafile at its first start
-                  fieldName: admin-password
+                jwt-private-key: {} # signs the tokens, at least 32 characters
+                db-root-password: {} # created by mariadb, used by seafile to create its databases
+                db-password: {} # the `seafile` user of the databases, created by seafile
+                admin-password: {} # the local administrator, created by seafile at its first start
 
           serviceAccounts:
             authelia-reader:

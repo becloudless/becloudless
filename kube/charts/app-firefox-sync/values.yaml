@@ -91,10 +91,8 @@ resources:
           stringSecrets:
             firefox-sync-generated:
               fields:
-                master-secret: # derives the secrets of the tokens, changing it signs everybody out
-                  fieldName: master-secret
-                metrics-hash-secret:
-                  fieldName: metrics-hash-secret
+                master-secret: {} # derives the secrets of the tokens, changing it signs everybody out
+                metrics-hash-secret: {}
 
     firefox-sync:
       dependsOn:

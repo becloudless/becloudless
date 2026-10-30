@@ -545,5 +545,4 @@ spec:
       stringSecrets:
         jellyfin-admin:
           fields:
-            password:
-              fieldName: password
+            password: {}

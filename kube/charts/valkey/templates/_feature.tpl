@@ -23,8 +23,7 @@ resources:
     main:
       fields:
         {{- range $user := $users }}
-        {{ $user }}:
-          fieldName: {{ $user }}
+        {{ $user }}: {}
         {{- end }}
   {{- end }}
   {{- if $values.clients }}
