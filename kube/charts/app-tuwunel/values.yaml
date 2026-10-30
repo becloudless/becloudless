@@ -118,8 +118,6 @@ resources:
           # the database (RocksDB) and the media
           persistentVolumeClaims:
             tuwunel-data:
-              accessModes:
-                - ReadWriteOnce
               storageClassName: longhorn-db
               resources:
                 requests:
@@ -177,7 +175,6 @@ resources:
                         httpGet:
                           path: /_matrix/client/versions
                           port: 8008
-                        periodSeconds: 5
                         failureThreshold: 60
                       readinessProbe:
                         httpGet:

@@ -351,10 +351,10 @@ spec:
                     runAsGroup: 1000
                     runAsUser: 1000
                   startupProbe:
-                    failureThreshold: 30
                     httpGet:
                       path: /api/v1/settings/public
                       port: 5055
+                    periodSeconds: 10
                   volumeMounts:
                     config:
                       mountPath: /app/config
@@ -414,8 +414,6 @@ spec:
                   name: scripts
       persistentVolumeClaims:
         seerr-config:
-          accessModes:
-          - ReadWriteOnce
           resources:
             requests:
               storage: 5Gi

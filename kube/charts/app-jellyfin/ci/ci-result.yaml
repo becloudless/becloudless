@@ -276,6 +276,7 @@ spec:
                     httpGet:
                       path: /health
                       port: 8096
+                    periodSeconds: 10
                   volumeMounts:
                     config:
                       mountPath: /config
@@ -341,8 +342,6 @@ spec:
                   name: scripts
       persistentVolumeClaims:
         jellyfin-config:
-          accessModes:
-          - ReadWriteOnce
           resources:
             requests:
               storage: 10Gi

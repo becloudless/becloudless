@@ -100,7 +100,6 @@ spec:
                     httpGet:
                       path: /health
                       port: 8080
-                    periodSeconds: 5
       services:
         whoami:
           ports:

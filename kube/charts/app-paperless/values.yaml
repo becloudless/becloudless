@@ -195,8 +195,6 @@ resources:
           # the documents (`media`) and the data (the search index, the classifier) of paperless
           persistentVolumeClaims:
             paperless-data:
-              accessModes:
-                - ReadWriteOnce
               storageClassName: longhorn-files
               resources:
                 requests:
@@ -275,7 +273,6 @@ resources:
                           port: 8000
                           httpHeaders:
                             host: {name: Host, value: localhost}
-                        periodSeconds: 5
                         failureThreshold: 120 # 10min, the first start migrates the database
                       readinessProbe:
                         httpGet:

@@ -30,8 +30,6 @@ resources:
 
   persistentVolumeClaims:
     main:
-      accessModes:
-        - ReadWriteOnce
       storageClassName: {{ $values.storageClassName | quote }}
       resources:
         requests:
@@ -60,7 +58,6 @@ resources:
                 httpGet:
                   path: /rest/noauth/health
                   port: 8384
-                periodSeconds: 5
                 failureThreshold: 60
               readinessProbe:
                 httpGet:

@@ -134,7 +134,6 @@ spec:
                     httpGet:
                       path: /_matrix/client/versions
                       port: 8008
-                    periodSeconds: 5
                   volumeMounts:
                     data:
                       mountPath: /var/lib/tuwunel
@@ -148,8 +147,6 @@ spec:
                     claimName: tuwunel-data
       persistentVolumeClaims:
         tuwunel-data:
-          accessModes:
-          - ReadWriteOnce
           resources:
             requests:
               storage: 10Gi

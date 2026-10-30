@@ -28,6 +28,28 @@ defaults:
 
   # applied to every container and initContainer of the deployments, statefulSets, daemonSets, jobs and cronJobs
   container:
+    livenessProbe:
+      initialDelaySeconds: 0
+      periodSeconds: 10
+      timeoutSeconds: 1
+      successThreshold: 1
+      failureThreshold: 3      
+
+    readinessProbe:
+      initialDelaySeconds: 0
+      periodSeconds: 10
+      timeoutSeconds: 1
+      successThreshold: 1
+      failureThreshold: 3
+
+    startupProbe:
+      initialDelaySeconds: 0
+      timeoutSeconds: 1
+      ## This means it has a maximum of 5*30=150 seconds to start up before it fails
+      periodSeconds: 5
+      successThreshold: 1
+      failureThreshold: 30
+
     securityContext:
       readOnlyRootFilesystem: true
       # the API rejects `false` with `privileged: true` or the capability `SYS_ADMIN`: such a container sets `true`
@@ -41,6 +63,49 @@ defaults:
         mountPath: /tmp
 
   resources:
+
+    deployments:
+      strategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxUnavailable: 0 # Do not decrease capacity
+          maxSurge: 33%
+      revisionHistoryLimit: 3
+
+    statefulSets:
+      podManagementPolicy: Parallel
+    
+
+    cronJobs:
+      concurrencyPolicy: Forbid
+      startingDeadlineSeconds: 30
+      successfulJobsHistoryLimit: 1
+      failedJobsHistoryLimit: 1
+      jobTemplate:
+        spec:
+          backoffLimit: 6
+
+    podDisruptionBudgets:
+      maxUnavailable: 10%
+
+    horizontalPodAutoscalers:
+      minReplicas: 2
+      maxReplicas: 10
+      metrics:
+        cpu:
+          type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: 70
+
+    persistentVolumeClaims:
+      accessModes:
+        ReadWriteOnce: ReadWriteOnce # TODO
+      resources:
+        requests:
+          storage: 1Gi
 
     fluxOCIRepositories:
       interval: 10m

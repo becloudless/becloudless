@@ -11,6 +11,7 @@ import (
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/metadata"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/normalizeIntOrString"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/portMaps"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/probes"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/required"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/stringifyFields"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/templatedStrings"
@@ -33,6 +34,7 @@ func Pipeline(extractContent content.ExtractContent, arrays *arraysToMaps.Arrays
 		enabled.Enabled{},
 		envMaps.EnvMaps{},   // before arraysToMaps, which would otherwise convert env to an id-keyed map
 		portMaps.PortMaps{}, // before arraysToMaps, same reason as envMaps
+		probes.Probes{},     // before arraysToMaps, the paths are the ones of the arrays of containers
 		*arrays,
 		required.Required{}, // after the mutations reshaping the nodes (env, ports and arrays), it moves the nested required out of the schema
 		*stringify,

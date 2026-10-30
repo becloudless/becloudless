@@ -273,8 +273,6 @@ resources:
           # database, metadata and cache of jellyfin
           persistentVolumeClaims:
             jellyfin-config:
-              accessModes:
-                - ReadWriteOnce
               storageClassName: longhorn-files
               resources:
                 requests:
@@ -376,6 +374,7 @@ resources:
                         httpGet:
                           path: /health
                           port: 8096
+                        periodSeconds: 10
                         failureThreshold: 60 # 10min, a huge library on low hardware can be slow to start
                       readinessProbe:
                         httpGet:

@@ -250,7 +250,6 @@ spec:
                     httpGet:
                       path: /api2/ping/
                       port: 80
-                    periodSeconds: 5
                   volumeMounts:
                     config:
                       mountPath: /config
@@ -275,8 +274,6 @@ spec:
                     claimName: seafile-data
       persistentVolumeClaims:
         seafile-data:
-          accessModes:
-          - ReadWriteOnce
           resources:
             requests:
               storage: 20Gi
@@ -452,7 +449,6 @@ spec:
                     runAsUser: 999
                   startupProbe:
                     failureThreshold: 60
-                    periodSeconds: 5
                     tcpSocket:
                       port: 3306
                   volumeMounts:
@@ -475,8 +471,6 @@ spec:
                   name: run
       persistentVolumeClaims:
         seafile-mariadb:
-          accessModes:
-          - ReadWriteOnce
           resources:
             requests:
               storage: 5Gi

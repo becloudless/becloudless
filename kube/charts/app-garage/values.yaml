@@ -250,7 +250,6 @@ resources:
             garage:
               replicas: "{{ .Values.app.scaling.dbReplicas }}"
               serviceName: garage-headless
-              podManagementPolicy: Parallel # the nodes are ready without a layout, and they discover each other
               # Sizes: the capacity of the nodes in the layout is the one of `garage-data` (`CAPACITY` of `garage-post`)
               volumeClaimTemplates:
                 garage-meta:
@@ -315,7 +314,6 @@ resources:
                       startupProbe:
                         tcpSocket:
                           port: 3903
-                        periodSeconds: 5
                         failureThreshold: 60
                       readinessProbe:
                         tcpSocket:

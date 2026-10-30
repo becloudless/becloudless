@@ -254,13 +254,31 @@ spec:
             name: s3-secrets
             optional: true
         image: docker.io/alpine/k8s:1.36.5
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         name: restore
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
             - ALL
           readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 30
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
         volumeMounts:
         - mountPath: /scripts
           name: script
@@ -327,13 +345,31 @@ spec:
                 name: s3-secrets
                 optional: true
             image: docker.io/alpine/k8s:1.36.5
+            livenessProbe:
+              failureThreshold: 3
+              initialDelaySeconds: 0
+              periodSeconds: 10
+              successThreshold: 1
+              timeoutSeconds: 1
             name: restore
+            readinessProbe:
+              failureThreshold: 3
+              initialDelaySeconds: 0
+              periodSeconds: 10
+              successThreshold: 1
+              timeoutSeconds: 1
             securityContext:
               allowPrivilegeEscalation: false
               capabilities:
                 drop:
                 - ALL
               readOnlyRootFilesystem: true
+            startupProbe:
+              failureThreshold: 30
+              initialDelaySeconds: 0
+              periodSeconds: 5
+              successThreshold: 1
+              timeoutSeconds: 1
             volumeMounts:
             - mountPath: /scripts
               name: script
@@ -356,4 +392,5 @@ spec:
           - emptyDir: {}
             name: tmp
   schedule: 7 * * * *
+  startingDeadlineSeconds: 30
   successfulJobsHistoryLimit: 1

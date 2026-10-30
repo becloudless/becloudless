@@ -1,0 +1,113 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: probes mutation (enabled false removes a probe, the field is stripped from the others)
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: removes the probes with enabled false and strips the field from the others
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                    livenessProbe:
+                      enabled: false
+                      httpGet:
+                        path: /live
+                        port: 8080
+                    readinessProbe:
+                      enabled: true
+                      httpGet:
+                        path: /ready
+                        port: 8080
+                    startupProbe:
+                      httpGet:
+                        path: /start
+                        port: 8080
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - isSubset:
+          path: spec.template.spec.containers[0].readinessProbe
+          content:
+            httpGet:
+              path: /ready
+              port: 8080
+      - notExists:
+          path: spec.template.spec.containers[0].readinessProbe.enabled
+      - isSubset:
+          path: spec.template.spec.containers[0].startupProbe
+          content:
+            httpGet:
+              path: /start
+              port: 8080
+
+  - it: removes a probe set by the defaults of the containers, from a container only
+    set:
+      defaults:
+        container:
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                  sidecar:
+                    name: sidecar
+                    image: busybox
+                    readinessProbe:
+                      enabled: false
+    asserts:
+      - isSubset:
+          path: spec.template.spec.containers[0].readinessProbe
+          content:
+            httpGet:
+              path: /ready
+              port: 8080
+      - notExists:
+          path: spec.template.spec.containers[1].readinessProbe
+
+  - it: handles the probes of the initContainers
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                initContainers:
+                  init:
+                    name: init
+                    image: busybox
+                    startupProbe:
+                      enabled: false
+                      periodSeconds: 5
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+    asserts:
+      - notExists:
+          path: spec.template.spec.initContainers[0].startupProbe

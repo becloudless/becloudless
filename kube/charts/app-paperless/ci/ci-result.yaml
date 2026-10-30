@@ -182,7 +182,6 @@ spec:
                           value: localhost
                       path: /
                       port: 8000
-                    periodSeconds: 5
                   volumeMounts:
                     data:
                       mountPath: /usr/src/paperless/data
@@ -201,8 +200,6 @@ spec:
                     claimName: paperless-data
       persistentVolumeClaims:
         paperless-data:
-          accessModes:
-          - ReadWriteOnce
           resources:
             requests:
               storage: 20Gi

@@ -154,8 +154,6 @@ resources:
         resources:
           persistentVolumeClaims:
             seafile-mariadb:
-              accessModes:
-                - ReadWriteOnce
               storageClassName: longhorn-db
               resources:
                 requests:
@@ -186,7 +184,6 @@ resources:
                       startupProbe:
                         tcpSocket:
                           port: 3306
-                        periodSeconds: 5
                         failureThreshold: 60
                       readinessProbe:
                         tcpSocket:
@@ -314,8 +311,6 @@ resources:
           # the libraries, the configuration and the logs of seafile
           persistentVolumeClaims:
             seafile-data:
-              accessModes:
-                - ReadWriteOnce
               storageClassName: longhorn-files
               resources:
                 requests:
@@ -398,7 +393,6 @@ resources:
                         httpGet:
                           path: /api2/ping/
                           port: 80
-                        periodSeconds: 5
                         failureThreshold: 120 # 10min, the first start creates the databases
                       readinessProbe:
                         httpGet:

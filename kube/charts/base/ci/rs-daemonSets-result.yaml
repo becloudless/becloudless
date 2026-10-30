@@ -26,10 +26,28 @@ spec:
     spec:
       containers:
       - image: myimage:latest
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         name: myapp
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 30
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
         volumeMounts:
           tmp:
             mountPath: /tmp

@@ -159,7 +159,6 @@ resources:
                         httpGet:
                           path: /__heartbeat__
                           port: 8000
-                        periodSeconds: 5
                         failureThreshold: 60
                       readinessProbe:
                         httpGet:

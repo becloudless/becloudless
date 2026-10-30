@@ -94,10 +94,28 @@ spec:
         - secretRef:
             name: creds
         image: myimage:latest
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         name: myapp
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 30
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
         volumeMounts:
         - mountPath: /tmp
           name: tmp
@@ -121,12 +139,18 @@ metadata:
   name: test-release
   namespace: default
 spec:
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app: myapp
       app.kubernetes.io/component: main
       app.kubernetes.io/instance: test-release
       app.kubernetes.io/name: base-test
+  strategy:
+    rollingUpdate:
+      maxSurge: 33%
+      maxUnavailable: 0
+    type: RollingUpdate
   template:
     metadata:
       annotations:
@@ -151,10 +175,28 @@ spec:
               key: password
               name: creds
         image: myimage:latest
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         name: myapp
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 30
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
         volumeMounts:
         - mountPath: /config
           name: config
@@ -193,12 +235,18 @@ metadata:
   name: manual
   namespace: default
 spec:
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app: manual
       app.kubernetes.io/component: manual
       app.kubernetes.io/instance: test-release
       app.kubernetes.io/name: base-test
+  strategy:
+    rollingUpdate:
+      maxSurge: 33%
+      maxUnavailable: 0
+    type: RollingUpdate
   template:
     metadata:
       annotations:
@@ -214,10 +262,28 @@ spec:
         - configMapRef:
             name: env
         image: myimage:latest
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         name: myapp
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 30
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
         volumeMounts:
         - mountPath: /tmp
           name: tmp
@@ -241,12 +307,18 @@ metadata:
   name: other
   namespace: default
 spec:
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app: other
       app.kubernetes.io/component: other
       app.kubernetes.io/instance: test-release
       app.kubernetes.io/name: base-test
+  strategy:
+    rollingUpdate:
+      maxSurge: 33%
+      maxUnavailable: 0
+    type: RollingUpdate
   template:
     metadata:
       annotations:
@@ -262,10 +334,28 @@ spec:
         - secretRef:
             name: made-elsewhere
         image: myimage:latest
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         name: myapp
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 30
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
         volumeMounts:
         - mountPath: /tmp
           name: tmp
@@ -289,6 +379,7 @@ metadata:
   name: test-release
   namespace: default
 spec:
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       app: stateful
@@ -307,10 +398,28 @@ spec:
     spec:
       containers:
       - image: myimage:latest
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         name: myapp
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 30
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
         volumeMounts:
         - mountPath: /tmp
           name: tmp
@@ -320,10 +429,28 @@ spec:
         - configMapRef:
             name: env
         image: myimage:latest
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         name: init
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 30
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
         volumeMounts:
         - mountPath: /tmp
           name: tmp

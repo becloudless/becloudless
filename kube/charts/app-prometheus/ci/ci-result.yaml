@@ -30,11 +30,17 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app.kubernetes.io/component: pushprox
       app.kubernetes.io/instance: test-release
       app.kubernetes.io/name: app-prometheus
+  strategy:
+    rollingUpdate:
+      maxSurge: 33%
+      maxUnavailable: 0
+    type: RollingUpdate
   template:
     metadata:
       labels:
@@ -45,21 +51,37 @@ spec:
       containers:
       - image: quay.io/prometheuscommunity/pushprox:v0.2.0
         livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
           tcpSocket:
             port: 8080
+          timeoutSeconds: 1
         name: pushprox
         ports:
         - containerPort: 8080
           name: http
         readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
           tcpSocket:
             port: 8080
+          timeoutSeconds: 1
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
             - ALL
           readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 30
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
         volumeMounts:
         - mountPath: /tmp
           name: tmp

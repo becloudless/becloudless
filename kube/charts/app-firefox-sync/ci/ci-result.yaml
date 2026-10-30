@@ -133,7 +133,6 @@ spec:
                     httpGet:
                       path: /__heartbeat__
                       port: 8000
-                    periodSeconds: 5
               nodeSelector:
                 kubernetes.io/arch: amd64
       services:

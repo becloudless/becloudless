@@ -209,7 +209,6 @@ spec:
                     runAsUser: 1000
                   startupProbe:
                     failureThreshold: 30
-                    periodSeconds: 5
                     tcpSocket:
                       port: 22067
                   volumeMounts:

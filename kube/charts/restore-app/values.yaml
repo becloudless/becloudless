@@ -100,9 +100,6 @@ resources:
     secrets-backup:
       fullNameOverride: 'secrets-backup-{{ .Values.restore.namespace | trunc 30 | trimSuffix "-" }}'
       schedule: '{{ .Values.restore.secretsBackupSchedule }}'
-      concurrencyPolicy: Forbid
-      successfulJobsHistoryLimit: 1
-      failedJobsHistoryLimit: 1
       jobTemplate:
         spec:
           backoffLimit: 1

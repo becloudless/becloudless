@@ -226,7 +226,6 @@ spec:
             app.kubernetes.io/component: garage
       statefulSets:
         garage:
-          podManagementPolicy: Parallel
           replicas: 2
           serviceName: garage-headless
           template:
@@ -268,7 +267,6 @@ spec:
                     runAsUser: 1000
                   startupProbe:
                     failureThreshold: 60
-                    periodSeconds: 5
                     tcpSocket:
                       port: 3903
                   volumeMounts:

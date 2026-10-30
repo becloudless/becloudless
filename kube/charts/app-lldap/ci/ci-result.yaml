@@ -165,7 +165,6 @@ spec:
                     httpGet:
                       path: /
                       port: 17170
-                    periodSeconds: 5
                   volumeMounts:
                     cert:
                       mountPath: /cert

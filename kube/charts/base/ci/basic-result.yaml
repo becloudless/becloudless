@@ -64,12 +64,18 @@ metadata:
   namespace: default
 spec:
   replicas: 2
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app: myapp
       app.kubernetes.io/component: myapp
       app.kubernetes.io/instance: test-release
       app.kubernetes.io/name: base-test
+  strategy:
+    rollingUpdate:
+      maxSurge: 33%
+      maxUnavailable: 0
+    type: RollingUpdate
   template:
     metadata:
       labels:
@@ -80,10 +86,28 @@ spec:
     spec:
       containers:
       - image: myimage:latest
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         name: myapp
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 30
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
         volumeMounts:
         - mountPath: /tmp
           name: tmp
@@ -104,6 +128,13 @@ metadata:
   namespace: default
 spec:
   maxReplicas: 3
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 70
+        type: Utilization
+    type: Resource
   minReplicas: 1
   scaleTargetRef:
     apiVersion: apps/v1

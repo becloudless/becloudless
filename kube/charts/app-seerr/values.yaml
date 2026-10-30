@@ -196,8 +196,6 @@ resources:
         resources:
           persistentVolumeClaims:
             seerr-config:
-              accessModes:
-                - ReadWriteOnce
               storageClassName: longhorn-files
               resources:
                 requests:
@@ -456,7 +454,7 @@ resources:
                         httpGet:
                           path: /api/v1/settings/public
                           port: 5055
-                        failureThreshold: 30
+                        periodSeconds: 10
                       readinessProbe:
                         httpGet:
                           path: /api/v1/settings/public

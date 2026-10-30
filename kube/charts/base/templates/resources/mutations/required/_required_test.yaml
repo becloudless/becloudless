@@ -17,7 +17,8 @@ tests:
       - failedTemplate:
           errorMessage: 'resources.horizontalPodAutoscalers.myhpa: "scaleTargetRef" is required'
 
-  - it: fails with a clear error when a required field is missing (maxReplicas)
+  # maxReplicas is not tested: the defaults of the chart set it
+  - it: fails with a clear error when a nested required field is missing (scaleTargetRef.name)
     set:
       resources:
         horizontalPodAutoscalers:
@@ -25,11 +26,11 @@ tests:
             scaleTargetRef:
               apiVersion: apps/v1
               kind: Deployment
-              name: myapp
             minReplicas: 1
+            maxReplicas: 3
     asserts:
       - failedTemplate:
-          errorMessage: 'resources.horizontalPodAutoscalers.myhpa: "maxReplicas" is required'
+          errorMessage: 'resources.horizontalPodAutoscalers.myhpa.scaleTargetRef: "name" is required'
 
   - it: passes when all required fields are present
     set:
