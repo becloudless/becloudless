@@ -48,7 +48,7 @@ resources:
           toPorts: [22, 80, 443]
         internet: # the git repositories, the helm repositories and the OCI registries: any name, the sources are set by the clusters
           toFQDNs:
-            any: {matchPattern: "*"}
+            any: {matchPattern: "*"} # TODO being explicit about public targets.
           toPorts: [22, 80, 443]
 
     source-watcher:
