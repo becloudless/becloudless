@@ -9,9 +9,9 @@ spec:
   - toEntities:
     - kube-apiserver
   - toEntities:
+    - world
     - host
     - remote-node
-    - world
     toPorts:
     - ports:
       - port: "53"

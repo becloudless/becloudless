@@ -55,8 +55,8 @@ spec:
       app.kubernetes.io/instance: seerr
   ingress:
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

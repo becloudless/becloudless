@@ -12,8 +12,8 @@ spec:
       app.kubernetes.io/instance: syncthing-relay
   ingress:
   - fromEntities:
-    - cluster
     - world
+    - cluster
     toPorts:
     - ports:
       - port: "22067"

@@ -322,8 +322,8 @@ spec:
       app.kubernetes.io/instance: test-release
   ingress:
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

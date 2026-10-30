@@ -185,9 +185,9 @@ resources:
                 matchExpressions:
                   any-namespace: {key: "k8s:io.kubernetes.pod.namespace", operator: Exists}
               ingress:
-                deny: {fromEntities: {none: none}}
+                deny: {fromEntities: [none]}
               egress:
-                deny: {toEntities: {none: none}}
+                deny: {toEntities: [none]}
 
             allow-dns:
               endpointSelector:
@@ -202,7 +202,7 @@ resources:
                     dns:
                       ports:
                         udp: {port: "53", protocol: UDP}
-                        tcp: {port: "53", protocol: TCP}
+                        tcp: {port: "53"}
                       rules: # the DNS proxy of Cilium learns the addresses behind the names, needed by the `toFQDNs` rules of the apps
                         dns:
                           all: {matchPattern: "*"}

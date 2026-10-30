@@ -12,13 +12,13 @@ resources:
         matchLabels: {app.kubernetes.io/instance: cert-manager, app.kubernetes.io/component: controller}
       egress:
         kube-apiserver:
-          toEntities: {apiserver: kube-apiserver}
+          toEntities: [kube-apiserver]
         acme: # the ACME servers of the issuers (production and staging)
           toFQDNs:
             letsencrypt: {matchName: acme-v02.api.letsencrypt.org}
             letsencrypt-staging: {matchName: acme-staging-v02.api.letsencrypt.org}
           toPorts:
-            https: {ports: {p443: {port: "443", protocol: TCP}}}
+            https: {ports: {"443": {}}}
         self-check: # the self check of the http-01 challenge: the names of the domain served by an external address (mail)
           toFQDNs:
             domain: {matchName: "{{ .Values.app.domain }}"}
@@ -26,34 +26,34 @@ resources:
           toPorts:
             web:
               ports:
-                p80: {port: "80", protocol: TCP}
-                p443: {port: "443", protocol: TCP}
+                "80": {}
+                "443": {}
         gateway: # the self check of the http-01 challenge goes through the public address of the gateway
-          toEntities: {ingress: ingress}
+          toEntities: [ingress]
           toPorts:
             web:
               ports:
-                p80: {port: "80", protocol: TCP}
-                p443: {port: "443", protocol: TCP}
+                "80": {}
+                "443": {}
 
     cert-manager-cainjector: # injects the CA bundles into the webhooks and the CRDs
       endpointSelector:
         matchLabels: {app.kubernetes.io/instance: cert-manager, app.kubernetes.io/component: cainjector}
       egress:
         kube-apiserver:
-          toEntities: {apiserver: kube-apiserver}
+          toEntities: [kube-apiserver]
 
     cert-manager-webhook:
       endpointSelector:
         matchLabels: {app.kubernetes.io/instance: cert-manager, app.kubernetes.io/component: webhook}
       ingress:
         kube-apiserver: # the API server is host networked, it is seen as the host or a remote node
-          fromEntities: {apiserver: kube-apiserver, host: host, remote-node: remote-node}
+          fromEntities: [kube-apiserver, host, remote-node]
           toPorts:
-            webhook: {ports: {p10250: {port: "10250", protocol: TCP}}}
+            webhook: {ports: {"10250": {}}}
       egress:
         kube-apiserver:
-          toEntities: {apiserver: kube-apiserver}
+          toEntities: [kube-apiserver]
 
   ciliumClusterwideNetworkPolicies:
     cert-manager-http01-solver: # the pod created by cert-manager in the namespace of each certificate: only the gateway reaches it
@@ -61,9 +61,9 @@ resources:
         matchLabels: {"k8s:acme.cert-manager.io/http01-solver": "true"}
       ingress:
         gateway:
-          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          fromEntities: [ingress, host, remote-node]
           toPorts:
-            http: {ports: {p8089: {port: "8089", protocol: TCP}}}
+            http: {ports: {"8089": {}}}
 
   fluxHelmReleases:
     cert-manager:

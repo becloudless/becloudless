@@ -23,15 +23,9 @@ import (
 // Disabled leaves every array as is (declared per-resource-kind in resources.yaml as
 // mutations.arraysToMaps.disabled), for the resources whose arrays are better written as real arrays, ex: the
 // ClusterPolicies of Kyverno, which are given as files. No path is reported then, nothing is reversed at render time.
-//
-// KeyFields sets a field of the items of a converted array to their key when they do not set it (declared per-resource-kind in
-// resources.yaml as mutations.arraysToMaps.keyFields: the schema path of the array and the name of the field), ex: for the
-// StringSecrets `fields.password: {}` is `fields: [{fieldName: password}]`. They are reported via
-// MutationResult.TemplateArgs (key "keyFields"), for templates/mutations/_mapsToArrays.tpl.
 type ArraysToMaps struct {
-	Ignore    []string          `yaml:"ignore"`
-	Disabled  bool              `yaml:"disabled"`
-	KeyFields map[string]string `yaml:"keyFields"`
+	Ignore   []string `yaml:"ignore"`
+	Disabled bool     `yaml:"disabled"`
 }
 
 func (m ArraysToMaps) Mutate(schema map[string]any) (mutations.MutationResult, error) {
@@ -48,24 +42,14 @@ func (m ArraysToMaps) Mutate(schema map[string]any) (mutations.MutationResult, e
 	}
 
 	var convertedPaths []string
-	keyFieldsFound := map[string]bool{}
 	mutations.WalkSchemaNodesWithPath(schema, "", func(node map[string]any, path string) {
 		if ignore[path] {
 			return
 		}
 		if convertArrayNodeToMap(node) {
 			convertedPaths = append(convertedPaths, path)
-			if field, ok := m.KeyFields[path]; ok && hasItemProperty(node, field) {
-				keyFieldsFound[path] = true
-			}
 		}
 	})
-
-	for path, field := range m.KeyFields {
-		if !keyFieldsFound[path] {
-			return mutations.MutationResult{}, fmt.Errorf("keyFields %q: %q is not an array of objects with the property %q", path, path, field)
-		}
-	}
 
 	sort.Strings(convertedPaths)
 	quoted := make([]string, len(convertedPaths))
@@ -73,39 +57,10 @@ func (m ArraysToMaps) Mutate(schema map[string]any) (mutations.MutationResult, e
 		quoted[i] = fmt.Sprintf("%q", path)
 	}
 
-	templateArgs := map[string]string{"arrayPaths": fmt.Sprintf("(list %s)", strings.Join(quoted, " "))}
-	if len(m.KeyFields) > 0 {
-		keyFieldPaths := make([]string, 0, len(m.KeyFields))
-		for path := range m.KeyFields {
-			keyFieldPaths = append(keyFieldPaths, path)
-		}
-		sort.Strings(keyFieldPaths)
-		pairs := make([]string, 0, len(keyFieldPaths))
-		for _, path := range keyFieldPaths {
-			pairs = append(pairs, fmt.Sprintf("%q %q", path, m.KeyFields[path]))
-		}
-		templateArgs["keyFields"] = fmt.Sprintf("(dict %s)", strings.Join(pairs, " "))
-	}
-
 	return mutations.MutationResult{
 		Schema:       schema,
-		TemplateArgs: templateArgs,
+		TemplateArgs: map[string]string{"arrayPaths": fmt.Sprintf("(list %s)", strings.Join(quoted, " "))},
 	}, nil
-}
-
-// hasItemProperty reports whether the items of the converted array node (its additionalProperties) are objects that have
-// the property.
-func hasItemProperty(node map[string]any, field string) bool {
-	items, ok := node["additionalProperties"].(map[string]any)
-	if !ok {
-		return false
-	}
-	props, ok := items["properties"].(map[string]any)
-	if !ok {
-		return false
-	}
-	_, ok = props[field]
-	return ok
 }
 
 func convertArrayNodeToMap(node map[string]any) bool {

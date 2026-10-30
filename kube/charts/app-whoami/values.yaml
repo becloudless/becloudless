@@ -12,9 +12,9 @@ resources:
         matchLabels: {app.kubernetes.io/instance: whoami, app.kubernetes.io/component: whoami}
       ingress:
         gateway:
-          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          fromEntities: [ingress, host, remote-node]
           toPorts:
-            http: {ports: {p8080: {port: "8080", protocol: TCP}}}
+            http: {ports: {"8080": {}}}
 
   fluxHelmReleases:
     whoami:

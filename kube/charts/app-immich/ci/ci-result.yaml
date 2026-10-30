@@ -119,8 +119,8 @@ spec:
       - port: "2283"
         protocol: TCP
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

@@ -16,7 +16,7 @@ resources:
         matchLabels: {"app.kubernetes.io/name": snapshot-controller}
       egress:
         kube-apiserver:
-          toEntities: {apiserver: kube-apiserver}
+          toEntities: [kube-apiserver]
 
   fluxKustomizations:
     external-snapshotter-crds:

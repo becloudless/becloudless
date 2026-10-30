@@ -39,8 +39,8 @@ spec:
       app.kubernetes.io/instance: paperless
   ingress:
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

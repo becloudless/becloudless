@@ -28,19 +28,19 @@ resources:
         matchLabels: {app.kubernetes.io/instance: tuwunel, app.kubernetes.io/component: tuwunel}
       ingress:
         gateway:
-          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          fromEntities: [ingress, host, remote-node]
           toPorts:
-            http: {ports: {p8008: {port: "8008", protocol: TCP}}}
+            http: {ports: {"8008": {}}}
       egress:
         authelia: # the OIDC issuer is the public address of authelia
           toFQDNs:
             authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
           toPorts:
-            https: {ports: {p443: {port: "443", protocol: TCP}}}
+            https: {ports: {"443": {}}}
         gateway: # the public addresses of the cluster are the gateway for the pods
-          toEntities: {ingress: ingress}
+          toEntities: [ingress]
           toPorts:
-            https: {ports: {p443: {port: "443", protocol: TCP}}}
+            https: {ports: {"443": {}}}
 
   fluxHelmReleases:
     # the OIDC client of authelia, copied before tuwunel starts

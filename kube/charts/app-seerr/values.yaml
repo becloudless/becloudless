@@ -28,43 +28,43 @@ resources:
         matchLabels: {app.kubernetes.io/instance: seerr, app.kubernetes.io/component: seerr}
       ingress:
         gateway:
-          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          fromEntities: [ingress, host, remote-node]
           toPorts:
-            http: {ports: {p5055: {port: "5055", protocol: TCP}}}
+            http: {ports: {"5055": {}}}
       egress:
         postgresql:
           toEndpoints:
             postgresql:
               matchLabels: {cnpg.io/cluster: seerr-postgresql}
           toPorts:
-            postgresql: {ports: {p5432: {port: "5432", protocol: TCP}}}
+            postgresql: {ports: {"5432": {}}}
         authelia: # the OIDC issuer is the public address of authelia
           toFQDNs:
             authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
           toPorts:
-            https: {ports: {p443: {port: "443", protocol: TCP}}}
+            https: {ports: {"443": {}}}
         gateway: # the public addresses of the cluster are the gateway for the pods (jellyfin by its public address)
-          toEntities: {ingress: ingress}
+          toEntities: [ingress]
           toPorts:
-            https: {ports: {p443: {port: "443", protocol: TCP}}}
+            https: {ports: {"443": {}}}
         jellyfin: # jellyfin by its service (`jellyfin.jellyfin:8096`)
           toEndpoints:
             jellyfin:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": jellyfin, "k8s:app.kubernetes.io/instance": jellyfin, "k8s:app.kubernetes.io/component": jellyfin}
           toPorts:
-            http: {ports: {p8096: {port: "8096", protocol: TCP}}}
+            http: {ports: {"8096": {}}}
         tmdb: # the metadata (api) and the posters (images, when the image cache is enabled)
           toFQDNs:
             api: {matchName: api.themoviedb.org}
             images: {matchName: image.tmdb.org}
           toPorts:
-            https: {ports: {p443: {port: "443", protocol: TCP}}}
+            https: {ports: {"443": {}}}
         tvdb: # the metadata of the series and the animes when the provider is TheTVDB
           toFQDNs:
             api: {matchName: api4.thetvdb.com}
             artworks: {matchName: artworks.thetvdb.com}
           toPorts:
-            https: {ports: {p443: {port: "443", protocol: TCP}}}
+            https: {ports: {"443": {}}}
 
   fluxHelmReleases:
     # the database is prepared by the postgresql chart (certificates, issuer, cluster and backups)

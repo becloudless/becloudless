@@ -30,9 +30,9 @@ resources:
         matchLabels: {app.kubernetes.io/instance: syncthing-relay, app.kubernetes.io/component: syncthing-relay}
       ingress:
         relay: # served by the Gateway service without Envoy: the source is the client itself (public, or in the cluster)
-          fromEntities: {world: world, cluster: cluster}
+          fromEntities: [world, cluster]
           toPorts:
-            relay: {ports: {p22067: {port: "22067", protocol: TCP}}}
+            relay: {ports: {"22067": {}}}
 
   fluxHelmReleases:
 

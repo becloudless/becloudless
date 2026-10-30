@@ -35,8 +35,8 @@ spec:
       app.kubernetes.io/name: forgejo
   ingress:
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

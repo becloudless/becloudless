@@ -40,8 +40,8 @@ spec:
       app.kubernetes.io/instance: seafile
   ingress:
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

@@ -350,8 +350,8 @@ spec:
       app: longhorn-ui
   ingress:
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

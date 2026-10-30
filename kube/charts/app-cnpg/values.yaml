@@ -13,12 +13,12 @@ resources:
         matchLabels: {"k8s:io.kubernetes.pod.namespace": cnpg-system, "k8s:app.kubernetes.io/name": cloudnative-pg}
       ingress:
         webhook: # the admission webhook: the API server is host networked, it is seen as the host or a remote node
-          fromEntities: {apiserver: kube-apiserver, host: host, remote-node: remote-node}
+          fromEntities: [kube-apiserver, host, remote-node]
           toPorts:
-            webhook: {ports: {p9443: {port: "9443", protocol: TCP}}}
+            webhook: {ports: {"9443": {}}}
       egress:
         kube-apiserver:
-          toEntities: {apiserver: kube-apiserver}
+          toEntities: [kube-apiserver]
         instances: # status API of the instances
           toEndpoints:
             instances:
@@ -27,8 +27,8 @@ resources:
           toPorts:
             postgres:
               ports:
-                p8000: {port: "8000", protocol: TCP}
-                p5432: {port: "5432", protocol: TCP}
+                "8000": {}
+                "5432": {}
 
     cnpg-cluster-instances:
       endpointSelector:
@@ -42,11 +42,11 @@ resources:
           toPorts:
             postgres:
               ports:
-                p8000: {port: "8000", protocol: TCP}
-                p5432: {port: "5432", protocol: TCP}
+                "8000": {}
+                "5432": {}
       egress:
         kube-apiserver:
-          toEntities: {apiserver: kube-apiserver}
+          toEntities: [kube-apiserver]
 
   fluxHelmReleases:
     cnpg:

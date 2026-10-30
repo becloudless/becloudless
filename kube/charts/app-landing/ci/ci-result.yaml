@@ -12,8 +12,8 @@ spec:
       app.kubernetes.io/instance: landing
   ingress:
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

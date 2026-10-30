@@ -205,8 +205,8 @@ spec:
       app.kubernetes.io/name: mailu
   ingress:
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

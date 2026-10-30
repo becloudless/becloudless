@@ -26,8 +26,8 @@ spec:
       app.kubernetes.io/instance: firefox-sync
   ingress:
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

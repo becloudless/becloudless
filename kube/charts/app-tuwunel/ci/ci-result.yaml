@@ -25,8 +25,8 @@ spec:
       app.kubernetes.io/instance: tuwunel
   ingress:
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

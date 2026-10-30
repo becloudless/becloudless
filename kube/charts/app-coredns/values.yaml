@@ -21,17 +21,17 @@ resources:
             dns:
               ports:
                 udp: {port: "53", protocol: UDP}
-                tcp: {port: "53", protocol: TCP}
+                tcp: {port: "53"}
       egress:
         upstream-resolvers: # the resolvers of the nodes / the LAN
-          toEntities: {world: world, host: host, remote-node: remote-node}
+          toEntities: [world, host, remote-node]
           toPorts:
             dns:
               ports:
                 udp: {port: "53", protocol: UDP}
-                tcp: {port: "53", protocol: TCP}
+                tcp: {port: "53"}
         kube-apiserver:
-          toEntities: {apiserver: kube-apiserver}
+          toEntities: [kube-apiserver]
 
   fluxHelmReleases:
     coredns:

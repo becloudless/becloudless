@@ -150,16 +150,16 @@ resources:
           app.kubernetes.io/component: main
       ingress:
         gateway: # the web UI
-          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          fromEntities: [ingress, host, remote-node]
           toPorts:
-            http: {ports: {p8384: {port: "8384", protocol: TCP}}}
+            http: {ports: {"8384": {}}}
       egress:
         relay:
           toEndpoints:
             relay:
               matchLabels: {{ $relay.matchLabels | toJson }}
           toPorts:
-            relay: {ports: {relay: {port: {{ $relay.port | toString | quote }}, protocol: TCP}}}
+            relay: {ports: {relay: {port: {{ $relay.port | toString | quote }}}}}
 
   certManagerCertificates:
     main:

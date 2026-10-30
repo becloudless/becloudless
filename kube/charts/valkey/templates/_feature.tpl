@@ -40,9 +40,7 @@ resources:
           toPorts:
             valkey:
               ports:
-                valkey:
-                  port: "6379"
-                  protocol: TCP
+                "6379": {}
   {{- end }}
 {{- end }}
 {{- end }}

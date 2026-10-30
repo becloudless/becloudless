@@ -14,28 +14,28 @@ resources:
         matchLabels: {app.kubernetes.io/name: authelia}
       ingress:
         gateway: # the portal and the forward auth of every protected route
-          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          fromEntities: [ingress, host, remote-node]
           toPorts:
-            http: {ports: {p9091: {port: "9091", protocol: TCP}}}
+            http: {ports: {"9091": {}}}
       egress:
         lldap:
           toEndpoints:
             lldap:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": lldap, "k8s:app.kubernetes.io/instance": lldap, "k8s:app.kubernetes.io/component": lldap}
           toPorts:
-            ldaps: {ports: {p6360: {port: "6360", protocol: TCP}}}
+            ldaps: {ports: {"6360": {}}}
         valkey:
           toEndpoints:
             valkey:
               matchLabels: {app.kubernetes.io/name: valkey}
           toPorts:
-            valkey: {ports: {p6379: {port: "6379", protocol: TCP}}}
+            valkey: {ports: {"6379": {}}}
         postgresql:
           toEndpoints:
             postgresql:
               matchLabels: {cnpg.io/cluster: authelia-postgresql}
           toPorts:
-            postgresql: {ports: {p5432: {port: "5432", protocol: TCP}}}
+            postgresql: {ports: {"5432": {}}}
         ntp: # the startup check of the clock (`ntp` of the configuration)
           toFQDNs:
             cloudflare: {matchName: time.cloudflare.com} # TODO check why

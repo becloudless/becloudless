@@ -10,8 +10,8 @@ spec:
       k8s:acme.cert-manager.io/http01-solver: "true"
   ingress:
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

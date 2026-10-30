@@ -39,8 +39,8 @@ spec:
       - port: "3901"
         protocol: TCP
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

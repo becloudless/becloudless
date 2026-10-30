@@ -133,21 +133,15 @@ resources:
           toPorts:
             postgres:
               ports:
-                postgres:
-                  port: "5432"
-                  protocol: TCP
-                status:
-                  port: "8000"
-                  protocol: TCP
+                "5432": {}
+                "8000": {}
         {{- if $values.clients }}
         clients:
           fromEndpoints: {{- $values.clients | toYaml | nindent 12 }}
           toPorts:
             postgres:
               ports:
-                postgres:
-                  port: "5432"
-                  protocol: TCP
+                "5432": {}
         {{- end }}
       egress:
         instances:
@@ -158,10 +152,6 @@ resources:
           toPorts:
             postgres:
               ports:
-                postgres:
-                  port: "5432"
-                  protocol: TCP
-                status:
-                  port: "8000"
-                  protocol: TCP
+                "5432": {}
+                "8000": {}
 {{- end }}

@@ -1,0 +1,89 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: itemFields mutation (the key of an item gives its field, the missing fields get their default)
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: sets the keyField (StringSecret fields.fieldName) to the key of the items that do not set it
+    set:
+      resources:
+        stringSecrets:
+          main:
+            fields:
+              password: {}
+              admin-token:
+                encoding: hex
+                length: "64"
+              jwt:
+                fieldName: LLDAP_JWT_SECRET
+    asserts:
+      - equal:
+          path: spec.fields
+          value:
+            - encoding: hex
+              fieldName: admin-token
+              length: "64"
+            - fieldName: LLDAP_JWT_SECRET
+            - fieldName: password
+
+  - it: gives the port of the key and the TCP protocol to the ports of a Cilium policy, whatever the nesting
+    set:
+      resources:
+        ciliumNetworkPolicies:
+          main:
+            endpointSelector:
+              matchLabels: {app: myapp}
+            ingress:
+              web:
+                toPorts:
+                  http:
+                    ports:
+                      "80": {}
+                      "443": {}
+            egress:
+              dns:
+                toPorts:
+                  dns:
+                    ports:
+                      udp: {port: "53", protocol: UDP}
+                      tcp: {port: "53"}
+                  range:
+                    ports:
+                      "8500": {endPort: 8510}
+    asserts:
+      - equal:
+          path: spec.ingress[0].toPorts[0].ports
+          value:
+            - {port: "443", protocol: TCP}
+            - {port: "80", protocol: TCP}
+      - equal:
+          path: spec.egress[0].toPorts
+          value:
+            - ports:
+                - {port: "53", protocol: TCP}
+                - {port: "53", protocol: UDP}
+            - ports:
+                - {port: "8500", endPort: 8510, protocol: TCP}
+
+  - it: keeps the entities of a Cilium policy as plain lists
+    set:
+      resources:
+        ciliumNetworkPolicies:
+          main:
+            endpointSelector:
+              matchLabels: {app: myapp}
+            ingress:
+              gateway:
+                fromEntities: [ingress, host]
+            egress:
+              apiserver:
+                toEntities: [kube-apiserver]
+    asserts:
+      - equal:
+          path: spec.ingress[0].fromEntities
+          value: [ingress, host]
+      - equal:
+          path: spec.egress[0].toEntities
+          value: [kube-apiserver]

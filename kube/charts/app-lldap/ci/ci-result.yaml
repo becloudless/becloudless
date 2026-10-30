@@ -36,8 +36,8 @@ spec:
       - port: "17170"
         protocol: TCP
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

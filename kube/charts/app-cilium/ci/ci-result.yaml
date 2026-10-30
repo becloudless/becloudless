@@ -124,7 +124,6 @@ spec:
                   ports:
                     tcp:
                       port: "53"
-                      protocol: TCP
                     udp:
                       port: "53"
                       protocol: UDP
@@ -141,7 +140,7 @@ spec:
           egress:
             deny:
               toEntities:
-                none: none
+              - none
           endpointSelector:
             matchExpressions:
               any-namespace:
@@ -150,7 +149,7 @@ spec:
           ingress:
             deny:
               fromEntities:
-                none: none
+              - none
 ---
 # Source: app-cilium/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

@@ -213,8 +213,8 @@ spec:
       - port: "9090"
         protocol: TCP
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

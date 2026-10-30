@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/arraysToMaps"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/itemFields"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/stringifyFields"
 )
 
@@ -153,5 +154,37 @@ func TestParseCRDs_ParsesClusterScoped(t *testing.T) {
 	}
 	if file.Resources[1].ClusterScoped {
 		t.Errorf("configMaps.ClusterScoped = true, want false")
+	}
+}
+
+func TestParseCRDs_ParsesItemFieldsWithAnchors(t *testing.T) {
+	path := writeResourcesYAML(t, `resources:
+  - name: policies
+    sourceCRD:
+      url: https://example.invalid/policies.yaml
+      crdVersion: v2
+    mutations: &policyMutations
+      itemFields:
+        ingress.toPorts.ports: &port {keyField: port, defaults: {protocol: TCP}}
+        egress.toPorts.ports: *port
+  - name: clusterPolicies
+    sourceCRD:
+      url: https://example.invalid/clusterpolicies.yaml
+      crdVersion: v2
+    mutations: *policyMutations
+`)
+
+	file, err := newResourcesFile(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := itemFields.ItemFields{
+		"ingress.toPorts.ports": {KeyField: "port", Defaults: map[string]string{"protocol": "TCP"}},
+		"egress.toPorts.ports":  {KeyField: "port", Defaults: map[string]string{"protocol": "TCP"}},
+	}
+	for _, e := range file.Resources {
+		if !reflect.DeepEqual(e.Mutations.ItemFields, want) {
+			t.Errorf("%s: Mutations.ItemFields = %#v, want %#v", e.Name, e.Mutations.ItemFields, want)
+		}
 	}
 }

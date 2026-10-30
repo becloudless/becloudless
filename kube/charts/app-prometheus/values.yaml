@@ -58,107 +58,107 @@ resources:
         matchLabels: {app.kubernetes.io/name: prometheus}
       ingress:
         gateway:
-          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          fromEntities: [ingress, host, remote-node]
           toPorts:
-            http: {ports: {p9090: {port: "9090", protocol: TCP}}}
+            http: {ports: {"9090": {}}}
         grafana:
           fromEndpoints:
             grafana:
               matchLabels: {app.kubernetes.io/name: grafana}
           toPorts:
-            http: {ports: {p9090: {port: "9090", protocol: TCP}}}
+            http: {ports: {"9090": {}}}
       egress:
         targets:
-          toEntities: {cluster: cluster, apiserver: kube-apiserver}
+          toEntities: [cluster, kube-apiserver]
 
     alertmanager:
       endpointSelector:
         matchLabels: {app.kubernetes.io/name: alertmanager}
       ingress:
         gateway:
-          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          fromEntities: [ingress, host, remote-node]
           toPorts:
-            http: {ports: {p9093: {port: "9093", protocol: TCP}}}
+            http: {ports: {"9093": {}}}
         prometheus: # the alerts
           fromEndpoints:
             prometheus:
               matchLabels: {app.kubernetes.io/name: prometheus}
           toPorts:
-            http: {ports: {p9093: {port: "9093", protocol: TCP}}}
+            http: {ports: {"9093": {}}}
         grafana:
           fromEndpoints:
             grafana:
               matchLabels: {app.kubernetes.io/name: grafana}
           toPorts:
-            http: {ports: {p9093: {port: "9093", protocol: TCP}}}
+            http: {ports: {"9093": {}}}
 
     grafana:
       endpointSelector:
         matchLabels: {app.kubernetes.io/name: grafana}
       ingress:
         gateway:
-          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          fromEntities: [ingress, host, remote-node]
           toPorts:
-            http: {ports: {p3000: {port: "3000", protocol: TCP}}}
+            http: {ports: {"3000": {}}}
       egress:
         kube-apiserver: # the sidecars watch the ConfigMaps of the dashboards and of the datasources
-          toEntities: {apiserver: kube-apiserver}
+          toEntities: [kube-apiserver]
         prometheus:
           toEndpoints:
             prometheus:
               matchLabels: {app.kubernetes.io/name: prometheus}
           toPorts:
-            http: {ports: {p9090: {port: "9090", protocol: TCP}}}
+            http: {ports: {"9090": {}}}
         alertmanager:
           toEndpoints:
             alertmanager:
               matchLabels: {app.kubernetes.io/name: alertmanager}
           toPorts:
-            http: {ports: {p9093: {port: "9093", protocol: TCP}}}
+            http: {ports: {"9093": {}}}
         authelia: # the OIDC issuer is the public address of authelia
           toFQDNs:
             authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
           toPorts:
-            https: {ports: {p443: {port: "443", protocol: TCP}}}
+            https: {ports: {"443": {}}}
         gateway: # the public addresses of the cluster are the gateway for the pods
-          toEntities: {ingress: ingress}
+          toEntities: [ingress]
           toPorts:
-            https: {ports: {p443: {port: "443", protocol: TCP}}}
+            https: {ports: {"443": {}}}
         grafana-com: # the dashboards (init container) and the plugins, whose archives are served by Google Cloud Storage
           toFQDNs:
             grafana: {matchName: grafana.com}
             grafana-subdomains: {matchPattern: "**.grafana.com"}
             plugins: {matchName: storage.googleapis.com}
           toPorts:
-            https: {ports: {p443: {port: "443", protocol: TCP}}}
+            https: {ports: {"443": {}}}
 
     prometheus-operator:
       endpointSelector:
         matchLabels: {app.kubernetes.io/name: kube-prometheus-stack-prometheus-operator}
       ingress:
         kube-apiserver: # the admission webhook: the API server is host networked, it is seen as the host or a remote node
-          fromEntities: {apiserver: kube-apiserver, host: host, remote-node: remote-node}
+          fromEntities: [kube-apiserver, host, remote-node]
           toPorts:
-            webhook: {ports: {p10250: {port: "10250", protocol: TCP}}}
+            webhook: {ports: {"10250": {}}}
       egress:
         kube-apiserver:
-          toEntities: {apiserver: kube-apiserver}
+          toEntities: [kube-apiserver]
 
     kube-state-metrics:
       endpointSelector:
         matchLabels: {app.kubernetes.io/name: kube-state-metrics}
       egress:
         kube-apiserver:
-          toEntities: {apiserver: kube-apiserver}
+          toEntities: [kube-apiserver]
 
     pushprox: # relays the scrapes of the control plane, that is host networked
       endpointSelector:
         matchLabels: {app.kubernetes.io/instance: app-prometheus, app.kubernetes.io/component: pushprox}
       ingress:
         gateway:
-          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          fromEntities: [ingress, host, remote-node]
           toPorts:
-            http: {ports: {p8080: {port: "8080", protocol: TCP}}}
+            http: {ports: {"8080": {}}}
 
   # Prometheus scrapes any port of any pod (the targets are discovered from the ServiceMonitors).
   ciliumClusterwideNetworkPolicies:

@@ -12,7 +12,7 @@ resources:
         matchLabels: {app.kubernetes.io/name: kubernetes-secret-generator}
       egress:
         kube-apiserver:
-          toEntities: {apiserver: kube-apiserver}
+          toEntities: [kube-apiserver]
 
   fluxHelmReleases:
     secret-generator:

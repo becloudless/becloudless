@@ -6,6 +6,7 @@ import (
 
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/arraysToMaps"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/content"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/itemFields"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/stringifyFields"
 
 	"gopkg.in/yaml.v3"
@@ -42,6 +43,7 @@ type resourceMutations struct {
 	ExtractContent  *content.ExtractContent          `yaml:"extractContent"`
 	ArraysToMaps    *arraysToMaps.ArraysToMaps       `yaml:"arraysToMaps"`
 	StringifyFields *stringifyFields.StringifyFields `yaml:"stringifyFields"`
+	ItemFields      itemFields.ItemFields            `yaml:"itemFields"`
 }
 
 func newResourcesFile(path string) (resourcesFile, error) {

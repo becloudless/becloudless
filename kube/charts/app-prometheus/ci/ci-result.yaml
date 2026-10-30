@@ -124,8 +124,8 @@ spec:
       app.kubernetes.io/name: alertmanager
   ingress:
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:
@@ -195,8 +195,8 @@ spec:
       app.kubernetes.io/name: grafana
   ingress:
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:
@@ -226,15 +226,15 @@ metadata:
 spec:
   egress:
   - toEntities:
-    - kube-apiserver
     - cluster
+    - kube-apiserver
   endpointSelector:
     matchLabels:
       app.kubernetes.io/name: prometheus
   ingress:
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:
@@ -284,8 +284,8 @@ spec:
       app.kubernetes.io/instance: app-prometheus
   ingress:
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

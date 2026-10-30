@@ -25,7 +25,7 @@ func TestPipeline_EnabledSurvivesFullPipeline(t *testing.T) {
 			},
 		},
 	}
-	got, err := mutations.MutateSchema(Pipeline(content.ExtractContent{}, nil, nil), schema)
+	got, err := mutations.MutateSchema(Pipeline(content.ExtractContent{}, nil, nil, nil), schema)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

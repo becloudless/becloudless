@@ -24,29 +24,29 @@ resources:
         matchLabels: {app.kubernetes.io/name: forgejo}
       ingress:
         gateway:
-          fromEntities: {ingress: ingress, host: host, remote-node: remote-node}
+          fromEntities: [ingress, host, remote-node]
           toPorts:
-            http: {ports: {p3000: {port: "3000", protocol: TCP}}}
+            http: {ports: {"3000": {}}}
       egress:
         postgresql:
           toEndpoints:
             postgresql:
               matchLabels: {cnpg.io/cluster: forgejo-postgresql}
           toPorts:
-            postgresql: {ports: {p5432: {port: "5432", protocol: TCP}}}
+            postgresql: {ports: {"5432": {}}}
         gateway: # the OIDC discovery of authelia goes through the public address of the gateway
-          toEntities: {ingress: ingress}
+          toEntities: [ingress]
           toPorts:
-            https: {ports: {p443: {port: "443", protocol: TCP}}}
+            https: {ports: {"443": {}}}
         internet: # TODO mirrors, webhooks, git over ssh: any name, the destinations are chosen by the users
           toFQDNs:
             any: {matchPattern: "*"}
           toPorts:
             out:
               ports:
-                p22: {port: "22", protocol: TCP}
-                p80: {port: "80", protocol: TCP}
-                p443: {port: "443", protocol: TCP}
+                "22": {}
+                "80": {}
+                "443": {}
 
   fluxHelmReleases:
     # the database is prepared by the postgresql chart (certificates, issuer, cluster and backups)

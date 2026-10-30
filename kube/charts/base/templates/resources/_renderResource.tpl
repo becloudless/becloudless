@@ -7,6 +7,7 @@
                                "base.resources.mutations.standardLabels"
                                "base.resources.mutations.stringifyFields"
                                "base.resources.mutations.enabled"
+                               "base.resources.mutations.itemFields"
                                "base.resources.mutations.required"
                                "base.resources.mutations.apiVersionKind"
                                "base.resources.mutations.metadata"

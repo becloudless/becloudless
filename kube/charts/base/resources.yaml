@@ -354,9 +354,9 @@ resources:
       url: https://raw.githubusercontent.com/mittwald/kubernetes-secret-generator/master/deploy/crds/secretgenerator.mittwald.de_stringsecrets_crd.yaml
       crdVersion: v1alpha1
     mutations:
-      arraysToMaps:
-        keyFields:
-          fields: fieldName # `fields.password: {}` is `fields: [{fieldName: password}]`
+      itemFields:
+        fields:
+          keyField: fieldName # `fields.password: {}` is `fields: [{fieldName: password}]`
   - name: traefikIngressRouteTCPs
     sourceCRD:
       url: https://raw.githubusercontent.com/traefik/traefik/master/docs/content/reference/dynamic-configuration/traefik.io_ingressroutetcps.yaml
@@ -407,8 +407,21 @@ resources:
     sourceCRD:
       url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumnetworkpolicies.yaml
       crdVersion: v2
+    mutations: &ciliumPolicyMutations
+      arraysToMaps:
+        ignore: # plain lists of entities (`toEntities: [kube-apiserver]`), they are not merged
+          - ingress.fromEntities
+          - ingressDeny.fromEntities
+          - egress.toEntities
+          - egressDeny.toEntities
+      itemFields: # `toPorts.https.ports.443: {}` is TCP on the port 443
+        ingress.toPorts.ports: &ciliumPort {keyField: port, defaults: {protocol: TCP}}
+        ingressDeny.toPorts.ports: *ciliumPort
+        egress.toPorts.ports: *ciliumPort
+        egressDeny.toPorts.ports: *ciliumPort
   - name: ciliumClusterwideNetworkPolicies
     clusterScoped: true
     sourceCRD:
       url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumclusterwidenetworkpolicies.yaml
       crdVersion: v2
+    mutations: *ciliumPolicyMutations

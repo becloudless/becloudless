@@ -12,16 +12,16 @@ resources:
         matchLabels: {"app.kubernetes.io/name": metrics-server}
       ingress:
         kube-apiserver: # the aggregated API: the API server is host networked, it is seen as the host or a remote node
-          fromEntities: {apiserver: kube-apiserver, host: host, remote-node: remote-node}
+          fromEntities: [kube-apiserver, host, remote-node]
           toPorts:
-            api: {ports: {p10250: {port: "10250", protocol: TCP}}}
+            api: {ports: {"10250": {}}}
       egress:
         kube-apiserver:
-          toEntities: {apiserver: kube-apiserver}
+          toEntities: [kube-apiserver]
         kubelets: # scrapes the kubelet of every node
-          toEntities: {host: host, remote-node: remote-node}
+          toEntities: [host, remote-node]
           toPorts:
-            kubelet: {ports: {p10250: {port: "10250", protocol: TCP}}}
+            kubelet: {ports: {"10250": {}}}
 
   fluxHelmReleases:
     metrics-server:

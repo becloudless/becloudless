@@ -41,8 +41,8 @@ spec:
       app.kubernetes.io/name: authelia
   ingress:
   - fromEntities:
-    - host
     - ingress
+    - host
     - remote-node
     toPorts:
     - ports:

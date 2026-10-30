@@ -14,23 +14,23 @@ resources:
         matchLabels: {app.kubernetes.io/name: external-secrets}
       egress:
         kube-apiserver:
-          toEntities: {apiserver: kube-apiserver}
+          toEntities: [kube-apiserver]
 
     external-secrets-cert-controller: # the certificate of the webhook
       endpointSelector:
         matchLabels: {app.kubernetes.io/name: external-secrets-cert-controller}
       egress:
         kube-apiserver:
-          toEntities: {apiserver: kube-apiserver}
+          toEntities: [kube-apiserver]
 
     external-secrets-webhook:
       endpointSelector:
         matchLabels: {app.kubernetes.io/name: external-secrets-webhook}
       ingress:
         kube-apiserver: # the API server is host networked, it is seen as the host or a remote node
-          fromEntities: {apiserver: kube-apiserver, host: host, remote-node: remote-node}
+          fromEntities: [kube-apiserver, host, remote-node]
           toPorts:
-            webhook: {ports: {p10250: {port: "10250", protocol: TCP}}}
+            webhook: {ports: {"10250": {}}}
 
   fluxHelmReleases:
     external-secrets:
