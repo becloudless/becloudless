@@ -419,6 +419,11 @@ resources:
         ingressDeny.toPorts.ports: *ciliumPort
         egress.toPorts.ports: *ciliumPort
         egressDeny.toPorts.ports: *ciliumPort
+      listShorthands: # `toPorts: [443, 80]` is the TCP ports 443 and 80, when the rule has only one group of ports
+        ingress.toPorts: &ciliumToPorts {key: main, field: ports}
+        ingressDeny.toPorts: *ciliumToPorts
+        egress.toPorts: *ciliumToPorts
+        egressDeny.toPorts: *ciliumToPorts
   - name: ciliumClusterwideNetworkPolicies
     clusterScoped: true
     sourceCRD:

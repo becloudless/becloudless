@@ -34,8 +34,7 @@ resources:
                   key: app
                   operator: In
                   values: {helm-controller: helm-controller, kustomize-controller: kustomize-controller, image-automation-controller: image-automation-controller, source-watcher: source-watcher}
-          toPorts:
-            artifacts: {ports: {"9090": {}}}
+          toPorts: [9090]
       egress:
         kube-apiserver:
           toEntities: [kube-apiserver]
@@ -43,25 +42,14 @@ resources:
           toEndpoints:
             notification-controller:
               matchLabels: {app: notification-controller}
-          toPorts:
-            events: {ports: {"9090": {}}}
+          toPorts: [9090]
         gateway: # the public addresses of the sources hosted in the cluster are the gateway
           toEntities: [ingress]
-          toPorts:
-            sources:
-              ports:
-                "22": {}
-                "80": {}
-                "443": {}
+          toPorts: [22, 80, 443]
         internet: # the git repositories, the helm repositories and the OCI registries: any name, the sources are set by the clusters
           toFQDNs:
             any: {matchPattern: "*"}
-          toPorts:
-            sources:
-              ports:
-                "22": {}
-                "80": {}
-                "443": {}
+          toPorts: [22, 80, 443]
 
     source-watcher:
       endpointSelector:
@@ -75,8 +63,7 @@ resources:
                   key: app
                   operator: In
                   values: {helm-controller: helm-controller, kustomize-controller: kustomize-controller}
-          toPorts:
-            artifacts: {ports: {"9090": {}}}
+          toPorts: [9090]
       egress:
         kube-apiserver:
           toEntities: [kube-apiserver]
@@ -84,14 +71,12 @@ resources:
           toEndpoints:
             source-controller:
               matchLabels: {app: source-controller}
-          toPorts:
-            artifacts: {ports: {"9090": {}}}
+          toPorts: [9090]
         notification-controller:
           toEndpoints:
             notification-controller:
               matchLabels: {app: notification-controller}
-          toPorts:
-            events: {ports: {"9090": {}}}
+          toPorts: [9090]
 
     helm-controller:
       endpointSelector:
@@ -103,26 +88,22 @@ resources:
           toEndpoints:
             source-controller:
               matchLabels: {app: source-controller}
-          toPorts:
-            artifacts: {ports: {"9090": {}}}
+          toPorts: [9090]
         source-watcher:
           toEndpoints:
             source-watcher:
               matchLabels: {app: source-watcher}
-          toPorts:
-            artifacts: {ports: {"9090": {}}}
+          toPorts: [9090]
         notification-controller:
           toEndpoints:
             notification-controller:
               matchLabels: {app: notification-controller}
-          toPorts:
-            events: {ports: {"9090": {}}}
+          toPorts: [9090]
         # TODO
         chart-schemas: # the values schema of the authelia chart references `definitions.json`, loaded by helm at each install/upgrade
           toFQDNs:
             authelia: {matchName: charts.authelia.com}
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
 
     kustomize-controller:
       endpointSelector:
@@ -134,20 +115,17 @@ resources:
           toEndpoints:
             source-controller:
               matchLabels: {app: source-controller}
-          toPorts:
-            artifacts: {ports: {"9090": {}}}
+          toPorts: [9090]
         source-watcher:
           toEndpoints:
             source-watcher:
               matchLabels: {app: source-watcher}
-          toPorts:
-            artifacts: {ports: {"9090": {}}}
+          toPorts: [9090]
         notification-controller:
           toEndpoints:
             notification-controller:
               matchLabels: {app: notification-controller}
-          toPorts:
-            events: {ports: {"9090": {}}}
+          toPorts: [9090]
 
     notification-controller: # the events of the controllers, and the webhook receiver exposed by the gateway
       endpointSelector:
@@ -161,30 +139,20 @@ resources:
                   key: app
                   operator: In
                   values: {helm-controller: helm-controller, kustomize-controller: kustomize-controller, source-controller: source-controller, source-watcher: source-watcher, image-automation-controller: image-automation-controller, image-reflector-controller: image-reflector-controller}
-          toPorts:
-            events: {ports: {"9090": {}}}
+          toPorts: [9090]
         webhook-receiver:
           fromEntities: [ingress, host, remote-node]
-          toPorts:
-            receiver: {ports: {"9292": {}}}
+          toPorts: [9292]
       egress:
         kube-apiserver:
           toEntities: [kube-apiserver]
         gateway: # the public addresses of the providers hosted in the cluster are the gateway
           toEntities: [ingress]
-          toPorts:
-            https:
-              ports:
-                "80": {}
-                "443": {}
+          toPorts: [80, 443]
         providers: # the notification providers: any name, the providers are set by the clusters
           toFQDNs:
             any: {matchPattern: "*"}
-          toPorts:
-            https:
-              ports:
-                "80": {}
-                "443": {}
+          toPorts: [80, 443]
 
     image-automation-controller:
       endpointSelector:
@@ -196,29 +164,19 @@ resources:
           toEndpoints:
             source-controller:
               matchLabels: {app: source-controller}
-          toPorts:
-            artifacts: {ports: {"9090": {}}}
+          toPorts: [9090]
         notification-controller:
           toEndpoints:
             notification-controller:
               matchLabels: {app: notification-controller}
-          toPorts:
-            events: {ports: {"9090": {}}}
+          toPorts: [9090]
         gateway: # the public addresses of the repositories hosted in the cluster are the gateway
           toEntities: [ingress]
-          toPorts:
-            git:
-              ports:
-                "22": {}
-                "443": {}
+          toPorts: [22, 443]
         git: # the push of the updates: any name, the repositories are set by the clusters
           toFQDNs:
             any: {matchPattern: "*"}
-          toPorts:
-            git:
-              ports:
-                "22": {}
-                "443": {}
+          toPorts: [22, 443]
 
     image-reflector-controller: # scans the registries
       endpointSelector:
@@ -230,17 +188,14 @@ resources:
           toEndpoints:
             notification-controller:
               matchLabels: {app: notification-controller}
-          toPorts:
-            events: {ports: {"9090": {}}}
+          toPorts: [9090]
         gateway: # the public addresses of the registries hosted in the cluster are the gateway
           toEntities: [ingress]
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
         registries: # any name, the registries are set by the clusters
           toFQDNs:
             any: {matchPattern: "*"}
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
 
   fluxHelmReleases:
     # Webhook receiver exposed by the Cilium Gateway `shared` (kube-system). Disabled by default: it needs the Gateway API CRDs

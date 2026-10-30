@@ -151,15 +151,13 @@ resources:
       ingress:
         gateway: # the web UI
           fromEntities: [ingress, host, remote-node]
-          toPorts:
-            http: {ports: {"8384": {}}}
+          toPorts: [8384]
       egress:
         relay:
           toEndpoints:
             relay:
               matchLabels: {{ $relay.matchLabels | toJson }}
-          toPorts:
-            relay: {ports: {relay: {port: {{ $relay.port | toString | quote }}}}}
+          toPorts: [{{ $relay.port | toString | quote }}]
 
   certManagerCertificates:
     main:

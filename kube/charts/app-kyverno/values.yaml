@@ -13,8 +13,7 @@ resources:
       ingress:
         kube-apiserver: # the webhooks: the API server is host networked, it is seen as the host or a remote node
           fromEntities: [kube-apiserver, host, remote-node]
-          toPorts:
-            webhook: {ports: {"9443": {}}}
+          toPorts: [9443]
       egress:
         kube-apiserver:
           toEntities: [kube-apiserver]
@@ -25,8 +24,7 @@ resources:
       ingress:
         kube-apiserver:
           fromEntities: [kube-apiserver, host, remote-node]
-          toPorts:
-            webhook: {ports: {"9443": {}}}
+          toPorts: [9443]
       egress:
         kube-apiserver:
           toEntities: [kube-apiserver]

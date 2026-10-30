@@ -29,8 +29,7 @@ resources:
       ingress:
         kube-apiserver: # the API server is host networked, it is seen as the host or a remote node
           fromEntities: [kube-apiserver, host, remote-node]
-          toPorts:
-            webhook: {ports: {"10250": {}}}
+          toPorts: [10250]
 
   fluxHelmReleases:
     external-secrets:

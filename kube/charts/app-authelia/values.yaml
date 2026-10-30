@@ -15,27 +15,23 @@ resources:
       ingress:
         gateway: # the portal and the forward auth of every protected route
           fromEntities: [ingress, host, remote-node]
-          toPorts:
-            http: {ports: {"9091": {}}}
+          toPorts: [9091]
       egress:
         lldap:
           toEndpoints:
             lldap:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": lldap, "k8s:app.kubernetes.io/instance": lldap, "k8s:app.kubernetes.io/component": lldap}
-          toPorts:
-            ldaps: {ports: {"6360": {}}}
+          toPorts: [6360]
         valkey:
           toEndpoints:
             valkey:
               matchLabels: {app.kubernetes.io/name: valkey}
-          toPorts:
-            valkey: {ports: {"6379": {}}}
+          toPorts: [6379]
         postgresql:
           toEndpoints:
             postgresql:
               matchLabels: {cnpg.io/cluster: authelia-postgresql}
-          toPorts:
-            postgresql: {ports: {"5432": {}}}
+          toPorts: [5432]
         ntp: # the startup check of the clock (`ntp` of the configuration)
           toFQDNs:
             cloudflare: {matchName: time.cloudflare.com} # TODO check why

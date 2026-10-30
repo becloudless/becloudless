@@ -14,8 +14,7 @@ resources:
       ingress:
         webhook: # the admission webhook: the API server is host networked, it is seen as the host or a remote node
           fromEntities: [kube-apiserver, host, remote-node]
-          toPorts:
-            webhook: {ports: {"9443": {}}}
+          toPorts: [9443]
       egress:
         kube-apiserver:
           toEntities: [kube-apiserver]
@@ -24,11 +23,7 @@ resources:
             instances:
               matchExpressions:
                 cnpg-cluster: {key: "k8s:cnpg.io/cluster", operator: Exists}
-          toPorts:
-            postgres:
-              ports:
-                "8000": {}
-                "5432": {}
+          toPorts: [8000, 5432]
 
     cnpg-cluster-instances:
       endpointSelector:
@@ -39,11 +34,7 @@ resources:
           fromEndpoints:
             operator:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": cnpg-system}
-          toPorts:
-            postgres:
-              ports:
-                "8000": {}
-                "5432": {}
+          toPorts: [8000, 5432]
       egress:
         kube-apiserver:
           toEntities: [kube-apiserver]

@@ -37,10 +37,7 @@ resources:
       ingress:
         clients:
           fromEndpoints: {{- $values.clients | toYaml | nindent 12 }}
-          toPorts:
-            valkey:
-              ports:
-                "6379": {}
+          toPorts: [6379]
   {{- end }}
 {{- end }}
 {{- end }}

@@ -25,28 +25,20 @@ resources:
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
-          toPorts:
-            http: {ports: {"3000": {}}}
+          toPorts: [3000]
       egress:
         postgresql:
           toEndpoints:
             postgresql:
               matchLabels: {cnpg.io/cluster: forgejo-postgresql}
-          toPorts:
-            postgresql: {ports: {"5432": {}}}
+          toPorts: [5432]
         gateway: # the OIDC discovery of authelia goes through the public address of the gateway
           toEntities: [ingress]
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
         internet: # TODO mirrors, webhooks, git over ssh: any name, the destinations are chosen by the users
           toFQDNs:
             any: {matchPattern: "*"}
-          toPorts:
-            out:
-              ports:
-                "22": {}
-                "80": {}
-                "443": {}
+          toPorts: [22, 80, 443]
 
   fluxHelmReleases:
     # the database is prepared by the postgresql chart (certificates, issuer, cluster and backups)

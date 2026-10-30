@@ -8,6 +8,7 @@ import (
 
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/arraysToMaps"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/itemFields"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/listShorthands"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/stringifyFields"
 )
 
@@ -186,5 +187,30 @@ func TestParseCRDs_ParsesItemFieldsWithAnchors(t *testing.T) {
 		if !reflect.DeepEqual(e.Mutations.ItemFields, want) {
 			t.Errorf("%s: Mutations.ItemFields = %#v, want %#v", e.Name, e.Mutations.ItemFields, want)
 		}
+	}
+}
+
+func TestParseCRDs_ParsesListShorthands(t *testing.T) {
+	path := writeResourcesYAML(t, `resources:
+  - name: policies
+    sourceCRD:
+      url: https://example.invalid/policies.yaml
+      crdVersion: v2
+    mutations:
+      listShorthands:
+        ingress.toPorts: &toPorts {key: main, field: ports}
+        egress.toPorts: *toPorts
+`)
+
+	file, err := newResourcesFile(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := listShorthands.ListShorthands{
+		"ingress.toPorts": {Key: "main", Field: "ports"},
+		"egress.toPorts":  {Key: "main", Field: "ports"},
+	}
+	if got := file.Resources[0].Mutations.ListShorthands; !reflect.DeepEqual(got, want) {
+		t.Errorf("Mutations.ListShorthands = %#v, want %#v", got, want)
 	}
 }

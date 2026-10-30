@@ -130,18 +130,11 @@ resources:
             instances:
               matchLabels:
                 cnpg.io/cluster: {{ $name }}
-          toPorts:
-            postgres:
-              ports:
-                "5432": {}
-                "8000": {}
+          toPorts: [5432, 8000]
         {{- if $values.clients }}
         clients:
           fromEndpoints: {{- $values.clients | toYaml | nindent 12 }}
-          toPorts:
-            postgres:
-              ports:
-                "5432": {}
+          toPorts: [5432]
         {{- end }}
       egress:
         instances:
@@ -149,9 +142,5 @@ resources:
             instances:
               matchLabels:
                 cnpg.io/cluster: {{ $name }}
-          toPorts:
-            postgres:
-              ports:
-                "5432": {}
-                "8000": {}
+          toPorts: [5432, 8000]
 {{- end }}

@@ -37,41 +37,35 @@ resources:
       ingress:
         gateway: # the S3 API, through the Gateway
           fromEntities: [ingress, host, remote-node]
-          toPorts:
-            s3: {ports: {"3900": {}}}
+          toPorts: [3900]
         garage: # the RPC between the nodes
           fromEndpoints:
             garage:
               matchLabels: {app.kubernetes.io/instance: garage, app.kubernetes.io/component: garage}
-          toPorts:
-            rpc: {ports: {"3901": {}}}
+          toPorts: [3901]
         longhorn: # the S3 API, for the backups of the volumes (the managers list and restore, the instance managers write)
           fromEndpoints:
             manager:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": longhorn-system, "k8s:app": longhorn-manager}
             instance-manager:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": longhorn-system, "k8s:longhorn.io/component": instance-manager}
-          toPorts:
-            s3: {ports: {"3900": {}}}
+          toPorts: [3900]
         backup-restore: # the S3 API, for the jobs saving and restoring the secrets of the apps (chart `restore-app`, see app-backup-restore)
           fromEndpoints:
             restore:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": backup-restore, "k8s:app.kubernetes.io/name": restore-app}
-          toPorts:
-            s3: {ports: {"3900": {}}}
+          toPorts: [3900]
         layout: # the admin API
           fromEndpoints:
             layout:
               matchLabels: {app.kubernetes.io/instance: garage-post, app.kubernetes.io/component: garage-layout}
-          toPorts:
-            admin: {ports: {"3903": {}}}
+          toPorts: [3903]
       egress:
         garage:
           toEndpoints:
             garage:
               matchLabels: {app.kubernetes.io/instance: garage, app.kubernetes.io/component: garage}
-          toPorts:
-            rpc: {ports: {"3901": {}}}
+          toPorts: [3901]
         kube-apiserver: # the discovery of the nodes (the `GarageNode` resources)
           toEntities: [kube-apiserver]
     garage-layout:
@@ -82,8 +76,7 @@ resources:
           toEndpoints:
             garage:
               matchLabels: {app.kubernetes.io/instance: garage, app.kubernetes.io/component: garage}
-          toPorts:
-            admin: {ports: {"3903": {}}}
+          toPorts: [3903]
 
   fluxHelmReleases:
     # the secrets, created before the nodes start

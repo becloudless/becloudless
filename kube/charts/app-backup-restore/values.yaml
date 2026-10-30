@@ -31,8 +31,7 @@ resources:
           toEndpoints:
             garage:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": garage, "k8s:app.kubernetes.io/instance": garage, "k8s:app.kubernetes.io/component": garage}
-          toPorts:
-            s3: {ports: {"3900": {}}}
+          toPorts: [3900]
 
   serviceAccounts:
     backup-restore:

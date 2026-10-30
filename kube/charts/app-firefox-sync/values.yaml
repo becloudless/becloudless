@@ -29,20 +29,17 @@ resources:
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
-          toPorts:
-            http: {ports: {"8000": {}}}
+          toPorts: [8000]
       egress:
         postgresql:
           toEndpoints:
             postgresql:
               matchLabels: {cnpg.io/cluster: firefox-sync-postgresql}
-          toPorts:
-            postgresql: {ports: {"5432": {}}}
+          toPorts: [5432]
         fxa: # the verification of the OAuth tokens of the Mozilla accounts
           toFQDNs:
             oauth: {matchName: oauth.accounts.firefox.com}
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
 
   fluxHelmReleases:
     # the database is prepared by the postgresql chart (certificates, issuer, cluster and backups)

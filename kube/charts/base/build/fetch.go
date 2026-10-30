@@ -88,6 +88,7 @@ func fetchAndMutateSchema(client *http.Client, e *resource, dest string) error {
 		e.Mutations.ArraysToMaps,
 		e.Mutations.StringifyFields,
 		e.Mutations.ItemFields,
+		e.Mutations.ListShorthands,
 	)
 	result, err := mutations.MutateSchema(pipeline, kindSchema)
 	if err != nil {

@@ -35,43 +35,36 @@ resources:
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
-          toPorts:
-            http: {ports: {"2283": {}}}
+          toPorts: [2283]
         bootstrap:
           fromEndpoints:
             bootstrap:
               matchExpressions:
                 job: {key: job-name, operator: Exists}
-          toPorts:
-            http: {ports: {"2283": {}}}
+          toPorts: [2283]
       egress:
         postgresql:
           toEndpoints:
             postgresql:
               matchLabels: {cnpg.io/cluster: immich-postgresql}
-          toPorts:
-            postgresql: {ports: {"5432": {}}}
+          toPorts: [5432]
         valkey:
           toEndpoints:
             valkey:
               matchLabels: {app.kubernetes.io/name: valkey}
-          toPorts:
-            valkey: {ports: {"6379": {}}}
+          toPorts: [6379]
         machine-learning:
           toEndpoints:
             machine-learning:
               matchLabels: {app.kubernetes.io/name: machine-learning}
-          toPorts:
-            http: {ports: {"3003": {}}}
+          toPorts: [3003]
         authelia: # the OIDC issuer is the public address of authelia
           toFQDNs:
             authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
         gateway: # the public addresses of the cluster are the gateway for the pods
           toEntities: [ingress]
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
 
     immich-machine-learning: # the models are downloaded on first use
       endpointSelector:
@@ -81,8 +74,7 @@ resources:
           fromEndpoints:
             server:
               matchLabels: {app.kubernetes.io/instance: immich, app.kubernetes.io/name: server}
-          toPorts:
-            http: {ports: {"3003": {}}}
+          toPorts: [3003]
       egress:
         huggingface: # the models, served by the CDNs of the hub
           toFQDNs:
@@ -90,8 +82,7 @@ resources:
             hub-subdomains: {matchPattern: "**.huggingface.co"}
             cdn: {matchName: hf.co}
             cdn-subdomains: {matchPattern: "**.hf.co"}
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
 
     immich-bootstrap: # the job creating the admin, its name changes with its content
       endpointSelector:
@@ -102,8 +93,7 @@ resources:
           toEndpoints:
             server:
               matchLabels: {app.kubernetes.io/instance: immich, app.kubernetes.io/name: server}
-          toPorts:
-            http: {ports: {"2283": {}}}
+          toPorts: [2283]
 
   fluxHelmReleases:
     # the database is prepared by the postgresql chart (certificates, issuer, cluster and backups)

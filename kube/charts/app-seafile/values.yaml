@@ -30,30 +30,25 @@ resources:
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
-          toPorts:
-            http: {ports: {"80": {}}}
+          toPorts: [80]
       egress:
         mariadb:
           toEndpoints:
             mariadb:
               matchLabels: {app.kubernetes.io/instance: seafile-mariadb, app.kubernetes.io/component: seafile-mariadb}
-          toPorts:
-            mysql: {ports: {"3306": {}}}
+          toPorts: [3306]
         valkey:
           toEndpoints:
             valkey:
               matchLabels: {app.kubernetes.io/name: valkey}
-          toPorts:
-            valkey: {ports: {"6379": {}}}
+          toPorts: [6379]
         authelia: # the OIDC issuer is the public address of authelia
           toFQDNs:
             authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
         gateway: # the public addresses of the cluster are the gateway for the pods
           toEntities: [ingress]
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
 
     seafile-mariadb:
       endpointSelector:
@@ -63,8 +58,7 @@ resources:
           fromEndpoints:
             seafile:
               matchLabels: {app.kubernetes.io/instance: seafile, app.kubernetes.io/component: seafile}
-          toPorts:
-            mysql: {ports: {"3306": {}}}
+          toPorts: [3306]
 
   fluxHelmReleases:
     # the secrets of the services, created before they start

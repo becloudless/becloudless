@@ -17,24 +17,15 @@ resources:
           toFQDNs:
             letsencrypt: {matchName: acme-v02.api.letsencrypt.org}
             letsencrypt-staging: {matchName: acme-staging-v02.api.letsencrypt.org}
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
         self-check: # the self check of the http-01 challenge: the names of the domain served by an external address (mail)
           toFQDNs:
             domain: {matchName: "{{ .Values.app.domain }}"}
             subdomains: {matchPattern: "**.{{ .Values.app.domain }}"}
-          toPorts:
-            web:
-              ports:
-                "80": {}
-                "443": {}
+          toPorts: [80, 443]
         gateway: # the self check of the http-01 challenge goes through the public address of the gateway
           toEntities: [ingress]
-          toPorts:
-            web:
-              ports:
-                "80": {}
-                "443": {}
+          toPorts: [80, 443]
 
     cert-manager-cainjector: # injects the CA bundles into the webhooks and the CRDs
       endpointSelector:
@@ -49,8 +40,7 @@ resources:
       ingress:
         kube-apiserver: # the API server is host networked, it is seen as the host or a remote node
           fromEntities: [kube-apiserver, host, remote-node]
-          toPorts:
-            webhook: {ports: {"10250": {}}}
+          toPorts: [10250]
       egress:
         kube-apiserver:
           toEntities: [kube-apiserver]
@@ -62,8 +52,7 @@ resources:
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
-          toPorts:
-            http: {ports: {"8089": {}}}
+          toPorts: [8089]
 
   fluxHelmReleases:
     cert-manager:

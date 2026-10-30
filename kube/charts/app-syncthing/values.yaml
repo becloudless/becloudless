@@ -31,8 +31,7 @@ resources:
       ingress:
         relay: # served by the Gateway service without Envoy: the source is the client itself (public, or in the cluster)
           fromEntities: [world, cluster]
-          toPorts:
-            relay: {ports: {"22067": {}}}
+          toPorts: [22067]
 
   fluxHelmReleases:
 

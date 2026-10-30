@@ -22,31 +22,26 @@ resources:
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
-          toPorts:
-            http: {ports: {"8096": {}}}
+          toPorts: [8096]
         seerr:
           fromEndpoints:
             seerr:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": seerr, "k8s:app.kubernetes.io/instance": seerr, "k8s:app.kubernetes.io/component": seerr}
-          toPorts:
-            http: {ports: {"8096": {}}}
+          toPorts: [8096]
       egress:
         authelia: # the OIDC issuer is the public address of authelia
           toFQDNs:
             authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
         gateway: # the public addresses of the cluster are the gateway for the pods
           toEntities: [ingress]
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
         github: # the download of the SSO plugin (release asset), by the init container
           toFQDNs:
             github: {matchName: github.com}
             release-assets: {matchName: release-assets.githubusercontent.com}
             objects: {matchName: objects.githubusercontent.com}
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
 
   fluxHelmReleases:
     # the secrets of jellyfin: the OIDC client (copied from authelia) and the administrator, before jellyfin starts

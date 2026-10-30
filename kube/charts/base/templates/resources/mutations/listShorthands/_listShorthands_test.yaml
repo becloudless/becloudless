@@ -1,0 +1,102 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: listShorthands mutation (toPorts of a Cilium rule given as a list of ports, TCP by default)
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: expands the list of ports of the rules to one group of TCP ports
+    set:
+      resources:
+        ciliumNetworkPolicies:
+          main:
+            endpointSelector:
+              matchLabels: {app: myapp}
+            ingress:
+              web:
+                fromEntities: [ingress]
+                toPorts: [443, "80"]
+            egress:
+              api:
+                toEntities: [kube-apiserver]
+                toPorts: [6443]
+    asserts:
+      - equal:
+          path: spec.ingress
+          value:
+            - fromEntities: [ingress]
+              toPorts:
+                - ports:
+                    - {port: "443", protocol: TCP}
+                    - {port: "80", protocol: TCP}
+      - equal:
+          path: spec.egress
+          value:
+            - toEntities: [kube-apiserver]
+              toPorts:
+                - ports:
+                    - {port: "6443", protocol: TCP}
+
+  - it: works for the deny rules of a clusterwide policy
+    set:
+      resources:
+        ciliumClusterwideNetworkPolicies:
+          main:
+            endpointSelector:
+              matchLabels: {app: myapp}
+            egressDeny:
+              blocked:
+                toEntities: [world]
+                toPorts: [25]
+    asserts:
+      - equal:
+          path: spec.egressDeny
+          value:
+            - toEntities: [world]
+              toPorts:
+                - ports:
+                    - {port: "25", protocol: TCP}
+
+  - it: keeps the groups given as a map, with their protocols
+    set:
+      resources:
+        ciliumNetworkPolicies:
+          main:
+            endpointSelector:
+              matchLabels: {app: myapp}
+            egress:
+              dns:
+                toEntities: [host]
+                toPorts:
+                  dns:
+                    ports:
+                      udp: {port: "53", protocol: UDP}
+                      tcp: {port: "53"}
+    asserts:
+      - equal:
+          path: spec.egress[0].toPorts
+          value:
+            - ports:
+                - {port: "53", protocol: TCP}
+                - {port: "53", protocol: UDP}
+
+  - it: leaves a real list of groups as it is
+    set:
+      resources:
+        ciliumNetworkPolicies:
+          main:
+            endpointSelector:
+              matchLabels: {app: myapp}
+            egress:
+              dns:
+                toEntities: [host]
+                toPorts:
+                  - ports:
+                      - {port: "53", protocol: UDP}
+    asserts:
+      - equal:
+          path: spec.egress[0].toPorts
+          value:
+            - ports:
+                - {port: "53", protocol: UDP}

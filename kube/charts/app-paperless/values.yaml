@@ -34,30 +34,25 @@ resources:
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
-          toPorts:
-            http: {ports: {"8000": {}}}
+          toPorts: [8000]
       egress:
         postgresql:
           toEndpoints:
             postgresql:
               matchLabels: {cnpg.io/cluster: paperless-postgresql}
-          toPorts:
-            postgresql: {ports: {"5432": {}}}
+          toPorts: [5432]
         valkey:
           toEndpoints:
             valkey:
               matchLabels: {app.kubernetes.io/name: valkey}
-          toPorts:
-            valkey: {ports: {"6379": {}}}
+          toPorts: [6379]
         authelia: # the OIDC issuer is the public address of authelia
           toFQDNs:
             authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
         gateway: # the public addresses of the cluster are the gateway for the pods
           toEntities: [ingress]
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
 
   fluxHelmReleases:
     # the database is prepared by the postgresql chart (certificates, issuer, cluster and backups)

@@ -13,15 +13,13 @@ resources:
       ingress:
         kube-apiserver: # the aggregated API: the API server is host networked, it is seen as the host or a remote node
           fromEntities: [kube-apiserver, host, remote-node]
-          toPorts:
-            api: {ports: {"10250": {}}}
+          toPorts: [10250]
       egress:
         kube-apiserver:
           toEntities: [kube-apiserver]
         kubelets: # scrapes the kubelet of every node
           toEntities: [host, remote-node]
-          toPorts:
-            kubelet: {ports: {"10250": {}}}
+          toPorts: [10250]
 
   fluxHelmReleases:
     metrics-server:

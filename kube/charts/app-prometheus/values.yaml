@@ -59,14 +59,12 @@ resources:
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
-          toPorts:
-            http: {ports: {"9090": {}}}
+          toPorts: [9090]
         grafana:
           fromEndpoints:
             grafana:
               matchLabels: {app.kubernetes.io/name: grafana}
-          toPorts:
-            http: {ports: {"9090": {}}}
+          toPorts: [9090]
       egress:
         targets:
           toEntities: [cluster, kube-apiserver]
@@ -77,20 +75,17 @@ resources:
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
-          toPorts:
-            http: {ports: {"9093": {}}}
+          toPorts: [9093]
         prometheus: # the alerts
           fromEndpoints:
             prometheus:
               matchLabels: {app.kubernetes.io/name: prometheus}
-          toPorts:
-            http: {ports: {"9093": {}}}
+          toPorts: [9093]
         grafana:
           fromEndpoints:
             grafana:
               matchLabels: {app.kubernetes.io/name: grafana}
-          toPorts:
-            http: {ports: {"9093": {}}}
+          toPorts: [9093]
 
     grafana:
       endpointSelector:
@@ -98,8 +93,7 @@ resources:
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
-          toPorts:
-            http: {ports: {"3000": {}}}
+          toPorts: [3000]
       egress:
         kube-apiserver: # the sidecars watch the ConfigMaps of the dashboards and of the datasources
           toEntities: [kube-apiserver]
@@ -107,30 +101,25 @@ resources:
           toEndpoints:
             prometheus:
               matchLabels: {app.kubernetes.io/name: prometheus}
-          toPorts:
-            http: {ports: {"9090": {}}}
+          toPorts: [9090]
         alertmanager:
           toEndpoints:
             alertmanager:
               matchLabels: {app.kubernetes.io/name: alertmanager}
-          toPorts:
-            http: {ports: {"9093": {}}}
+          toPorts: [9093]
         authelia: # the OIDC issuer is the public address of authelia
           toFQDNs:
             authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
         gateway: # the public addresses of the cluster are the gateway for the pods
           toEntities: [ingress]
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
         grafana-com: # the dashboards (init container) and the plugins, whose archives are served by Google Cloud Storage
           toFQDNs:
             grafana: {matchName: grafana.com}
             grafana-subdomains: {matchPattern: "**.grafana.com"}
             plugins: {matchName: storage.googleapis.com}
-          toPorts:
-            https: {ports: {"443": {}}}
+          toPorts: [443]
 
     prometheus-operator:
       endpointSelector:
@@ -138,8 +127,7 @@ resources:
       ingress:
         kube-apiserver: # the admission webhook: the API server is host networked, it is seen as the host or a remote node
           fromEntities: [kube-apiserver, host, remote-node]
-          toPorts:
-            webhook: {ports: {"10250": {}}}
+          toPorts: [10250]
       egress:
         kube-apiserver:
           toEntities: [kube-apiserver]
@@ -157,8 +145,7 @@ resources:
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
-          toPorts:
-            http: {ports: {"8080": {}}}
+          toPorts: [8080]
 
   # Prometheus scrapes any port of any pod (the targets are discovered from the ServiceMonitors).
   ciliumClusterwideNetworkPolicies:

@@ -10,8 +10,7 @@ resources:
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
-          toPorts:
-            http: {ports: {"8080": {}}}
+          toPorts: [8080]
 
   fluxHelmReleases:
     landing:
