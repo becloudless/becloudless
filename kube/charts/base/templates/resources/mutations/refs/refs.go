@@ -56,10 +56,12 @@ func (m Refs) Mutate(schema map[string]any) (mutations.MutationResult, error) {
 		return mutations.MutationResult{Schema: schema}, nil
 	}
 
-	// the nodes visited for a path, the last one is the outermost (the map of the entries is visited after the entries)
+	// the nodes visited for a path, the last one is the outermost (the map of the entries is visited after the entries). The empty
+	// nodes are skipped: a `oneOf` of `required` (ex: the endpointSelector or the nodeSelector of a Cilium policy) names the
+	// properties it needs with `{}`, visited after the real one, which would else be taken for the outermost.
 	found := map[string][]map[string]any{}
 	mutations.WalkSchemaNodesWithPath(schema, "", func(node map[string]any, path string) {
-		if _, configured := m[path]; configured {
+		if _, configured := m[path]; configured && describesValue(node) {
 			found[path] = append(found[path], node)
 		}
 	})
@@ -115,6 +117,17 @@ func (m Refs) Mutate(schema map[string]any) (mutations.MutationResult, error) {
 
 func refNode() map[string]any {
 	return map[string]any{"type": "string", "pattern": Pattern}
+}
+
+// describesValue reports whether a node describes a value (a type, properties, entries or items), as opposed to the `{}` a
+// `oneOf` of `required` uses to name a property.
+func describesValue(node map[string]any) bool {
+	for _, key := range []string{"type", "properties", "additionalProperties", "items"} {
+		if _, ok := node[key]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 // relax makes the node accept a reference next to what it accepts.

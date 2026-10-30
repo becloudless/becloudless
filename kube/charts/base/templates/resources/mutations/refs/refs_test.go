@@ -153,6 +153,33 @@ func TestRefs_AnArrayAcceptsReferencesAsItems(t *testing.T) {
 	}
 }
 
+func TestRefs_AnObjectNamedByAOneOfOfRequiredIsStillRelaxed(t *testing.T) {
+	// the Cilium policies: `endpointSelector` is a property, and a `oneOf` of `required` names it again with `{}`
+	schema := routeSchema()
+	schema["oneOf"] = []any{
+		map[string]any{
+			"properties": map[string]any{"endpointSelector": map[string]any{}},
+			"required":   []any{"endpointSelector"},
+		},
+	}
+	m := Refs{"endpointSelector": {Kinds: []string{"deployments"}, As: "podSelector"}}
+
+	got, err := m.Mutate(schema)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	node := property(got.Schema, "endpointSelector")
+	branches, _ := node["anyOf"].([]any)
+	if len(branches) != 2 || branches[0].(map[string]any)["pattern"] != Pattern {
+		t.Fatalf("endpointSelector = %#v, want an anyOf of the reference and the object", node)
+	}
+	placeholder := property(got.Schema["oneOf"].([]any)[0].(map[string]any), "endpointSelector")
+	if len(placeholder) != 0 {
+		t.Errorf("the name of the oneOf should be left as is, got %#v", placeholder)
+	}
+}
+
 func TestRefs_NothingConfiguredReportsNothing(t *testing.T) {
 	got, err := (Refs{}).Mutate(routeSchema())
 	if err != nil {
