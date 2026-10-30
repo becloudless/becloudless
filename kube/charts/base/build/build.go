@@ -39,5 +39,10 @@ func Build() error {
 		return err
 	}
 
+	// last: the schemas above read the resource files as fetched
+	if err := optimizeResourceFiles(dir, resources); err != nil {
+		return err
+	}
+
 	return nil
 }

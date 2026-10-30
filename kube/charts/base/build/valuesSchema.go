@@ -105,6 +105,7 @@ func generateChartValuesSchema(dir string, entries []resource) error {
 	defs := map[string]any{}
 	resourcesProps := map[string]any{}
 	defaultsResourcesProps := map[string]any{}
+	docs := make([]schemaDoc, 0, len(entries))
 
 	for _, e := range entries {
 		data, err := os.ReadFile(filepath.Join(schemaDir, e.Name+".json"))
@@ -116,6 +117,7 @@ func generateChartValuesSchema(dir string, entries []resource) error {
 			return fmt.Errorf("parse %s.json: %w", e.Name, err)
 		}
 		defs[e.Name] = inlined
+		docs = append(docs, schemaDoc{name: e.Name, root: inlined})
 
 		ref := map[string]any{"$ref": "#/$defs/" + e.Name}
 		resourcesProps[e.Name] = map[string]any{
@@ -124,6 +126,14 @@ func generateChartValuesSchema(dir string, entries []resource) error {
 			"additionalProperties": ref,
 		}
 		defaultsResourcesProps[e.Name] = map[string]any{"$ref": "#/$defs/" + e.Name}
+	}
+
+	// the schema is inlined: the subschemas shared by the kinds, the pod spec of the workloads for most, are defined once
+	location := func(_, to string, tokens []string) string {
+		return "#/$defs/" + to + pointerOf(tokens)
+	}
+	if err := optimizeSchemas(orderDocs(docs, "deployments"), location, workloadPointers()); err != nil {
+		return err
 	}
 
 	schema, err := loadValuesSchemaBase()
