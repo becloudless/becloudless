@@ -3,6 +3,7 @@
   {{- $work := dict "enabled" true "object" dict "resource" (.resource | default dict) }}
 
   {{- range $mutation := (list "base.resources.mutations.defaults" 
+                               "base.resources.mutations.recreateStrategy"
                                "base.resources.mutations.standardLabels"
                                "base.resources.mutations.stringifyFields"
                                "base.resources.mutations.enabled"

@@ -148,9 +148,6 @@ spec:
       app.kubernetes.io/instance: test-release
       app.kubernetes.io/name: syncthing
   strategy:
-    rollingUpdate:
-      maxSurge: 33%
-      maxUnavailable: 0
     type: Recreate
   template:
     metadata:
