@@ -142,8 +142,8 @@ spec:
         name: immich
       version: 0.12.0
   dependsOn:
-  - name: immich-postgresql
   - name: immich-pre
+  - name: immich-postgresql
   - name: immich-valkey
   driftDetection:
     mode: enabled
@@ -218,11 +218,11 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: immich-post
   - name: app-cert-manager
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
-  - name: immich-post
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -245,6 +245,51 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      immich-integration:
+        certManagerCertificates:
+          immich-gateway:
+            name: immich-gateway
+            namespace: default
+            secretName: tls-immich-gateway
+        httpRoutes:
+          immich:
+            name: immich
+            namespace: default
+        listenerSets:
+          immich:
+            name: immich
+            namespace: default
+      immich-post:
+        jobs:
+          immich-bootstrap:
+            labels:
+              app.kubernetes.io/component: immich-bootstrap
+              app.kubernetes.io/instance: immich-post
+            name: ""
+            namespace: default
+      immich-postgresql:
+        cnpgClusters:
+          main:
+            name: immich-postgresql
+            namespace: default
+      immich-pre:
+        externalSecrets:
+          immich-config:
+            name: immich-config
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          immich-admin:
+            name: immich-admin
+            namespace: default
     resources:
       certManagerCertificates:
         immich-gateway:
@@ -259,10 +304,7 @@ spec:
           hostnames:
             immich: immich.test.com
           parentRefs:
-            immich:
-              group: gateway.networking.k8s.io
-              kind: ListenerSet
-              name: immich
+            immich: ref:immich
           rules:
             root:
               backendRefs:
@@ -285,7 +327,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-immich-gateway
+                    name: ref:immich-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
@@ -331,6 +373,51 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      immich-integration:
+        certManagerCertificates:
+          immich-gateway:
+            name: immich-gateway
+            namespace: default
+            secretName: tls-immich-gateway
+        httpRoutes:
+          immich:
+            name: immich
+            namespace: default
+        listenerSets:
+          immich:
+            name: immich
+            namespace: default
+      immich-post:
+        jobs:
+          immich-bootstrap:
+            labels:
+              app.kubernetes.io/component: immich-bootstrap
+              app.kubernetes.io/instance: immich-post
+            name: ""
+            namespace: default
+      immich-postgresql:
+        cnpgClusters:
+          main:
+            name: immich-postgresql
+            namespace: default
+      immich-pre:
+        externalSecrets:
+          immich-config:
+            name: immich-config
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          immich-admin:
+            name: immich-admin
+            namespace: default
     resources:
       jobs:
         immich-bootstrap:
@@ -356,7 +443,7 @@ spec:
                     ADMIN_PASSWORD:
                       secretKeyRef:
                         key: password
-                        name: immich-admin
+                        name: ref:immich-admin
                   image: curlimages/curl:8.19.0
                   name: bootstrap
               restartPolicy: Never
@@ -418,6 +505,51 @@ spec:
         shared_buffers: 256MB
       shared_preload_libraries:
       - vchord.so
+    refs:
+      immich-integration:
+        certManagerCertificates:
+          immich-gateway:
+            name: immich-gateway
+            namespace: default
+            secretName: tls-immich-gateway
+        httpRoutes:
+          immich:
+            name: immich
+            namespace: default
+        listenerSets:
+          immich:
+            name: immich
+            namespace: default
+      immich-post:
+        jobs:
+          immich-bootstrap:
+            labels:
+              app.kubernetes.io/component: immich-bootstrap
+              app.kubernetes.io/instance: immich-post
+            name: ""
+            namespace: default
+      immich-postgresql:
+        cnpgClusters:
+          main:
+            name: immich-postgresql
+            namespace: default
+      immich-pre:
+        externalSecrets:
+          immich-config:
+            name: immich-config
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          immich-admin:
+            name: immich-admin
+            namespace: default
     resources:
       cnpgClusters:
         main:
@@ -445,12 +577,12 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
-  - name: authelia-pre
-    namespace: authelia
-  - name: app-external-secrets
-    namespace: external-secrets
   - name: app-secret-generator
     namespace: secret-generator
+  - name: app-external-secrets
+    namespace: external-secrets
+  - name: authelia-pre
+    namespace: authelia
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -471,6 +603,51 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      immich-integration:
+        certManagerCertificates:
+          immich-gateway:
+            name: immich-gateway
+            namespace: default
+            secretName: tls-immich-gateway
+        httpRoutes:
+          immich:
+            name: immich
+            namespace: default
+        listenerSets:
+          immich:
+            name: immich
+            namespace: default
+      immich-post:
+        jobs:
+          immich-bootstrap:
+            labels:
+              app.kubernetes.io/component: immich-bootstrap
+              app.kubernetes.io/instance: immich-post
+            name: ""
+            namespace: default
+      immich-postgresql:
+        cnpgClusters:
+          main:
+            name: immich-postgresql
+            namespace: default
+      immich-pre:
+        externalSecrets:
+          immich-config:
+            name: immich-config
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          immich-admin:
+            name: immich-admin
+            namespace: default
     resources:
       externalSecrets:
         immich-config:
@@ -486,9 +663,7 @@ spec:
                 property: secret
               secretKey: secret
           refreshInterval: 1h
-          secretStoreRef:
-            kind: SecretStore
-            name: authelia
+          secretStoreRef: ref:authelia
           target:
             template:
               data:
@@ -516,7 +691,7 @@ spec:
             kubernetes:
               auth:
                 serviceAccount:
-                  name: authelia-reader
+                  name: ref:authelia-reader
               remoteNamespace: authelia
               server:
                 caProvider:

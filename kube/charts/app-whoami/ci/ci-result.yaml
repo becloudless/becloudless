@@ -55,6 +55,33 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      whoami:
+        deployments:
+          whoami:
+            labels:
+              app.kubernetes.io/component: whoami
+              app.kubernetes.io/instance: whoami
+            name: whoami
+            namespace: default
+        services:
+          whoami:
+            name: whoami
+            namespace: default
+      whoami-integration:
+        certManagerCertificates:
+          whoami-gateway:
+            name: whoami-gateway
+            namespace: default
+            secretName: tls-whoami-gateway
+        httpRoutes:
+          whoami:
+            name: whoami
+            namespace: default
+        listenerSets:
+          whoami:
+            name: whoami
+            namespace: default
     resources:
       deployments:
         whoami:
@@ -122,11 +149,11 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: whoami
   - name: app-cert-manager
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
-  - name: whoami
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -149,6 +176,33 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      whoami:
+        deployments:
+          whoami:
+            labels:
+              app.kubernetes.io/component: whoami
+              app.kubernetes.io/instance: whoami
+            name: whoami
+            namespace: default
+        services:
+          whoami:
+            name: whoami
+            namespace: default
+      whoami-integration:
+        certManagerCertificates:
+          whoami-gateway:
+            name: whoami-gateway
+            namespace: default
+            secretName: tls-whoami-gateway
+        httpRoutes:
+          whoami:
+            name: whoami
+            namespace: default
+        listenerSets:
+          whoami:
+            name: whoami
+            namespace: default
     resources:
       certManagerCertificates:
         whoami-gateway:
@@ -163,15 +217,12 @@ spec:
           hostnames:
             whoami: whoami.test.com
           parentRefs:
-            whoami:
-              group: gateway.networking.k8s.io
-              kind: ListenerSet
-              name: whoami
+            whoami: ref:whoami
           rules:
             root:
               backendRefs:
                 whoami:
-                  name: whoami
+                  name: ref:whoami
                   port: 8080
               filters:
                 authelia:
@@ -209,7 +260,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-whoami-gateway
+                    name: ref:whoami-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io

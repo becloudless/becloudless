@@ -165,9 +165,9 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: forgejo
   - name: app-cert-manager
     namespace: cert-manager
-  - name: forgejo
   - name: app-gateway-api
     namespace: gateway-api
   driftDetection:
@@ -192,6 +192,34 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      forgejo-integration:
+        certManagerCertificates:
+          forgejo-gateway:
+            name: forgejo-gateway
+            namespace: default
+            secretName: tls-forgejo-gateway
+        httpRoutes:
+          forgejo:
+            name: forgejo
+            namespace: default
+        listenerSets:
+          forgejo:
+            name: forgejo
+            namespace: default
+      forgejo-pre:
+        externalSecrets:
+          forgejo-oidc:
+            name: forgejo-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
     resources:
       certManagerCertificates:
         forgejo-gateway:
@@ -206,10 +234,7 @@ spec:
           hostnames:
             forgejo: forgejo.test.com
           parentRefs:
-            forgejo:
-              group: gateway.networking.k8s.io
-              kind: ListenerSet
-              name: forgejo
+            forgejo: ref:forgejo
           rules:
             root:
               backendRefs:
@@ -232,7 +257,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-forgejo-gateway
+                    name: ref:forgejo-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
@@ -304,10 +329,10 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
-  - name: authelia-pre
-    namespace: authelia
   - name: app-external-secrets
     namespace: external-secrets
+  - name: authelia-pre
+    namespace: authelia
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -328,6 +353,34 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      forgejo-integration:
+        certManagerCertificates:
+          forgejo-gateway:
+            name: forgejo-gateway
+            namespace: default
+            secretName: tls-forgejo-gateway
+        httpRoutes:
+          forgejo:
+            name: forgejo
+            namespace: default
+        listenerSets:
+          forgejo:
+            name: forgejo
+            namespace: default
+      forgejo-pre:
+        externalSecrets:
+          forgejo-oidc:
+            name: forgejo-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
     resources:
       externalSecrets:
         forgejo-oidc:
@@ -343,16 +396,14 @@ spec:
                 property: secret
               secretKey: secret
           refreshInterval: 1h
-          secretStoreRef:
-            kind: SecretStore
-            name: authelia
+          secretStoreRef: ref:authelia
       secretStores:
         authelia:
           provider:
             kubernetes:
               auth:
                 serviceAccount:
-                  name: authelia-reader
+                  name: ref:authelia-reader
               remoteNamespace: authelia
               server:
                 caProvider:

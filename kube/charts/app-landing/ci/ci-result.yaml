@@ -55,6 +55,37 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      landing:
+        configMaps:
+          landing-html:
+            name: landing-html
+            namespace: default
+        deployments:
+          landing:
+            labels:
+              app.kubernetes.io/component: landing
+              app.kubernetes.io/instance: landing
+            name: landing
+            namespace: default
+        services:
+          landing:
+            name: landing
+            namespace: default
+      landing-integration:
+        certManagerCertificates:
+          landing:
+            name: landing
+            namespace: default
+            secretName: tls-landing
+        httpRoutes:
+          landing:
+            name: landing
+            namespace: default
+        listenerSets:
+          landing:
+            name: landing
+            namespace: default
     resources:
       configMaps:
         landing-html:
@@ -123,7 +154,7 @@ spec:
               volumes:
                 html:
                   configMap:
-                    name: landing-html
+                    name: ref:landing-html
                   name: html
       services:
         landing:
@@ -148,11 +179,11 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: landing
   - name: app-cert-manager
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
-  - name: landing
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -175,6 +206,37 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      landing:
+        configMaps:
+          landing-html:
+            name: landing-html
+            namespace: default
+        deployments:
+          landing:
+            labels:
+              app.kubernetes.io/component: landing
+              app.kubernetes.io/instance: landing
+            name: landing
+            namespace: default
+        services:
+          landing:
+            name: landing
+            namespace: default
+      landing-integration:
+        certManagerCertificates:
+          landing:
+            name: landing
+            namespace: default
+            secretName: tls-landing
+        httpRoutes:
+          landing:
+            name: landing
+            namespace: default
+        listenerSets:
+          landing:
+            name: landing
+            namespace: default
     resources:
       certManagerCertificates:
         landing:
@@ -189,15 +251,12 @@ spec:
           hostnames:
             apex: test.com
           parentRefs:
-            landing:
-              group: gateway.networking.k8s.io
-              kind: ListenerSet
-              name: landing
+            landing: ref:landing
           rules:
             root:
               backendRefs:
                 landing:
-                  name: landing
+                  name: ref:landing
                   port: 80
       listenerSets:
         landing:
@@ -213,7 +272,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-landing
+                    name: ref:landing
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io

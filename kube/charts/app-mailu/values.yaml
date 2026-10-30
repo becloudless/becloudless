@@ -297,11 +297,9 @@ resources:
     # the secrets and the certificate of the services, created before they start
     mailu-pre:
       dependsOn:
-        cert-manager:
-          name: app-cert-manager
+        - name: app-cert-manager
           namespace: cert-manager
-        secret-generator:
-          name: app-secret-generator
+        - name: app-secret-generator
           namespace: secret-generator
       chart:
         spec:
@@ -355,10 +353,8 @@ resources:
     mailu:
       timeout: 15m # the first start of the databases and of clamav is slow
       dependsOn:
-        mailu-pre: # the secrets and the certificate
-          name: mailu-pre
-        longhorn: # the volumes
-          name: app-longhorn
+        - ref:mailu-pre # the secrets and the certificate
+        - name: app-longhorn # the volumes
           namespace: longhorn-system
       chart:
         spec:
@@ -607,13 +603,10 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        mailu:
-          name: mailu
-        cert-manager:
-          name: app-cert-manager
+        - ref:mailu
+        - name: app-cert-manager
           namespace: cert-manager
-        gateway-api:
-          name: app-gateway-api
+        - name: app-gateway-api
           namespace: gateway-api
       chart:
         spec:
@@ -645,7 +638,7 @@ resources:
                     mode: Terminate
                     certificateRefs:
                       tls:
-                        name: tls-mailu
+                        name: ref:certManagerCertificates/mailu
                   allowedRoutes:
                     namespaces:
                       from: Same
@@ -653,10 +646,7 @@ resources:
           httpRoutes:
             mailu:
               parentRefs:
-                mailu:
-                  group: gateway.networking.k8s.io
-                  kind: ListenerSet
-                  name: mailu
+                mailu: ref:mailu
               hostnames:
                 mail: mail.{{ .Values.app.domain }}
               rules:

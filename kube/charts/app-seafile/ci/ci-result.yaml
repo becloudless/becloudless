@@ -85,8 +85,8 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
-  - name: seafile-mariadb
   - name: seafile-pre
+  - name: seafile-mariadb
   - name: seafile-valkey
   driftDetection:
     mode: enabled
@@ -108,6 +108,74 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      seafile:
+        configMaps:
+          seafile-config:
+            name: seafile-config
+            namespace: default
+        deployments:
+          seafile:
+            labels:
+              app.kubernetes.io/component: seafile
+              app.kubernetes.io/instance: seafile
+            name: seafile
+            namespace: default
+        persistentVolumeClaims:
+          seafile-data:
+            name: seafile-data
+            namespace: default
+        services:
+          seafile:
+            name: seafile
+            namespace: default
+      seafile-integration:
+        certManagerCertificates:
+          seafile-gateway:
+            name: seafile-gateway
+            namespace: default
+            secretName: tls-seafile-gateway
+        httpRoutes:
+          seafile:
+            name: seafile
+            namespace: default
+        listenerSets:
+          seafile:
+            name: seafile
+            namespace: default
+      seafile-mariadb:
+        deployments:
+          seafile-mariadb:
+            labels:
+              app.kubernetes.io/component: seafile-mariadb
+              app.kubernetes.io/instance: seafile-mariadb
+            name: seafile-mariadb
+            namespace: default
+        persistentVolumeClaims:
+          seafile-mariadb:
+            name: seafile-mariadb
+            namespace: default
+        services:
+          seafile-mariadb:
+            name: seafile-mariadb
+            namespace: default
+      seafile-pre:
+        externalSecrets:
+          seafile-oidc:
+            name: seafile-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          seafile-generated:
+            name: seafile-generated
+            namespace: default
     resources:
       configMaps:
         seafile-config:
@@ -176,23 +244,23 @@ spec:
                     INIT_SEAFILE_ADMIN_PASSWORD:
                       secretKeyRef:
                         key: admin-password
-                        name: seafile-generated
+                        name: ref:seafile-generated
                     INIT_SEAFILE_MYSQL_ROOT_PASSWORD:
                       secretKeyRef:
                         key: db-root-password
-                        name: seafile-generated
+                        name: ref:seafile-generated
                     JWT_PRIVATE_KEY:
                       secretKeyRef:
                         key: jwt-private-key
-                        name: seafile-generated
+                        name: ref:seafile-generated
                     OAUTH_CLIENT_ID:
                       secretKeyRef:
                         key: client-id
-                        name: seafile-oidc
+                        name: ref:seafile-oidc
                     OAUTH_CLIENT_SECRET:
                       secretKeyRef:
                         key: secret
-                        name: seafile-oidc
+                        name: ref:seafile-oidc
                     OAUTH_ISSUER_URL: https://authelia.test.com
                     REDIS_HOST: seafile-valkey
                     REDIS_PASSWORD:
@@ -206,7 +274,7 @@ spec:
                     SEAFILE_MYSQL_DB_PASSWORD:
                       secretKeyRef:
                         key: db-password
-                        name: seafile-generated
+                        name: ref:seafile-generated
                     SEAFILE_MYSQL_DB_PORT: "3306"
                     SEAFILE_MYSQL_DB_SEAFILE_DB_NAME: seafile_db
                     SEAFILE_MYSQL_DB_SEAHUB_DB_NAME: seahub_db
@@ -266,12 +334,12 @@ spec:
               volumes:
                 config:
                   configMap:
-                    name: seafile-config
+                    name: ref:seafile-config
                   name: config
                 data:
                   name: data
                   persistentVolumeClaim:
-                    claimName: seafile-data
+                    claimName: ref:seafile-data
       persistentVolumeClaims:
         seafile-data:
           resources:
@@ -300,11 +368,11 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: seafile
   - name: app-cert-manager
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
-  - name: seafile
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -327,6 +395,74 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      seafile:
+        configMaps:
+          seafile-config:
+            name: seafile-config
+            namespace: default
+        deployments:
+          seafile:
+            labels:
+              app.kubernetes.io/component: seafile
+              app.kubernetes.io/instance: seafile
+            name: seafile
+            namespace: default
+        persistentVolumeClaims:
+          seafile-data:
+            name: seafile-data
+            namespace: default
+        services:
+          seafile:
+            name: seafile
+            namespace: default
+      seafile-integration:
+        certManagerCertificates:
+          seafile-gateway:
+            name: seafile-gateway
+            namespace: default
+            secretName: tls-seafile-gateway
+        httpRoutes:
+          seafile:
+            name: seafile
+            namespace: default
+        listenerSets:
+          seafile:
+            name: seafile
+            namespace: default
+      seafile-mariadb:
+        deployments:
+          seafile-mariadb:
+            labels:
+              app.kubernetes.io/component: seafile-mariadb
+              app.kubernetes.io/instance: seafile-mariadb
+            name: seafile-mariadb
+            namespace: default
+        persistentVolumeClaims:
+          seafile-mariadb:
+            name: seafile-mariadb
+            namespace: default
+        services:
+          seafile-mariadb:
+            name: seafile-mariadb
+            namespace: default
+      seafile-pre:
+        externalSecrets:
+          seafile-oidc:
+            name: seafile-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          seafile-generated:
+            name: seafile-generated
+            namespace: default
     resources:
       certManagerCertificates:
         seafile-gateway:
@@ -341,15 +477,12 @@ spec:
           hostnames:
             seafile: seafile.test.com
           parentRefs:
-            seafile:
-              group: gateway.networking.k8s.io
-              kind: ListenerSet
-              name: seafile
+            seafile: ref:seafile
           rules:
             root:
               backendRefs:
                 seafile:
-                  name: seafile
+                  name: ref:seafile
                   port: 80
               timeouts:
                 request: 0s
@@ -367,7 +500,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-seafile-gateway
+                    name: ref:seafile-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
@@ -412,6 +545,74 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      seafile:
+        configMaps:
+          seafile-config:
+            name: seafile-config
+            namespace: default
+        deployments:
+          seafile:
+            labels:
+              app.kubernetes.io/component: seafile
+              app.kubernetes.io/instance: seafile
+            name: seafile
+            namespace: default
+        persistentVolumeClaims:
+          seafile-data:
+            name: seafile-data
+            namespace: default
+        services:
+          seafile:
+            name: seafile
+            namespace: default
+      seafile-integration:
+        certManagerCertificates:
+          seafile-gateway:
+            name: seafile-gateway
+            namespace: default
+            secretName: tls-seafile-gateway
+        httpRoutes:
+          seafile:
+            name: seafile
+            namespace: default
+        listenerSets:
+          seafile:
+            name: seafile
+            namespace: default
+      seafile-mariadb:
+        deployments:
+          seafile-mariadb:
+            labels:
+              app.kubernetes.io/component: seafile-mariadb
+              app.kubernetes.io/instance: seafile-mariadb
+            name: seafile-mariadb
+            namespace: default
+        persistentVolumeClaims:
+          seafile-mariadb:
+            name: seafile-mariadb
+            namespace: default
+        services:
+          seafile-mariadb:
+            name: seafile-mariadb
+            namespace: default
+      seafile-pre:
+        externalSecrets:
+          seafile-oidc:
+            name: seafile-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          seafile-generated:
+            name: seafile-generated
+            namespace: default
     resources:
       deployments:
         seafile-mariadb:
@@ -427,7 +628,7 @@ spec:
                     MARIADB_ROOT_PASSWORD:
                       secretKeyRef:
                         key: db-root-password
-                        name: seafile-generated
+                        name: ref:seafile-generated
                   image: docker.io/library/mariadb:10.11.19
                   livenessProbe:
                     failureThreshold: 6
@@ -465,7 +666,7 @@ spec:
                 data:
                   name: data
                   persistentVolumeClaim:
-                    claimName: seafile-mariadb
+                    claimName: ref:seafile-mariadb
                 run:
                   emptyDir: {}
                   name: run
@@ -497,12 +698,12 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
-  - name: authelia-pre
-    namespace: authelia
-  - name: app-external-secrets
-    namespace: external-secrets
   - name: app-secret-generator
     namespace: secret-generator
+  - name: app-external-secrets
+    namespace: external-secrets
+  - name: authelia-pre
+    namespace: authelia
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -523,6 +724,74 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      seafile:
+        configMaps:
+          seafile-config:
+            name: seafile-config
+            namespace: default
+        deployments:
+          seafile:
+            labels:
+              app.kubernetes.io/component: seafile
+              app.kubernetes.io/instance: seafile
+            name: seafile
+            namespace: default
+        persistentVolumeClaims:
+          seafile-data:
+            name: seafile-data
+            namespace: default
+        services:
+          seafile:
+            name: seafile
+            namespace: default
+      seafile-integration:
+        certManagerCertificates:
+          seafile-gateway:
+            name: seafile-gateway
+            namespace: default
+            secretName: tls-seafile-gateway
+        httpRoutes:
+          seafile:
+            name: seafile
+            namespace: default
+        listenerSets:
+          seafile:
+            name: seafile
+            namespace: default
+      seafile-mariadb:
+        deployments:
+          seafile-mariadb:
+            labels:
+              app.kubernetes.io/component: seafile-mariadb
+              app.kubernetes.io/instance: seafile-mariadb
+            name: seafile-mariadb
+            namespace: default
+        persistentVolumeClaims:
+          seafile-mariadb:
+            name: seafile-mariadb
+            namespace: default
+        services:
+          seafile-mariadb:
+            name: seafile-mariadb
+            namespace: default
+      seafile-pre:
+        externalSecrets:
+          seafile-oidc:
+            name: seafile-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          seafile-generated:
+            name: seafile-generated
+            namespace: default
     resources:
       externalSecrets:
         seafile-oidc:
@@ -538,16 +807,14 @@ spec:
                 property: secret
               secretKey: secret
           refreshInterval: 1h
-          secretStoreRef:
-            kind: SecretStore
-            name: authelia
+          secretStoreRef: ref:authelia
       secretStores:
         authelia:
           provider:
             kubernetes:
               auth:
                 serviceAccount:
-                  name: authelia-reader
+                  name: ref:authelia-reader
               remoteNamespace: authelia
               server:
                 caProvider:

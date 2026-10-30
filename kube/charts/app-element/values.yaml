@@ -14,8 +14,7 @@ resources:
   # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     element:
-      endpointSelector:
-        matchLabels: {app.kubernetes.io/instance: element, app.kubernetes.io/component: element}
+      endpointSelector: ref:element
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
@@ -102,7 +101,7 @@ resources:
                     config:
                       name: config
                       configMap:
-                        name: element-config
+                        name: ref:element-config
                     nginx-conf:
                       name: nginx-conf
                       emptyDir: {}
@@ -121,13 +120,10 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        element:
-          name: element
-        cert-manager:
-          name: app-cert-manager
+        - ref:element
+        - name: app-cert-manager
           namespace: cert-manager
-        gateway-api:
-          name: app-gateway-api
+        - name: app-gateway-api
           namespace: gateway-api
       chart:
         spec:
@@ -168,7 +164,7 @@ resources:
                     mode: Terminate
                     certificateRefs:
                       tls:
-                        name: tls-element-gateway
+                        name: ref:element-gateway
                   allowedRoutes:
                     namespaces:
                       from: Same
@@ -176,15 +172,12 @@ resources:
           httpRoutes:
             element:
               parentRefs:
-                element:
-                  group: gateway.networking.k8s.io
-                  kind: ListenerSet
-                  name: element
+                element: ref:element
               hostnames:
                 element: element.{{ .Values.app.domain }}
               rules:
                 root:
                   backendRefs:
                     element:
-                      name: element
+                      name: ref:element
                       port: 80

@@ -9,6 +9,7 @@ import (
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/arraysToMaps"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/itemFields"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/listShorthands"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/refs"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/stringifyFields"
 )
 
@@ -212,5 +213,30 @@ func TestParseCRDs_ParsesListShorthands(t *testing.T) {
 	}
 	if got := file.Resources[0].Mutations.ListShorthands; !reflect.DeepEqual(got, want) {
 		t.Errorf("Mutations.ListShorthands = %#v, want %#v", got, want)
+	}
+}
+
+func TestParseCRDs_ParsesRefs(t *testing.T) {
+	path := writeResourcesYAML(t, `resources:
+  - name: routes
+    sourceCRD:
+      url: https://example.invalid/routes.yaml
+      crdVersion: v1
+    mutations:
+      refs:
+        parentRefs: {kinds: [listenerSets, gateways], as: gatewayRef}
+        rules.backendRefs.name: {kinds: [services], as: name}
+`)
+
+	file, err := newResourcesFile(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := refs.Refs{
+		"parentRefs":             {Kinds: []string{"listenerSets", "gateways"}, As: "gatewayRef"},
+		"rules.backendRefs.name": {Kinds: []string{"services"}, As: "name"},
+	}
+	if got := file.Resources[0].Mutations.Refs; !reflect.DeepEqual(got, want) {
+		t.Errorf("Mutations.Refs = %#v, want %#v", got, want)
 	}
 }

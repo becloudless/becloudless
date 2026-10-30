@@ -181,6 +181,18 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      cert-manager-post:
+        certManagerClusterIssuers:
+          letsencrypt-prod:
+            name: letsencrypt-prod
+            namespace: default
+          letsencrypt-staging:
+            name: letsencrypt-staging
+            namespace: default
+          self-signed:
+            name: self-signed
+            namespace: default
     resources:
       certManagerClusterIssuers:
         letsencrypt-prod:

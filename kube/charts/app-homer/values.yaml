@@ -5,8 +5,7 @@ resources:
   # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     homer:
-      endpointSelector:
-        matchLabels: {app.kubernetes.io/instance: homer, app.kubernetes.io/component: homer}
+      endpointSelector: ref:homer
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
@@ -327,7 +326,7 @@ resources:
                     config:
                       name: config
                       configMap:
-                        name: homer-config
+                        name: ref:homer-config
 
           services:
             homer:
@@ -342,13 +341,10 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        homer:
-          name: homer
-        cert-manager:
-          name: app-cert-manager
+        - ref:homer
+        - name: app-cert-manager
           namespace: cert-manager
-        gateway-api:
-          name: app-gateway-api
+        - name: app-gateway-api
           namespace: gateway-api
       chart:
         spec:
@@ -388,7 +384,7 @@ resources:
                     mode: Terminate
                     certificateRefs:
                       tls:
-                        name: tls-homer
+                        name: ref:homer
                   allowedRoutes:
                     namespaces:
                       from: Same
@@ -396,10 +392,7 @@ resources:
           httpRoutes:
             homer:
               parentRefs:
-                homer:
-                  group: gateway.networking.k8s.io
-                  kind: ListenerSet
-                  name: homer
+                homer: ref:homer
               hostnames:
                 homer: homer.{{ .Values.app.domain }}
               rules:
@@ -428,5 +421,5 @@ resources:
                             x-forwarded-for: x-forwarded-for
                   backendRefs:
                     homer:
-                      name: homer
+                      name: ref:homer
                       port: 8080

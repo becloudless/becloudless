@@ -17,8 +17,7 @@ resources:
   # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     jellyfin:
-      endpointSelector:
-        matchLabels: {app.kubernetes.io/instance: jellyfin, app.kubernetes.io/component: jellyfin}
+      endpointSelector: ref:jellyfin
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
@@ -47,14 +46,11 @@ resources:
     # the secrets of jellyfin: the OIDC client (copied from authelia) and the administrator, before jellyfin starts
     jellyfin-pre:
       dependsOn:
-        external-secrets:
-          name: app-external-secrets
+        - name: app-external-secrets
           namespace: external-secrets
-        secret-generator:
-          name: app-secret-generator
+        - name: app-secret-generator
           namespace: secret-generator
-        authelia-pre: # the generated secret of the client and the right to read it
-          name: authelia-pre
+        - name: authelia-pre # the generated secret of the client and the right to read it
           namespace: authelia
       chart:
         spec:
@@ -84,10 +80,7 @@ resources:
 
           roleBindings:
             seerr-secrets-reader:
-              roleRef:
-                apiGroup: rbac.authorization.k8s.io
-                kind: Role
-                name: seerr-secrets-reader
+              roleRef: ref:seerr-secrets-reader
               subjects:
                 jellyfin-reader:
                   kind: ServiceAccount
@@ -110,14 +103,12 @@ resources:
                       key: ca.crt
                   auth:
                     serviceAccount:
-                      name: authelia-reader
+                      name: ref:authelia-reader
 
           externalSecrets:
             jellyfin-oidc:
               refreshInterval: 1h
-              secretStoreRef:
-                kind: SecretStore
-                name: authelia
+              secretStoreRef: ref:authelia
               data:
                 client-id:
                   secretKey: client-id
@@ -132,8 +123,7 @@ resources:
 
     jellyfin:
       dependsOn:
-        jellyfin-pre: # the secrets of the OIDC client and of the administrator
-          name: jellyfin-pre
+        - ref:jellyfin-pre # the secrets of the OIDC client and of the administrator
       chart:
         spec:
           chart: ./kube/charts/base-loader
@@ -330,18 +320,18 @@ resources:
                         JELLYFIN_USER: admin
                         JELLYFIN_PASSWORD:
                           secretKeyRef:
-                            name: jellyfin-admin
+                            name: ref:jellyfin-admin
                             key: password
                         PUBLIC_URL: https://jellyfin.{{ .Values.app.domain }}
                         SERVER_NAME: "{{ .Values.app.name }}"
                         ISSUER_URL: https://authelia.{{ .Values.app.domain }}
                         CLIENT_ID:
                           secretKeyRef:
-                            name: jellyfin-oidc
+                            name: ref:jellyfin-oidc
                             key: client-id
                         CLIENT_SECRET:
                           secretKeyRef:
-                            name: jellyfin-oidc
+                            name: ref:jellyfin-oidc
                             key: secret
                       securityContext:
                         runAsUser: 1000
@@ -399,15 +389,15 @@ resources:
                     config:
                       name: config
                       persistentVolumeClaim:
-                        claimName: jellyfin-config
+                        claimName: ref:jellyfin-config
                     network:
                       name: network
                       configMap:
-                        name: jellyfin-config
+                        name: ref:jellyfin-config
                     scripts:
                       name: scripts
                       configMap:
-                        name: jellyfin-scripts
+                        name: ref:jellyfin-scripts
                     media:
                       name: media
                       emptyDir: {} # TODO
@@ -425,13 +415,10 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        jellyfin:
-          name: jellyfin
-        cert-manager:
-          name: app-cert-manager
+        - ref:jellyfin
+        - name: app-cert-manager
           namespace: cert-manager
-        gateway-api:
-          name: app-gateway-api
+        - name: app-gateway-api
           namespace: gateway-api
       chart:
         spec:
@@ -473,7 +460,7 @@ resources:
                     mode: Terminate
                     certificateRefs:
                       tls:
-                        name: tls-jellyfin-gateway
+                        name: ref:jellyfin-gateway
                   allowedRoutes:
                     namespaces:
                       from: Same
@@ -481,17 +468,14 @@ resources:
           httpRoutes:
             jellyfin:
               parentRefs:
-                jellyfin:
-                  group: gateway.networking.k8s.io
-                  kind: ListenerSet
-                  name: jellyfin
+                jellyfin: ref:jellyfin
               hostnames:
                 jellyfin: jellyfin.{{ .Values.app.domain }}
               rules:
                 root:
                   backendRefs:
                     jellyfin:
-                      name: jellyfin
+                      name: ref:jellyfin
                       port: 8096
                   timeouts:
                     request: 0s # streams can be long

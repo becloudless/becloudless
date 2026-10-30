@@ -63,8 +63,8 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
-  - name: paperless-postgresql
   - name: paperless-pre
+  - name: paperless-postgresql
   - name: paperless-valkey
   driftDetection:
     mode: enabled
@@ -86,6 +86,54 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      paperless:
+        deployments:
+          paperless:
+            labels:
+              app.kubernetes.io/component: paperless
+              app.kubernetes.io/instance: paperless
+            name: paperless
+            namespace: default
+        persistentVolumeClaims:
+          paperless-data:
+            name: paperless-data
+            namespace: default
+        services:
+          paperless:
+            name: paperless
+            namespace: default
+      paperless-integration:
+        certManagerCertificates:
+          paperless-gateway:
+            name: paperless-gateway
+            namespace: default
+            secretName: tls-paperless-gateway
+        httpRoutes:
+          paperless:
+            name: paperless
+            namespace: default
+        listenerSets:
+          paperless:
+            name: paperless
+            namespace: default
+      paperless-pre:
+        externalSecrets:
+          paperless-oidc:
+            name: paperless-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          paperless-generated:
+            name: paperless-generated
+            namespace: default
     resources:
       deployments:
         paperless:
@@ -104,17 +152,17 @@ spec:
                     OIDC_CLIENT_ID:
                       secretKeyRef:
                         key: client-id
-                        name: paperless-oidc
+                        name: ref:paperless-oidc
                     OIDC_CLIENT_SECRET:
                       secretKeyRef:
                         key: secret
-                        name: paperless-oidc
+                        name: ref:paperless-oidc
                     PAPERLESS_ACCOUNT_EMAIL_VERIFICATION: none
                     PAPERLESS_ADMIN_MAIL: paperless_admin@test.com
                     PAPERLESS_ADMIN_PASSWORD:
                       secretKeyRef:
                         key: admin-password
-                        name: paperless-generated
+                        name: ref:paperless-generated
                     PAPERLESS_ADMIN_USER: paperless_admin
                     PAPERLESS_APPS: allauth.socialaccount.providers.openid_connect
                     PAPERLESS_CONSUMER_DISABLE: "true"
@@ -135,7 +183,7 @@ spec:
                     PAPERLESS_SECRET_KEY:
                       secretKeyRef:
                         key: secret-key
-                        name: paperless-generated
+                        name: ref:paperless-generated
                     PAPERLESS_SOCIAL_ACCOUNT_SYNC_GROUPS: "true"
                     PAPERLESS_SOCIAL_ACCOUNT_SYNC_SUPERUSER_GROUP: role_admin
                     PAPERLESS_SOCIAL_AUTO_SIGNUP: "true"
@@ -197,7 +245,7 @@ spec:
                 data:
                   name: data
                   persistentVolumeClaim:
-                    claimName: paperless-data
+                    claimName: ref:paperless-data
       persistentVolumeClaims:
         paperless-data:
           resources:
@@ -226,11 +274,11 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: paperless
   - name: app-cert-manager
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
-  - name: paperless
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -253,6 +301,54 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      paperless:
+        deployments:
+          paperless:
+            labels:
+              app.kubernetes.io/component: paperless
+              app.kubernetes.io/instance: paperless
+            name: paperless
+            namespace: default
+        persistentVolumeClaims:
+          paperless-data:
+            name: paperless-data
+            namespace: default
+        services:
+          paperless:
+            name: paperless
+            namespace: default
+      paperless-integration:
+        certManagerCertificates:
+          paperless-gateway:
+            name: paperless-gateway
+            namespace: default
+            secretName: tls-paperless-gateway
+        httpRoutes:
+          paperless:
+            name: paperless
+            namespace: default
+        listenerSets:
+          paperless:
+            name: paperless
+            namespace: default
+      paperless-pre:
+        externalSecrets:
+          paperless-oidc:
+            name: paperless-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          paperless-generated:
+            name: paperless-generated
+            namespace: default
     resources:
       certManagerCertificates:
         paperless-gateway:
@@ -267,15 +363,12 @@ spec:
           hostnames:
             paperless: paperless.test.com
           parentRefs:
-            paperless:
-              group: gateway.networking.k8s.io
-              kind: ListenerSet
-              name: paperless
+            paperless: ref:paperless
           rules:
             root:
               backendRefs:
                 paperless:
-                  name: paperless
+                  name: ref:paperless
                   port: 8000
               timeouts:
                 request: 0s
@@ -293,7 +386,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-paperless-gateway
+                    name: ref:paperless-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
@@ -367,12 +460,12 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
-  - name: authelia-pre
-    namespace: authelia
-  - name: app-external-secrets
-    namespace: external-secrets
   - name: app-secret-generator
     namespace: secret-generator
+  - name: app-external-secrets
+    namespace: external-secrets
+  - name: authelia-pre
+    namespace: authelia
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -393,6 +486,54 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      paperless:
+        deployments:
+          paperless:
+            labels:
+              app.kubernetes.io/component: paperless
+              app.kubernetes.io/instance: paperless
+            name: paperless
+            namespace: default
+        persistentVolumeClaims:
+          paperless-data:
+            name: paperless-data
+            namespace: default
+        services:
+          paperless:
+            name: paperless
+            namespace: default
+      paperless-integration:
+        certManagerCertificates:
+          paperless-gateway:
+            name: paperless-gateway
+            namespace: default
+            secretName: tls-paperless-gateway
+        httpRoutes:
+          paperless:
+            name: paperless
+            namespace: default
+        listenerSets:
+          paperless:
+            name: paperless
+            namespace: default
+      paperless-pre:
+        externalSecrets:
+          paperless-oidc:
+            name: paperless-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          paperless-generated:
+            name: paperless-generated
+            namespace: default
     resources:
       externalSecrets:
         paperless-oidc:
@@ -408,16 +549,14 @@ spec:
                 property: secret
               secretKey: secret
           refreshInterval: 1h
-          secretStoreRef:
-            kind: SecretStore
-            name: authelia
+          secretStoreRef: ref:authelia
       secretStores:
         authelia:
           provider:
             kubernetes:
               auth:
                 serviceAccount:
-                  name: authelia-reader
+                  name: ref:authelia-reader
               remoteNamespace: authelia
               server:
                 caProvider:

@@ -38,8 +38,7 @@ resources:
   # The database has its own policy, from the postgresql chart.
   ciliumNetworkPolicies:
     lldap:
-      endpointSelector:
-        matchLabels: {app.kubernetes.io/instance: lldap, app.kubernetes.io/component: lldap}
+      endpointSelector: ref:lldap
       ingress:
         authelia:
           fromEndpoints:
@@ -69,8 +68,7 @@ resources:
       egress:
         lldap:
           toEndpoints:
-            lldap:
-              matchLabels: {app.kubernetes.io/instance: lldap, app.kubernetes.io/component: lldap}
+            lldap: ref:lldap
           toPorts: [17170]
 
   fluxHelmReleases:
@@ -85,14 +83,11 @@ resources:
             name: bcl
             namespace: apps
       dependsOn: # the certificates, the cluster and the volume snapshots
-        cert-manager:
-          name: app-cert-manager
+        - name: app-cert-manager
           namespace: cert-manager
-        cnpg:
-          name: app-cnpg
+        - name: app-cnpg
           namespace: cnpg-system
-        longhorn:
-          name: app-longhorn
+        - name: app-longhorn
           namespace: longhorn-system
       values:
         instances: "{{ .Values.app.scaling.dbReplicas }}"
@@ -107,11 +102,9 @@ resources:
     # the secrets and the certificate of the pod, created before it starts
     lldap-pre:
       dependsOn:
-        cert-manager:
-          name: app-cert-manager
+        - name: app-cert-manager
           namespace: cert-manager
-        secret-generator:
-          name: app-secret-generator
+        - name: app-secret-generator
           namespace: secret-generator
       chart:
         spec:
@@ -157,10 +150,7 @@ resources:
 
           roleBindings:
             authelia-secrets-reader:
-              roleRef:
-                apiGroup: rbac.authorization.k8s.io
-                kind: Role
-                name: authelia-secrets-reader
+              roleRef: ref:authelia-secrets-reader
               subjects:
                 lldap-reader:
                   kind: ServiceAccount
@@ -179,10 +169,8 @@ resources:
 
     lldap:
       dependsOn:
-        lldap-pre:
-          name: lldap-pre
-        lldap-postgresql:
-          name: lldap-postgresql
+        - ref:lldap-pre
+        - ref:lldap-postgresql
       chart:
         spec:
           chart: ./kube/charts/base-loader
@@ -273,11 +261,11 @@ resources:
                     cert:
                       name: cert
                       secret:
-                        secretName: tls-lldaps
+                        secretName: ref:tls-lldaps
                     data:
                       name: data
                       configMap:
-                        name: lldap-config
+                        name: ref:lldap-config
                     dbcert:
                       name: dbcert
                       secret:
@@ -319,8 +307,7 @@ resources:
     # (the script, the env...) is a change of an immutable field of the existing Job: bump `revision`, or delete the Job.
     lldap-post:
       dependsOn:
-        lldap:
-          name: lldap
+        - ref:lldap
       chart:
         spec:
           chart: ./kube/charts/base-loader
@@ -376,11 +363,11 @@ resources:
                         LLDAP_URL: http://lldap:17170
                         LLDAP_ADMIN_USERNAME:
                           secretKeyRef:
-                            name: lldap-generated
+                            name: ref:lldap-generated
                             key: LLDAP_LDAP_USER_DN
                         LLDAP_ADMIN_PASSWORD:
                           secretKeyRef:
-                            name: lldap-generated
+                            name: ref:lldap-generated
                             key: LLDAP_LDAP_USER_PASS
                         DO_CLEANUP: "true"
                       volumeMounts:
@@ -396,11 +383,11 @@ resources:
                     setup:
                       name: setup
                       configMap:
-                        name: lldap-bootstrap
+                        name: ref:lldap-bootstrap
                     authelia:
                       name: authelia
                       secret:
-                        secretName: lldap-authelia
+                        secretName: ref:lldap-authelia
 
     # the public exposure, applied once lldap is deployed and not waited for
     lldap-integration:
@@ -409,13 +396,10 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        lldap-post:
-          name: lldap-post
-        cert-manager:
-          name: app-cert-manager
+        - ref:lldap-post
+        - name: app-cert-manager
           namespace: cert-manager
-        gateway-api:
-          name: app-gateway-api
+        - name: app-gateway-api
           namespace: gateway-api
       chart:
         spec:
@@ -457,7 +441,7 @@ resources:
                     mode: Terminate
                     certificateRefs:
                       tls:
-                        name: tls-lldap-gateway
+                        name: ref:lldap-gateway
                   allowedRoutes:
                     namespaces:
                       from: Same
@@ -486,7 +470,7 @@ resources:
                 root:
                   backendRefs:
                     lldap:
-                      name: lldap
+                      name: ref:lldap
                       port: 17170
 
           tlsRoutes:

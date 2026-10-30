@@ -65,6 +65,15 @@ resources:
           - template.spec.containers.args
           - template.spec.initContainers.command
           - template.spec.initContainers.args
+      refs: &podRefs
+        template.spec.serviceAccountName: {kinds: [serviceAccounts], as: name}
+        template.spec.volumes.persistentVolumeClaim.claimName: {kinds: [persistentVolumeClaims], as: name}
+        template.spec.volumes.configMap.name: {kinds: [configMaps], as: name}
+        template.spec.volumes.secret.secretName: {kinds: &secretKinds [certManagerCertificates, externalSecrets, stringSecrets, secrets, sealedSecrets], as: secretName}
+        template.spec.containers.env.configMapKeyRef.name: {kinds: [configMaps], as: name}
+        template.spec.containers.env.secretKeyRef.name: {kinds: *secretKinds, as: secretName}
+        template.spec.initContainers.env.configMapKeyRef.name: {kinds: [configMaps], as: name}
+        template.spec.initContainers.env.secretKeyRef.name: {kinds: *secretKinds, as: secretName}
   - name: statefulSets
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__apps__v1_openapi.json
@@ -78,6 +87,7 @@ resources:
           - template.spec.containers.args
           - template.spec.initContainers.command
           - template.spec.initContainers.args
+      refs: *podRefs
   - name: daemonSets
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__apps__v1_openapi.json
@@ -91,6 +101,7 @@ resources:
           - template.spec.containers.args
           - template.spec.initContainers.command
           - template.spec.initContainers.args
+      refs: *podRefs
   - name: cronJobs
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__batch__v1_openapi.json
@@ -104,6 +115,15 @@ resources:
           - jobTemplate.spec.template.spec.containers.args
           - jobTemplate.spec.template.spec.initContainers.command
           - jobTemplate.spec.template.spec.initContainers.args
+      refs:
+        jobTemplate.spec.template.spec.serviceAccountName: {kinds: [serviceAccounts], as: name}
+        jobTemplate.spec.template.spec.volumes.persistentVolumeClaim.claimName: {kinds: [persistentVolumeClaims], as: name}
+        jobTemplate.spec.template.spec.volumes.configMap.name: {kinds: [configMaps], as: name}
+        jobTemplate.spec.template.spec.volumes.secret.secretName: {kinds: *secretKinds, as: secretName}
+        jobTemplate.spec.template.spec.containers.env.configMapKeyRef.name: {kinds: [configMaps], as: name}
+        jobTemplate.spec.template.spec.containers.env.secretKeyRef.name: {kinds: *secretKinds, as: secretName}
+        jobTemplate.spec.template.spec.initContainers.env.configMapKeyRef.name: {kinds: [configMaps], as: name}
+        jobTemplate.spec.template.spec.initContainers.env.secretKeyRef.name: {kinds: *secretKinds, as: secretName}
   - name: jobs
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__batch__v1_openapi.json
@@ -117,6 +137,7 @@ resources:
           - template.spec.containers.args
           - template.spec.initContainers.command
           - template.spec.initContainers.args
+      refs: *podRefs
   - name: serviceAccounts
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
@@ -144,6 +165,9 @@ resources:
     mutations:
       extractContent:
         contentIsOutOfSpec: true
+      refs:
+        roleRef: {kinds: [roles, clusterRoles], as: roleRef}
+        subjects: {kinds: [serviceAccounts], as: serviceAccountSubject}
   - name: clusterRoles
     clusterScoped: true
     sourceOpenAPI:
@@ -164,6 +188,9 @@ resources:
     mutations:
       extractContent:
         contentIsOutOfSpec: true
+      refs:
+        roleRef: {kinds: [clusterRoles], as: roleRef}
+        subjects: {kinds: [serviceAccounts], as: serviceAccountSubject}
   - name: podDisruptionBudgets
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__policy__v1_openapi.json
@@ -196,10 +223,17 @@ resources:
       # experimental channel for the ExternalAuth filter (forward auth), keep in sync with app-gateway-api
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.6.1/config/crd/experimental/gateway.networking.k8s.io_httproutes.yaml
       crdVersion: v1
+    mutations:
+      refs:
+        parentRefs: {kinds: [listenerSets, gateways], as: gatewayRef}
+        rules.backendRefs.name: {kinds: [services], as: name}
   - name: listenerSets
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.6.1/config/crd/standard/gateway.networking.k8s.io_listenersets.yaml
       crdVersion: v1
+    mutations:
+      refs:
+        listeners.tls.certificateRefs.name: {kinds: *secretKinds, as: secretName}
   - name: grpcRoutes
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_grpcroutes.yaml
@@ -272,6 +306,12 @@ resources:
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/helm-controller/main/config/crd/bases/helm.toolkit.fluxcd.io_helmreleases.yaml
       crdVersion: v2
+    mutations:
+      arraysToMaps:
+        ignore:
+          - dependsOn # a list of the HelmReleases, there is nothing to merge: `- ref:db`, or `- {name, namespace}` for another release
+      refs:
+        dependsOn: {kinds: [fluxHelmReleases], as: helmReleaseRef}
   - name: fluxKustomizations
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/kustomize-controller/main/config/crd/bases/kustomize.toolkit.fluxcd.io_kustomizations.yaml
@@ -333,10 +373,16 @@ resources:
     sourceCRD:
       url: https://raw.githubusercontent.com/external-secrets/external-secrets/main/config/crds/bases/external-secrets.io_secretstores.yaml
       crdVersion: v1
+    mutations:
+      refs:
+        provider.kubernetes.auth.serviceAccount.name: {kinds: [serviceAccounts], as: name}
   - name: externalSecrets
     sourceCRD:
       url: https://raw.githubusercontent.com/external-secrets/external-secrets/main/config/crds/bases/external-secrets.io_externalsecrets.yaml
       crdVersion: v1
+    mutations:
+      refs:
+        secretStoreRef: {kinds: [secretStores], as: secretStoreRef}
   - name: fluxAlerts
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_alerts.yaml
@@ -424,6 +470,12 @@ resources:
         ingressDeny.toPorts: *ciliumToPorts
         egress.toPorts: *ciliumToPorts
         egressDeny.toPorts: *ciliumToPorts
+      refs: # `toEndpoints: {db: ref:db}` selects the pods of a workload of the release, `endpointSelector: ref:web` the ones of the policy
+        ingress.fromEndpoints: &ciliumPodSelector {kinds: [deployments, statefulSets, daemonSets, jobs, cronJobs], as: podSelector}
+        ingressDeny.fromEndpoints: *ciliumPodSelector
+        egress.toEndpoints: *ciliumPodSelector
+        egressDeny.toEndpoints: *ciliumPodSelector
+        endpointSelector: *ciliumPodSelector
   - name: ciliumClusterwideNetworkPolicies
     clusterScoped: true
     sourceCRD:

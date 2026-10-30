@@ -85,10 +85,10 @@ spec:
         namespace: apps
   dependsOn:
   - name: cilium
-  - name: app-coredns
-    namespace: kube-system
   - name: app-flux
     namespace: flux-system
+  - name: app-coredns
+    namespace: kube-system
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -109,6 +109,32 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      cilium-policies:
+        ciliumClusterwideNetworkPolicies:
+          allow-dns:
+            name: allow-dns
+            namespace: default
+          default-deny:
+            name: default-deny
+            namespace: default
+      cilium-post:
+        ciliumBGPAdvertisements:
+          bgp-advertisement:
+            name: bgp-advertisement
+            namespace: default
+        ciliumBGPPeerConfigs:
+          bgp-peer-config:
+            name: bgp-peer-config
+            namespace: default
+        gateways:
+          shared:
+            name: shared
+            namespace: default
+        httpRoutes:
+          https-redirect:
+            name: https-redirect
+            namespace: default
     resources:
       ciliumClusterwideNetworkPolicies:
         allow-dns:
@@ -190,6 +216,32 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      cilium-policies:
+        ciliumClusterwideNetworkPolicies:
+          allow-dns:
+            name: allow-dns
+            namespace: default
+          default-deny:
+            name: default-deny
+            namespace: default
+      cilium-post:
+        ciliumBGPAdvertisements:
+          bgp-advertisement:
+            name: bgp-advertisement
+            namespace: default
+        ciliumBGPPeerConfigs:
+          bgp-peer-config:
+            name: bgp-peer-config
+            namespace: default
+        gateways:
+          shared:
+            name: shared
+            namespace: default
+        httpRoutes:
+          https-redirect:
+            name: https-redirect
+            namespace: default
     resources:
       ciliumBGPAdvertisements:
         bgp-advertisement:

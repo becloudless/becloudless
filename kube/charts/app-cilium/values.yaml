@@ -8,8 +8,7 @@ resources:
   fluxHelmReleases:
     cilium:
       dependsOn:
-        gateway-api:
-          name: app-gateway-api
+        - name: app-gateway-api
           namespace: gateway-api
 
       uninstall:
@@ -67,10 +66,8 @@ resources:
     # The cluster sets its pool and BGP cluster config through `resources.fluxHelmReleases.cilium-post.values.resources`.
     cilium-post:
       dependsOn:
-        cilium:
-          name: cilium
-        gateway-api: # the Gateway needs its CRDs
-          name: app-gateway-api
+        - ref:cilium
+        - name: app-gateway-api # the Gateway needs its CRDs
           namespace: gateway-api
       chart:
         spec:
@@ -158,13 +155,10 @@ resources:
     # A flow needs an egress rule on the source side and an ingress rule on the destination side (the same-namespace rules do both).
     cilium-policies:
       dependsOn:
-        cilium:
-          name: cilium
-        flux: # the deny must not land before the rules of Flux: it could not reconcile anything anymore, including its own rules
-          name: app-flux
+        - ref:cilium
+        - name: app-flux # the deny must not land before the rules of Flux: it could not reconcile anything anymore, including its own rules
           namespace: flux-system
-        coredns: # nor before the rules of CoreDNS: nothing could resolve a name anymore
-          name: app-coredns
+        - name: app-coredns # nor before the rules of CoreDNS: nothing could resolve a name anymore
           namespace: kube-system
       chart:
         spec:

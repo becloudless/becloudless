@@ -35,13 +35,13 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
-  - name: app-cert-manager
-    namespace: cert-manager
-  - name: app-gateway-api
-    namespace: gateway-api
   - name: app-longhorn
     namespace: longhorn-system
+  - name: app-cert-manager
+    namespace: cert-manager
   - name: syncthing-pre
+  - name: app-gateway-api
+    namespace: gateway-api
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -111,6 +111,36 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      syncthing-pre:
+        certManagerCertificates:
+          syncthing-relay-keys:
+            name: syncthing-relay-keys
+            namespace: default
+        stringSecrets:
+          syncthing-relay:
+            name: syncthing-relay
+            namespace: default
+      syncthing-relay:
+        deployments:
+          syncthing-relay:
+            labels:
+              app.kubernetes.io/component: syncthing-relay
+              app.kubernetes.io/instance: syncthing-relay
+            name: syncthing-relay
+            namespace: default
+        listenerSets:
+          syncthing-relay:
+            name: syncthing-relay
+            namespace: default
+        services:
+          syncthing-relay:
+            name: syncthing-relay
+            namespace: default
+        tcpRoutes:
+          syncthing-relay:
+            name: syncthing-relay
+            namespace: default
     resources:
       certManagerCertificates:
         syncthing-relay-keys:
@@ -145,9 +175,9 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: syncthing-pre
   - name: app-gateway-api
     namespace: gateway-api
-  - name: syncthing-pre
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -168,6 +198,36 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      syncthing-pre:
+        certManagerCertificates:
+          syncthing-relay-keys:
+            name: syncthing-relay-keys
+            namespace: default
+        stringSecrets:
+          syncthing-relay:
+            name: syncthing-relay
+            namespace: default
+      syncthing-relay:
+        deployments:
+          syncthing-relay:
+            labels:
+              app.kubernetes.io/component: syncthing-relay
+              app.kubernetes.io/instance: syncthing-relay
+            name: syncthing-relay
+            namespace: default
+        listenerSets:
+          syncthing-relay:
+            name: syncthing-relay
+            namespace: default
+        services:
+          syncthing-relay:
+            name: syncthing-relay
+            namespace: default
+        tcpRoutes:
+          syncthing-relay:
+            name: syncthing-relay
+            namespace: default
     resources:
       deployments:
         syncthing-relay:
@@ -187,7 +247,7 @@ spec:
                     RELAY_TOKEN:
                       secretKeyRef:
                         key: token
-                        name: syncthing-relay
+                        name: ref:syncthing-relay
                   image: docker.io/syncthing/relaysrv:2.1.7
                   livenessProbe:
                     periodSeconds: 30
@@ -229,7 +289,7 @@ spec:
                       key:
                         key: tls.key
                         path: key.pem
-                    secretName: syncthing-relay-keys
+                    secretName: ref:syncthing-relay-keys
       listenerSets:
         syncthing-relay:
           listeners:

@@ -64,8 +64,8 @@ spec:
         name: authelia
       version: 0.11.22
   dependsOn:
-  - name: authelia-postgresql
   - name: authelia-pre
+  - name: authelia-postgresql
   - name: authelia-valkey
   - name: app-lldap
     namespace: lldap
@@ -652,6 +652,120 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      authelia-integration:
+        certManagerCertificates:
+          authelia-gateway:
+            name: authelia-gateway
+            namespace: default
+            secretName: tls-authelia-gateway
+        httpRoutes:
+          authelia:
+            name: authelia
+            namespace: default
+        listenerSets:
+          authelia:
+            name: authelia
+            namespace: default
+        referenceGrants:
+          ext-authz:
+            name: ext-authz
+            namespace: default
+      authelia-pre:
+        certManagerCertificates:
+          authelia-jwks:
+            name: authelia-jwks
+            namespace: default
+        externalSecrets:
+          authelia-ldap:
+            name: authelia-ldap
+            namespace: default
+        roleBindings:
+          forgejo-secrets-reader:
+            name: forgejo-secrets-reader
+            namespace: default
+          grafana-secrets-reader:
+            name: grafana-secrets-reader
+            namespace: default
+          immich-secrets-reader:
+            name: immich-secrets-reader
+            namespace: default
+          jellyfin-secrets-reader:
+            name: jellyfin-secrets-reader
+            namespace: default
+          paperless-secrets-reader:
+            name: paperless-secrets-reader
+            namespace: default
+          seafile-secrets-reader:
+            name: seafile-secrets-reader
+            namespace: default
+          seerr-secrets-reader:
+            name: seerr-secrets-reader
+            namespace: default
+          tuwunel-secrets-reader:
+            name: tuwunel-secrets-reader
+            namespace: default
+        roles:
+          forgejo-secrets-reader:
+            name: forgejo-secrets-reader
+            namespace: default
+          grafana-secrets-reader:
+            name: grafana-secrets-reader
+            namespace: default
+          immich-secrets-reader:
+            name: immich-secrets-reader
+            namespace: default
+          jellyfin-secrets-reader:
+            name: jellyfin-secrets-reader
+            namespace: default
+          paperless-secrets-reader:
+            name: paperless-secrets-reader
+            namespace: default
+          seafile-secrets-reader:
+            name: seafile-secrets-reader
+            namespace: default
+          seerr-secrets-reader:
+            name: seerr-secrets-reader
+            namespace: default
+          tuwunel-secrets-reader:
+            name: tuwunel-secrets-reader
+            namespace: default
+        secretStores:
+          lldap:
+            name: lldap
+            namespace: default
+        serviceAccounts:
+          lldap-reader:
+            name: lldap-reader
+            namespace: default
+        stringSecrets:
+          authelia-generated:
+            name: authelia-generated
+            namespace: default
+          authelia-oidc-forgejo:
+            name: authelia-oidc-forgejo
+            namespace: default
+          authelia-oidc-grafana:
+            name: authelia-oidc-grafana
+            namespace: default
+          authelia-oidc-immich:
+            name: authelia-oidc-immich
+            namespace: default
+          authelia-oidc-jellyfin:
+            name: authelia-oidc-jellyfin
+            namespace: default
+          authelia-oidc-paperless:
+            name: authelia-oidc-paperless
+            namespace: default
+          authelia-oidc-seafile:
+            name: authelia-oidc-seafile
+            namespace: default
+          authelia-oidc-seerr:
+            name: authelia-oidc-seerr
+            namespace: default
+          authelia-oidc-tuwunel:
+            name: authelia-oidc-tuwunel
+            namespace: default
     resources:
       certManagerCertificates:
         authelia-gateway:
@@ -666,10 +780,7 @@ spec:
           hostnames:
             authelia: authelia.test.com
           parentRefs:
-            authelia:
-              group: gateway.networking.k8s.io
-              kind: ListenerSet
-              name: authelia
+            authelia: ref:authelia
           rules:
             root:
               backendRefs:
@@ -690,7 +801,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-authelia-gateway
+                    name: ref:authelia-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
@@ -820,6 +931,120 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      authelia-integration:
+        certManagerCertificates:
+          authelia-gateway:
+            name: authelia-gateway
+            namespace: default
+            secretName: tls-authelia-gateway
+        httpRoutes:
+          authelia:
+            name: authelia
+            namespace: default
+        listenerSets:
+          authelia:
+            name: authelia
+            namespace: default
+        referenceGrants:
+          ext-authz:
+            name: ext-authz
+            namespace: default
+      authelia-pre:
+        certManagerCertificates:
+          authelia-jwks:
+            name: authelia-jwks
+            namespace: default
+        externalSecrets:
+          authelia-ldap:
+            name: authelia-ldap
+            namespace: default
+        roleBindings:
+          forgejo-secrets-reader:
+            name: forgejo-secrets-reader
+            namespace: default
+          grafana-secrets-reader:
+            name: grafana-secrets-reader
+            namespace: default
+          immich-secrets-reader:
+            name: immich-secrets-reader
+            namespace: default
+          jellyfin-secrets-reader:
+            name: jellyfin-secrets-reader
+            namespace: default
+          paperless-secrets-reader:
+            name: paperless-secrets-reader
+            namespace: default
+          seafile-secrets-reader:
+            name: seafile-secrets-reader
+            namespace: default
+          seerr-secrets-reader:
+            name: seerr-secrets-reader
+            namespace: default
+          tuwunel-secrets-reader:
+            name: tuwunel-secrets-reader
+            namespace: default
+        roles:
+          forgejo-secrets-reader:
+            name: forgejo-secrets-reader
+            namespace: default
+          grafana-secrets-reader:
+            name: grafana-secrets-reader
+            namespace: default
+          immich-secrets-reader:
+            name: immich-secrets-reader
+            namespace: default
+          jellyfin-secrets-reader:
+            name: jellyfin-secrets-reader
+            namespace: default
+          paperless-secrets-reader:
+            name: paperless-secrets-reader
+            namespace: default
+          seafile-secrets-reader:
+            name: seafile-secrets-reader
+            namespace: default
+          seerr-secrets-reader:
+            name: seerr-secrets-reader
+            namespace: default
+          tuwunel-secrets-reader:
+            name: tuwunel-secrets-reader
+            namespace: default
+        secretStores:
+          lldap:
+            name: lldap
+            namespace: default
+        serviceAccounts:
+          lldap-reader:
+            name: lldap-reader
+            namespace: default
+        stringSecrets:
+          authelia-generated:
+            name: authelia-generated
+            namespace: default
+          authelia-oidc-forgejo:
+            name: authelia-oidc-forgejo
+            namespace: default
+          authelia-oidc-grafana:
+            name: authelia-oidc-grafana
+            namespace: default
+          authelia-oidc-immich:
+            name: authelia-oidc-immich
+            namespace: default
+          authelia-oidc-jellyfin:
+            name: authelia-oidc-jellyfin
+            namespace: default
+          authelia-oidc-paperless:
+            name: authelia-oidc-paperless
+            namespace: default
+          authelia-oidc-seafile:
+            name: authelia-oidc-seafile
+            namespace: default
+          authelia-oidc-seerr:
+            name: authelia-oidc-seerr
+            namespace: default
+          authelia-oidc-tuwunel:
+            name: authelia-oidc-tuwunel
+            namespace: default
     resources:
       certManagerCertificates:
         authelia-jwks:
@@ -837,85 +1062,59 @@ spec:
                 property: password
               secretKey: password
           refreshInterval: 1h
-          secretStoreRef:
-            kind: SecretStore
-            name: lldap
+          secretStoreRef: ref:lldap
       roleBindings:
         forgejo-secrets-reader:
-          roleRef:
-            apiGroup: rbac.authorization.k8s.io
-            kind: Role
-            name: forgejo-secrets-reader
+          roleRef: ref:forgejo-secrets-reader
           subjects:
             authelia-reader:
               kind: ServiceAccount
               name: authelia-reader
               namespace: forgejo
         grafana-secrets-reader:
-          roleRef:
-            apiGroup: rbac.authorization.k8s.io
-            kind: Role
-            name: grafana-secrets-reader
+          roleRef: ref:grafana-secrets-reader
           subjects:
             authelia-reader:
               kind: ServiceAccount
               name: authelia-reader
               namespace: prometheus
         immich-secrets-reader:
-          roleRef:
-            apiGroup: rbac.authorization.k8s.io
-            kind: Role
-            name: immich-secrets-reader
+          roleRef: ref:immich-secrets-reader
           subjects:
             authelia-reader:
               kind: ServiceAccount
               name: authelia-reader
               namespace: immich
         jellyfin-secrets-reader:
-          roleRef:
-            apiGroup: rbac.authorization.k8s.io
-            kind: Role
-            name: jellyfin-secrets-reader
+          roleRef: ref:jellyfin-secrets-reader
           subjects:
             authelia-reader:
               kind: ServiceAccount
               name: authelia-reader
               namespace: jellyfin
         paperless-secrets-reader:
-          roleRef:
-            apiGroup: rbac.authorization.k8s.io
-            kind: Role
-            name: paperless-secrets-reader
+          roleRef: ref:paperless-secrets-reader
           subjects:
             authelia-reader:
               kind: ServiceAccount
               name: authelia-reader
               namespace: paperless
         seafile-secrets-reader:
-          roleRef:
-            apiGroup: rbac.authorization.k8s.io
-            kind: Role
-            name: seafile-secrets-reader
+          roleRef: ref:seafile-secrets-reader
           subjects:
             authelia-reader:
               kind: ServiceAccount
               name: authelia-reader
               namespace: seafile
         seerr-secrets-reader:
-          roleRef:
-            apiGroup: rbac.authorization.k8s.io
-            kind: Role
-            name: seerr-secrets-reader
+          roleRef: ref:seerr-secrets-reader
           subjects:
             authelia-reader:
               kind: ServiceAccount
               name: authelia-reader
               namespace: seerr
         tuwunel-secrets-reader:
-          roleRef:
-            apiGroup: rbac.authorization.k8s.io
-            kind: Role
-            name: tuwunel-secrets-reader
+          roleRef: ref:tuwunel-secrets-reader
           subjects:
             authelia-reader:
               kind: ServiceAccount
@@ -1016,7 +1215,7 @@ spec:
             kubernetes:
               auth:
                 serviceAccount:
-                  name: lldap-reader
+                  name: ref:lldap-reader
               remoteNamespace: lldap
               server:
                 caProvider:

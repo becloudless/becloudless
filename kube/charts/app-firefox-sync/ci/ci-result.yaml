@@ -72,6 +72,38 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      firefox-sync:
+        deployments:
+          firefox-sync:
+            labels:
+              app.kubernetes.io/component: firefox-sync
+              app.kubernetes.io/instance: firefox-sync
+            name: firefox-sync
+            namespace: default
+        services:
+          firefox-sync:
+            name: firefox-sync
+            namespace: default
+      firefox-sync-integration:
+        certManagerCertificates:
+          firefox-sync-gateway:
+            name: firefox-sync-gateway
+            namespace: default
+            secretName: tls-firefox-sync-gateway
+        httpRoutes:
+          firefox-sync:
+            name: firefox-sync
+            namespace: default
+        listenerSets:
+          firefox-sync:
+            name: firefox-sync
+            namespace: default
+      firefox-sync-pre:
+        stringSecrets:
+          firefox-sync-generated:
+            name: firefox-sync-generated
+            namespace: default
     resources:
       deployments:
         firefox-sync:
@@ -90,7 +122,7 @@ spec:
                     SYNC_MASTER_SECRET:
                       secretKeyRef:
                         key: master-secret
-                        name: firefox-sync-generated
+                        name: ref:firefox-sync-generated
                     SYNC_PORT: "8000"
                     SYNC_SYNCSTORAGE__DATABASE_URL: postgres://app:$(DB_PASSWORD)@firefox-sync-postgresql-rw:5432/app
                     SYNC_TOKENSERVER__ALLOW_NEW_USERS: "true"
@@ -100,7 +132,7 @@ spec:
                     SYNC_TOKENSERVER__FXA_METRICS_HASH_SECRET:
                       secretKeyRef:
                         key: metrics-hash-secret
-                        name: firefox-sync-generated
+                        name: ref:firefox-sync-generated
                     SYNC_TOKENSERVER__FXA_OAUTH_SERVER_URL: https://oauth.accounts.firefox.com
                     SYNC_TOKENSERVER__INIT_NODE_URL: https://firefox-sync.test.com
                     SYNC_TOKENSERVER__NODE_TYPE: postgres
@@ -157,9 +189,9 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: firefox-sync
   - name: app-cert-manager
     namespace: cert-manager
-  - name: firefox-sync
   - name: app-gateway-api
     namespace: gateway-api
   driftDetection:
@@ -184,6 +216,38 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      firefox-sync:
+        deployments:
+          firefox-sync:
+            labels:
+              app.kubernetes.io/component: firefox-sync
+              app.kubernetes.io/instance: firefox-sync
+            name: firefox-sync
+            namespace: default
+        services:
+          firefox-sync:
+            name: firefox-sync
+            namespace: default
+      firefox-sync-integration:
+        certManagerCertificates:
+          firefox-sync-gateway:
+            name: firefox-sync-gateway
+            namespace: default
+            secretName: tls-firefox-sync-gateway
+        httpRoutes:
+          firefox-sync:
+            name: firefox-sync
+            namespace: default
+        listenerSets:
+          firefox-sync:
+            name: firefox-sync
+            namespace: default
+      firefox-sync-pre:
+        stringSecrets:
+          firefox-sync-generated:
+            name: firefox-sync-generated
+            namespace: default
     resources:
       certManagerCertificates:
         firefox-sync-gateway:
@@ -198,15 +262,12 @@ spec:
           hostnames:
             firefox-sync: firefox-sync.test.com
           parentRefs:
-            firefox-sync:
-              group: gateway.networking.k8s.io
-              kind: ListenerSet
-              name: firefox-sync
+            firefox-sync: ref:firefox-sync
           rules:
             root:
               backendRefs:
                 firefox-sync:
-                  name: firefox-sync
+                  name: ref:firefox-sync
                   port: 8000
       listenerSets:
         firefox-sync:
@@ -222,7 +283,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-firefox-sync-gateway
+                    name: ref:firefox-sync-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
@@ -317,6 +378,38 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      firefox-sync:
+        deployments:
+          firefox-sync:
+            labels:
+              app.kubernetes.io/component: firefox-sync
+              app.kubernetes.io/instance: firefox-sync
+            name: firefox-sync
+            namespace: default
+        services:
+          firefox-sync:
+            name: firefox-sync
+            namespace: default
+      firefox-sync-integration:
+        certManagerCertificates:
+          firefox-sync-gateway:
+            name: firefox-sync-gateway
+            namespace: default
+            secretName: tls-firefox-sync-gateway
+        httpRoutes:
+          firefox-sync:
+            name: firefox-sync
+            namespace: default
+        listenerSets:
+          firefox-sync:
+            name: firefox-sync
+            namespace: default
+      firefox-sync-pre:
+        stringSecrets:
+          firefox-sync-generated:
+            name: firefox-sync-generated
+            namespace: default
     resources:
       stringSecrets:
         firefox-sync-generated:

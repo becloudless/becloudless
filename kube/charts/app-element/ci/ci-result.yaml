@@ -55,6 +55,37 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      element:
+        configMaps:
+          element-config:
+            name: element-config
+            namespace: default
+        deployments:
+          element:
+            labels:
+              app.kubernetes.io/component: element
+              app.kubernetes.io/instance: element
+            name: element
+            namespace: default
+        services:
+          element:
+            name: element
+            namespace: default
+      element-integration:
+        certManagerCertificates:
+          element-gateway:
+            name: element-gateway
+            namespace: default
+            secretName: tls-element-gateway
+        httpRoutes:
+          element:
+            name: element
+            namespace: default
+        listenerSets:
+          element:
+            name: element
+            namespace: default
     resources:
       configMaps:
         element-config:
@@ -121,7 +152,7 @@ spec:
               volumes:
                 config:
                   configMap:
-                    name: element-config
+                    name: ref:element-config
                   name: config
                 nginx-conf:
                   emptyDir: {}
@@ -149,9 +180,9 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: element
   - name: app-cert-manager
     namespace: cert-manager
-  - name: element
   - name: app-gateway-api
     namespace: gateway-api
   driftDetection:
@@ -176,6 +207,37 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      element:
+        configMaps:
+          element-config:
+            name: element-config
+            namespace: default
+        deployments:
+          element:
+            labels:
+              app.kubernetes.io/component: element
+              app.kubernetes.io/instance: element
+            name: element
+            namespace: default
+        services:
+          element:
+            name: element
+            namespace: default
+      element-integration:
+        certManagerCertificates:
+          element-gateway:
+            name: element-gateway
+            namespace: default
+            secretName: tls-element-gateway
+        httpRoutes:
+          element:
+            name: element
+            namespace: default
+        listenerSets:
+          element:
+            name: element
+            namespace: default
     resources:
       certManagerCertificates:
         element-gateway:
@@ -190,15 +252,12 @@ spec:
           hostnames:
             element: element.test.com
           parentRefs:
-            element:
-              group: gateway.networking.k8s.io
-              kind: ListenerSet
-              name: element
+            element: ref:element
           rules:
             root:
               backendRefs:
                 element:
-                  name: element
+                  name: ref:element
                   port: 80
       listenerSets:
         element:
@@ -214,7 +273,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-element-gateway
+                    name: ref:element-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io

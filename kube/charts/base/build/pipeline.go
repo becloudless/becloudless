@@ -14,6 +14,7 @@ import (
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/normalizeIntOrString"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/portMaps"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/probes"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/refs"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/required"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/stringifyFields"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/templatedStrings"
@@ -21,7 +22,7 @@ import (
 
 // Pipeline returns the ordered list of schema mutations applied to every
 // resource's instance schema (see fetchAndMutateSchema).
-func Pipeline(extractContent content.ExtractContent, arrays *arraysToMaps.ArraysToMaps, stringify *stringifyFields.StringifyFields, items itemFields.ItemFields, shorthands listShorthands.ListShorthands) []mutations.Mutation {
+func Pipeline(extractContent content.ExtractContent, arrays *arraysToMaps.ArraysToMaps, stringify *stringifyFields.StringifyFields, items itemFields.ItemFields, shorthands listShorthands.ListShorthands, references refs.Refs) []mutations.Mutation {
 	if arrays == nil {
 		arrays = &arraysToMaps.ArraysToMaps{}
 	}
@@ -41,6 +42,7 @@ func Pipeline(extractContent content.ExtractContent, arrays *arraysToMaps.Arrays
 		items,               // after arraysToMaps, the paths are the ones of the maps it made
 		shorthands,          // after arraysToMaps: the paths are the ones of the maps it made
 		required.Required{}, // after the mutations reshaping the nodes (env, ports and arrays), it moves the nested required out of the schema
+		references,          // after required: it takes the required out of the schema, a wrapped entry would keep it as an alternative
 		*stringify,
 		templatedStrings.TemplatedStrings{}, // last of the schema relaxations: wraps the validation the other mutations left on the strings
 		additionalPropertiesFalse.AdditionalPropertiesFalse{},

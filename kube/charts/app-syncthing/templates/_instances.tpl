@@ -31,16 +31,12 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        longhorn:
-          name: app-longhorn
+        - name: app-longhorn
           namespace: longhorn-system
-        cert-manager:
-          name: app-cert-manager
+        - name: app-cert-manager
           namespace: cert-manager
-        syncthing-pre:
-          name: syncthing-pre
-        gateway-api:
-          name: app-gateway-api
+        - name: syncthing-pre
+        - name: app-gateway-api
           namespace: gateway-api
       chart:
         spec:

@@ -32,16 +32,14 @@ resources:
   # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     garage:
-      endpointSelector:
-        matchLabels: {app.kubernetes.io/instance: garage, app.kubernetes.io/component: garage}
+      endpointSelector: ref:garage
       ingress:
         gateway: # the S3 API, through the Gateway
           fromEntities: [ingress, host, remote-node]
           toPorts: [3900]
         garage: # the RPC between the nodes
           fromEndpoints:
-            garage:
-              matchLabels: {app.kubernetes.io/instance: garage, app.kubernetes.io/component: garage}
+            garage: ref:garage
           toPorts: [3901]
         longhorn: # the S3 API, for the backups of the volumes (the managers list and restore, the instance managers write)
           fromEndpoints:
@@ -57,33 +55,28 @@ resources:
           toPorts: [3900]
         layout: # the admin API
           fromEndpoints:
-            layout:
-              matchLabels: {app.kubernetes.io/instance: garage-post, app.kubernetes.io/component: garage-layout}
+            layout: ref:garage-layout
           toPorts: [3903]
       egress:
         garage:
           toEndpoints:
-            garage:
-              matchLabels: {app.kubernetes.io/instance: garage, app.kubernetes.io/component: garage}
+            garage: ref:garage
           toPorts: [3901]
         kube-apiserver: # the discovery of the nodes (the `GarageNode` resources)
           toEntities: [kube-apiserver]
     garage-layout:
-      endpointSelector:
-        matchLabels: {app.kubernetes.io/instance: garage-post, app.kubernetes.io/component: garage-layout}
+      endpointSelector: ref:garage-layout
       egress:
         garage:
           toEndpoints:
-            garage:
-              matchLabels: {app.kubernetes.io/instance: garage, app.kubernetes.io/component: garage}
+            garage: ref:garage
           toPorts: [3903]
 
   fluxHelmReleases:
     # the secrets, created before the nodes start
     garage-pre:
       dependsOn:
-        secret-generator:
-          name: app-secret-generator
+        - name: app-secret-generator
           namespace: secret-generator
       chart:
         spec:
@@ -135,10 +128,7 @@ resources:
                   verbs: [ get ]
           roleBindings:
             longhorn-secrets-reader:
-              roleRef:
-                apiGroup: rbac.authorization.k8s.io
-                kind: Role
-                name: longhorn-secrets-reader
+              roleRef: ref:longhorn-secrets-reader
               subjects:
                 garage-reader:
                   kind: ServiceAccount
@@ -151,10 +141,8 @@ resources:
 
     garage:
       dependsOn:
-        garage-pre: # the secrets
-          name: garage-pre
-        longhorn:
-          name: app-longhorn
+        - ref:garage-pre # the secrets
+        - name: app-longhorn
           namespace: longhorn-system
       chart:
         spec:
@@ -180,10 +168,7 @@ resources:
                   verbs: [ get, list, watch, create, patch ]
           clusterRoleBindings:
             garage-crds:
-              roleRef:
-                apiGroup: rbac.authorization.k8s.io
-                kind: ClusterRole
-                name: garage-crds
+              roleRef: ref:garage-crds
               subjects:
                 garage:
                   kind: ServiceAccount
@@ -198,10 +183,7 @@ resources:
                   verbs: [ get, list, watch, create, update, patch, delete ]
           roleBindings:
             garage-nodes:
-              roleRef:
-                apiGroup: rbac.authorization.k8s.io
-                kind: Role
-                name: garage-nodes
+              roleRef: ref:garage-nodes
               subjects:
                 garage:
                   kind: ServiceAccount
@@ -265,7 +247,7 @@ resources:
                         storage: 10Gi
               template:
                 spec:
-                  serviceAccountName: garage
+                  serviceAccountName: ref:garage
                   securityContext:
                     runAsUser: 1000
                     runAsGroup: 1000
@@ -294,11 +276,11 @@ resources:
                       env:
                         GARAGE_RPC_SECRET:
                           secretKeyRef:
-                            name: garage
+                            name: ref:garage
                             key: rpc-secret
                         GARAGE_ADMIN_TOKEN:
                           secretKeyRef:
-                            name: garage
+                            name: ref:garage
                             key: admin-token
                       # the image only has the binary: no exec probe, and `/health` of the admin API needs the layout (a quorum),
                       # which is applied once the nodes are started
@@ -337,7 +319,7 @@ resources:
                     config:
                       name: config
                       configMap:
-                        name: garage-config
+                        name: ref:garage-config
 
           services:
             # the S3 API, for the Gateway and the pods of the cluster
@@ -361,8 +343,7 @@ resources:
     # the layout of the cluster, applied once the nodes are started
     garage-post:
       dependsOn:
-        garage:
-          name: garage
+        - ref:garage
       chart:
         spec:
           chart: ./kube/charts/base-loader
@@ -429,15 +410,15 @@ resources:
                       env:
                         ADMIN_TOKEN:
                           secretKeyRef:
-                            name: garage
+                            name: ref:garage
                             key: admin-token
                         AWS_ACCESS_KEY_ID:
                           secretKeyRef:
-                            name: garage-longhorn
+                            name: ref:garage-longhorn
                             key: AWS_ACCESS_KEY_ID
                         AWS_SECRET_ACCESS_KEY:
                           secretKeyRef:
-                            name: garage-longhorn
+                            name: ref:garage-longhorn
                             key: AWS_SECRET_ACCESS_KEY
                         CAPACITY: "10737418240" # the size of `garage-data` (10Gi), in bytes
                       securityContext:
@@ -455,7 +436,7 @@ resources:
                     config:
                       name: config
                       configMap:
-                        name: garage-config
+                        name: ref:garage-config
 
     # The backup target of longhorn: the bucket `longhorn-backups` of Garage, with the key made by `garage-layout`. It is here and not
     # in app-longhorn because the volumes of Garage are longhorn ones: longhorn can not wait for Garage. The release object is in
@@ -470,10 +451,8 @@ resources:
       targetNamespace: longhorn-system
       releaseName: longhorn-backup
       dependsOn:
-        garage-post: # the bucket and the key
-          name: garage-post
-        external-secrets:
-          name: app-external-secrets
+        - ref:garage-post # the bucket and the key
+        - name: app-external-secrets
           namespace: external-secrets
       chart:
         spec:
@@ -501,15 +480,13 @@ resources:
                       key: ca.crt
                   auth:
                     serviceAccount:
-                      name: garage-reader
+                      name: ref:garage-reader
 
           # the `AWS_*` variables read by the backup target of longhorn
           externalSecrets:
             garage-backup:
               refreshInterval: 1h
-              secretStoreRef:
-                kind: SecretStore
-                name: garage
+              secretStoreRef: ref:garage
               dataFrom:
                 all:
                   extract:
@@ -532,13 +509,10 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        garage-post: # the layout, the API is usable
-          name: garage-post
-        cert-manager:
-          name: app-cert-manager
+        - ref:garage-post # the layout, the API is usable
+        - name: app-cert-manager
           namespace: cert-manager
-        gateway-api:
-          name: app-gateway-api
+        - name: app-gateway-api
           namespace: gateway-api
       chart:
         spec:
@@ -580,7 +554,7 @@ resources:
                     mode: Terminate
                     certificateRefs:
                       tls:
-                        name: tls-garage-gateway
+                        name: ref:garage-gateway
                   allowedRoutes:
                     namespaces:
                       from: Same
@@ -588,17 +562,14 @@ resources:
           httpRoutes:
             garage:
               parentRefs:
-                garage:
-                  group: gateway.networking.k8s.io
-                  kind: ListenerSet
-                  name: garage
+                garage: ref:garage
               hostnames:
                 s3: s3.{{ .Values.app.domain }}
               rules:
                 root:
                   backendRefs:
                     garage:
-                      name: garage
+                      name: ref:garage
                       port: 3900
                   timeouts:
                     request: 0s # the uploads and downloads of big objects can be long

@@ -101,6 +101,63 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      seerr:
+        configMaps:
+          seerr-scripts:
+            name: seerr-scripts
+            namespace: default
+        deployments:
+          seerr:
+            labels:
+              app.kubernetes.io/component: seerr
+              app.kubernetes.io/instance: seerr
+            name: seerr
+            namespace: default
+        persistentVolumeClaims:
+          seerr-config:
+            name: seerr-config
+            namespace: default
+        services:
+          seerr:
+            name: seerr
+            namespace: default
+      seerr-integration:
+        certManagerCertificates:
+          seerr-gateway:
+            name: seerr-gateway
+            namespace: default
+            secretName: tls-seerr-gateway
+        httpRoutes:
+          seerr:
+            name: seerr
+            namespace: default
+        listenerSets:
+          seerr:
+            name: seerr
+            namespace: default
+      seerr-pre:
+        externalSecrets:
+          seerr-jellyfin:
+            name: seerr-jellyfin
+            namespace: default
+          seerr-oidc:
+            name: seerr-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+          jellyfin:
+            name: jellyfin
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+          jellyfin-reader:
+            name: jellyfin-reader
+            namespace: default
     resources:
       configMaps:
         seerr-scripts:
@@ -295,7 +352,7 @@ spec:
                     JELLYFIN_PASSWORD:
                       secretKeyRef:
                         key: password
-                        name: seerr-jellyfin
+                        name: ref:seerr-jellyfin
                     JELLYFIN_USER: admin
                   image: ghcr.io/seerr-team/seerr:preview-new-oidc@sha256:28744b1ced522beb7af8e5c966b73c6e46b1dc2c4c8cb497ad2f12d3139699a3
                   name: admin
@@ -369,18 +426,18 @@ spec:
                     CLIENT_ID:
                       secretKeyRef:
                         key: client-id
-                        name: seerr-oidc
+                        name: ref:seerr-oidc
                     CLIENT_SECRET:
                       secretKeyRef:
                         key: secret
-                        name: seerr-oidc
+                        name: ref:seerr-oidc
                     ISSUER_URL: https://authelia.test.com
                     JELLYFIN_EXTERNAL_URL: https://jellyfin.test.com
                     JELLYFIN_HOST: jellyfin.jellyfin
                     JELLYFIN_PASSWORD:
                       secretKeyRef:
                         key: password
-                        name: seerr-jellyfin
+                        name: ref:seerr-jellyfin
                     JELLYFIN_PORT: "8096"
                     JELLYFIN_URL: http://jellyfin.jellyfin:8096
                     JELLYFIN_USER: admin
@@ -407,10 +464,10 @@ spec:
                 config:
                   name: config
                   persistentVolumeClaim:
-                    claimName: seerr-config
+                    claimName: ref:seerr-config
                 scripts:
                   configMap:
-                    name: seerr-scripts
+                    name: ref:seerr-scripts
                   name: scripts
       persistentVolumeClaims:
         seerr-config:
@@ -440,11 +497,11 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: seerr
   - name: app-cert-manager
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
-  - name: seerr
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -467,6 +524,63 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      seerr:
+        configMaps:
+          seerr-scripts:
+            name: seerr-scripts
+            namespace: default
+        deployments:
+          seerr:
+            labels:
+              app.kubernetes.io/component: seerr
+              app.kubernetes.io/instance: seerr
+            name: seerr
+            namespace: default
+        persistentVolumeClaims:
+          seerr-config:
+            name: seerr-config
+            namespace: default
+        services:
+          seerr:
+            name: seerr
+            namespace: default
+      seerr-integration:
+        certManagerCertificates:
+          seerr-gateway:
+            name: seerr-gateway
+            namespace: default
+            secretName: tls-seerr-gateway
+        httpRoutes:
+          seerr:
+            name: seerr
+            namespace: default
+        listenerSets:
+          seerr:
+            name: seerr
+            namespace: default
+      seerr-pre:
+        externalSecrets:
+          seerr-jellyfin:
+            name: seerr-jellyfin
+            namespace: default
+          seerr-oidc:
+            name: seerr-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+          jellyfin:
+            name: jellyfin
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+          jellyfin-reader:
+            name: jellyfin-reader
+            namespace: default
     resources:
       certManagerCertificates:
         seerr-gateway:
@@ -481,15 +595,12 @@ spec:
           hostnames:
             seerr: seerr.test.com
           parentRefs:
-            seerr:
-              group: gateway.networking.k8s.io
-              kind: ListenerSet
-              name: seerr
+            seerr: ref:seerr
           rules:
             root:
               backendRefs:
                 seerr:
-                  name: seerr
+                  name: ref:seerr
                   port: 5055
       listenerSets:
         seerr:
@@ -505,7 +616,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-seerr-gateway
+                    name: ref:seerr-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
@@ -578,12 +689,12 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
-  - name: authelia-pre
-    namespace: authelia
   - name: app-external-secrets
     namespace: external-secrets
   - name: jellyfin-pre
     namespace: jellyfin
+  - name: authelia-pre
+    namespace: authelia
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -604,6 +715,63 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      seerr:
+        configMaps:
+          seerr-scripts:
+            name: seerr-scripts
+            namespace: default
+        deployments:
+          seerr:
+            labels:
+              app.kubernetes.io/component: seerr
+              app.kubernetes.io/instance: seerr
+            name: seerr
+            namespace: default
+        persistentVolumeClaims:
+          seerr-config:
+            name: seerr-config
+            namespace: default
+        services:
+          seerr:
+            name: seerr
+            namespace: default
+      seerr-integration:
+        certManagerCertificates:
+          seerr-gateway:
+            name: seerr-gateway
+            namespace: default
+            secretName: tls-seerr-gateway
+        httpRoutes:
+          seerr:
+            name: seerr
+            namespace: default
+        listenerSets:
+          seerr:
+            name: seerr
+            namespace: default
+      seerr-pre:
+        externalSecrets:
+          seerr-jellyfin:
+            name: seerr-jellyfin
+            namespace: default
+          seerr-oidc:
+            name: seerr-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+          jellyfin:
+            name: jellyfin
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+          jellyfin-reader:
+            name: jellyfin-reader
+            namespace: default
     resources:
       externalSecrets:
         seerr-jellyfin:
@@ -614,9 +782,7 @@ spec:
                 property: password
               secretKey: password
           refreshInterval: 1h
-          secretStoreRef:
-            kind: SecretStore
-            name: jellyfin
+          secretStoreRef: ref:jellyfin
         seerr-oidc:
           data:
             client-id:
@@ -630,16 +796,14 @@ spec:
                 property: secret
               secretKey: secret
           refreshInterval: 1h
-          secretStoreRef:
-            kind: SecretStore
-            name: authelia
+          secretStoreRef: ref:authelia
       secretStores:
         authelia:
           provider:
             kubernetes:
               auth:
                 serviceAccount:
-                  name: authelia-reader
+                  name: ref:authelia-reader
               remoteNamespace: authelia
               server:
                 caProvider:
@@ -651,7 +815,7 @@ spec:
             kubernetes:
               auth:
                 serviceAccount:
-                  name: jellyfin-reader
+                  name: ref:jellyfin-reader
               remoteNamespace: jellyfin
               server:
                 caProvider:

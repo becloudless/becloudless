@@ -64,8 +64,7 @@ resources:
             kind: HelmRepository
             name: cert-manager
       dependsOn:
-        gateway-api: # the Gateway API CRDs must exist when cert-manager starts, for the gatewayHTTPRoute http-01 solver
-          name: app-gateway-api
+        - name: app-gateway-api # the Gateway API CRDs must exist when cert-manager starts, for the gatewayHTTPRoute http-01 solver
           namespace: gateway-api
       values:
         crds:
@@ -83,8 +82,7 @@ resources:
     # ClusterIssuers need the cert-manager CRDs, so they are installed once cert-manager is ready
     cert-manager-post:
       dependsOn:
-        cert-manager:
-          name: cert-manager
+        - ref:cert-manager
       chart:
         spec:
           chart: ./kube/charts/base-loader

@@ -580,11 +580,11 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: prometheus
   - name: app-cert-manager
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
-  - name: prometheus
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -607,6 +607,55 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      prometheus-integration:
+        certManagerCertificates:
+          alertmanager-gateway:
+            name: alertmanager-gateway
+            namespace: default
+            secretName: tls-alertmanager-gateway
+          grafana-gateway:
+            name: grafana-gateway
+            namespace: default
+            secretName: tls-grafana-gateway
+          prometheus-gateway:
+            name: prometheus-gateway
+            namespace: default
+            secretName: tls-prometheus-gateway
+          pushprox-gateway:
+            name: pushprox-gateway
+            namespace: default
+            secretName: tls-pushprox-gateway
+        httpRoutes:
+          alertmanager:
+            name: alertmanager
+            namespace: default
+          grafana:
+            name: grafana
+            namespace: default
+          prometheus:
+            name: prometheus
+            namespace: default
+          pushprox:
+            name: pushprox
+            namespace: default
+        listenerSets:
+          prometheus:
+            name: prometheus
+            namespace: default
+      prometheus-pre:
+        externalSecrets:
+          grafana-oidc:
+            name: grafana-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
     resources:
       certManagerCertificates:
         alertmanager-gateway:
@@ -778,7 +827,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-alertmanager-gateway
+                    name: ref:alertmanager-gateway
                 mode: Terminate
             grafana:
               allowedRoutes:
@@ -791,7 +840,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-grafana-gateway
+                    name: ref:grafana-gateway
                 mode: Terminate
             prometheus:
               allowedRoutes:
@@ -804,7 +853,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-prometheus-gateway
+                    name: ref:prometheus-gateway
                 mode: Terminate
             pushprox:
               allowedRoutes:
@@ -817,7 +866,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-pushprox-gateway
+                    name: ref:pushprox-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
@@ -841,10 +890,10 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
-  - name: authelia-pre
-    namespace: authelia
   - name: app-external-secrets
     namespace: external-secrets
+  - name: authelia-pre
+    namespace: authelia
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -865,6 +914,55 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      prometheus-integration:
+        certManagerCertificates:
+          alertmanager-gateway:
+            name: alertmanager-gateway
+            namespace: default
+            secretName: tls-alertmanager-gateway
+          grafana-gateway:
+            name: grafana-gateway
+            namespace: default
+            secretName: tls-grafana-gateway
+          prometheus-gateway:
+            name: prometheus-gateway
+            namespace: default
+            secretName: tls-prometheus-gateway
+          pushprox-gateway:
+            name: pushprox-gateway
+            namespace: default
+            secretName: tls-pushprox-gateway
+        httpRoutes:
+          alertmanager:
+            name: alertmanager
+            namespace: default
+          grafana:
+            name: grafana
+            namespace: default
+          prometheus:
+            name: prometheus
+            namespace: default
+          pushprox:
+            name: pushprox
+            namespace: default
+        listenerSets:
+          prometheus:
+            name: prometheus
+            namespace: default
+      prometheus-pre:
+        externalSecrets:
+          grafana-oidc:
+            name: grafana-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
     resources:
       externalSecrets:
         grafana-oidc:
@@ -880,16 +978,14 @@ spec:
                 property: secret
               secretKey: secret
           refreshInterval: 1h
-          secretStoreRef:
-            kind: SecretStore
-            name: authelia
+          secretStoreRef: ref:authelia
       secretStores:
         authelia:
           provider:
             kubernetes:
               auth:
                 serviceAccount:
-                  name: authelia-reader
+                  name: ref:authelia-reader
               remoteNamespace: authelia
               server:
                 caProvider:

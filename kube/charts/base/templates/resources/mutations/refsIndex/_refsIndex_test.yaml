@@ -1,0 +1,87 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: refsIndex mutation (the parent shares the resources of its HelmReleases with each of them, in refs)
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: gives the HelmReleases that have resources what the resources of all of them are
+    set:
+      resources:
+        fluxHelmReleases:
+          db-pre:
+            chart: {spec: {chart: ./kube/charts/base-loader, sourceRef: {kind: GitRepository, name: bcl}}}
+            values:
+              resources:
+                stringSecrets:
+                  db-generated:
+                    fields: {password: {}}
+                certManagerCertificates:
+                  db-tls:
+                    secretName: tls-db
+                    dnsNames: {db: db.example.com}
+                    issuerRef: {name: letsencrypt, kind: ClusterIssuer}
+                serviceAccounts:
+                  disabled:
+                    enabled: false
+          app:
+            targetNamespace: apps # the release is `apps-app`, as Flux names it
+            chart: {spec: {chart: ./kube/charts/base-loader, sourceRef: {kind: GitRepository, name: bcl}}}
+            values:
+              prefixNamesWithRelease: true
+              resources:
+                deployments:
+                  web:
+                    template:
+                      spec:
+                        containers:
+                          web: {name: web, image: img}
+          valkey:
+            chart: {spec: {chart: ./kube/charts/valkey, sourceRef: {kind: GitRepository, name: bcl}}}
+            values:
+              clients: {}
+    asserts:
+      - equal:
+          path: spec.values.refs
+          value:
+            db-pre:
+              stringSecrets:
+                db-generated: {name: db-generated, namespace: default}
+              certManagerCertificates:
+                db-tls: {name: db-tls, namespace: default, secretName: tls-db}
+            app:
+              deployments:
+                web:
+                  name: apps-app-web
+                  namespace: apps
+                  labels:
+                    app.kubernetes.io/instance: apps-app
+                    app.kubernetes.io/component: web
+        documentSelector: {path: metadata.name, value: app}
+      - exists:
+          path: spec.values.refs
+        documentSelector: {path: metadata.name, value: db-pre}
+
+  - it: leaves alone the HelmReleases that have no resources (the ones of a public chart)
+    set:
+      resources:
+        fluxHelmReleases:
+          app:
+            chart: {spec: {chart: ./kube/charts/base-loader, sourceRef: {kind: GitRepository, name: bcl}}}
+            values:
+              resources:
+                stringSecrets:
+                  generated:
+                    fields: {password: {}}
+          valkey:
+            chart: {spec: {chart: ./kube/charts/valkey, sourceRef: {kind: GitRepository, name: bcl}}}
+            values:
+              clients: {}
+        services:
+          web:
+            ports: {http: {port: 80}}
+    asserts:
+      - notExists:
+          path: spec.values.refs
+        documentSelector: {path: metadata.name, value: valkey}

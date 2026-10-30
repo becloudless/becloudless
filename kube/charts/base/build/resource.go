@@ -8,6 +8,7 @@ import (
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/content"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/itemFields"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/listShorthands"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/refs"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/stringifyFields"
 
 	"gopkg.in/yaml.v3"
@@ -46,6 +47,7 @@ type resourceMutations struct {
 	StringifyFields *stringifyFields.StringifyFields `yaml:"stringifyFields"`
 	ItemFields      itemFields.ItemFields            `yaml:"itemFields"`
 	ListShorthands  listShorthands.ListShorthands    `yaml:"listShorthands"`
+	Refs            refs.Refs                        `yaml:"refs"`
 }
 
 func newResourcesFile(path string) (resourcesFile, error) {

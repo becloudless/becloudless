@@ -87,6 +87,69 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      jellyfin:
+        configMaps:
+          jellyfin-config:
+            name: jellyfin-config
+            namespace: default
+          jellyfin-scripts:
+            name: jellyfin-scripts
+            namespace: default
+        deployments:
+          jellyfin:
+            labels:
+              app.kubernetes.io/component: jellyfin
+              app.kubernetes.io/instance: jellyfin
+            name: jellyfin
+            namespace: default
+        persistentVolumeClaims:
+          jellyfin-config:
+            name: jellyfin-config
+            namespace: default
+        services:
+          jellyfin:
+            name: jellyfin
+            namespace: default
+      jellyfin-integration:
+        certManagerCertificates:
+          jellyfin-gateway:
+            name: jellyfin-gateway
+            namespace: default
+            secretName: tls-jellyfin-gateway
+        httpRoutes:
+          jellyfin:
+            name: jellyfin
+            namespace: default
+        listenerSets:
+          jellyfin:
+            name: jellyfin
+            namespace: default
+      jellyfin-pre:
+        externalSecrets:
+          jellyfin-oidc:
+            name: jellyfin-oidc
+            namespace: default
+        roleBindings:
+          seerr-secrets-reader:
+            name: seerr-secrets-reader
+            namespace: default
+        roles:
+          seerr-secrets-reader:
+            name: seerr-secrets-reader
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          jellyfin-admin:
+            name: jellyfin-admin
+            namespace: default
     resources:
       configMaps:
         jellyfin-config:
@@ -222,16 +285,16 @@ spec:
                     CLIENT_ID:
                       secretKeyRef:
                         key: client-id
-                        name: jellyfin-oidc
+                        name: ref:jellyfin-oidc
                     CLIENT_SECRET:
                       secretKeyRef:
                         key: secret
-                        name: jellyfin-oidc
+                        name: ref:jellyfin-oidc
                     ISSUER_URL: https://authelia.test.com
                     JELLYFIN_PASSWORD:
                       secretKeyRef:
                         key: password
-                        name: jellyfin-admin
+                        name: ref:jellyfin-admin
                     JELLYFIN_URL: http://127.0.0.1:8096
                     JELLYFIN_USER: admin
                     PUBLIC_URL: https://jellyfin.test.com
@@ -328,17 +391,17 @@ spec:
                 config:
                   name: config
                   persistentVolumeClaim:
-                    claimName: jellyfin-config
+                    claimName: ref:jellyfin-config
                 media:
                   emptyDir: {}
                   name: media
                 network:
                   configMap:
-                    name: jellyfin-config
+                    name: ref:jellyfin-config
                   name: network
                 scripts:
                   configMap:
-                    name: jellyfin-scripts
+                    name: ref:jellyfin-scripts
                   name: scripts
       persistentVolumeClaims:
         jellyfin-config:
@@ -368,11 +431,11 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: jellyfin
   - name: app-cert-manager
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
-  - name: jellyfin
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -395,6 +458,69 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      jellyfin:
+        configMaps:
+          jellyfin-config:
+            name: jellyfin-config
+            namespace: default
+          jellyfin-scripts:
+            name: jellyfin-scripts
+            namespace: default
+        deployments:
+          jellyfin:
+            labels:
+              app.kubernetes.io/component: jellyfin
+              app.kubernetes.io/instance: jellyfin
+            name: jellyfin
+            namespace: default
+        persistentVolumeClaims:
+          jellyfin-config:
+            name: jellyfin-config
+            namespace: default
+        services:
+          jellyfin:
+            name: jellyfin
+            namespace: default
+      jellyfin-integration:
+        certManagerCertificates:
+          jellyfin-gateway:
+            name: jellyfin-gateway
+            namespace: default
+            secretName: tls-jellyfin-gateway
+        httpRoutes:
+          jellyfin:
+            name: jellyfin
+            namespace: default
+        listenerSets:
+          jellyfin:
+            name: jellyfin
+            namespace: default
+      jellyfin-pre:
+        externalSecrets:
+          jellyfin-oidc:
+            name: jellyfin-oidc
+            namespace: default
+        roleBindings:
+          seerr-secrets-reader:
+            name: seerr-secrets-reader
+            namespace: default
+        roles:
+          seerr-secrets-reader:
+            name: seerr-secrets-reader
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          jellyfin-admin:
+            name: jellyfin-admin
+            namespace: default
     resources:
       certManagerCertificates:
         jellyfin-gateway:
@@ -409,15 +535,12 @@ spec:
           hostnames:
             jellyfin: jellyfin.test.com
           parentRefs:
-            jellyfin:
-              group: gateway.networking.k8s.io
-              kind: ListenerSet
-              name: jellyfin
+            jellyfin: ref:jellyfin
           rules:
             root:
               backendRefs:
                 jellyfin:
-                  name: jellyfin
+                  name: ref:jellyfin
                   port: 8096
               timeouts:
                 request: 0s
@@ -435,7 +558,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-jellyfin-gateway
+                    name: ref:jellyfin-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
@@ -459,12 +582,12 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
-  - name: authelia-pre
-    namespace: authelia
   - name: app-external-secrets
     namespace: external-secrets
   - name: app-secret-generator
     namespace: secret-generator
+  - name: authelia-pre
+    namespace: authelia
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -485,6 +608,69 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      jellyfin:
+        configMaps:
+          jellyfin-config:
+            name: jellyfin-config
+            namespace: default
+          jellyfin-scripts:
+            name: jellyfin-scripts
+            namespace: default
+        deployments:
+          jellyfin:
+            labels:
+              app.kubernetes.io/component: jellyfin
+              app.kubernetes.io/instance: jellyfin
+            name: jellyfin
+            namespace: default
+        persistentVolumeClaims:
+          jellyfin-config:
+            name: jellyfin-config
+            namespace: default
+        services:
+          jellyfin:
+            name: jellyfin
+            namespace: default
+      jellyfin-integration:
+        certManagerCertificates:
+          jellyfin-gateway:
+            name: jellyfin-gateway
+            namespace: default
+            secretName: tls-jellyfin-gateway
+        httpRoutes:
+          jellyfin:
+            name: jellyfin
+            namespace: default
+        listenerSets:
+          jellyfin:
+            name: jellyfin
+            namespace: default
+      jellyfin-pre:
+        externalSecrets:
+          jellyfin-oidc:
+            name: jellyfin-oidc
+            namespace: default
+        roleBindings:
+          seerr-secrets-reader:
+            name: seerr-secrets-reader
+            namespace: default
+        roles:
+          seerr-secrets-reader:
+            name: seerr-secrets-reader
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          jellyfin-admin:
+            name: jellyfin-admin
+            namespace: default
     resources:
       externalSecrets:
         jellyfin-oidc:
@@ -500,15 +686,10 @@ spec:
                 property: secret
               secretKey: secret
           refreshInterval: 1h
-          secretStoreRef:
-            kind: SecretStore
-            name: authelia
+          secretStoreRef: ref:authelia
       roleBindings:
         seerr-secrets-reader:
-          roleRef:
-            apiGroup: rbac.authorization.k8s.io
-            kind: Role
-            name: seerr-secrets-reader
+          roleRef: ref:seerr-secrets-reader
           subjects:
             jellyfin-reader:
               kind: ServiceAccount
@@ -532,7 +713,7 @@ spec:
             kubernetes:
               auth:
                 serviceAccount:
-                  name: authelia-reader
+                  name: ref:authelia-reader
               remoteNamespace: authelia
               server:
                 caProvider:

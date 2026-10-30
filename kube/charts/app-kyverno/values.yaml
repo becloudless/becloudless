@@ -79,8 +79,7 @@ resources:
     # The ClusterPolicies (files/policies, see templates/_policies.tpl) need the Kyverno CRDs, so they are installed once kyverno is ready
     kyverno-post:
       dependsOn:
-        kyverno:
-          name: kyverno
+        - ref:kyverno
       chart:
         spec:
           chart: ./kube/charts/base-loader

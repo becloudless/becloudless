@@ -24,8 +24,7 @@ resources:
   # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     tuwunel:
-      endpointSelector:
-        matchLabels: {app.kubernetes.io/instance: tuwunel, app.kubernetes.io/component: tuwunel}
+      endpointSelector: ref:tuwunel
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
@@ -43,11 +42,9 @@ resources:
     # the OIDC client of authelia, copied before tuwunel starts
     tuwunel-pre:
       dependsOn:
-        external-secrets:
-          name: app-external-secrets
+        - name: app-external-secrets
           namespace: external-secrets
-        authelia-pre: # the generated secret of the client and the right to read it
-          name: authelia-pre
+        - name: authelia-pre # the generated secret of the client and the right to read it
           namespace: authelia
       chart:
         spec:
@@ -75,14 +72,12 @@ resources:
                       key: ca.crt
                   auth:
                     serviceAccount:
-                      name: authelia-reader
+                      name: ref:authelia-reader
 
           externalSecrets:
             tuwunel-oidc:
               refreshInterval: 1h
-              secretStoreRef:
-                kind: SecretStore
-                name: authelia
+              secretStoreRef: ref:authelia
               data:
                 client-id:
                   secretKey: client-id
@@ -97,10 +92,8 @@ resources:
 
     tuwunel:
       dependsOn:
-        tuwunel-pre: # the OIDC client
-          name: tuwunel-pre
-        longhorn:
-          name: app-longhorn
+        - ref:tuwunel-pre # the OIDC client
+        - name: app-longhorn
           namespace: longhorn-system
       chart:
         spec:
@@ -143,7 +136,7 @@ resources:
                       env:
                         OIDC_CLIENT_ID:
                           secretKeyRef:
-                            name: tuwunel-oidc
+                            name: ref:tuwunel-oidc
                             key: client-id
                         TUWUNEL_SERVER_NAME: matrix.{{ .Values.app.domain }} # can not be changed
                         TUWUNEL_ADDRESS: 0.0.0.0
@@ -163,7 +156,7 @@ resources:
                         TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_ID: $(OIDC_CLIENT_ID)
                         TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_SECRET:
                           secretKeyRef:
-                            name: tuwunel-oidc
+                            name: ref:tuwunel-oidc
                             key: secret
                         TUWUNEL_IDENTITY_PROVIDER__0__CALLBACK_URL: https://matrix.{{ .Values.app.domain }}/_matrix/client/unstable/login/sso/callback/$(OIDC_CLIENT_ID)
                         # the user is the `preferred_username` of authelia: no random name when it is taken, the login fails
@@ -199,7 +192,7 @@ resources:
                     data:
                       name: data
                       persistentVolumeClaim:
-                        claimName: tuwunel-data
+                        claimName: ref:tuwunel-data
 
           services:
             tuwunel:
@@ -214,13 +207,10 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        tuwunel:
-          name: tuwunel
-        cert-manager:
-          name: app-cert-manager
+        - ref:tuwunel
+        - name: app-cert-manager
           namespace: cert-manager
-        gateway-api:
-          name: app-gateway-api
+        - name: app-gateway-api
           namespace: gateway-api
       chart:
         spec:
@@ -262,7 +252,7 @@ resources:
                     mode: Terminate
                     certificateRefs:
                       tls:
-                        name: tls-tuwunel-gateway
+                        name: ref:tuwunel-gateway
                   allowedRoutes:
                     namespaces:
                       from: Same
@@ -270,17 +260,14 @@ resources:
           httpRoutes:
             tuwunel:
               parentRefs:
-                tuwunel:
-                  group: gateway.networking.k8s.io
-                  kind: ListenerSet
-                  name: tuwunel
+                tuwunel: ref:tuwunel
               hostnames:
                 matrix: matrix.{{ .Values.app.domain }}
               rules:
                 root:
                   backendRefs:
                     tuwunel:
-                      name: tuwunel
+                      name: ref:tuwunel
                       port: 8008
                   timeouts:
                     request: 0s # the long polling of the sync and the uploads of big files can be long

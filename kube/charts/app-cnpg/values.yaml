@@ -49,6 +49,5 @@ resources:
             kind: HelmRepository
             name: cnpg
       dependsOn:
-        external-snapshotter: # cnpg snapshot support needs the CRDs before starting, or will require manual restart
-          name: app-external-snapshotter
+        - name: app-external-snapshotter # cnpg snapshot support needs the CRDs before starting, or will require manual restart
           namespace: external-snapshotter

@@ -509,9 +509,9 @@ spec:
         name: mailu
       version: 2.8.0
   dependsOn:
+  - name: mailu-pre
   - name: app-longhorn
     namespace: longhorn-system
-  - name: mailu-pre
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -750,11 +750,11 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: mailu
   - name: app-cert-manager
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
-  - name: mailu
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -777,16 +777,39 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      mailu-integration:
+        httpRoutes:
+          mailu:
+            name: mailu
+            namespace: default
+        listenerSets:
+          mailu:
+            name: mailu
+            namespace: default
+      mailu-pre:
+        certManagerCertificates:
+          mailu:
+            name: mailu
+            namespace: default
+            secretName: tls-mailu
+        stringSecrets:
+          mailu:
+            name: mailu
+            namespace: default
+          mailu-mariadb:
+            name: mailu-mariadb
+            namespace: default
+          mailu-roundcube:
+            name: mailu-roundcube
+            namespace: default
     resources:
       httpRoutes:
         mailu:
           hostnames:
             mail: mail.test.com
           parentRefs:
-            mailu:
-              group: gateway.networking.k8s.io
-              kind: ListenerSet
-              name: mailu
+            mailu: ref:mailu
           rules:
             root:
               backendRefs:
@@ -807,7 +830,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-mailu
+                    name: ref:certManagerCertificates/mailu
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
@@ -855,6 +878,32 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      mailu-integration:
+        httpRoutes:
+          mailu:
+            name: mailu
+            namespace: default
+        listenerSets:
+          mailu:
+            name: mailu
+            namespace: default
+      mailu-pre:
+        certManagerCertificates:
+          mailu:
+            name: mailu
+            namespace: default
+            secretName: tls-mailu
+        stringSecrets:
+          mailu:
+            name: mailu
+            namespace: default
+          mailu-mariadb:
+            name: mailu-mariadb
+            namespace: default
+          mailu-roundcube:
+            name: mailu-roundcube
+            namespace: default
     resources:
       certManagerCertificates:
         mailu:

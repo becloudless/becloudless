@@ -5,8 +5,7 @@ resources:
   # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     landing:
-      endpointSelector:
-        matchLabels: {app.kubernetes.io/instance: landing, app.kubernetes.io/component: landing}
+      endpointSelector: ref:landing
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
@@ -94,7 +93,7 @@ resources:
                     html:
                       name: html
                       configMap:
-                        name: landing-html
+                        name: ref:landing-html
 
           services:
             landing:
@@ -110,13 +109,10 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        landing:
-          name: landing
-        cert-manager:
-          name: app-cert-manager
+        - ref:landing
+        - name: app-cert-manager
           namespace: cert-manager
-        gateway-api:
-          name: app-gateway-api
+        - name: app-gateway-api
           namespace: gateway-api
       chart:
         spec:
@@ -156,7 +152,7 @@ resources:
                     mode: Terminate
                     certificateRefs:
                       tls:
-                        name: tls-landing
+                        name: ref:landing
                   allowedRoutes:
                     namespaces:
                       from: Same
@@ -164,15 +160,12 @@ resources:
           httpRoutes:
             landing:
               parentRefs:
-                landing:
-                  group: gateway.networking.k8s.io
-                  kind: ListenerSet
-                  name: landing
+                landing: ref:landing
               hostnames:
                 apex: "{{ .Values.app.domain }}"
               rules:
                 root:
                   backendRefs:
                     landing:
-                      name: landing
+                      name: ref:landing
                       port: 80

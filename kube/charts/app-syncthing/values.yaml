@@ -26,8 +26,7 @@ resources:
   # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     syncthing-relay:
-      endpointSelector:
-        matchLabels: {app.kubernetes.io/instance: syncthing-relay, app.kubernetes.io/component: syncthing-relay}
+      endpointSelector: ref:syncthing-relay
       ingress:
         relay: # served by the Gateway service without Envoy: the source is the client itself (public, or in the cluster)
           fromEntities: [world, cluster]
@@ -38,11 +37,9 @@ resources:
     # the secrets of the relay, created before it and the instances start
     syncthing-pre:
       dependsOn:
-        cert-manager:
-          name: app-cert-manager
+        - name: app-cert-manager
           namespace: cert-manager
-        secret-generator:
-          name: app-secret-generator
+        - name: app-secret-generator
           namespace: secret-generator
       chart:
         spec:
@@ -76,10 +73,8 @@ resources:
 
     syncthing-relay:
       dependsOn:
-        syncthing-pre: # the token and the certificate
-          name: syncthing-pre
-        gateway-api: # the listener set and the route
-          name: app-gateway-api
+        - ref:syncthing-pre # the token and the certificate
+        - name: app-gateway-api # the listener set and the route
           namespace: gateway-api
       chart:
         spec:
@@ -111,7 +106,7 @@ resources:
                       env:
                         RELAY_TOKEN:
                           secretKeyRef:
-                            name: syncthing-relay
+                            name: ref:syncthing-relay
                             key: token
                       ports:
                         relay:
@@ -142,7 +137,7 @@ resources:
                     keys:
                       name: keys
                       secret:
-                        secretName: syncthing-relay-keys
+                        secretName: ref:syncthing-relay-keys
                         defaultMode: 0440
                         items:
                           cert:

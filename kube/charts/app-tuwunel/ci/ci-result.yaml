@@ -49,9 +49,9 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: tuwunel-pre
   - name: app-longhorn
     namespace: longhorn-system
-  - name: tuwunel-pre
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -72,6 +72,50 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      tuwunel:
+        deployments:
+          tuwunel:
+            labels:
+              app.kubernetes.io/component: tuwunel
+              app.kubernetes.io/instance: tuwunel
+            name: tuwunel
+            namespace: default
+        persistentVolumeClaims:
+          tuwunel-data:
+            name: tuwunel-data
+            namespace: default
+        services:
+          tuwunel:
+            name: tuwunel
+            namespace: default
+      tuwunel-integration:
+        certManagerCertificates:
+          tuwunel-gateway:
+            name: tuwunel-gateway
+            namespace: default
+            secretName: tls-tuwunel-gateway
+        httpRoutes:
+          tuwunel:
+            name: tuwunel
+            namespace: default
+        listenerSets:
+          tuwunel:
+            name: tuwunel
+            namespace: default
+      tuwunel-pre:
+        externalSecrets:
+          tuwunel-oidc:
+            name: tuwunel-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
     resources:
       deployments:
         tuwunel:
@@ -86,7 +130,7 @@ spec:
                     OIDC_CLIENT_ID:
                       secretKeyRef:
                         key: client-id
-                        name: tuwunel-oidc
+                        name: ref:tuwunel-oidc
                     TUWUNEL_ADDRESS: 0.0.0.0
                     TUWUNEL_ALLOW_FEDERATION: "false"
                     TUWUNEL_DATABASE_PATH: /var/lib/tuwunel/data
@@ -96,7 +140,7 @@ spec:
                     TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_SECRET:
                       secretKeyRef:
                         key: secret
-                        name: tuwunel-oidc
+                        name: ref:tuwunel-oidc
                     TUWUNEL_IDENTITY_PROVIDER__0__ISSUER_URL: https://authelia.test.com
                     TUWUNEL_IDENTITY_PROVIDER__0__NAME: Authelia
                     TUWUNEL_IDENTITY_PROVIDER__0__UNIQUE_ID_FALLBACKS: "false"
@@ -144,7 +188,7 @@ spec:
                 data:
                   name: data
                   persistentVolumeClaim:
-                    claimName: tuwunel-data
+                    claimName: ref:tuwunel-data
       persistentVolumeClaims:
         tuwunel-data:
           resources:
@@ -173,11 +217,11 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: tuwunel
   - name: app-cert-manager
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
-  - name: tuwunel
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -200,6 +244,50 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      tuwunel:
+        deployments:
+          tuwunel:
+            labels:
+              app.kubernetes.io/component: tuwunel
+              app.kubernetes.io/instance: tuwunel
+            name: tuwunel
+            namespace: default
+        persistentVolumeClaims:
+          tuwunel-data:
+            name: tuwunel-data
+            namespace: default
+        services:
+          tuwunel:
+            name: tuwunel
+            namespace: default
+      tuwunel-integration:
+        certManagerCertificates:
+          tuwunel-gateway:
+            name: tuwunel-gateway
+            namespace: default
+            secretName: tls-tuwunel-gateway
+        httpRoutes:
+          tuwunel:
+            name: tuwunel
+            namespace: default
+        listenerSets:
+          tuwunel:
+            name: tuwunel
+            namespace: default
+      tuwunel-pre:
+        externalSecrets:
+          tuwunel-oidc:
+            name: tuwunel-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
     resources:
       certManagerCertificates:
         tuwunel-gateway:
@@ -214,15 +302,12 @@ spec:
           hostnames:
             matrix: matrix.test.com
           parentRefs:
-            tuwunel:
-              group: gateway.networking.k8s.io
-              kind: ListenerSet
-              name: tuwunel
+            tuwunel: ref:tuwunel
           rules:
             root:
               backendRefs:
                 tuwunel:
-                  name: tuwunel
+                  name: ref:tuwunel
                   port: 8008
               timeouts:
                 request: 0s
@@ -240,7 +325,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-tuwunel-gateway
+                    name: ref:tuwunel-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
@@ -264,10 +349,10 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
-  - name: authelia-pre
-    namespace: authelia
   - name: app-external-secrets
     namespace: external-secrets
+  - name: authelia-pre
+    namespace: authelia
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -288,6 +373,50 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      tuwunel:
+        deployments:
+          tuwunel:
+            labels:
+              app.kubernetes.io/component: tuwunel
+              app.kubernetes.io/instance: tuwunel
+            name: tuwunel
+            namespace: default
+        persistentVolumeClaims:
+          tuwunel-data:
+            name: tuwunel-data
+            namespace: default
+        services:
+          tuwunel:
+            name: tuwunel
+            namespace: default
+      tuwunel-integration:
+        certManagerCertificates:
+          tuwunel-gateway:
+            name: tuwunel-gateway
+            namespace: default
+            secretName: tls-tuwunel-gateway
+        httpRoutes:
+          tuwunel:
+            name: tuwunel
+            namespace: default
+        listenerSets:
+          tuwunel:
+            name: tuwunel
+            namespace: default
+      tuwunel-pre:
+        externalSecrets:
+          tuwunel-oidc:
+            name: tuwunel-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
     resources:
       externalSecrets:
         tuwunel-oidc:
@@ -303,16 +432,14 @@ spec:
                 property: secret
               secretKey: secret
           refreshInterval: 1h
-          secretStoreRef:
-            kind: SecretStore
-            name: authelia
+          secretStoreRef: ref:authelia
       secretStores:
         authelia:
           provider:
             kubernetes:
               auth:
                 serviceAccount:
-                  name: authelia-reader
+                  name: ref:authelia-reader
               remoteNamespace: authelia
               server:
                 caProvider:

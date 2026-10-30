@@ -24,8 +24,7 @@ resources:
   # The database has its own policy, from the postgresql chart.
   ciliumNetworkPolicies:
     firefox-sync:
-      endpointSelector:
-        matchLabels: {app.kubernetes.io/instance: firefox-sync, app.kubernetes.io/component: firefox-sync}
+      endpointSelector: ref:firefox-sync
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
@@ -51,14 +50,11 @@ resources:
           firefox-sync:
             matchLabels: {app.kubernetes.io/instance: firefox-sync, app.kubernetes.io/component: firefox-sync}
       dependsOn: # the certificates, the cluster and the volume snapshots
-        cert-manager:
-          name: app-cert-manager
+        - name: app-cert-manager
           namespace: cert-manager
-        cnpg:
-          name: app-cnpg
+        - name: app-cnpg
           namespace: cnpg-system
-        longhorn:
-          name: app-longhorn
+        - name: app-longhorn
           namespace: longhorn-system
       chart:
         spec:
@@ -72,8 +68,7 @@ resources:
     # the secrets of the service, created before it starts
     firefox-sync-pre:
       dependsOn:
-        secret-generator:
-          name: app-secret-generator
+        - name: app-secret-generator
           namespace: secret-generator
       chart:
         spec:
@@ -93,10 +88,8 @@ resources:
 
     firefox-sync:
       dependsOn:
-        firefox-sync-postgresql: # the database
-          name: firefox-sync-postgresql
-        firefox-sync-pre: # the generated secrets
-          name: firefox-sync-pre
+        - ref:firefox-sync-postgresql # the database
+        - ref:firefox-sync-pre # the generated secrets
       chart:
         spec:
           chart: ./kube/charts/base-loader
@@ -126,7 +119,7 @@ resources:
                         SYNC_PORT: "8000"
                         SYNC_MASTER_SECRET:
                           secretKeyRef:
-                            name: firefox-sync-generated
+                            name: ref:firefox-sync-generated
                             key: master-secret
                         # storage and token server share the database, the postgres backend has no TLS. The password has to be defined
                         # before the urls that use it.
@@ -146,7 +139,7 @@ resources:
                         SYNC_TOKENSERVER__FXA_OAUTH_SERVER_URL: https://oauth.accounts.firefox.com
                         SYNC_TOKENSERVER__FXA_METRICS_HASH_SECRET:
                           secretKeyRef:
-                            name: firefox-sync-generated
+                            name: ref:firefox-sync-generated
                             key: metrics-hash-secret
                         SYNC_TOKENSERVER__ALLOW_NEW_USERS: "true" # set to "false" once the devices are signed in
                         SYNC_ENVIRONMENT: prod
@@ -187,13 +180,10 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        firefox-sync:
-          name: firefox-sync
-        cert-manager:
-          name: app-cert-manager
+        - ref:firefox-sync
+        - name: app-cert-manager
           namespace: cert-manager
-        gateway-api:
-          name: app-gateway-api
+        - name: app-gateway-api
           namespace: gateway-api
       chart:
         spec:
@@ -234,7 +224,7 @@ resources:
                     mode: Terminate
                     certificateRefs:
                       tls:
-                        name: tls-firefox-sync-gateway
+                        name: ref:firefox-sync-gateway
                   allowedRoutes:
                     namespaces:
                       from: Same
@@ -242,15 +232,12 @@ resources:
           httpRoutes:
             firefox-sync:
               parentRefs:
-                firefox-sync:
-                  group: gateway.networking.k8s.io
-                  kind: ListenerSet
-                  name: firefox-sync
+                firefox-sync: ref:firefox-sync
               hostnames:
                 firefox-sync: firefox-sync.{{ .Values.app.domain }}
               rules:
                 root:
                   backendRefs:
                     firefox-sync:
-                      name: firefox-sync
+                      name: ref:firefox-sync
                       port: 8000

@@ -38,8 +38,7 @@ resources:
         kind: GitRepository
         name: external-snapshotter
       dependsOn:
-        crds:
-          name: external-snapshotter-crds
+        - name: external-snapshotter-crds
       # the upstream manifest sets no security context: compliant with container-require-run-as-non-root and
       # container-require-read-only-root-filesystem (see app-kyverno)
       patches:

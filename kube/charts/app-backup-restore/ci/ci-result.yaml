@@ -136,6 +136,20 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      backup-restore-pre:
+        externalSecrets:
+          s3-secrets:
+            name: s3-secrets
+            namespace: default
+        secretStores:
+          garage:
+            name: garage
+            namespace: default
+        serviceAccounts:
+          garage-reader:
+            name: garage-reader
+            namespace: default
     resources:
       externalSecrets:
         s3-secrets:
@@ -144,16 +158,14 @@ spec:
               extract:
                 key: garage-longhorn
           refreshInterval: 1h
-          secretStoreRef:
-            kind: SecretStore
-            name: garage
+          secretStoreRef: ref:garage
       secretStores:
         garage:
           provider:
             kubernetes:
               auth:
                 serviceAccount:
-                  name: garage-reader
+                  name: ref:garage-reader
               remoteNamespace: garage
               server:
                 caProvider:

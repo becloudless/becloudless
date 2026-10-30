@@ -170,6 +170,36 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      kyverno-post:
+        kyvernoClusterPolicies:
+          container-disallow-latest-tag:
+            name: container-disallow-latest-tag
+            namespace: default
+          container-require-read-only-root-filesystem:
+            name: container-require-read-only-root-filesystem
+            namespace: default
+          container-require-run-as-non-root:
+            name: container-require-run-as-non-root
+            namespace: default
+          container-set-image-pull-policy:
+            name: container-set-image-pull-policy
+            namespace: default
+          container-set-no-privilege-escalation:
+            name: container-set-no-privilege-escalation
+            namespace: default
+          hr-ks-require-service-account:
+            name: hr-ks-require-service-account
+            namespace: default
+          pod-disable-service-links:
+            name: pod-disable-service-links
+            namespace: default
+          pod-set-host-users:
+            name: pod-set-host-users
+            namespace: default
+          pod-set-seccomp-profile:
+            name: pod-set-seccomp-profile
+            namespace: default
     resources:
       kyvernoClusterPolicies:
         container-disallow-latest-tag:

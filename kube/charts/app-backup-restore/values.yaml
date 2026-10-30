@@ -80,11 +80,9 @@ resources:
     # the access key of the bucket of the secrets, copied from Garage before the jobs run
     backup-restore-pre:
       dependsOn:
-        external-secrets:
-          name: app-external-secrets
+        - name: app-external-secrets
           namespace: external-secrets
-        garage-pre: # the key, and the right to read it
-          name: garage-pre
+        - name: garage-pre # the key, and the right to read it
           namespace: garage
       chart:
         spec:
@@ -112,15 +110,13 @@ resources:
                       key: ca.crt
                   auth:
                     serviceAccount:
-                      name: garage-reader
+                      name: ref:garage-reader
 
           # `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_ENDPOINTS`, read by the jobs
           externalSecrets:
             s3-secrets:
               refreshInterval: 1h
-              secretStoreRef:
-                kind: SecretStore
-                name: garage
+              secretStoreRef: ref:garage
               dataFrom:
                 all:
                   extract:

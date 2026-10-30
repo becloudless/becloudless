@@ -264,6 +264,10 @@
       "description": "Whether the name of the resources is prefixed with the release name (\u003crelease\u003e-\u003cid\u003e). When false, the name is the id (or nameOverride). Defaults to false.",
       "type": "boolean"
     },
+    "refs": {
+      "description": "What the resources of the sibling releases are, by release id, kind and resource id: the name, the namespace, the labels of the pods and the name of the Secret. Set by the parent chart (refsIndex mutation), for the references (`ref:\u003cid\u003e`) to resources of a sibling release.",
+      "type": "object"
+    },
     "resources": {
       "additionalProperties": false,
       "properties": {

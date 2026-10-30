@@ -50,14 +50,11 @@ resources:
           forgejo:
             matchLabels: {app.kubernetes.io/name: forgejo}
       dependsOn: # the certificates, the cluster and the volume snapshots
-        cert-manager:
-          name: app-cert-manager
+        - name: app-cert-manager
           namespace: cert-manager
-        cnpg:
-          name: app-cnpg
+        - name: app-cnpg
           namespace: cnpg-system
-        longhorn:
-          name: app-longhorn
+        - name: app-longhorn
           namespace: longhorn-system
       chart:
         spec:
@@ -71,11 +68,9 @@ resources:
     # the secret of the OIDC client, copied from authelia before forgejo starts
     forgejo-pre:
       dependsOn:
-        external-secrets:
-          name: app-external-secrets
+        - name: app-external-secrets
           namespace: external-secrets
-        authelia-pre: # the generated secret of the client and the right to read it
-          name: authelia-pre
+        - name: authelia-pre # the generated secret of the client and the right to read it
           namespace: authelia
       chart:
         spec:
@@ -103,15 +98,13 @@ resources:
                       key: ca.crt
                   auth:
                     serviceAccount:
-                      name: authelia-reader
+                      name: ref:authelia-reader
 
           # the `key` (client_id) and the `secret` of the client are the keys the forgejo chart reads
           externalSecrets:
             forgejo-oidc:
               refreshInterval: 1h
-              secretStoreRef:
-                kind: SecretStore
-                name: authelia
+              secretStoreRef: ref:authelia
               data:
                 key:
                   secretKey: key
@@ -126,10 +119,8 @@ resources:
 
     forgejo:
       dependsOn:
-        forgejo-postgresql:
-          name: forgejo-postgresql
-        forgejo-pre: # the secret of the OIDC client
-          name: forgejo-pre
+        - ref:forgejo-postgresql
+        - ref:forgejo-pre # the secret of the OIDC client
       chart:
         spec:
           chart: forgejo
@@ -226,13 +217,10 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        forgejo:
-          name: forgejo
-        cert-manager:
-          name: app-cert-manager
+        - ref:forgejo
+        - name: app-cert-manager
           namespace: cert-manager
-        gateway-api:
-          name: app-gateway-api
+        - name: app-gateway-api
           namespace: gateway-api
       chart:
         spec:
@@ -273,7 +261,7 @@ resources:
                     mode: Terminate
                     certificateRefs:
                       tls:
-                        name: tls-forgejo-gateway
+                        name: ref:forgejo-gateway
                   allowedRoutes:
                     namespaces:
                       from: Same
@@ -281,10 +269,7 @@ resources:
           httpRoutes:
             forgejo:
               parentRefs:
-                forgejo:
-                  group: gateway.networking.k8s.io
-                  kind: ListenerSet
-                  name: forgejo
+                forgejo: ref:forgejo
               hostnames:
                 forgejo: forgejo.{{ .Values.app.domain }}
               rules:

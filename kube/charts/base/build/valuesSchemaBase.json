@@ -6,6 +6,10 @@
     "global": {
       "type": "object"
     },
+    "refs": {
+      "type": "object",
+      "description": "What the resources of the sibling releases are, by release id, kind and resource id: the name, the namespace, the labels of the pods and the name of the Secret. Set by the parent chart (refsIndex mutation), for the references (`ref:<id>`) to resources of a sibling release."
+    },
     "checkRequiredValues": {
       "description": "Whether to check and fail if some values are null. Defaults to true.",
       "type": "boolean"

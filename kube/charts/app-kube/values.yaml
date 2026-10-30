@@ -56,8 +56,7 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        gateway-api:
-          name: app-gateway-api
+        - name: app-gateway-api
           namespace: gateway-api
       chart:
         spec:

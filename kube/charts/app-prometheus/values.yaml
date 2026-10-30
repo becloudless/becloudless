@@ -163,11 +163,9 @@ resources:
     # the secret of the OIDC client of grafana, copied from authelia before it starts
     prometheus-pre:
       dependsOn:
-        external-secrets:
-          name: app-external-secrets
+        - name: app-external-secrets
           namespace: external-secrets
-        authelia-pre: # the generated secret of the client and the right to read it
-          name: authelia-pre
+        - name: authelia-pre # the generated secret of the client and the right to read it
           namespace: authelia
       chart:
         spec:
@@ -195,14 +193,12 @@ resources:
                       key: ca.crt
                   auth:
                     serviceAccount:
-                      name: authelia-reader
+                      name: ref:authelia-reader
 
           externalSecrets:
             grafana-oidc:
               refreshInterval: 1h
-              secretStoreRef:
-                kind: SecretStore
-                name: authelia
+              secretStoreRef: ref:authelia
               data:
                 client-id:
                   secretKey: client-id
@@ -218,11 +214,9 @@ resources:
     # the release is named `prometheus`, which gives the service names used by the httpRoutes
     prometheus:
       dependsOn: # the volumes, the secret of the OIDC client
-        longhorn:
-          name: app-longhorn
+        - name: app-longhorn
           namespace: longhorn-system
-        prometheus-pre:
-          name: prometheus-pre
+        - ref:prometheus-pre
       chart:
         spec:
           chart: kube-prometheus-stack
@@ -477,13 +471,10 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        prometheus:
-          name: prometheus
-        cert-manager:
-          name: app-cert-manager
+        - ref:prometheus
+        - name: app-cert-manager
           namespace: cert-manager
-        gateway-api:
-          name: app-gateway-api
+        - name: app-gateway-api
           namespace: gateway-api
       chart:
         spec:
@@ -543,7 +534,7 @@ resources:
                     mode: Terminate
                     certificateRefs:
                       tls:
-                        name: tls-prometheus-gateway
+                        name: ref:prometheus-gateway
                   allowedRoutes:
                     namespaces:
                       from: Same
@@ -556,7 +547,7 @@ resources:
                     mode: Terminate
                     certificateRefs:
                       tls:
-                        name: tls-alertmanager-gateway
+                        name: ref:alertmanager-gateway
                   allowedRoutes:
                     namespaces:
                       from: Same
@@ -569,7 +560,7 @@ resources:
                     mode: Terminate
                     certificateRefs:
                       tls:
-                        name: tls-grafana-gateway
+                        name: ref:grafana-gateway
                   allowedRoutes:
                     namespaces:
                       from: Same
@@ -582,7 +573,7 @@ resources:
                     mode: Terminate
                     certificateRefs:
                       tls:
-                        name: tls-pushprox-gateway
+                        name: ref:pushprox-gateway
                   allowedRoutes:
                     namespaces:
                       from: Same

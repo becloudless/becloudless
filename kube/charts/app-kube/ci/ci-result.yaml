@@ -76,6 +76,16 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      kube-integration:
+        listenerSets:
+          kube:
+            name: kube
+            namespace: default
+        tlsRoutes:
+          kube:
+            name: kube
+            namespace: default
     resources:
       listenerSets:
         kube:

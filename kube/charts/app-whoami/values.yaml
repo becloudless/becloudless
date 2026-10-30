@@ -8,8 +8,7 @@ resources:
   # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     whoami:
-      endpointSelector:
-        matchLabels: {app.kubernetes.io/instance: whoami, app.kubernetes.io/component: whoami}
+      endpointSelector: ref:whoami
       ingress:
         gateway:
           fromEntities: [ingress, host, remote-node]
@@ -85,13 +84,10 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        whoami:
-          name: whoami
-        cert-manager:
-          name: app-cert-manager
+        - ref:whoami
+        - name: app-cert-manager
           namespace: cert-manager
-        gateway-api:
-          name: app-gateway-api
+        - name: app-gateway-api
           namespace: gateway-api
       chart:
         spec:
@@ -132,7 +128,7 @@ resources:
                     mode: Terminate
                     certificateRefs:
                       tls:
-                        name: tls-whoami-gateway
+                        name: ref:whoami-gateway
                   allowedRoutes:
                     namespaces:
                       from: Same
@@ -140,10 +136,7 @@ resources:
           httpRoutes:
             whoami:
               parentRefs:
-                whoami:
-                  group: gateway.networking.k8s.io
-                  kind: ListenerSet
-                  name: whoami
+                whoami: ref:whoami
               hostnames:
                 whoami: whoami.{{ .Values.app.domain }}
               rules:
@@ -172,5 +165,5 @@ resources:
                             x-forwarded-for: x-forwarded-for
                   backendRefs:
                     whoami:
-                      name: whoami
+                      name: ref:whoami
                       port: 8080

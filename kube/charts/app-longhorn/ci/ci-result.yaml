@@ -429,11 +429,11 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: longhorn-post
   - name: app-cert-manager
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
-  - name: longhorn-post
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -456,6 +456,77 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      longhorn-integration:
+        certManagerCertificates:
+          longhorn-ui:
+            name: longhorn-ui
+            namespace: default
+            secretName: tls-longhorn
+        httpRoutes:
+          longhorn:
+            name: longhorn
+            namespace: default
+        listenerSets:
+          longhorn:
+            name: longhorn
+            namespace: default
+      longhorn-post:
+        longhornRecurringJobs:
+          daily-backups:
+            name: daily-backups
+            namespace: default
+        longhornSettings:
+          allow-collecting-longhorn-usage-metrics:
+            name: allow-collecting-longhorn-usage-metrics
+            namespace: default
+          concurrent-automatic-engine-upgrade-per-node-limit:
+            name: concurrent-automatic-engine-upgrade-per-node-limit
+            namespace: default
+          default-backup-block-size:
+            name: default-backup-block-size
+            namespace: default
+          upgrade-checker:
+            name: upgrade-checker
+            namespace: default
+        storageClasses:
+          longhorn-db:
+            name: longhorn-db
+            namespace: default
+          longhorn-files:
+            name: longhorn-files
+            namespace: default
+          longhorn-single-local-replica:
+            name: longhorn-single-local-replica
+            namespace: default
+        volumeSnapshotClasses:
+          longhorn-backing-image:
+            name: longhorn-backing-image
+            namespace: default
+          longhorn-backup-full:
+            name: longhorn-backup-full
+            namespace: default
+          longhorn-backup-incremental:
+            name: longhorn-backup-incremental
+            namespace: default
+          longhorn-snapshot:
+            name: longhorn-snapshot
+            namespace: default
+      longhorn-pre:
+        configMaps:
+          longhorn-nixos-path:
+            name: longhorn-nixos-path
+            namespace: default
+        kyvernoClusterPolicies:
+          longhorn-add-nixos-path:
+            name: longhorn-add-nixos-path
+            namespace: default
+          longhorn-host-users:
+            name: longhorn-host-users
+            namespace: default
+          longhorn-skip-security-audit:
+            name: longhorn-skip-security-audit
+            namespace: default
     resources:
       certManagerCertificates:
         longhorn-ui:
@@ -470,10 +541,7 @@ spec:
           hostnames:
             ui: longhorn.test.com
           parentRefs:
-            longhorn:
-              group: gateway.networking.k8s.io
-              kind: ListenerSet
-              name: longhorn
+            longhorn: ref:longhorn
           rules:
             ui:
               backendRefs:
@@ -516,7 +584,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-longhorn
+                    name: ref:longhorn-ui
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
@@ -540,9 +608,9 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: longhorn
   - name: app-external-snapshotter
     namespace: external-snapshotter
-  - name: longhorn
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -563,6 +631,77 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      longhorn-integration:
+        certManagerCertificates:
+          longhorn-ui:
+            name: longhorn-ui
+            namespace: default
+            secretName: tls-longhorn
+        httpRoutes:
+          longhorn:
+            name: longhorn
+            namespace: default
+        listenerSets:
+          longhorn:
+            name: longhorn
+            namespace: default
+      longhorn-post:
+        longhornRecurringJobs:
+          daily-backups:
+            name: daily-backups
+            namespace: default
+        longhornSettings:
+          allow-collecting-longhorn-usage-metrics:
+            name: allow-collecting-longhorn-usage-metrics
+            namespace: default
+          concurrent-automatic-engine-upgrade-per-node-limit:
+            name: concurrent-automatic-engine-upgrade-per-node-limit
+            namespace: default
+          default-backup-block-size:
+            name: default-backup-block-size
+            namespace: default
+          upgrade-checker:
+            name: upgrade-checker
+            namespace: default
+        storageClasses:
+          longhorn-db:
+            name: longhorn-db
+            namespace: default
+          longhorn-files:
+            name: longhorn-files
+            namespace: default
+          longhorn-single-local-replica:
+            name: longhorn-single-local-replica
+            namespace: default
+        volumeSnapshotClasses:
+          longhorn-backing-image:
+            name: longhorn-backing-image
+            namespace: default
+          longhorn-backup-full:
+            name: longhorn-backup-full
+            namespace: default
+          longhorn-backup-incremental:
+            name: longhorn-backup-incremental
+            namespace: default
+          longhorn-snapshot:
+            name: longhorn-snapshot
+            namespace: default
+      longhorn-pre:
+        configMaps:
+          longhorn-nixos-path:
+            name: longhorn-nixos-path
+            namespace: default
+        kyvernoClusterPolicies:
+          longhorn-add-nixos-path:
+            name: longhorn-add-nixos-path
+            namespace: default
+          longhorn-host-users:
+            name: longhorn-host-users
+            namespace: default
+          longhorn-skip-security-audit:
+            name: longhorn-skip-security-audit
+            namespace: default
     resources:
       longhornRecurringJobs:
         daily-backups:
@@ -689,6 +828,77 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      longhorn-integration:
+        certManagerCertificates:
+          longhorn-ui:
+            name: longhorn-ui
+            namespace: default
+            secretName: tls-longhorn
+        httpRoutes:
+          longhorn:
+            name: longhorn
+            namespace: default
+        listenerSets:
+          longhorn:
+            name: longhorn
+            namespace: default
+      longhorn-post:
+        longhornRecurringJobs:
+          daily-backups:
+            name: daily-backups
+            namespace: default
+        longhornSettings:
+          allow-collecting-longhorn-usage-metrics:
+            name: allow-collecting-longhorn-usage-metrics
+            namespace: default
+          concurrent-automatic-engine-upgrade-per-node-limit:
+            name: concurrent-automatic-engine-upgrade-per-node-limit
+            namespace: default
+          default-backup-block-size:
+            name: default-backup-block-size
+            namespace: default
+          upgrade-checker:
+            name: upgrade-checker
+            namespace: default
+        storageClasses:
+          longhorn-db:
+            name: longhorn-db
+            namespace: default
+          longhorn-files:
+            name: longhorn-files
+            namespace: default
+          longhorn-single-local-replica:
+            name: longhorn-single-local-replica
+            namespace: default
+        volumeSnapshotClasses:
+          longhorn-backing-image:
+            name: longhorn-backing-image
+            namespace: default
+          longhorn-backup-full:
+            name: longhorn-backup-full
+            namespace: default
+          longhorn-backup-incremental:
+            name: longhorn-backup-incremental
+            namespace: default
+          longhorn-snapshot:
+            name: longhorn-snapshot
+            namespace: default
+      longhorn-pre:
+        configMaps:
+          longhorn-nixos-path:
+            name: longhorn-nixos-path
+            namespace: default
+        kyvernoClusterPolicies:
+          longhorn-add-nixos-path:
+            name: longhorn-add-nixos-path
+            namespace: default
+          longhorn-host-users:
+            name: longhorn-host-users
+            namespace: default
+          longhorn-skip-security-audit:
+            name: longhorn-skip-security-audit
+            namespace: default
     resources:
       configMaps:
         longhorn-nixos-path:

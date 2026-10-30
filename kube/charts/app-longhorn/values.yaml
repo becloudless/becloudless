@@ -251,8 +251,7 @@ resources:
             name: bcl
             namespace: apps
       dependsOn:
-        kyverno:
-          name: app-kyverno
+        - name: app-kyverno
           namespace: kyverno
       values:
 
@@ -398,8 +397,7 @@ resources:
       # (deleting-confirmation-flag is false on purpose) and leaves the Helm release stuck in `uninstalling`
       timeout: 15m
       dependsOn:
-        longhorn-pre:
-          name: longhorn-pre
+        - ref:longhorn-pre
       values:
         enablePSP: false
 
@@ -433,10 +431,8 @@ resources:
     # the VolumeSnapshotClasses also need the snapshot CRDs from app-external-snapshotter
     longhorn-post:
       dependsOn:
-        longhorn:
-          name: longhorn
-        external-snapshotter:
-          name: app-external-snapshotter
+        - ref:longhorn
+        - name: app-external-snapshotter
           namespace: external-snapshotter
       chart:
         spec:
@@ -565,13 +561,10 @@ resources:
       upgrade:
         disableWait: true
       dependsOn:
-        longhorn-post:
-          name: longhorn-post
-        cert-manager:
-          name: app-cert-manager
+        - ref:longhorn-post
+        - name: app-cert-manager
           namespace: cert-manager
-        gateway-api:
-          name: app-gateway-api
+        - name: app-gateway-api
           namespace: gateway-api
       chart:
         spec:
@@ -612,7 +605,7 @@ resources:
                     mode: Terminate
                     certificateRefs:
                       tls:
-                        name: tls-longhorn
+                        name: ref:longhorn-ui
                   allowedRoutes:
                     namespaces:
                       from: Same
@@ -620,10 +613,7 @@ resources:
           httpRoutes:
             longhorn:
               parentRefs:
-                longhorn:
-                  group: gateway.networking.k8s.io
-                  kind: ListenerSet
-                  name: longhorn
+                longhorn: ref:longhorn
               hostnames:
                 ui: longhorn.{{ .Values.app.domain }}
               rules:

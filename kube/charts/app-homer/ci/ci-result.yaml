@@ -55,6 +55,37 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      homer:
+        configMaps:
+          homer-config:
+            name: homer-config
+            namespace: default
+        deployments:
+          homer:
+            labels:
+              app.kubernetes.io/component: homer
+              app.kubernetes.io/instance: homer
+            name: homer
+            namespace: default
+        services:
+          homer:
+            name: homer
+            namespace: default
+      homer-integration:
+        certManagerCertificates:
+          homer:
+            name: homer
+            namespace: default
+            secretName: tls-homer
+        httpRoutes:
+          homer:
+            name: homer
+            namespace: default
+        listenerSets:
+          homer:
+            name: homer
+            namespace: default
     resources:
       configMaps:
         homer-config:
@@ -354,7 +385,7 @@ spec:
               volumes:
                 config:
                   configMap:
-                    name: homer-config
+                    name: ref:homer-config
                   name: config
       services:
         homer:
@@ -378,11 +409,11 @@ spec:
         name: bcl
         namespace: apps
   dependsOn:
+  - name: homer
   - name: app-cert-manager
     namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
-  - name: homer
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -405,6 +436,37 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    refs:
+      homer:
+        configMaps:
+          homer-config:
+            name: homer-config
+            namespace: default
+        deployments:
+          homer:
+            labels:
+              app.kubernetes.io/component: homer
+              app.kubernetes.io/instance: homer
+            name: homer
+            namespace: default
+        services:
+          homer:
+            name: homer
+            namespace: default
+      homer-integration:
+        certManagerCertificates:
+          homer:
+            name: homer
+            namespace: default
+            secretName: tls-homer
+        httpRoutes:
+          homer:
+            name: homer
+            namespace: default
+        listenerSets:
+          homer:
+            name: homer
+            namespace: default
     resources:
       certManagerCertificates:
         homer:
@@ -419,15 +481,12 @@ spec:
           hostnames:
             homer: homer.test.com
           parentRefs:
-            homer:
-              group: gateway.networking.k8s.io
-              kind: ListenerSet
-              name: homer
+            homer: ref:homer
           rules:
             root:
               backendRefs:
                 homer:
-                  name: homer
+                  name: ref:homer
                   port: 8080
               filters:
                 authelia:
@@ -465,7 +524,7 @@ spec:
               tls:
                 certificateRefs:
                   tls:
-                    name: tls-homer
+                    name: ref:homer
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
