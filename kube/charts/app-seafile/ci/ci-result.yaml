@@ -157,6 +157,10 @@ spec:
           strategy:
             type: Recreate
           template:
+            metadata:
+              annotations:
+                policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
+                policy.bcl/skipContainerRequireRunAsNonRoot: "true"
             spec:
               containers:
                 seafile:
@@ -239,6 +243,8 @@ spec:
                       - NET_BIND_SERVICE
                       drop:
                         all: ALL
+                    readOnlyRootFilesystem: false
+                    runAsNonRoot: false
                   startupProbe:
                     failureThreshold: 120
                     httpGet:
@@ -454,6 +460,9 @@ spec:
                       mountPath: /var/lib/mysql
                       name: data
                       subPath: data
+                    run:
+                      mountPath: /run/mysqld
+                      name: run
               securityContext:
                 fsGroup: 999
               volumes:
@@ -461,6 +470,9 @@ spec:
                   name: data
                   persistentVolumeClaim:
                     claimName: seafile-mariadb
+                run:
+                  emptyDir: {}
+                  name: run
       persistentVolumeClaims:
         seafile-mariadb:
           accessModes:

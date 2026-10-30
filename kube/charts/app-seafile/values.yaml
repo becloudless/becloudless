@@ -207,11 +207,17 @@ resources:
                           name: data
                           mountPath: /var/lib/mysql
                           subPath: data # the volume has a `lost+found` directory
+                        run:
+                          name: run
+                          mountPath: /run/mysqld # the socket
                   volumes:
                     data:
                       name: data
                       persistentVolumeClaim:
                         claimName: seafile-mariadb
+                    run:
+                      name: run
+                      emptyDir: {}
 
           services:
             seafile-mariadb:
@@ -321,6 +327,11 @@ resources:
               strategy:
                 type: Recreate # the volume is ReadWriteOnce
               template:
+                metadata:
+                  annotations:
+                    # the image runs as root and writes in its filesystem (init system, nginx, cron, generated configuration)
+                    policy.bcl/skipContainerRequireRunAsNonRoot: "true"
+                    policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
                 spec:
                   containers:
                     seafile:
@@ -403,6 +414,8 @@ resources:
                         failureThreshold: 6
                       # the image runs as root (nginx, cron, the init of the files of the volume): only the capabilities it uses are kept
                       securityContext:
+                        runAsNonRoot: false
+                        readOnlyRootFilesystem: false
                         capabilities:
                           drop:
                             all: ALL
