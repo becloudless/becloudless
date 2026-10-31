@@ -173,19 +173,7 @@ spec:
               key: token
               name: syncthing-relay
         image: docker.io/syncthing/syncthing:2.1.7
-        livenessProbe:
-          failureThreshold: 3
-          initialDelaySeconds: 0
-          periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 1
         name: relay-config
-        readinessProbe:
-          failureThreshold: 3
-          initialDelaySeconds: 0
-          periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 1
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -194,12 +182,6 @@ spec:
           readOnlyRootFilesystem: true
           runAsGroup: 1000
           runAsUser: 1000
-        startupProbe:
-          failureThreshold: 30
-          initialDelaySeconds: 0
-          periodSeconds: 5
-          successThreshold: 1
-          timeoutSeconds: 1
         volumeMounts:
         - mountPath: /var/syncthing
           name: data

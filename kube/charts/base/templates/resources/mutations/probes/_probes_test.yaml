@@ -111,3 +111,53 @@ tests:
     asserts:
       - notExists:
           path: spec.template.spec.initContainers[0].startupProbe
+
+  - it: removes the probes without handler, which the defaults of the containers leave on a container that sets none
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                initContainers:
+                  init:
+                    name: init
+                    image: busybox
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                    readinessProbe:
+                      httpGet:
+                        path: /ready
+                        port: 8080
+                  other:
+                    name: other
+                    image: busybox
+    asserts:
+      - notExists:
+          path: spec.template.spec.initContainers[0].livenessProbe
+      - notExists:
+          path: spec.template.spec.initContainers[0].readinessProbe
+      - notExists:
+          path: spec.template.spec.initContainers[0].startupProbe
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - notExists:
+          path: spec.template.spec.containers[0].startupProbe
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe
+          value:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+      - notExists:
+          path: spec.template.spec.containers[1].readinessProbe
