@@ -216,25 +216,17 @@ spec:
                       secretRef:
                         name: lldap
                   image: lldap/lldap:2026-09-22-debian-rootless
-                  livenessProbe:
-                    httpGet:
-                      path: /
-                      port: 17170
                   name: lldap
                   ports:
                     http:
                       containerPort: 17170
                     ldaps:
                       containerPort: 6360
-                  readinessProbe:
+                  probe:
                     httpGet:
                       path: /
-                      port: 17170
                   startupProbe:
                     failureThreshold: 60
-                    httpGet:
-                      path: /
-                      port: 17170
                   volumeMounts:
                     cert:
                       mountPath: /cert

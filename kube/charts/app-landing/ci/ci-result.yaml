@@ -127,18 +127,13 @@ spec:
               containers:
                 nginx:
                   image: nginxinc/nginx-unprivileged:1.29.3-alpine
-                  livenessProbe:
-                    httpGet:
-                      path: /
-                      port: 8080
                   name: nginx
                   ports:
                     http:
                       containerPort: 8080
-                  readinessProbe:
+                  probe:
                     httpGet:
                       path: /
-                      port: 8080
                   securityContext:
                     capabilities:
                       drop:

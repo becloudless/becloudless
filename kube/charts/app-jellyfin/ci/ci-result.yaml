@@ -318,27 +318,19 @@ spec:
                     JELLYFIN_PublishedServerUrl: https://jellyfin.test.com
                     TZ: Europe/Paris
                   image: ghcr.io/jellyfin/jellyfin:10.11.11
-                  livenessProbe:
-                    httpGet:
-                      path: /health
-                      port: 8096
                   name: jellyfin
                   ports:
                     http:
                       containerPort: 8096
-                  readinessProbe:
+                  probe:
                     httpGet:
                       path: /health
-                      port: 8096
                   securityContext:
                     capabilities:
                       drop:
                         all: ALL
                   startupProbe:
                     failureThreshold: 60
-                    httpGet:
-                      path: /health
-                      port: 8096
                     periodSeconds: 10
                   volumeMounts:
                     config:

@@ -385,33 +385,19 @@ spec:
                     DB_USER: app
                     TZ: Europe/Paris
                   image: ghcr.io/seerr-team/seerr:preview-new-oidc@sha256:28744b1ced522beb7af8e5c966b73c6e46b1dc2c4c8cb497ad2f12d3139699a3
-                  livenessProbe:
-                    httpGet:
-                      path: /api/v1/settings/public
-                      port: 5055
-                    periodSeconds: 15
-                    timeoutSeconds: 3
                   name: seerr
                   ports:
                     http:
                       containerPort: 5055
-                  readinessProbe:
+                  probe:
                     httpGet:
                       path: /api/v1/settings/public
-                      port: 5055
-                    periodSeconds: 15
-                    timeoutSeconds: 3
                   securityContext:
                     capabilities:
                       drop:
                         all: ALL
                     runAsGroup: 1000
                     runAsUser: 1000
-                  startupProbe:
-                    httpGet:
-                      path: /api/v1/settings/public
-                      port: 5055
-                    periodSeconds: 10
                   volumeMounts:
                     config:
                       mountPath: /app/config

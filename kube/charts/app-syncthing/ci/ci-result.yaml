@@ -249,27 +249,18 @@ spec:
                         key: token
                         name: ref:syncthing-relay
                   image: docker.io/syncthing/relaysrv:2.1.7
-                  livenessProbe:
-                    periodSeconds: 30
-                    tcpSocket:
-                      port: 22067
                   name: relay
                   ports:
                     relay:
                       containerPort: 22067
-                  readinessProbe:
-                    tcpSocket:
-                      port: 22067
+                  probe:
+                    tcpSocket: {}
                   securityContext:
                     capabilities:
                       drop:
                         all: ALL
                     runAsGroup: 1000
                     runAsUser: 1000
-                  startupProbe:
-                    failureThreshold: 30
-                    tcpSocket:
-                      port: 22067
                   volumeMounts:
                     keys:
                       mountPath: /var/strelaysrv

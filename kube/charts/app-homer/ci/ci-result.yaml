@@ -352,18 +352,13 @@ spec:
                   env:
                     INIT_ASSETS: "0"
                   image: b4bz/homer:v26.08.3
-                  livenessProbe:
-                    httpGet:
-                      path: /
-                      port: 8080
                   name: homer
                   ports:
                     http:
                       containerPort: 8080
-                  readinessProbe:
+                  probe:
                     httpGet:
                       path: /
-                      port: 8080
                   securityContext:
                     capabilities:
                       drop:

@@ -151,33 +151,19 @@ spec:
                     TUWUNEL_SERVER_NAME: matrix.test.com
                     TUWUNEL_WELL_KNOWN__CLIENT: https://matrix.test.com
                   image: ghcr.io/matrix-construct/tuwunel:v1.9.4
-                  livenessProbe:
-                    failureThreshold: 6
-                    httpGet:
-                      path: /_matrix/client/versions
-                      port: 8008
-                    periodSeconds: 30
-                    timeoutSeconds: 10
                   name: tuwunel
                   ports:
                     http:
                       containerPort: 8008
-                  readinessProbe:
+                  probe:
                     httpGet:
                       path: /_matrix/client/versions
-                      port: 8008
-                    timeoutSeconds: 5
                   securityContext:
                     capabilities:
                       drop:
                         all: ALL
                     runAsGroup: 1000
                     runAsUser: 1000
-                  startupProbe:
-                    failureThreshold: 60
-                    httpGet:
-                      path: /_matrix/client/versions
-                      port: 8008
                   volumeMounts:
                     data:
                       mountPath: /var/lib/tuwunel

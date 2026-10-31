@@ -283,22 +283,13 @@ spec:
                     SEAFILE_SERVER_PROTOCOL: https
                     TIME_ZONE: Europe/Paris
                   image: docker.io/seafileltd/seafile-mc:13.0.28
-                  livenessProbe:
-                    failureThreshold: 6
-                    httpGet:
-                      path: /api2/ping/
-                      port: 80
-                    periodSeconds: 30
-                    timeoutSeconds: 10
                   name: seafile
                   ports:
                     http:
                       containerPort: 80
-                  readinessProbe:
+                  probe:
                     httpGet:
                       path: /api2/ping/
-                      port: 80
-                    timeoutSeconds: 5
                   securityContext:
                     capabilities:
                       add:
@@ -315,9 +306,6 @@ spec:
                     runAsNonRoot: false
                   startupProbe:
                     failureThreshold: 120
-                    httpGet:
-                      path: /api2/ping/
-                      port: 80
                   volumeMounts:
                     config:
                       mountPath: /config
@@ -630,28 +618,18 @@ spec:
                         key: db-root-password
                         name: ref:seafile-generated
                   image: docker.io/library/mariadb:10.11.19
-                  livenessProbe:
-                    failureThreshold: 6
-                    periodSeconds: 20
-                    tcpSocket:
-                      port: 3306
                   name: mariadb
                   ports:
                     mysql:
                       containerPort: 3306
-                  readinessProbe:
-                    tcpSocket:
-                      port: 3306
+                  probe:
+                    tcpSocket: {}
                   securityContext:
                     capabilities:
                       drop:
                         all: ALL
                     runAsGroup: 999
                     runAsUser: 999
-                  startupProbe:
-                    failureThreshold: 60
-                    tcpSocket:
-                      port: 3306
                   volumeMounts:
                     data:
                       mountPath: /var/lib/mysql

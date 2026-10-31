@@ -331,12 +331,6 @@ spec:
                         key: rpc-secret
                         name: ref:garage
                   image: docker.io/dxflrs/garage:v2.5.0
-                  livenessProbe:
-                    failureThreshold: 6
-                    periodSeconds: 30
-                    tcpSocket:
-                      port: 3903
-                    timeoutSeconds: 10
                   name: garage
                   ports:
                     admin:
@@ -345,19 +339,15 @@ spec:
                       containerPort: 3901
                     s3:
                       containerPort: 3900
-                  readinessProbe:
+                  probe:
                     tcpSocket:
-                      port: 3903
+                      port: admin
                   securityContext:
                     capabilities:
                       drop:
                         all: ALL
                     runAsGroup: 1000
                     runAsUser: 1000
-                  startupProbe:
-                    failureThreshold: 60
-                    tcpSocket:
-                      port: 3903
                   volumeMounts:
                     config:
                       mountPath: /etc/garage.toml

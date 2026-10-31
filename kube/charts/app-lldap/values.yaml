@@ -232,18 +232,10 @@ resources:
                           containerPort: 17170
                         ldaps:
                           containerPort: 6360
-                      readinessProbe:
+                      probe:
                         httpGet:
                           path: /
-                          port: 17170
-                      livenessProbe:
-                        httpGet:
-                          path: /
-                          port: 17170
                       startupProbe:
-                        httpGet:
-                          path: /
-                          port: 17170
                         failureThreshold: 60 # the first start creates the schema of the database, killing it leaves it half done
                       volumeMounts:
                         cert:

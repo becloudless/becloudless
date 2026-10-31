@@ -161,18 +161,8 @@ resources:
                             name: ref:seafile-generated
                             key: db-root-password
                         MARIADB_AUTO_UPGRADE: "1"
-                      startupProbe:
-                        tcpSocket:
-                          port: 3306
-                        failureThreshold: 60
-                      readinessProbe:
-                        tcpSocket:
-                          port: 3306
-                      livenessProbe:
-                        tcpSocket:
-                          port: 3306
-                        periodSeconds: 20
-                        failureThreshold: 6
+                      probe:
+                        tcpSocket: {}
                       securityContext:
                         runAsUser: 999
                         runAsGroup: 999
@@ -365,23 +355,11 @@ resources:
                           secretKeyRef:
                             name: ref:seafile-oidc
                             key: secret
+                      probe:
+                        httpGet:
+                          path: /api2/ping/
                       startupProbe:
-                        httpGet:
-                          path: /api2/ping/
-                          port: 80
                         failureThreshold: 120 # 10min, the first start creates the databases
-                      readinessProbe:
-                        httpGet:
-                          path: /api2/ping/
-                          port: 80
-                        timeoutSeconds: 5
-                      livenessProbe:
-                        httpGet:
-                          path: /api2/ping/
-                          port: 80
-                        periodSeconds: 30
-                        timeoutSeconds: 10
-                        failureThreshold: 6
                       # the image runs as root (nginx, cron, the init of the files of the volume): only the capabilities it uses are kept
                       securityContext:
                         runAsNonRoot: false

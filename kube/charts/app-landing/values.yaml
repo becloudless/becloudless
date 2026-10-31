@@ -72,14 +72,9 @@ resources:
                       ports:
                         http:
                           containerPort: 8080
-                      readinessProbe:
+                      probe:
                         httpGet:
                           path: /
-                          port: 8080
-                      livenessProbe:
-                        httpGet:
-                          path: /
-                          port: 8080
                       securityContext:
                         capabilities:
                           drop:

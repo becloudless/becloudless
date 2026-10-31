@@ -161,23 +161,9 @@ resources:
                         TUWUNEL_IDENTITY_PROVIDER__0__CALLBACK_URL: https://matrix.{{ .Values.app.domain }}/_matrix/client/unstable/login/sso/callback/$(OIDC_CLIENT_ID)
                         # the user is the `preferred_username` of authelia: no random name when it is taken, the login fails
                         TUWUNEL_IDENTITY_PROVIDER__0__UNIQUE_ID_FALLBACKS: "false"
-                      startupProbe:
+                      probe:
                         httpGet:
                           path: /_matrix/client/versions
-                          port: 8008
-                        failureThreshold: 60
-                      readinessProbe:
-                        httpGet:
-                          path: /_matrix/client/versions
-                          port: 8008
-                        timeoutSeconds: 5
-                      livenessProbe:
-                        httpGet:
-                          path: /_matrix/client/versions
-                          port: 8008
-                        periodSeconds: 30
-                        timeoutSeconds: 10
-                        failureThreshold: 6
                       securityContext:
                         runAsUser: 1000
                         runAsGroup: 1000

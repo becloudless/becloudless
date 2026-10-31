@@ -56,7 +56,7 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           tcpSocket:
-            port: 8080
+            port: http
           timeoutSeconds: 1
         name: pushprox
         ports:
@@ -68,7 +68,7 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           tcpSocket:
-            port: 8080
+            port: http
           timeoutSeconds: 1
         securityContext:
           allowPrivilegeEscalation: false
@@ -76,6 +76,14 @@ spec:
             drop:
             - ALL
           readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 30
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          successThreshold: 1
+          tcpSocket:
+            port: http
+          timeoutSeconds: 1
         volumeMounts:
         - mountPath: /tmp
           name: tmp

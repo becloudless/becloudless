@@ -111,17 +111,8 @@ resources:
                       ports:
                         relay:
                           containerPort: 22067
-                      startupProbe:
-                        tcpSocket:
-                          port: 22067
-                        failureThreshold: 30
-                      readinessProbe:
-                        tcpSocket:
-                          port: 22067
-                      livenessProbe:
-                        tcpSocket:
-                          port: 22067
-                        periodSeconds: 30
+                      probe:
+                        tcpSocket: {}
                       securityContext:
                         runAsUser: 1000
                         runAsGroup: 1000

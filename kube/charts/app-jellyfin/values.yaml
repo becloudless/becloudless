@@ -354,20 +354,12 @@ resources:
                         TZ: Europe/Paris
                         JELLYFIN_CACHE_DIR: /tmp/jellyfin # the root filesystem is read only (`/cache` of the image)
                         JELLYFIN_PublishedServerUrl: https://jellyfin.{{ .Values.app.domain }}
-                      startupProbe:
+                      probe:
                         httpGet:
                           path: /health
-                          port: 8096
+                      startupProbe:
                         periodSeconds: 10
                         failureThreshold: 60 # 10min, a huge library on low hardware can be slow to start
-                      readinessProbe:
-                        httpGet:
-                          path: /health
-                          port: 8096
-                      livenessProbe:
-                        httpGet:
-                          path: /health
-                          port: 8096
                       securityContext:
                         capabilities:
                           drop:

@@ -94,22 +94,13 @@ spec:
                   - --port=8080
                   - --verbose
                   image: traefik/whoami:v1.12.0
-                  livenessProbe:
-                    httpGet:
-                      path: /health
-                      port: 8080
-                    periodSeconds: 15
-                    timeoutSeconds: 3
                   name: whoami
                   ports:
                     http:
                       containerPort: 8080
-                  readinessProbe:
+                  probe:
                     httpGet:
                       path: /health
-                      port: 8080
-                    periodSeconds: 15
-                    timeoutSeconds: 3
                   resources:
                     limits:
                       memory: 64Mi
@@ -122,11 +113,6 @@ spec:
                         all: ALL
                     runAsGroup: 1000
                     runAsUser: 1000
-                  startupProbe:
-                    failureThreshold: 12
-                    httpGet:
-                      path: /health
-                      port: 8080
       services:
         whoami:
           ports:

@@ -284,19 +284,9 @@ resources:
                             key: admin-token
                       # the image only has the binary: no exec probe, and `/health` of the admin API needs the layout (a quorum),
                       # which is applied once the nodes are started
-                      startupProbe:
+                      probe:
                         tcpSocket:
-                          port: 3903
-                        failureThreshold: 60
-                      readinessProbe:
-                        tcpSocket:
-                          port: 3903
-                      livenessProbe:
-                        tcpSocket:
-                          port: 3903
-                        periodSeconds: 30
-                        timeoutSeconds: 10
-                        failureThreshold: 6
+                          port: admin
                       securityContext:
                         runAsUser: 1000
                         runAsGroup: 1000

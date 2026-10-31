@@ -120,18 +120,13 @@ spec:
                   env:
                     ELEMENT_WEB_PORT: "8080"
                   image: vectorim/element-web:v1.12.32
-                  livenessProbe:
-                    httpGet:
-                      path: /
-                      port: 8080
                   name: element
                   ports:
                     http:
                       containerPort: 8080
-                  readinessProbe:
+                  probe:
                     httpGet:
                       path: /
-                      port: 8080
                   securityContext:
                     capabilities:
                       drop:

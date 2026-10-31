@@ -75,14 +75,9 @@ resources:
                           containerPort: 8080
                       env:
                         ELEMENT_WEB_PORT: "8080" # the default is 80, which an unprivileged user can not bind
-                      readinessProbe:
+                      probe:
                         httpGet:
                           path: /
-                          port: 8080
-                      livenessProbe:
-                        httpGet:
-                          path: /
-                          port: 8080
                       securityContext:
                         capabilities:
                           drop:

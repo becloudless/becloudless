@@ -191,30 +191,17 @@ spec:
                     PAPERLESS_TIME_ZONE: Europe/Paris
                     PAPERLESS_URL: https://paperless.test.com
                   image: ghcr.io/paperless-ngx/paperless-ngx:3.3.4
-                  livenessProbe:
-                    failureThreshold: 6
-                    httpGet:
-                      httpHeaders:
-                        host:
-                          name: Host
-                          value: localhost
-                      path: /
-                      port: 8000
-                    periodSeconds: 30
-                    timeoutSeconds: 10
                   name: paperless
                   ports:
                     http:
                       containerPort: 8000
-                  readinessProbe:
+                  probe:
                     httpGet:
                       httpHeaders:
                         host:
                           name: Host
                           value: localhost
                       path: /
-                      port: 8000
-                    timeoutSeconds: 5
                   securityContext:
                     capabilities:
                       drop:
@@ -223,13 +210,6 @@ spec:
                     runAsUser: 1000
                   startupProbe:
                     failureThreshold: 120
-                    httpGet:
-                      httpHeaders:
-                        host:
-                          name: Host
-                          value: localhost
-                      path: /
-                      port: 8000
                   volumeMounts:
                     data:
                       mountPath: /usr/src/paperless/data
