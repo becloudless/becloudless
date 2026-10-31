@@ -33,7 +33,7 @@ require (
 	golang.org/x/lint v0.0.0-20241112194109-818c5a804067
 	golang.org/x/term v0.47.0
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.22.1
+	helm.sh/helm/v3 v3.21.3
 	helm.sh/helm/v4 v4.3.1
 	k8s.io/apimachinery v0.37.1
 	k8s.io/cli-runtime v0.37.1
