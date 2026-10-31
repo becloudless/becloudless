@@ -884,9 +884,8 @@ spec:
         name: bcl
         namespace: default
   dependsOn:
-    restore:
-      name: restore-something
-      namespace: backup-restore
+  - name: restore-something
+    namespace: backup-restore
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -947,18 +946,14 @@ spec:
         name: bcl
         namespace: default
   dependsOn:
-    backup-restore:
-      name: app-backup-restore
-      namespace: backup-restore
-    backup-restore-pre:
-      name: backup-restore-pre
-      namespace: backup-restore
-    backup-target:
-      name: longhorn-backup
-      namespace: garage
-    longhorn:
-      name: app-longhorn
-      namespace: longhorn-system
+  - name: app-backup-restore
+    namespace: backup-restore
+  - name: backup-restore-pre
+    namespace: backup-restore
+  - name: longhorn-backup
+    namespace: garage
+  - name: app-longhorn
+    namespace: longhorn-system
   driftDetection:
     mode: enabled
   healthCheckExprs:

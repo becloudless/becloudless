@@ -58,6 +58,10 @@ patches (the ownership of a restored secret) its secrets, and reads its `StringS
     {{- if include "base.lib.isEnabled" $garage | trim }}
       {{- $_ := set $dependsOn "backup-target" (dict "name" "longhorn-backup" "namespace" ($garage.namespace | default "garage")) }}
     {{- end }}
+    {{- $dependsOnList := list }}
+    {{- range $_, $dependency := $dependsOn }}
+      {{- $dependsOnList = append $dependsOnList $dependency }}
+    {{- end }}
 
     {{- $_ := set $helmReleases (printf "restore-%s" $name) (dict
           "namespace" $backupNamespace
@@ -67,7 +71,7 @@ patches (the ownership of a restored secret) its secrets, and reads its `StringS
           "install" (dict "timeout" "1h")
           "upgrade" (dict "timeout" "1h")
           "rollback" (dict "cleanupOnFail" true)
-          "dependsOn" $dependsOn
+          "dependsOn" $dependsOnList
           "chart" (dict "spec" (dict
             "chart" "./kube/charts/restore-app"
             "reconcileStrategy" "Revision"

@@ -70,7 +70,11 @@ Any other key set next to these (ex: `interval`) is merged over the HelmRelease 
             "fluxKustomizations" (dict "serviceAccountName" $fluxName))))
     }}
     {{- if $dependsOn }}
-      {{- $_ := set $hr "dependsOn" $dependsOn }}
+      {{- $dependsOnList := list }}
+      {{- range $_, $dependency := $dependsOn }}
+        {{- $dependsOnList = append $dependsOnList $dependency }}
+      {{- end }}
+      {{- $_ := set $hr "dependsOn" $dependsOnList }}
     {{- end }}
     {{- $_ := set $helmReleases $hrName (mustMergeOverwrite $hr (omit $app "enabled" "groups" "namespace" "appChart" "dependsOn" "clusterAdmin" "restore")) }}
     {{- end }}
