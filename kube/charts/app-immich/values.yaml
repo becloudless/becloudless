@@ -324,65 +324,13 @@ resources:
                             name: ref:immich-admin
                             key: password
 
-    # the public exposure, applied once immich is deployed and not waited for
-    immich-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
-      dependsOn:
-        - ref:immich-post # the admin exists, nobody can register as the admin
-        - name: app-cert-manager
-          namespace: cert-manager
-        - name: app-gateway-api
-          namespace: gateway-api
-      values:
-        resources:
-          certManagerCertificates:
-            # certificate of the web UI, terminated by the Gateway
-            immich-gateway:
-              secretName: tls-immich-gateway
-              dnsNames:
-                immich: immich.{{ .Values.app.domain }}
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
-
-          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
-          # It is not protected by forward auth: the mobile apps cannot follow the login redirect of authelia, immich has its own login.
-          listenerSets:
-            immich:
-              parentRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: shared
-                namespace: kube-system
-              listeners:
-                https:
-                  name: https
-                  hostname: immich.{{ .Values.app.domain }}
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: ref:immich-gateway
-                  allowedRoutes:
-                    namespaces:
-                      from: Same
-
-          httpRoutes:
-            immich:
-              parentRefs:
-                immich: ref:immich
-              hostnames:
-                immich: immich.{{ .Values.app.domain }}
-              rules:
-                root:
-                  backendRefs:
-                    immich:
-                      name: immich-server
-                      port: 2283
-                  timeouts:
-                    request: 0s # uploads and downloads of videos can be long
+# the public exposure by the Cilium Gateway `shared` (kube-system). It is not protected by forward auth: the mobile apps cannot
+# follow the login redirect of authelia, immich has its own login.
+expose:
+  immich:
+    service: immich-server
+    port: 2283
+    timeouts:
+      request: 0s # uploads and downloads of videos can be long
+    dependsOn:
+      - ref:immich-post # the admin exists, nobody can register as the admin

@@ -304,11 +304,15 @@ spec:
           hostnames:
             immich: immich.test.com
           parentRefs:
-            immich: ref:immich
+            immich:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: immich
+              sectionName: immich
           rules:
             root:
               backendRefs:
-                immich:
+                backend:
                   name: immich-server
                   port: 2283
               timeouts:
@@ -316,12 +320,12 @@ spec:
       listenerSets:
         immich:
           listeners:
-            https:
+            immich:
               allowedRoutes:
                 namespaces:
                   from: Same
               hostname: immich.test.com
-              name: https
+              name: immich
               port: 443
               protocol: HTTPS
               tls:

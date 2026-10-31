@@ -538,86 +538,13 @@ resources:
                 type: bak
                 backupMode: full
 
-    # the public exposure, applied once longhorn-post is deployed and not waited for
-    longhorn-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
-      dependsOn:
-        - ref:longhorn-post
-        - name: app-cert-manager
-          namespace: cert-manager
-        - name: app-gateway-api
-          namespace: gateway-api
-      values:
-        # UI behind the Cilium Gateway `shared` (kube-system) with Authelia forward auth.
-        # The certificate is issued by the http-01 solver of the ClusterIssuer (gatewayHTTPRoute), which only needs the host to be
-        # reachable on port 80 through the http listener of the Gateway.
-        resources:
-          certManagerCertificates:
-            longhorn-ui:
-              secretName: tls-longhorn
-              dnsNames:
-                ui: longhorn.{{ .Values.app.domain }}
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
-
-          listenerSets:
-            longhorn:
-              parentRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: shared
-                namespace: kube-system
-              listeners:
-                https:
-                  name: https
-                  hostname: longhorn.{{ .Values.app.domain }}
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: ref:longhorn-ui
-                  allowedRoutes:
-                    namespaces:
-                      from: Same
-
-          httpRoutes:
-            longhorn:
-              parentRefs:
-                longhorn: ref:longhorn
-              hostnames:
-                ui: longhorn.{{ .Values.app.domain }}
-              rules:
-                ui:
-                  filters:
-                    authelia:
-                      type: ExternalAuth
-                      externalAuth:
-                        protocol: HTTP
-                        backendRef:
-                          name: authelia
-                          namespace: authelia
-                          port: 80
-                        http:
-                          path: /api/authz/ext-authz/
-                          allowedResponseHeaders: # only the identity headers, not the authz content-type/content-length (a GET with a content-length makes upstreams answer 400)
-                            remote-user: remote-user
-                            remote-groups: remote-groups
-                            remote-name: remote-name
-                            remote-email: remote-email
-                          allowedHeaders: # what authelia needs to find the session and to redirect to the login page
-                            cookie: cookie
-                            accept: accept
-                            proxy-authorization: proxy-authorization
-                            x-forwarded-proto: x-forwarded-proto
-                            x-forwarded-for: x-forwarded-for
-                  backendRefs:
-                    frontend:
-                      name: longhorn-frontend
-                      port: 80
-
+# the UI behind the Cilium Gateway `shared` (kube-system) with the Authelia forward auth. The certificate is issued by the http-01
+# solver of the ClusterIssuer (gatewayHTTPRoute), which only needs the host to be reachable on port 80 through the http listener of
+# the Gateway.
+expose:
+  longhorn:
+    service: longhorn-frontend
+    port: 80
+    auth: authelia
+    dependsOn:
+      - ref:longhorn-post

@@ -74,10 +74,10 @@ spec:
             namespace: default
       landing-integration:
         certManagerCertificates:
-          landing:
-            name: landing
+          landing-gateway:
+            name: landing-gateway
             namespace: default
-            secretName: tls-landing
+            secretName: tls-landing-gateway
         httpRoutes:
           landing:
             name: landing
@@ -220,10 +220,10 @@ spec:
             namespace: default
       landing-integration:
         certManagerCertificates:
-          landing:
-            name: landing
+          landing-gateway:
+            name: landing-gateway
             namespace: default
-            secretName: tls-landing
+            secretName: tls-landing-gateway
         httpRoutes:
           landing:
             name: landing
@@ -234,40 +234,44 @@ spec:
             namespace: default
     resources:
       certManagerCertificates:
-        landing:
+        landing-gateway:
           dnsNames:
-            apex: test.com
+            landing: test.com
           issuerRef:
             kind: ClusterIssuer
             name: letsencrypt-prod
-          secretName: tls-landing
+          secretName: tls-landing-gateway
       httpRoutes:
         landing:
           hostnames:
-            apex: test.com
+            landing: test.com
           parentRefs:
-            landing: ref:landing
+            landing:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: landing
+              sectionName: landing
           rules:
             root:
               backendRefs:
-                landing:
+                backend:
                   name: ref:landing
                   port: 80
       listenerSets:
         landing:
           listeners:
-            https:
+            landing:
               allowedRoutes:
                 namespaces:
                   from: Same
               hostname: test.com
-              name: https
+              name: landing
               port: 443
               protocol: HTTPS
               tls:
                 certificateRefs:
                   tls:
-                    name: ref:landing
+                    name: ref:landing-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io

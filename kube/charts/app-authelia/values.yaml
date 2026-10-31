@@ -858,30 +858,10 @@ resources:
                   userinfo_signed_response_alg: 'none'
                   token_endpoint_auth_method: 'client_secret_post'
 
-    # the public exposure, applied once authelia is deployed and not waited for
+    # the ReferenceGrants of the public exposure (`expose` below), merged with the generated release
     authelia-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
-      dependsOn:
-        - ref:authelia
-        - name: app-cert-manager
-          namespace: cert-manager
-        - name: app-gateway-api
-          namespace: gateway-api
       values:
         resources:
-          certManagerCertificates:
-            # certificate of the portal, terminated by the Gateway
-            authelia-gateway:
-              secretName: tls-authelia-gateway
-              dnsNames:
-                authelia: authelia.{{ .Values.app.domain }}
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
-
           # Forward auth for the apps behind the Cilium Gateway: the `ExternalAuth` filter of their HTTPRoute calls the authelia service.
           # An HTTPRoute can only reference a service of another namespace when it is granted here: add the namespace of each app.
           referenceGrants:
@@ -917,38 +897,8 @@ resources:
                   kind: Service
                   name: authelia
 
-          # Portal exposed by the Cilium Gateway `shared` (kube-system). It is not protected by forward auth itself.
-          listenerSets:
-            authelia:
-              parentRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: shared
-                namespace: kube-system
-              listeners:
-                https:
-                  name: https
-                  hostname: authelia.{{ .Values.app.domain }}
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: ref:authelia-gateway
-                  allowedRoutes:
-                    namespaces:
-                      from: Same
-
-          httpRoutes:
-            authelia:
-              parentRefs:
-                authelia: ref:authelia
-              hostnames:
-                authelia: authelia.{{ .Values.app.domain }}
-              rules:
-                root:
-                  backendRefs:
-                    authelia:
-                      name: authelia
-                      port: 80
+# the portal exposed by the Cilium Gateway `shared` (kube-system). It is not protected by forward auth itself.
+expose:
+  authelia:
+    service: authelia
+    port: 80

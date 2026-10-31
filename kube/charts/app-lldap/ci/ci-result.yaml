@@ -394,29 +394,16 @@ spec:
               group: gateway.networking.k8s.io
               kind: ListenerSet
               name: lldap
-              sectionName: https
+              sectionName: lldap
           rules:
             root:
               backendRefs:
-                lldap:
+                backend:
                   name: ref:lldap
                   port: 17170
       listenerSets:
         lldap:
           listeners:
-            https:
-              allowedRoutes:
-                namespaces:
-                  from: Same
-              hostname: lldap.test.com
-              name: https
-              port: 443
-              protocol: HTTPS
-              tls:
-                certificateRefs:
-                  tls:
-                    name: ref:lldap-gateway
-                mode: Terminate
             ldaps:
               allowedRoutes:
                 namespaces:
@@ -427,6 +414,19 @@ spec:
               protocol: TLS
               tls:
                 mode: Passthrough
+            lldap:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: lldap.test.com
+              name: lldap
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: ref:lldap-gateway
+                mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
             kind: Gateway

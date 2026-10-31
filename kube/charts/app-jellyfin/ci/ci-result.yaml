@@ -527,11 +527,15 @@ spec:
           hostnames:
             jellyfin: jellyfin.test.com
           parentRefs:
-            jellyfin: ref:jellyfin
+            jellyfin:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: jellyfin
+              sectionName: jellyfin
           rules:
             root:
               backendRefs:
-                jellyfin:
+                backend:
                   name: ref:jellyfin
                   port: 8096
               timeouts:
@@ -539,12 +543,12 @@ spec:
       listenerSets:
         jellyfin:
           listeners:
-            https:
+            jellyfin:
               allowedRoutes:
                 namespaces:
                   from: Same
               hostname: jellyfin.test.com
-              name: https
+              name: jellyfin
               port: 443
               protocol: HTTPS
               tls:

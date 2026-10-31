@@ -352,54 +352,15 @@ resources:
                       secret:
                         secretName: ref:lldap-authelia
 
-    # the public exposure, applied once lldap is deployed and not waited for
+    # the public exposure (`expose` below), merged with the generated release: the ldaps part
     lldap-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
-      dependsOn:
-        - ref:lldap-post
-        - name: app-cert-manager
-          namespace: cert-manager
-        - name: app-gateway-api
-          namespace: gateway-api
       values:
         resources:
-          certManagerCertificates:
-            # certificate of the web UI, terminated by the Gateway
-            lldap-gateway:
-              secretName: tls-lldap-gateway
-              dnsNames:
-                lldap: lldap.{{ .Values.app.domain }}
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
-
-          # Exposed by the Cilium Gateway `shared` (kube-system), both on port 443 and routed by SNI:
-          #  - lldap.<domain>: web UI, TLS terminated by the Gateway
-          #  - lldaps.<domain>: ldaps served by lldap itself (tls-lldaps certificate), the TLS stream is forwarded as is (passthrough)
+          # lldap.<domain> (web UI, TLS terminated by the Gateway) and lldaps.<domain> are both on port 443 and routed by SNI.
+          # lldaps.<domain>: ldaps served by lldap itself (tls-lldaps certificate), the TLS stream is forwarded as is (passthrough)
           listenerSets:
             lldap:
-              parentRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: shared
-                namespace: kube-system
               listeners:
-                https:
-                  name: https
-                  hostname: lldap.{{ .Values.app.domain }}
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: ref:lldap-gateway
-                  allowedRoutes:
-                    namespaces:
-                      from: Same
                 ldaps:
                   name: ldaps
                   hostname: lldaps.{{ .Values.app.domain }}
@@ -410,23 +371,6 @@ resources:
                   allowedRoutes:
                     namespaces:
                       from: Same
-
-          httpRoutes:
-            lldap:
-              parentRefs:
-                lldap:
-                  group: gateway.networking.k8s.io
-                  kind: ListenerSet
-                  name: lldap
-                  sectionName: https
-              hostnames:
-                lldap: lldap.{{ .Values.app.domain }}
-              rules:
-                root:
-                  backendRefs:
-                    lldap:
-                      name: ref:lldap
-                      port: 17170
 
           tlsRoutes:
             lldap-ldaps:
@@ -444,3 +388,10 @@ resources:
                     lldap:
                       name: lldap
                       port: 6360
+
+# the web UI exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway
+expose:
+  lldap:
+    port: 17170
+    dependsOn:
+      - ref:lldap-post

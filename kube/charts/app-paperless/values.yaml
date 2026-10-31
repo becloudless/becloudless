@@ -256,66 +256,10 @@ resources:
                 http:
                   port: 8000
 
-    # the public exposure, applied once paperless is deployed and not waited for
-    paperless-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
-      dependsOn:
-        - ref:paperless
-        - name: app-cert-manager
-          namespace: cert-manager
-        - name: app-gateway-api
-          namespace: gateway-api
-      values:
-        resources:
-          certManagerCertificates:
-            # certificate of the web UI, terminated by the Gateway
-            paperless-gateway:
-              secretName: tls-paperless-gateway
-              dnsNames:
-                paperless: paperless.{{ .Values.app.domain }}
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
-
-          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
-          # It is not protected by forward auth: the API clients (mobile applications, scanners) cannot follow the login redirect of
-          # authelia, paperless has its own SSO login.
-          listenerSets:
-            paperless:
-              parentRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: shared
-                namespace: kube-system
-              listeners:
-                https:
-                  name: https
-                  hostname: paperless.{{ .Values.app.domain }}
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: ref:paperless-gateway
-                  allowedRoutes:
-                    namespaces:
-                      from: Same
-
-          httpRoutes:
-            paperless:
-              parentRefs:
-                paperless: ref:paperless
-              hostnames:
-                paperless: paperless.{{ .Values.app.domain }}
-              rules:
-                root:
-                  backendRefs:
-                    paperless:
-                      name: ref:paperless
-                      port: 8000
-                  timeouts:
-                    request: 0s # the uploads and the downloads of big documents can be long
+# the public exposure by the Cilium Gateway `shared` (kube-system). It is not protected by forward auth: the API clients (mobile
+# applications, scanners) cannot follow the login redirect of authelia, paperless has its own SSO login.
+expose:
+  paperless:
+    port: 8000
+    timeouts:
+      request: 0s # the uploads and the downloads of big documents can be long

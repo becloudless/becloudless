@@ -203,11 +203,15 @@ spec:
           hostnames:
             whoami: whoami.test.com
           parentRefs:
-            whoami: ref:whoami
+            whoami:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: whoami
+              sectionName: whoami
           rules:
             root:
               backendRefs:
-                whoami:
+                backend:
                   name: ref:whoami
                   port: 8080
               filters:
@@ -235,12 +239,12 @@ spec:
       listenerSets:
         whoami:
           listeners:
-            https:
+            whoami:
               allowedRoutes:
                 namespaces:
                   from: Same
               hostname: whoami.test.com
-              name: https
+              name: whoami
               port: 443
               protocol: HTTPS
               tls:

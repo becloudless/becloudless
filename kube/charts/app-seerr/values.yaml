@@ -465,63 +465,8 @@ resources:
                 http:
                   port: 5055
 
-    # the public exposure, applied once seerr is deployed and not waited for
-    seerr-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
-      dependsOn:
-        - ref:seerr
-        - name: app-cert-manager
-          namespace: cert-manager
-        - name: app-gateway-api
-          namespace: gateway-api
-      values:
-        resources:
-          certManagerCertificates:
-            # certificate of the web UI, terminated by the Gateway
-            seerr-gateway:
-              secretName: tls-seerr-gateway
-              dnsNames:
-                seerr: seerr.{{ .Values.app.domain }}
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
-
-          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway. Not behind the Authelia forward auth: the
-          # login is the OIDC one of seerr (and the API has to be reachable by the apps and the other services).
-          listenerSets:
-            seerr:
-              parentRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: shared
-                namespace: kube-system
-              listeners:
-                https:
-                  name: https
-                  hostname: seerr.{{ .Values.app.domain }}
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: ref:seerr-gateway
-                  allowedRoutes:
-                    namespaces:
-                      from: Same
-
-          httpRoutes:
-            seerr:
-              parentRefs:
-                seerr: ref:seerr
-              hostnames:
-                seerr: seerr.{{ .Values.app.domain }}
-              rules:
-                root:
-                  backendRefs:
-                    seerr:
-                      name: ref:seerr
-                      port: 5055
+# the public exposure by the Cilium Gateway `shared` (kube-system). Not behind the Authelia forward auth: the login is the OIDC one
+# of seerr (and the API has to be reachable by the apps and the other services).
+expose:
+  seerr:
+    port: 5055

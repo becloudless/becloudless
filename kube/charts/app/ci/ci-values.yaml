@@ -17,6 +17,19 @@ resources:
   # a release with no source is a chart of this repository (base-loader by default)
   fluxHelmReleases:
     default: {}
+    simple: {}
+    apex: {}
+    protected: {}
+    disabled: {}
+    grouped: {}
+    merged: {}
+    merged-integration:
+      values:
+        resources:
+          referenceGrants:
+            extra:
+              spec:
+                from: []
     local:
       chart:
         spec:
@@ -33,3 +46,31 @@ resources:
           sourceRef:
             kind: HelmRepository
             name: myrepository
+
+# the public exposure: a release `<release>-integration` with the certificate, the listener and the route of each id
+expose:
+  simple: {}
+  apex:
+    hostname: "{{ .Values.app.domain }}"
+    service: apex-service
+    port: 8080
+    timeouts:
+      request: 0s
+  protected:
+    auth: authelia
+    service: protected-http
+    port: 80
+  disabled:
+    enabled: false
+  # the hostnames of a release are exposed together
+  grouped-a:
+    release: grouped
+    hostname: a
+    service: grouped-a
+  grouped-b:
+    release: grouped
+    hostname: b
+    service: grouped-b
+    auth: authelia
+  # merged with the release of the same name of fluxHelmReleases, which wins
+  merged: {}

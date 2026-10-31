@@ -100,63 +100,8 @@ resources:
                   port: 80
                   targetPort: 8080
 
-    # the public exposure, applied once element is deployed and not waited for
-    element-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
-      dependsOn:
-        - ref:element
-        - name: app-cert-manager
-          namespace: cert-manager
-        - name: app-gateway-api
-          namespace: gateway-api
-      values:
-        resources:
-          certManagerCertificates:
-            # certificate of the web UI, terminated by the Gateway
-            element-gateway:
-              secretName: tls-element-gateway
-              dnsNames:
-                element: element.{{ .Values.app.domain }}
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
-
-          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
-          # It is not protected by forward auth: the login is the SSO of tuwunel, and the page holds nothing.
-          listenerSets:
-            element:
-              parentRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: shared
-                namespace: kube-system
-              listeners:
-                https:
-                  name: https
-                  hostname: element.{{ .Values.app.domain }}
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: ref:element-gateway
-                  allowedRoutes:
-                    namespaces:
-                      from: Same
-
-          httpRoutes:
-            element:
-              parentRefs:
-                element: ref:element
-              hostnames:
-                element: element.{{ .Values.app.domain }}
-              rules:
-                root:
-                  backendRefs:
-                    element:
-                      name: ref:element
-                      port: 80
+# the public exposure by the Cilium Gateway `shared` (kube-system). It is not protected by forward auth: the login is the SSO of
+# tuwunel, and the page holds nothing.
+expose:
+  element:
+    port: 80

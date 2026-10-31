@@ -343,11 +343,15 @@ spec:
           hostnames:
             paperless: paperless.test.com
           parentRefs:
-            paperless: ref:paperless
+            paperless:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: paperless
+              sectionName: paperless
           rules:
             root:
               backendRefs:
-                paperless:
+                backend:
                   name: ref:paperless
                   port: 8000
               timeouts:
@@ -355,12 +359,12 @@ spec:
       listenerSets:
         paperless:
           listeners:
-            https:
+            paperless:
               allowedRoutes:
                 namespaces:
                   from: Same
               hostname: paperless.test.com
-              name: https
+              name: paperless
               port: 443
               protocol: HTTPS
               tls:

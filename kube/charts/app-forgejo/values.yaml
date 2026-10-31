@@ -197,65 +197,11 @@ resources:
             serviceMonitor:
               enabled: false # the prometheus CRDs are not installed by the bcl apps
 
-    # the public exposure, applied once forgejo is deployed and not waited for
-    forgejo-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
-      dependsOn:
-        - ref:forgejo
-        - name: app-cert-manager
-          namespace: cert-manager
-        - name: app-gateway-api
-          namespace: gateway-api
-      values:
-        resources:
-          certManagerCertificates:
-            # certificate of the web UI, terminated by the Gateway
-            forgejo-gateway:
-              secretName: tls-forgejo-gateway
-              dnsNames:
-                forgejo: forgejo.{{ .Values.app.domain }}
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
-
-          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
-          # It is not protected by forward auth: git clients cannot follow the login redirect of authelia.
-          listenerSets:
-            forgejo:
-              parentRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: shared
-                namespace: kube-system
-              listeners:
-                https:
-                  name: https
-                  hostname: forgejo.{{ .Values.app.domain }}
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: ref:forgejo-gateway
-                  allowedRoutes:
-                    namespaces:
-                      from: Same
-
-          httpRoutes:
-            forgejo:
-              parentRefs:
-                forgejo: ref:forgejo
-              hostnames:
-                forgejo: forgejo.{{ .Values.app.domain }}
-              rules:
-                root:
-                  backendRefs:
-                    forgejo:
-                      name: forgejo-http
-                      port: 3000
-                  timeouts:
-                    request: 0s # pushes and lfs uploads can be long
+# the public exposure by the Cilium Gateway `shared` (kube-system). It is not protected by forward auth: git clients cannot follow
+# the login redirect of authelia.
+expose:
+  forgejo:
+    service: forgejo-http
+    port: 3000
+    timeouts:
+      request: 0s # pushes and lfs uploads can be long

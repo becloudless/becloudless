@@ -74,10 +74,10 @@ spec:
             namespace: default
       homer-integration:
         certManagerCertificates:
-          homer:
-            name: homer
+          homer-gateway:
+            name: homer-gateway
             namespace: default
-            secretName: tls-homer
+            secretName: tls-homer-gateway
         httpRoutes:
           homer:
             name: homer
@@ -450,10 +450,10 @@ spec:
             namespace: default
       homer-integration:
         certManagerCertificates:
-          homer:
-            name: homer
+          homer-gateway:
+            name: homer-gateway
             namespace: default
-            secretName: tls-homer
+            secretName: tls-homer-gateway
         httpRoutes:
           homer:
             name: homer
@@ -464,23 +464,27 @@ spec:
             namespace: default
     resources:
       certManagerCertificates:
-        homer:
+        homer-gateway:
           dnsNames:
             homer: homer.test.com
           issuerRef:
             kind: ClusterIssuer
             name: letsencrypt-prod
-          secretName: tls-homer
+          secretName: tls-homer-gateway
       httpRoutes:
         homer:
           hostnames:
             homer: homer.test.com
           parentRefs:
-            homer: ref:homer
+            homer:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: homer
+              sectionName: homer
           rules:
             root:
               backendRefs:
-                homer:
+                backend:
                   name: ref:homer
                   port: 8080
               filters:
@@ -508,18 +512,18 @@ spec:
       listenerSets:
         homer:
           listeners:
-            https:
+            homer:
               allowedRoutes:
                 namespaces:
                   from: Same
               hostname: homer.test.com
-              name: https
+              name: homer
               port: 443
               protocol: HTTPS
               tls:
                 certificateRefs:
                   tls:
-                    name: ref:homer
+                    name: ref:homer-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io

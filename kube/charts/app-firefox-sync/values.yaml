@@ -141,63 +141,8 @@ resources:
                 http:
                   port: 8000
 
-    # the public exposure, applied once the service is deployed and not waited for
-    firefox-sync-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
-      dependsOn:
-        - ref:firefox-sync
-        - name: app-cert-manager
-          namespace: cert-manager
-        - name: app-gateway-api
-          namespace: gateway-api
-      values:
-        resources:
-          certManagerCertificates:
-            # certificate of the service, terminated by the Gateway
-            firefox-sync-gateway:
-              secretName: tls-firefox-sync-gateway
-              dnsNames:
-                firefox-sync: firefox-sync.{{ .Values.app.domain }}
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
-
-          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway. Not behind the Authelia forward auth: the
-          # browsers authenticate with their Mozilla account, which the service checks itself.
-          listenerSets:
-            firefox-sync:
-              parentRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: shared
-                namespace: kube-system
-              listeners:
-                https:
-                  name: https
-                  hostname: firefox-sync.{{ .Values.app.domain }}
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: ref:firefox-sync-gateway
-                  allowedRoutes:
-                    namespaces:
-                      from: Same
-
-          httpRoutes:
-            firefox-sync:
-              parentRefs:
-                firefox-sync: ref:firefox-sync
-              hostnames:
-                firefox-sync: firefox-sync.{{ .Values.app.domain }}
-              rules:
-                root:
-                  backendRefs:
-                    firefox-sync:
-                      name: ref:firefox-sync
-                      port: 8000
+# the public exposure by the Cilium Gateway `shared` (kube-system). Not behind the Authelia forward auth: the browsers authenticate
+# with their Mozilla account, which the service checks itself.
+expose:
+  firefox-sync:
+    port: 8000

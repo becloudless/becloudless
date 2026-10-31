@@ -14,6 +14,215 @@ metadata:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
+  name: apex
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+---
+# Source: app-test/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: apex-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: apex
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      apex-integration:
+        certManagerCertificates:
+          apex-gateway:
+            name: apex-gateway
+            namespace: default
+            secretName: tls-apex-gateway
+        httpRoutes:
+          apex:
+            name: apex
+            namespace: default
+        listenerSets:
+          apex:
+            name: apex
+            namespace: default
+      grouped-integration:
+        certManagerCertificates:
+          grouped-a-gateway:
+            name: grouped-a-gateway
+            namespace: default
+            secretName: tls-grouped-a-gateway
+          grouped-b-gateway:
+            name: grouped-b-gateway
+            namespace: default
+            secretName: tls-grouped-b-gateway
+        httpRoutes:
+          grouped-a:
+            name: grouped-a
+            namespace: default
+          grouped-b:
+            name: grouped-b
+            namespace: default
+        listenerSets:
+          grouped:
+            name: grouped
+            namespace: default
+      merged-integration:
+        certManagerCertificates:
+          merged-gateway:
+            name: merged-gateway
+            namespace: default
+            secretName: tls-merged-gateway
+        httpRoutes:
+          merged:
+            name: merged
+            namespace: default
+        listenerSets:
+          merged:
+            name: merged
+            namespace: default
+        referenceGrants:
+          extra:
+            name: extra
+            namespace: default
+      protected-integration:
+        certManagerCertificates:
+          protected-gateway:
+            name: protected-gateway
+            namespace: default
+            secretName: tls-protected-gateway
+        httpRoutes:
+          protected:
+            name: protected
+            namespace: default
+        listenerSets:
+          protected:
+            name: protected
+            namespace: default
+      simple-integration:
+        certManagerCertificates:
+          simple-gateway:
+            name: simple-gateway
+            namespace: default
+            secretName: tls-simple-gateway
+        httpRoutes:
+          simple:
+            name: simple
+            namespace: default
+        listenerSets:
+          simple:
+            name: simple
+            namespace: default
+    resources:
+      certManagerCertificates:
+        apex-gateway:
+          dnsNames:
+            apex: test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-apex-gateway
+      httpRoutes:
+        apex:
+          hostnames:
+            apex: test.com
+          parentRefs:
+            apex:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: apex
+              sectionName: apex
+          rules:
+            root:
+              backendRefs:
+                backend:
+                  name: apex-service
+                  port: 8080
+              timeouts:
+                request: 0s
+      listenerSets:
+        apex:
+          listeners:
+            apex:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: test.com
+              name: apex
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: ref:apex-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+---
+# Source: app-test/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
   name: default
   namespace: default
 spec:
@@ -44,6 +253,303 @@ spec:
     strategy:
       name: RetryOnFailure
       retryInterval: 5m
+---
+# Source: app-test/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: disabled
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+---
+# Source: app-test/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: grouped
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+---
+# Source: app-test/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: grouped-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: grouped
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      apex-integration:
+        certManagerCertificates:
+          apex-gateway:
+            name: apex-gateway
+            namespace: default
+            secretName: tls-apex-gateway
+        httpRoutes:
+          apex:
+            name: apex
+            namespace: default
+        listenerSets:
+          apex:
+            name: apex
+            namespace: default
+      grouped-integration:
+        certManagerCertificates:
+          grouped-a-gateway:
+            name: grouped-a-gateway
+            namespace: default
+            secretName: tls-grouped-a-gateway
+          grouped-b-gateway:
+            name: grouped-b-gateway
+            namespace: default
+            secretName: tls-grouped-b-gateway
+        httpRoutes:
+          grouped-a:
+            name: grouped-a
+            namespace: default
+          grouped-b:
+            name: grouped-b
+            namespace: default
+        listenerSets:
+          grouped:
+            name: grouped
+            namespace: default
+      merged-integration:
+        certManagerCertificates:
+          merged-gateway:
+            name: merged-gateway
+            namespace: default
+            secretName: tls-merged-gateway
+        httpRoutes:
+          merged:
+            name: merged
+            namespace: default
+        listenerSets:
+          merged:
+            name: merged
+            namespace: default
+        referenceGrants:
+          extra:
+            name: extra
+            namespace: default
+      protected-integration:
+        certManagerCertificates:
+          protected-gateway:
+            name: protected-gateway
+            namespace: default
+            secretName: tls-protected-gateway
+        httpRoutes:
+          protected:
+            name: protected
+            namespace: default
+        listenerSets:
+          protected:
+            name: protected
+            namespace: default
+      simple-integration:
+        certManagerCertificates:
+          simple-gateway:
+            name: simple-gateway
+            namespace: default
+            secretName: tls-simple-gateway
+        httpRoutes:
+          simple:
+            name: simple
+            namespace: default
+        listenerSets:
+          simple:
+            name: simple
+            namespace: default
+    resources:
+      certManagerCertificates:
+        grouped-a-gateway:
+          dnsNames:
+            grouped-a: a.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-grouped-a-gateway
+        grouped-b-gateway:
+          dnsNames:
+            grouped-b: b.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-grouped-b-gateway
+      httpRoutes:
+        grouped-a:
+          hostnames:
+            grouped-a: a.test.com
+          parentRefs:
+            grouped-a:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: grouped
+              sectionName: grouped-a
+          rules:
+            root:
+              backendRefs:
+                backend:
+                  name: grouped-a
+        grouped-b:
+          hostnames:
+            grouped-b: b.test.com
+          parentRefs:
+            grouped-b:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: grouped
+              sectionName: grouped-b
+          rules:
+            root:
+              backendRefs:
+                backend:
+                  name: grouped-b
+              filters:
+                authelia:
+                  externalAuth:
+                    backendRef:
+                      name: authelia
+                      namespace: authelia
+                      port: 80
+                    http:
+                      allowedHeaders:
+                        accept: accept
+                        cookie: cookie
+                        proxy-authorization: proxy-authorization
+                        x-forwarded-for: x-forwarded-for
+                        x-forwarded-proto: x-forwarded-proto
+                      allowedResponseHeaders:
+                        remote-email: remote-email
+                        remote-groups: remote-groups
+                        remote-name: remote-name
+                        remote-user: remote-user
+                      path: /api/authz/ext-authz/
+                    protocol: HTTP
+                  type: ExternalAuth
+      listenerSets:
+        grouped:
+          listeners:
+            grouped-a:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: a.test.com
+              name: grouped-a
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: ref:grouped-a-gateway
+                mode: Terminate
+            grouped-b:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: b.test.com
+              name: grouped-b
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: ref:grouped-b-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
 ---
 # Source: app-test/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -113,6 +619,651 @@ spec:
     strategy:
       name: RetryOnFailure
       retryInterval: 5m
+---
+# Source: app-test/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: merged
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+---
+# Source: app-test/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: merged-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: merged
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      apex-integration:
+        certManagerCertificates:
+          apex-gateway:
+            name: apex-gateway
+            namespace: default
+            secretName: tls-apex-gateway
+        httpRoutes:
+          apex:
+            name: apex
+            namespace: default
+        listenerSets:
+          apex:
+            name: apex
+            namespace: default
+      grouped-integration:
+        certManagerCertificates:
+          grouped-a-gateway:
+            name: grouped-a-gateway
+            namespace: default
+            secretName: tls-grouped-a-gateway
+          grouped-b-gateway:
+            name: grouped-b-gateway
+            namespace: default
+            secretName: tls-grouped-b-gateway
+        httpRoutes:
+          grouped-a:
+            name: grouped-a
+            namespace: default
+          grouped-b:
+            name: grouped-b
+            namespace: default
+        listenerSets:
+          grouped:
+            name: grouped
+            namespace: default
+      merged-integration:
+        certManagerCertificates:
+          merged-gateway:
+            name: merged-gateway
+            namespace: default
+            secretName: tls-merged-gateway
+        httpRoutes:
+          merged:
+            name: merged
+            namespace: default
+        listenerSets:
+          merged:
+            name: merged
+            namespace: default
+        referenceGrants:
+          extra:
+            name: extra
+            namespace: default
+      protected-integration:
+        certManagerCertificates:
+          protected-gateway:
+            name: protected-gateway
+            namespace: default
+            secretName: tls-protected-gateway
+        httpRoutes:
+          protected:
+            name: protected
+            namespace: default
+        listenerSets:
+          protected:
+            name: protected
+            namespace: default
+      simple-integration:
+        certManagerCertificates:
+          simple-gateway:
+            name: simple-gateway
+            namespace: default
+            secretName: tls-simple-gateway
+        httpRoutes:
+          simple:
+            name: simple
+            namespace: default
+        listenerSets:
+          simple:
+            name: simple
+            namespace: default
+    resources:
+      certManagerCertificates:
+        merged-gateway:
+          dnsNames:
+            merged: merged.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-merged-gateway
+      httpRoutes:
+        merged:
+          hostnames:
+            merged: merged.test.com
+          parentRefs:
+            merged:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: merged
+              sectionName: merged
+          rules:
+            root:
+              backendRefs:
+                backend:
+                  name: ref:merged
+      listenerSets:
+        merged:
+          listeners:
+            merged:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: merged.test.com
+              name: merged
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: ref:merged-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+      referenceGrants:
+        extra:
+          spec:
+            from: []
+---
+# Source: app-test/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: protected
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+---
+# Source: app-test/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: protected-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: protected
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      apex-integration:
+        certManagerCertificates:
+          apex-gateway:
+            name: apex-gateway
+            namespace: default
+            secretName: tls-apex-gateway
+        httpRoutes:
+          apex:
+            name: apex
+            namespace: default
+        listenerSets:
+          apex:
+            name: apex
+            namespace: default
+      grouped-integration:
+        certManagerCertificates:
+          grouped-a-gateway:
+            name: grouped-a-gateway
+            namespace: default
+            secretName: tls-grouped-a-gateway
+          grouped-b-gateway:
+            name: grouped-b-gateway
+            namespace: default
+            secretName: tls-grouped-b-gateway
+        httpRoutes:
+          grouped-a:
+            name: grouped-a
+            namespace: default
+          grouped-b:
+            name: grouped-b
+            namespace: default
+        listenerSets:
+          grouped:
+            name: grouped
+            namespace: default
+      merged-integration:
+        certManagerCertificates:
+          merged-gateway:
+            name: merged-gateway
+            namespace: default
+            secretName: tls-merged-gateway
+        httpRoutes:
+          merged:
+            name: merged
+            namespace: default
+        listenerSets:
+          merged:
+            name: merged
+            namespace: default
+        referenceGrants:
+          extra:
+            name: extra
+            namespace: default
+      protected-integration:
+        certManagerCertificates:
+          protected-gateway:
+            name: protected-gateway
+            namespace: default
+            secretName: tls-protected-gateway
+        httpRoutes:
+          protected:
+            name: protected
+            namespace: default
+        listenerSets:
+          protected:
+            name: protected
+            namespace: default
+      simple-integration:
+        certManagerCertificates:
+          simple-gateway:
+            name: simple-gateway
+            namespace: default
+            secretName: tls-simple-gateway
+        httpRoutes:
+          simple:
+            name: simple
+            namespace: default
+        listenerSets:
+          simple:
+            name: simple
+            namespace: default
+    resources:
+      certManagerCertificates:
+        protected-gateway:
+          dnsNames:
+            protected: protected.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-protected-gateway
+      httpRoutes:
+        protected:
+          hostnames:
+            protected: protected.test.com
+          parentRefs:
+            protected:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: protected
+              sectionName: protected
+          rules:
+            root:
+              backendRefs:
+                backend:
+                  name: protected-http
+                  port: 80
+              filters:
+                authelia:
+                  externalAuth:
+                    backendRef:
+                      name: authelia
+                      namespace: authelia
+                      port: 80
+                    http:
+                      allowedHeaders:
+                        accept: accept
+                        cookie: cookie
+                        proxy-authorization: proxy-authorization
+                        x-forwarded-for: x-forwarded-for
+                        x-forwarded-proto: x-forwarded-proto
+                      allowedResponseHeaders:
+                        remote-email: remote-email
+                        remote-groups: remote-groups
+                        remote-name: remote-name
+                        remote-user: remote-user
+                      path: /api/authz/ext-authz/
+                    protocol: HTTP
+                  type: ExternalAuth
+      listenerSets:
+        protected:
+          listeners:
+            protected:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: protected.test.com
+              name: protected
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: ref:protected-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+---
+# Source: app-test/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: simple
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+---
+# Source: app-test/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: simple-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: simple
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      apex-integration:
+        certManagerCertificates:
+          apex-gateway:
+            name: apex-gateway
+            namespace: default
+            secretName: tls-apex-gateway
+        httpRoutes:
+          apex:
+            name: apex
+            namespace: default
+        listenerSets:
+          apex:
+            name: apex
+            namespace: default
+      grouped-integration:
+        certManagerCertificates:
+          grouped-a-gateway:
+            name: grouped-a-gateway
+            namespace: default
+            secretName: tls-grouped-a-gateway
+          grouped-b-gateway:
+            name: grouped-b-gateway
+            namespace: default
+            secretName: tls-grouped-b-gateway
+        httpRoutes:
+          grouped-a:
+            name: grouped-a
+            namespace: default
+          grouped-b:
+            name: grouped-b
+            namespace: default
+        listenerSets:
+          grouped:
+            name: grouped
+            namespace: default
+      merged-integration:
+        certManagerCertificates:
+          merged-gateway:
+            name: merged-gateway
+            namespace: default
+            secretName: tls-merged-gateway
+        httpRoutes:
+          merged:
+            name: merged
+            namespace: default
+        listenerSets:
+          merged:
+            name: merged
+            namespace: default
+        referenceGrants:
+          extra:
+            name: extra
+            namespace: default
+      protected-integration:
+        certManagerCertificates:
+          protected-gateway:
+            name: protected-gateway
+            namespace: default
+            secretName: tls-protected-gateway
+        httpRoutes:
+          protected:
+            name: protected
+            namespace: default
+        listenerSets:
+          protected:
+            name: protected
+            namespace: default
+      simple-integration:
+        certManagerCertificates:
+          simple-gateway:
+            name: simple-gateway
+            namespace: default
+            secretName: tls-simple-gateway
+        httpRoutes:
+          simple:
+            name: simple
+            namespace: default
+        listenerSets:
+          simple:
+            name: simple
+            namespace: default
+    resources:
+      certManagerCertificates:
+        simple-gateway:
+          dnsNames:
+            simple: simple.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-simple-gateway
+      httpRoutes:
+        simple:
+          hostnames:
+            simple: simple.test.com
+          parentRefs:
+            simple:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: simple
+              sectionName: simple
+          rules:
+            root:
+              backendRefs:
+                backend:
+                  name: ref:simple
+      listenerSets:
+        simple:
+          listeners:
+            simple:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: simple.test.com
+              name: simple
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: ref:simple-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
 ---
 # Source: app-test/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

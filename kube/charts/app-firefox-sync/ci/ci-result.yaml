@@ -251,22 +251,26 @@ spec:
           hostnames:
             firefox-sync: firefox-sync.test.com
           parentRefs:
-            firefox-sync: ref:firefox-sync
+            firefox-sync:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: firefox-sync
+              sectionName: firefox-sync
           rules:
             root:
               backendRefs:
-                firefox-sync:
+                backend:
                   name: ref:firefox-sync
                   port: 8000
       listenerSets:
         firefox-sync:
           listeners:
-            https:
+            firefox-sync:
               allowedRoutes:
                 namespaces:
                   from: Same
               hostname: firefox-sync.test.com
-              name: https
+              name: firefox-sync
               port: 443
               protocol: HTTPS
               tls:

@@ -247,22 +247,26 @@ spec:
           hostnames:
             element: element.test.com
           parentRefs:
-            element: ref:element
+            element:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: element
+              sectionName: element
           rules:
             root:
               backendRefs:
-                element:
+                backend:
                   name: ref:element
                   port: 80
       listenerSets:
         element:
           listeners:
-            https:
+            element:
               allowedRoutes:
                 namespaces:
                   from: Same
               hostname: element.test.com
-              name: https
+              name: element
               port: 443
               protocol: HTTPS
               tls:

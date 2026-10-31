@@ -278,7 +278,7 @@ spec:
       certManagerCertificates:
         tuwunel-gateway:
           dnsNames:
-            matrix: matrix.test.com
+            tuwunel: matrix.test.com
           issuerRef:
             kind: ClusterIssuer
             name: letsencrypt-prod
@@ -286,13 +286,17 @@ spec:
       httpRoutes:
         tuwunel:
           hostnames:
-            matrix: matrix.test.com
+            tuwunel: matrix.test.com
           parentRefs:
-            tuwunel: ref:tuwunel
+            tuwunel:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: tuwunel
+              sectionName: tuwunel
           rules:
             root:
               backendRefs:
-                tuwunel:
+                backend:
                   name: ref:tuwunel
                   port: 8008
               timeouts:
@@ -300,12 +304,12 @@ spec:
       listenerSets:
         tuwunel:
           listeners:
-            https:
+            tuwunel:
               allowedRoutes:
                 namespaces:
                   from: Same
               hostname: matrix.test.com
-              name: https
+              name: tuwunel
               port: 443
               protocol: HTTPS
               tls:

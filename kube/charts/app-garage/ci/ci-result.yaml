@@ -544,7 +544,7 @@ spec:
       certManagerCertificates:
         garage-gateway:
           dnsNames:
-            s3: s3.test.com
+            garage: s3.test.com
           issuerRef:
             kind: ClusterIssuer
             name: letsencrypt-prod
@@ -552,13 +552,17 @@ spec:
       httpRoutes:
         garage:
           hostnames:
-            s3: s3.test.com
+            garage: s3.test.com
           parentRefs:
-            garage: ref:garage
+            garage:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: garage
+              sectionName: garage
           rules:
             root:
               backendRefs:
-                garage:
+                backend:
                   name: ref:garage
                   port: 3900
               timeouts:
@@ -566,12 +570,12 @@ spec:
       listenerSets:
         garage:
           listeners:
-            https:
+            garage:
               allowedRoutes:
                 namespaces:
                   from: Same
               hostname: s3.test.com
-              name: https
+              name: garage
               port: 443
               protocol: HTTPS
               tls:

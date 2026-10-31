@@ -459,10 +459,10 @@ spec:
     refs:
       longhorn-integration:
         certManagerCertificates:
-          longhorn-ui:
-            name: longhorn-ui
+          longhorn-gateway:
+            name: longhorn-gateway
             namespace: default
-            secretName: tls-longhorn
+            secretName: tls-longhorn-gateway
         httpRoutes:
           longhorn:
             name: longhorn
@@ -529,23 +529,27 @@ spec:
             namespace: default
     resources:
       certManagerCertificates:
-        longhorn-ui:
+        longhorn-gateway:
           dnsNames:
-            ui: longhorn.test.com
+            longhorn: longhorn.test.com
           issuerRef:
             kind: ClusterIssuer
             name: letsencrypt-prod
-          secretName: tls-longhorn
+          secretName: tls-longhorn-gateway
       httpRoutes:
         longhorn:
           hostnames:
-            ui: longhorn.test.com
+            longhorn: longhorn.test.com
           parentRefs:
-            longhorn: ref:longhorn
+            longhorn:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: longhorn
+              sectionName: longhorn
           rules:
-            ui:
+            root:
               backendRefs:
-                frontend:
+                backend:
                   name: longhorn-frontend
                   port: 80
               filters:
@@ -573,18 +577,18 @@ spec:
       listenerSets:
         longhorn:
           listeners:
-            https:
+            longhorn:
               allowedRoutes:
                 namespaces:
                   from: Same
               hostname: longhorn.test.com
-              name: https
+              name: longhorn
               port: 443
               protocol: HTTPS
               tls:
                 certificateRefs:
                   tls:
-                    name: ref:longhorn-ui
+                    name: ref:longhorn-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
@@ -634,10 +638,10 @@ spec:
     refs:
       longhorn-integration:
         certManagerCertificates:
-          longhorn-ui:
-            name: longhorn-ui
+          longhorn-gateway:
+            name: longhorn-gateway
             namespace: default
-            secretName: tls-longhorn
+            secretName: tls-longhorn-gateway
         httpRoutes:
           longhorn:
             name: longhorn
@@ -831,10 +835,10 @@ spec:
     refs:
       longhorn-integration:
         certManagerCertificates:
-          longhorn-ui:
-            name: longhorn-ui
+          longhorn-gateway:
+            name: longhorn-gateway
             namespace: default
-            secretName: tls-longhorn
+            secretName: tls-longhorn-gateway
         httpRoutes:
           longhorn:
             name: longhorn

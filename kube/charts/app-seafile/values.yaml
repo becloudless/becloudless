@@ -375,65 +375,10 @@ resources:
                 http:
                   port: 80
 
-    # the public exposure, applied once seafile is deployed and not waited for
-    seafile-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
-      dependsOn:
-        - ref:seafile
-        - name: app-cert-manager
-          namespace: cert-manager
-        - name: app-gateway-api
-          namespace: gateway-api
-      values:
-        resources:
-          certManagerCertificates:
-            # certificate of the web UI, terminated by the Gateway
-            seafile-gateway:
-              secretName: tls-seafile-gateway
-              dnsNames:
-                seafile: seafile.{{ .Values.app.domain }}
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
-
-          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
-          # It is not protected by forward auth: the sync clients cannot follow the login redirect of authelia, seafile has its own login.
-          listenerSets:
-            seafile:
-              parentRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: shared
-                namespace: kube-system
-              listeners:
-                https:
-                  name: https
-                  hostname: seafile.{{ .Values.app.domain }}
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: ref:seafile-gateway
-                  allowedRoutes:
-                    namespaces:
-                      from: Same
-
-          httpRoutes:
-            seafile:
-              parentRefs:
-                seafile: ref:seafile
-              hostnames:
-                seafile: seafile.{{ .Values.app.domain }}
-              rules:
-                root:
-                  backendRefs:
-                    seafile:
-                      name: ref:seafile
-                      port: 80
-                  timeouts:
-                    request: 0s # uploads and downloads of big files can be long
+# the public exposure by the Cilium Gateway `shared` (kube-system). It is not protected by forward auth: the sync clients cannot
+# follow the login redirect of authelia, seafile has its own login.
+expose:
+  seafile:
+    port: 80
+    timeouts:
+      request: 0s # uploads and downloads of big files can be long

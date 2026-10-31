@@ -460,66 +460,13 @@ resources:
               credentialSecret: garage-backup
               pollInterval: 3m0s
 
-    # the public exposure, applied once the nodes have their layout and not waited for
-    garage-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
-      dependsOn:
-        - ref:garage-post # the layout, the API is usable
-        - name: app-cert-manager
-          namespace: cert-manager
-        - name: app-gateway-api
-          namespace: gateway-api
-      values:
-        resources:
-          certManagerCertificates:
-            # certificate of the S3 API, terminated by the Gateway
-            garage-gateway:
-              secretName: tls-garage-gateway
-              dnsNames:
-                s3: s3.{{ .Values.app.domain }}
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
-
-          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
-          # It is not protected by forward auth: the S3 clients cannot follow the login redirect of authelia, the access keys
-          # of Garage are the protection.
-          listenerSets:
-            garage:
-              parentRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: shared
-                namespace: kube-system
-              listeners:
-                https:
-                  name: https
-                  hostname: s3.{{ .Values.app.domain }}
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: ref:garage-gateway
-                  allowedRoutes:
-                    namespaces:
-                      from: Same
-
-          httpRoutes:
-            garage:
-              parentRefs:
-                garage: ref:garage
-              hostnames:
-                s3: s3.{{ .Values.app.domain }}
-              rules:
-                root:
-                  backendRefs:
-                    garage:
-                      name: ref:garage
-                      port: 3900
-                  timeouts:
-                    request: 0s # the uploads and downloads of big objects can be long
+# the public exposure of the S3 API by the Cilium Gateway `shared` (kube-system). It is not protected by forward auth: the S3 clients
+# cannot follow the login redirect of authelia, the access keys of Garage are the protection.
+expose:
+  garage:
+    hostname: s3
+    port: 3900
+    timeouts:
+      request: 0s # the uploads and downloads of big objects can be long
+    dependsOn:
+      - ref:garage-post # the layout, the API is usable

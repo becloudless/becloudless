@@ -89,62 +89,8 @@ resources:
                   port: 80
                   targetPort: 8080
 
-    # the public exposure, applied once landing is deployed and not waited for
-    landing-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
-      dependsOn:
-        - ref:landing
-        - name: app-cert-manager
-          namespace: cert-manager
-        - name: app-gateway-api
-          namespace: gateway-api
-      values:
-        resources:
-
-          # Exposed on the apex of the domain by the Cilium Gateway `shared` (kube-system).
-          certManagerCertificates:
-            landing:
-              secretName: tls-landing
-              dnsNames:
-                apex: "{{ .Values.app.domain }}"
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
-
-          listenerSets:
-            landing:
-              parentRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: shared
-                namespace: kube-system
-              listeners:
-                https:
-                  name: https
-                  hostname: "{{ .Values.app.domain }}"
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: ref:landing
-                  allowedRoutes:
-                    namespaces:
-                      from: Same
-
-          httpRoutes:
-            landing:
-              parentRefs:
-                landing: ref:landing
-              hostnames:
-                apex: "{{ .Values.app.domain }}"
-              rules:
-                root:
-                  backendRefs:
-                    landing:
-                      name: ref:landing
-                      port: 80
+# the public exposure on the apex of the domain by the Cilium Gateway `shared` (kube-system)
+expose:
+  landing:
+    hostname: "{{ .Values.app.domain }}"
+    port: 80

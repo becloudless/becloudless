@@ -170,66 +170,11 @@ resources:
                 http:
                   port: 8008
 
-    # the public exposure, applied once tuwunel is deployed and not waited for
-    tuwunel-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
-      dependsOn:
-        - ref:tuwunel
-        - name: app-cert-manager
-          namespace: cert-manager
-        - name: app-gateway-api
-          namespace: gateway-api
-      values:
-        resources:
-          certManagerCertificates:
-            # certificate of the API, terminated by the Gateway
-            tuwunel-gateway:
-              secretName: tls-tuwunel-gateway
-              dnsNames:
-                matrix: matrix.{{ .Values.app.domain }}
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
-
-          # Exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
-          # It is not protected by forward auth: the Matrix clients (Element, Element X, ...) cannot follow the login redirect of
-          # authelia, tuwunel has its own SSO login.
-          listenerSets:
-            tuwunel:
-              parentRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: shared
-                namespace: kube-system
-              listeners:
-                https:
-                  name: https
-                  hostname: matrix.{{ .Values.app.domain }}
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: ref:tuwunel-gateway
-                  allowedRoutes:
-                    namespaces:
-                      from: Same
-
-          httpRoutes:
-            tuwunel:
-              parentRefs:
-                tuwunel: ref:tuwunel
-              hostnames:
-                matrix: matrix.{{ .Values.app.domain }}
-              rules:
-                root:
-                  backendRefs:
-                    tuwunel:
-                      name: ref:tuwunel
-                      port: 8008
-                  timeouts:
-                    request: 0s # the long polling of the sync and the uploads of big files can be long
+# the public exposure of the API by the Cilium Gateway `shared` (kube-system). It is not protected by forward auth: the Matrix
+# clients (Element, Element X, ...) cannot follow the login redirect of authelia, tuwunel has its own SSO login.
+expose:
+  tuwunel:
+    hostname: matrix
+    port: 8008
+    timeouts:
+      request: 0s # the long polling of the sync and the uploads of big files can be long

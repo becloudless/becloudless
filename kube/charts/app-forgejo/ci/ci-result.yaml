@@ -234,11 +234,15 @@ spec:
           hostnames:
             forgejo: forgejo.test.com
           parentRefs:
-            forgejo: ref:forgejo
+            forgejo:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: forgejo
+              sectionName: forgejo
           rules:
             root:
               backendRefs:
-                forgejo:
+                backend:
                   name: forgejo-http
                   port: 3000
               timeouts:
@@ -246,12 +250,12 @@ spec:
       listenerSets:
         forgejo:
           listeners:
-            https:
+            forgejo:
               allowedRoutes:
                 namespaces:
                   from: Same
               hostname: forgejo.test.com
-              name: https
+              name: forgejo
               port: 443
               protocol: HTTPS
               tls:

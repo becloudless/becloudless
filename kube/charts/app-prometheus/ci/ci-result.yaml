@@ -699,9 +699,9 @@ spec:
               name: prometheus
               sectionName: alertmanager
           rules:
-            ui:
+            root:
               backendRefs:
-                alertmanager:
+                backend:
                   name: prometheus-kube-prometheus-alertmanager
                   port: 9093
               filters:
@@ -736,9 +736,9 @@ spec:
               name: prometheus
               sectionName: grafana
           rules:
-            ui:
+            root:
               backendRefs:
-                grafana:
+                backend:
                   name: prometheus-grafana
                   port: 80
         prometheus:
@@ -751,9 +751,9 @@ spec:
               name: prometheus
               sectionName: prometheus
           rules:
-            ui:
+            root:
               backendRefs:
-                prometheus:
+                backend:
                   name: prometheus-kube-prometheus-prometheus
                   port: 9090
               filters:
@@ -788,9 +788,9 @@ spec:
               name: prometheus
               sectionName: pushprox
           rules:
-            proxy:
+            root:
               backendRefs:
-                pushprox:
+                backend:
                   name: pushprox
                   port: 8080
               filters:

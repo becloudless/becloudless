@@ -581,22 +581,26 @@ spec:
           hostnames:
             seerr: seerr.test.com
           parentRefs:
-            seerr: ref:seerr
+            seerr:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: seerr
+              sectionName: seerr
           rules:
             root:
               backendRefs:
-                seerr:
+                backend:
                   name: ref:seerr
                   port: 5055
       listenerSets:
         seerr:
           listeners:
-            https:
+            seerr:
               allowedRoutes:
                 namespaces:
                   from: Same
               hostname: seerr.test.com
-              name: https
+              name: seerr
               port: 443
               protocol: HTTPS
               tls:

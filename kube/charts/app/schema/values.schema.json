@@ -45,6 +45,59 @@
     "checkRequiredValues": {
       "$ref": "../../base/schema/values.schema.json#/properties/checkRequiredValues"
     },
+    "expose": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "auth": {
+            "default": "none",
+            "description": "The forward auth of the route: `none`, or `authelia`.",
+            "enum": [
+              "none",
+              "authelia"
+            ],
+            "type": "string"
+          },
+          "dependsOn": {
+            "description": "What the release waits for (`[ref:<release>]` by default). The Certificates and the Gateway API CRDs are added.",
+            "type": "array"
+          },
+          "enabled": {
+            "description": "`false` disables the release of the exposure.",
+            "type": "boolean"
+          },
+          "hostname": {
+            "description": "The subdomain of `app.domain` (the id by default). A value with a dot is used as it is.",
+            "type": "string"
+          },
+          "port": {
+            "description": "The port of the Service (not set by default).",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "release": {
+            "description": "The hostnames of a same release are exposed together, as `<release>-integration` (the id by default).",
+            "type": "string"
+          },
+          "service": {
+            "description": "The name of the Service that gets the requests (`ref:<id>` by default).",
+            "type": "string"
+          },
+          "timeouts": {
+            "description": "The timeouts of the HTTPRoute rule (ex: `{request: 0s}`).",
+            "type": "object"
+          }
+        },
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "description": "The public exposure of the app by the shared Gateway: the key is the id of an exposed hostname. Generates the Certificate, the listener of the ListenerSet and the HTTPRoute, in the release `<release>-integration`.",
+      "type": "object"
+    },
     "prefixNamesWithRelease": {
       "$ref": "../../base/schema/values.schema.json#/properties/prefixNamesWithRelease"
     },

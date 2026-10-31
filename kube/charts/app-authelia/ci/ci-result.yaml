@@ -780,22 +780,26 @@ spec:
           hostnames:
             authelia: authelia.test.com
           parentRefs:
-            authelia: ref:authelia
+            authelia:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: authelia
+              sectionName: authelia
           rules:
             root:
               backendRefs:
-                authelia:
+                backend:
                   name: authelia
                   port: 80
       listenerSets:
         authelia:
           listeners:
-            https:
+            authelia:
               allowedRoutes:
                 namespaces:
                   from: Same
               hostname: authelia.test.com
-              name: https
+              name: authelia
               port: 443
               protocol: HTTPS
               tls:

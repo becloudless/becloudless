@@ -321,84 +321,8 @@ resources:
                 http:
                   port: 8080
 
-    # the public exposure, applied once homer is deployed and not waited for
-    homer-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
-      dependsOn:
-        - ref:homer
-        - name: app-cert-manager
-          namespace: cert-manager
-        - name: app-gateway-api
-          namespace: gateway-api
-      values:
-        resources:
-
-          # Exposed by the Cilium Gateway `shared` (kube-system), protected by Authelia forward auth.
-          certManagerCertificates:
-            homer:
-              secretName: tls-homer
-              dnsNames:
-                homer: homer.{{ .Values.app.domain }}
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
-
-          listenerSets:
-            homer:
-              parentRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: shared
-                namespace: kube-system
-              listeners:
-                https:
-                  name: https
-                  hostname: homer.{{ .Values.app.domain }}
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: ref:homer
-                  allowedRoutes:
-                    namespaces:
-                      from: Same
-
-          httpRoutes:
-            homer:
-              parentRefs:
-                homer: ref:homer
-              hostnames:
-                homer: homer.{{ .Values.app.domain }}
-              rules:
-                root:
-                  filters:
-                    authelia:
-                      type: ExternalAuth
-                      externalAuth:
-                        protocol: HTTP
-                        backendRef:
-                          name: authelia
-                          namespace: authelia
-                          port: 80
-                        http:
-                          path: /api/authz/ext-authz/
-                          allowedResponseHeaders: # only the identity headers, not the authz content-type/content-length (a GET with a content-length makes upstreams answer 400)
-                            remote-user: remote-user
-                            remote-groups: remote-groups
-                            remote-name: remote-name
-                            remote-email: remote-email
-                          allowedHeaders: # what authelia needs to find the session and to redirect to the login page
-                            cookie: cookie
-                            accept: accept
-                            proxy-authorization: proxy-authorization
-                            x-forwarded-proto: x-forwarded-proto
-                            x-forwarded-for: x-forwarded-for
-                  backendRefs:
-                    homer:
-                      name: ref:homer
-                      port: 8080
+# the public exposure by the Cilium Gateway `shared` (kube-system), protected by the Authelia forward auth
+expose:
+  homer:
+    port: 8080
+    auth: authelia

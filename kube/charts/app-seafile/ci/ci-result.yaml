@@ -465,11 +465,15 @@ spec:
           hostnames:
             seafile: seafile.test.com
           parentRefs:
-            seafile: ref:seafile
+            seafile:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: seafile
+              sectionName: seafile
           rules:
             root:
               backendRefs:
-                seafile:
+                backend:
                   name: ref:seafile
                   port: 80
               timeouts:
@@ -477,12 +481,12 @@ spec:
       listenerSets:
         seafile:
           listeners:
-            https:
+            seafile:
               allowedRoutes:
                 namespaces:
                   from: Same
               hostname: seafile.test.com
-              name: https
+              name: seafile
               port: 443
               protocol: HTTPS
               tls:
