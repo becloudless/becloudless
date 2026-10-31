@@ -139,8 +139,6 @@ resources:
           namespace: secret-generator
         - name: app-external-secrets
           namespace: external-secrets
-        - name: authelia-pre # the generated secret of the client and the right to read it
-          namespace: authelia
       values:
         resources:
           stringSecrets:
@@ -148,24 +146,6 @@ resources:
             immich-admin:
               fields:
                 password: {}
-
-          serviceAccounts:
-            authelia-reader:
-              automountServiceAccountToken: false # only used by external-secrets to get a token
-
-          secretStores:
-            authelia:
-              provider:
-                kubernetes:
-                  remoteNamespace: authelia
-                  server:
-                    caProvider:
-                      type: ConfigMap
-                      name: kube-root-ca.crt
-                      key: ca.crt
-                  auth:
-                    serviceAccount:
-                      name: ref:authelia-reader
 
           # The configuration file of immich with the OAuth settings, the client id and the secret of the client are the only values read from authelia.
           # The template of external-secrets is escaped twice: the values are rendered by the app chart, then by the base chart.
@@ -334,3 +314,9 @@ expose:
       request: 0s # uploads and downloads of videos can be long
     dependsOn:
       - ref:immich-post # the admin exists, nobody can register as the admin
+
+# the OIDC client of authelia (see `oidcClients` in app-authelia). The ExternalSecret is `immich-config` (the configuration file with the
+# OAuth settings).
+oidc:
+  immich:
+    externalSecret: false

@@ -156,49 +156,6 @@ resources:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": prometheus, "k8s:app.kubernetes.io/name": prometheus}
 
   fluxHelmReleases:
-    # the secret of the OIDC client of grafana, copied from authelia before it starts
-    prometheus-pre:
-      dependsOn:
-        - name: app-external-secrets
-          namespace: external-secrets
-        - name: authelia-pre # the generated secret of the client and the right to read it
-          namespace: authelia
-      values:
-        resources:
-          serviceAccounts:
-            authelia-reader:
-              automountServiceAccountToken: false # only used by external-secrets to get a token
-
-          secretStores:
-            authelia:
-              provider:
-                kubernetes:
-                  remoteNamespace: authelia
-                  server:
-                    caProvider:
-                      type: ConfigMap
-                      name: kube-root-ca.crt
-                      key: ca.crt
-                  auth:
-                    serviceAccount:
-                      name: ref:authelia-reader
-
-          externalSecrets:
-            grafana-oidc:
-              refreshInterval: 1h
-              secretStoreRef: ref:authelia
-              data:
-                client-id:
-                  secretKey: client-id
-                  remoteRef:
-                    key: authelia-oidc-grafana
-                    property: client-id
-                secret:
-                  secretKey: secret
-                  remoteRef:
-                    key: authelia-oidc-grafana
-                    property: secret
-
     # the release is named `prometheus`, which gives the service names used by the httpRoutes
     prometheus:
       dependsOn: # the volumes, the secret of the OIDC client
@@ -474,3 +431,8 @@ expose:
     service: pushprox
     port: 8080
     auth: authelia
+
+# the OIDC client of authelia of grafana (see `oidcClients` in app-authelia), copied before it starts
+oidc:
+  grafana:
+    release: prometheus-pre

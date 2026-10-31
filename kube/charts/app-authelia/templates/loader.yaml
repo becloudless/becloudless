@@ -1,1 +1,3 @@
+{{- /* the OIDC clients generate resources in the releases, before the loader of the library reads them */}}
+{{- include "app-authelia.features.oidcClients" $ }}
 {{- include "app.loader.all" $ }}

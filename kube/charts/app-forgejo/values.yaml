@@ -60,50 +60,6 @@ resources:
         spec:
           chart: ./kube/charts/postgresql
 
-    # the secret of the OIDC client, copied from authelia before forgejo starts
-    forgejo-pre:
-      dependsOn:
-        - name: app-external-secrets
-          namespace: external-secrets
-        - name: authelia-pre # the generated secret of the client and the right to read it
-          namespace: authelia
-      values:
-        resources:
-          serviceAccounts:
-            authelia-reader:
-              automountServiceAccountToken: false # only used by external-secrets to get a token
-
-          secretStores:
-            authelia:
-              provider:
-                kubernetes:
-                  remoteNamespace: authelia
-                  server:
-                    caProvider:
-                      type: ConfigMap
-                      name: kube-root-ca.crt
-                      key: ca.crt
-                  auth:
-                    serviceAccount:
-                      name: ref:authelia-reader
-
-          # the `key` (client_id) and the `secret` of the client are the keys the forgejo chart reads
-          externalSecrets:
-            forgejo-oidc:
-              refreshInterval: 1h
-              secretStoreRef: ref:authelia
-              data:
-                key:
-                  secretKey: key
-                  remoteRef:
-                    key: authelia-oidc-forgejo
-                    property: client-id
-                secret:
-                  secretKey: secret
-                  remoteRef:
-                    key: authelia-oidc-forgejo
-                    property: secret
-
     forgejo:
       dependsOn:
         - ref:forgejo-postgresql
@@ -205,3 +161,9 @@ expose:
     port: 3000
     timeouts:
       request: 0s # pushes and lfs uploads can be long
+
+# the OIDC client of authelia (see `oidcClients` in app-authelia), copied before forgejo starts. The `key` (client_id) and the `secret`
+# of the client are the keys the forgejo chart reads.
+oidc:
+  forgejo:
+    clientIdKey: key

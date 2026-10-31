@@ -12,6 +12,7 @@ where the dependencies of a local dependency are not vendored (`charts/` is not 
 
 The features applied to the values before the base loader, one file each in `features/`:
   - `expose`: the public exposure of an app (`_expose.tpl`);
+  - `oidc`: the OIDC client of an app that logs in with authelia (`_oidc.tpl`);
   - `app.scaling`: the values of the scale as integers (`_scaling.tpl`);
   - the chart of the `fluxHelmReleases` (`_helmReleasesSource.tpl`).
 */}}
@@ -27,6 +28,7 @@ The features applied to the values before the base loader, one file each in `fea
   {{- include "base.lib.init.mergeLibrariesValuesIntoValues" (dict "rootContext" $ "libraryNames" (list "app")) }}
 
   {{- include "app.loader.expose" $ }}
+  {{- include "app.loader.oidc" $ }}
   {{- include "app.loader.scalingToIntegers" $ }}
   {{- include "app.loader.helmReleasesSource" $ }}
 

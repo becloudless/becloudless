@@ -64,8 +64,6 @@ resources:
           namespace: secret-generator
         - name: app-external-secrets
           namespace: external-secrets
-        - name: authelia-pre # the generated secret of the client and the right to read it
-          namespace: authelia
       values:
         resources:
           stringSecrets:
@@ -76,40 +74,6 @@ resources:
                 db-root-password: {} # created by mariadb, used by seafile to create its databases
                 db-password: {} # the `seafile` user of the databases, created by seafile
                 admin-password: {} # the local administrator, created by seafile at its first start
-
-          serviceAccounts:
-            authelia-reader:
-              automountServiceAccountToken: false # only used by external-secrets to get a token
-
-          secretStores:
-            authelia:
-              provider:
-                kubernetes:
-                  remoteNamespace: authelia
-                  server:
-                    caProvider:
-                      type: ConfigMap
-                      name: kube-root-ca.crt
-                      key: ca.crt
-                  auth:
-                    serviceAccount:
-                      name: ref:authelia-reader
-
-          externalSecrets:
-            seafile-oidc:
-              refreshInterval: 1h
-              secretStoreRef: ref:authelia
-              data:
-                client-id:
-                  secretKey: client-id
-                  remoteRef:
-                    key: authelia-oidc-seafile
-                    property: client-id
-                secret:
-                  secretKey: secret
-                  remoteRef:
-                    key: authelia-oidc-seafile
-                    property: secret
 
     seafile-mariadb:
       dependsOn: # the generated passwords
@@ -382,3 +346,7 @@ expose:
     port: 80
     timeouts:
       request: 0s # uploads and downloads of big files can be long
+
+# the OIDC client of authelia (see `oidcClients` in app-authelia), copied before seafile starts
+oidc:
+  seafile: {}

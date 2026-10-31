@@ -17,6 +17,10 @@ resources:
   # a release with no source is a chart of this repository (base-loader by default)
   fluxHelmReleases:
     default: {}
+    simple-pre:
+      dependsOn:
+        - name: app-external-secrets
+          namespace: external-secrets
     simple: {}
     apex: {}
     protected: {}
@@ -74,3 +78,13 @@ expose:
     auth: authelia
   # merged with the release of the same name of fluxHelmReleases, which wins
   merged: {}
+
+# the OIDC clients of authelia the app uses: the ServiceAccount, the SecretStore and the ExternalSecret in `<id>-pre`
+oidc:
+  client:
+    release: simple-pre
+  other:
+    name: other-secret
+    clientIdKey: key
+  own:
+    externalSecret: false

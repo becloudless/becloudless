@@ -142,6 +142,28 @@ spec:
           extra:
             name: extra
             namespace: default
+      other-pre:
+        externalSecrets:
+          other-secret:
+            name: other-secret
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+      own-pre:
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
       protected-integration:
         certManagerCertificates:
           protected-gateway:
@@ -169,6 +191,19 @@ spec:
         listenerSets:
           simple:
             name: simple
+            namespace: default
+      simple-pre:
+        externalSecrets:
+          client-oidc:
+            name: client-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
             namespace: default
     resources:
       certManagerCertificates:
@@ -421,6 +456,28 @@ spec:
           extra:
             name: extra
             namespace: default
+      other-pre:
+        externalSecrets:
+          other-secret:
+            name: other-secret
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+      own-pre:
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
       protected-integration:
         certManagerCertificates:
           protected-gateway:
@@ -448,6 +505,19 @@ spec:
         listenerSets:
           simple:
             name: simple
+            namespace: default
+      simple-pre:
+        externalSecrets:
+          client-oidc:
+            name: client-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
             namespace: default
     resources:
       certManagerCertificates:
@@ -752,6 +822,28 @@ spec:
           extra:
             name: extra
             namespace: default
+      other-pre:
+        externalSecrets:
+          other-secret:
+            name: other-secret
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+      own-pre:
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
       protected-integration:
         certManagerCertificates:
           protected-gateway:
@@ -779,6 +871,19 @@ spec:
         listenerSets:
           simple:
             name: simple
+            namespace: default
+      simple-pre:
+        externalSecrets:
+          client-oidc:
+            name: client-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
             namespace: default
     resources:
       certManagerCertificates:
@@ -829,6 +934,371 @@ spec:
         extra:
           spec:
             from: []
+---
+# Source: app-test/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: other-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-external-secrets
+    namespace: external-secrets
+  - name: authelia-pre
+    namespace: authelia
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      apex-integration:
+        certManagerCertificates:
+          apex-gateway:
+            name: apex-gateway
+            namespace: default
+            secretName: tls-apex-gateway
+        httpRoutes:
+          apex:
+            name: apex
+            namespace: default
+        listenerSets:
+          apex:
+            name: apex
+            namespace: default
+      grouped-integration:
+        certManagerCertificates:
+          grouped-a-gateway:
+            name: grouped-a-gateway
+            namespace: default
+            secretName: tls-grouped-a-gateway
+          grouped-b-gateway:
+            name: grouped-b-gateway
+            namespace: default
+            secretName: tls-grouped-b-gateway
+        httpRoutes:
+          grouped-a:
+            name: grouped-a
+            namespace: default
+          grouped-b:
+            name: grouped-b
+            namespace: default
+        listenerSets:
+          grouped:
+            name: grouped
+            namespace: default
+      merged-integration:
+        certManagerCertificates:
+          merged-gateway:
+            name: merged-gateway
+            namespace: default
+            secretName: tls-merged-gateway
+        httpRoutes:
+          merged:
+            name: merged
+            namespace: default
+        listenerSets:
+          merged:
+            name: merged
+            namespace: default
+        referenceGrants:
+          extra:
+            name: extra
+            namespace: default
+      other-pre:
+        externalSecrets:
+          other-secret:
+            name: other-secret
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+      own-pre:
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+      protected-integration:
+        certManagerCertificates:
+          protected-gateway:
+            name: protected-gateway
+            namespace: default
+            secretName: tls-protected-gateway
+        httpRoutes:
+          protected:
+            name: protected
+            namespace: default
+        listenerSets:
+          protected:
+            name: protected
+            namespace: default
+      simple-integration:
+        certManagerCertificates:
+          simple-gateway:
+            name: simple-gateway
+            namespace: default
+            secretName: tls-simple-gateway
+        httpRoutes:
+          simple:
+            name: simple
+            namespace: default
+        listenerSets:
+          simple:
+            name: simple
+            namespace: default
+      simple-pre:
+        externalSecrets:
+          client-oidc:
+            name: client-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+    resources:
+      externalSecrets:
+        other-secret:
+          data:
+            key:
+              remoteRef:
+                key: authelia-oidc-other
+                property: client-id
+              secretKey: key
+            secret:
+              remoteRef:
+                key: authelia-oidc-other
+                property: secret
+              secretKey: secret
+          refreshInterval: 1h
+          secretStoreRef: ref:authelia
+      secretStores:
+        authelia:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: ref:authelia-reader
+              remoteNamespace: authelia
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        authelia-reader:
+          automountServiceAccountToken: false
+---
+# Source: app-test/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: own-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-external-secrets
+    namespace: external-secrets
+  - name: authelia-pre
+    namespace: authelia
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      apex-integration:
+        certManagerCertificates:
+          apex-gateway:
+            name: apex-gateway
+            namespace: default
+            secretName: tls-apex-gateway
+        httpRoutes:
+          apex:
+            name: apex
+            namespace: default
+        listenerSets:
+          apex:
+            name: apex
+            namespace: default
+      grouped-integration:
+        certManagerCertificates:
+          grouped-a-gateway:
+            name: grouped-a-gateway
+            namespace: default
+            secretName: tls-grouped-a-gateway
+          grouped-b-gateway:
+            name: grouped-b-gateway
+            namespace: default
+            secretName: tls-grouped-b-gateway
+        httpRoutes:
+          grouped-a:
+            name: grouped-a
+            namespace: default
+          grouped-b:
+            name: grouped-b
+            namespace: default
+        listenerSets:
+          grouped:
+            name: grouped
+            namespace: default
+      merged-integration:
+        certManagerCertificates:
+          merged-gateway:
+            name: merged-gateway
+            namespace: default
+            secretName: tls-merged-gateway
+        httpRoutes:
+          merged:
+            name: merged
+            namespace: default
+        listenerSets:
+          merged:
+            name: merged
+            namespace: default
+        referenceGrants:
+          extra:
+            name: extra
+            namespace: default
+      other-pre:
+        externalSecrets:
+          other-secret:
+            name: other-secret
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+      own-pre:
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+      protected-integration:
+        certManagerCertificates:
+          protected-gateway:
+            name: protected-gateway
+            namespace: default
+            secretName: tls-protected-gateway
+        httpRoutes:
+          protected:
+            name: protected
+            namespace: default
+        listenerSets:
+          protected:
+            name: protected
+            namespace: default
+      simple-integration:
+        certManagerCertificates:
+          simple-gateway:
+            name: simple-gateway
+            namespace: default
+            secretName: tls-simple-gateway
+        httpRoutes:
+          simple:
+            name: simple
+            namespace: default
+        listenerSets:
+          simple:
+            name: simple
+            namespace: default
+      simple-pre:
+        externalSecrets:
+          client-oidc:
+            name: client-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+    resources:
+      secretStores:
+        authelia:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: ref:authelia-reader
+              remoteNamespace: authelia
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        authelia-reader:
+          automountServiceAccountToken: false
 ---
 # Source: app-test/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -962,6 +1432,28 @@ spec:
           extra:
             name: extra
             namespace: default
+      other-pre:
+        externalSecrets:
+          other-secret:
+            name: other-secret
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+      own-pre:
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
       protected-integration:
         certManagerCertificates:
           protected-gateway:
@@ -989,6 +1481,19 @@ spec:
         listenerSets:
           simple:
             name: simple
+            namespace: default
+      simple-pre:
+        externalSecrets:
+          client-oidc:
+            name: client-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
             namespace: default
     resources:
       certManagerCertificates:
@@ -1191,6 +1696,28 @@ spec:
           extra:
             name: extra
             namespace: default
+      other-pre:
+        externalSecrets:
+          other-secret:
+            name: other-secret
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+      own-pre:
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
       protected-integration:
         certManagerCertificates:
           protected-gateway:
@@ -1218,6 +1745,19 @@ spec:
         listenerSets:
           simple:
             name: simple
+            namespace: default
+      simple-pre:
+        externalSecrets:
+          client-oidc:
+            name: client-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
             namespace: default
     resources:
       certManagerCertificates:
@@ -1264,6 +1804,196 @@ spec:
             kind: Gateway
             name: shared
             namespace: kube-system
+---
+# Source: app-test/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: simple-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-external-secrets
+    namespace: external-secrets
+  - name: authelia-pre
+    namespace: authelia
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      apex-integration:
+        certManagerCertificates:
+          apex-gateway:
+            name: apex-gateway
+            namespace: default
+            secretName: tls-apex-gateway
+        httpRoutes:
+          apex:
+            name: apex
+            namespace: default
+        listenerSets:
+          apex:
+            name: apex
+            namespace: default
+      grouped-integration:
+        certManagerCertificates:
+          grouped-a-gateway:
+            name: grouped-a-gateway
+            namespace: default
+            secretName: tls-grouped-a-gateway
+          grouped-b-gateway:
+            name: grouped-b-gateway
+            namespace: default
+            secretName: tls-grouped-b-gateway
+        httpRoutes:
+          grouped-a:
+            name: grouped-a
+            namespace: default
+          grouped-b:
+            name: grouped-b
+            namespace: default
+        listenerSets:
+          grouped:
+            name: grouped
+            namespace: default
+      merged-integration:
+        certManagerCertificates:
+          merged-gateway:
+            name: merged-gateway
+            namespace: default
+            secretName: tls-merged-gateway
+        httpRoutes:
+          merged:
+            name: merged
+            namespace: default
+        listenerSets:
+          merged:
+            name: merged
+            namespace: default
+        referenceGrants:
+          extra:
+            name: extra
+            namespace: default
+      other-pre:
+        externalSecrets:
+          other-secret:
+            name: other-secret
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+      own-pre:
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+      protected-integration:
+        certManagerCertificates:
+          protected-gateway:
+            name: protected-gateway
+            namespace: default
+            secretName: tls-protected-gateway
+        httpRoutes:
+          protected:
+            name: protected
+            namespace: default
+        listenerSets:
+          protected:
+            name: protected
+            namespace: default
+      simple-integration:
+        certManagerCertificates:
+          simple-gateway:
+            name: simple-gateway
+            namespace: default
+            secretName: tls-simple-gateway
+        httpRoutes:
+          simple:
+            name: simple
+            namespace: default
+        listenerSets:
+          simple:
+            name: simple
+            namespace: default
+      simple-pre:
+        externalSecrets:
+          client-oidc:
+            name: client-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+    resources:
+      externalSecrets:
+        client-oidc:
+          data:
+            client-id:
+              remoteRef:
+                key: authelia-oidc-client
+                property: client-id
+              secretKey: client-id
+            secret:
+              remoteRef:
+                key: authelia-oidc-client
+                property: secret
+              secretKey: secret
+          refreshInterval: 1h
+          secretStoreRef: ref:authelia
+      secretStores:
+        authelia:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: ref:authelia-reader
+              remoteNamespace: authelia
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        authelia-reader:
+          automountServiceAccountToken: false
 ---
 # Source: app-test/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

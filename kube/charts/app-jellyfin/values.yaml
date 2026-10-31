@@ -50,8 +50,6 @@ resources:
           namespace: external-secrets
         - name: app-secret-generator
           namespace: secret-generator
-        - name: authelia-pre # the generated secret of the client and the right to read it
-          namespace: authelia
       values:
         resources:
           # password of the `admin` user, created by the setup wizard that the `configure` container completes
@@ -78,40 +76,6 @@ resources:
                   kind: ServiceAccount
                   name: jellyfin-reader
                   namespace: seerr
-
-          serviceAccounts:
-            authelia-reader:
-              automountServiceAccountToken: false # only used by external-secrets to get a token
-
-          secretStores:
-            authelia:
-              provider:
-                kubernetes:
-                  remoteNamespace: authelia
-                  server:
-                    caProvider:
-                      type: ConfigMap
-                      name: kube-root-ca.crt
-                      key: ca.crt
-                  auth:
-                    serviceAccount:
-                      name: ref:authelia-reader
-
-          externalSecrets:
-            jellyfin-oidc:
-              refreshInterval: 1h
-              secretStoreRef: ref:authelia
-              data:
-                client-id:
-                  secretKey: client-id
-                  remoteRef:
-                    key: authelia-oidc-jellyfin
-                    property: client-id
-                secret:
-                  secretKey: secret
-                  remoteRef:
-                    key: authelia-oidc-jellyfin
-                    property: secret
 
     jellyfin:
       dependsOn:
@@ -391,3 +355,7 @@ expose:
     port: 8096
     timeouts:
       request: 0s # streams can be long
+
+# the OIDC client of authelia (see `oidcClients` in app-authelia), copied before jellyfin starts
+oidc:
+  jellyfin: {}

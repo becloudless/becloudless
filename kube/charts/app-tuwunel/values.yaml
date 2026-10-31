@@ -39,49 +39,6 @@ resources:
           toPorts: [443]
 
   fluxHelmReleases:
-    # the OIDC client of authelia, copied before tuwunel starts
-    tuwunel-pre:
-      dependsOn:
-        - name: app-external-secrets
-          namespace: external-secrets
-        - name: authelia-pre # the generated secret of the client and the right to read it
-          namespace: authelia
-      values:
-        resources:
-          serviceAccounts:
-            authelia-reader:
-              automountServiceAccountToken: false # only used by external-secrets to get a token
-
-          secretStores:
-            authelia:
-              provider:
-                kubernetes:
-                  remoteNamespace: authelia
-                  server:
-                    caProvider:
-                      type: ConfigMap
-                      name: kube-root-ca.crt
-                      key: ca.crt
-                  auth:
-                    serviceAccount:
-                      name: ref:authelia-reader
-
-          externalSecrets:
-            tuwunel-oidc:
-              refreshInterval: 1h
-              secretStoreRef: ref:authelia
-              data:
-                client-id:
-                  secretKey: client-id
-                  remoteRef:
-                    key: authelia-oidc-tuwunel
-                    property: client-id
-                secret:
-                  secretKey: secret
-                  remoteRef:
-                    key: authelia-oidc-tuwunel
-                    property: secret
-
     tuwunel:
       dependsOn:
         - ref:tuwunel-pre # the OIDC client
@@ -178,3 +135,7 @@ expose:
     port: 8008
     timeouts:
       request: 0s # the long polling of the sync and the uploads of big files can be long
+
+# the OIDC client of authelia (see `oidcClients` in app-authelia), copied before tuwunel starts
+oidc:
+  tuwunel: {}

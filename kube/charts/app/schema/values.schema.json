@@ -98,6 +98,37 @@
       "description": "The public exposure of the app by the shared Gateway: the key is the id of an exposed hostname. Generates the Certificate, the listener of the ListenerSet and the HTTPRoute, in the release `<release>-integration`.",
       "type": "object"
     },
+    "oidc": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "clientIdKey": {
+            "default": "client-id",
+            "description": "The key of the client id in the Secret created by the ExternalSecret.",
+            "type": "string"
+          },
+          "externalSecret": {
+            "default": true,
+            "description": "`false` does not create the ExternalSecret, the chart has its own with the SecretStore `authelia`.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the ExternalSecret and of its Secret (`<id>-oidc` by default).",
+            "type": "string"
+          },
+          "release": {
+            "description": "The release that gets the ServiceAccount, the SecretStore and the ExternalSecret (`<id>-pre` by default), merged with the one of the chart.",
+            "type": "string"
+          }
+        },
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "description": "The OIDC clients of authelia the app uses: the key is the id of the client (see `oidcClients` in app-authelia).",
+      "type": "object"
+    },
     "prefixNamesWithRelease": {
       "$ref": "../../base/schema/values.schema.json#/properties/prefixNamesWithRelease"
     },

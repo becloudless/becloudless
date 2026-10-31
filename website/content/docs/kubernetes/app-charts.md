@@ -239,6 +239,43 @@ expose:
 
 `app-kube` (TLS passthrough, no certificate) and `app-mailu` (the certificate is shared with the mail protocols) keep a manual release.
 
+## OIDC clients (`oidc` and `oidcClients`)
+
+An app that logs in with authelia has an OIDC client, in two parts that share the secret `authelia-oidc-<id>` (keys `client-id` and
+`secret`, generated in the authelia namespace):
+
+- `oidcClients` in `app-authelia` only (its templates, `app-authelia/templates/features/_oidcClients.tpl`; its schema is
+  `app-authelia/schema/values.schema.json`), the key is the id of the client. It generates the secret, the Role that lets the app read only this
+  secret (and its RoleBinding for the namespace `namespace`, the id by default), the secret mounted in the init container `oidc-hashes`
+  (which makes the hash of the secret) and in the chart, the authorization policy `<id>_authz` and the client.
+
+  | Option | Description |
+  |---|---|
+  | `redirectUris` | required, `{clientId}` is replaced by the client id |
+  | `name`, `scopes` | the display name (the id with a capital), the scopes (`openid profile email`) |
+  | `groups`, `oneFactorGroups` | the groups with the second factor (`role_admin` and `app_<id>`), with the first factor only (none) |
+  | `policy` | a policy of authelia (`two_factor`) instead of `<id>_authz` |
+  | `pkce`, `claimsPolicy` | requires PKCE (S256), a claims policy of the configuration |
+  | `tokenEndpointAuthMethod`, `signingAlgorithm` | `client_secret_basic`, `none` |
+  | `grantTypes`, `responseModes` | `authorization_code`, not set |
+
+- `oidc` in the app, the key is the id of the client. It generates, in the release `release` (`<id>-pre` by default, merged with the
+  one of the chart, which waits for `authelia-pre`), the ServiceAccount `authelia-reader`, the SecretStore `authelia` and the
+  ExternalSecret `name` (`<id>-oidc`, keys `clientIdKey` and `secret`). `externalSecret: false` keeps the ExternalSecret out, for a
+  chart that builds its own (the configuration file of immich).
+
+```yaml
+# app-seafile
+oidc:
+  seafile: {}
+
+# app-authelia
+oidcClients:
+  seafile:
+    redirectUris:
+      - https://seafile.{{ .Values.app.domain }}/oauth/callback/
+```
+
 Apps that are only static resources (`homer`, `jellyfin`, `landing`, `seerr`) put them in the `<app>` sub-HR, so that
 `<app>-integration` has a service to wait for. `app-longhorn` has the four: `longhorn-pre` (NixOS PATH policy), `longhorn`
 (the Helm chart), `longhorn-post` (settings, recurring jobs, storage and snapshot classes) and `longhorn-integration` (the UI).
