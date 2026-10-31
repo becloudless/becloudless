@@ -52,14 +52,6 @@ resources:
           namespace: secret-generator
         - name: authelia-pre # the generated secret of the client and the right to read it
           namespace: authelia
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           # password of the `admin` user, created by the setup wizard that the `configure` container completes
@@ -124,14 +116,6 @@ resources:
     jellyfin:
       dependsOn:
         - ref:jellyfin-pre # the secrets of the OIDC client and of the administrator
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           configMaps:
@@ -412,14 +396,6 @@ resources:
           namespace: cert-manager
         - name: app-gateway-api
           namespace: gateway-api
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
 

@@ -77,11 +77,6 @@ resources:
       chart:
         spec:
           chart: ./kube/charts/postgresql
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       dependsOn: # the certificates, the cluster and the volume snapshots
         - name: app-cert-manager
           namespace: cert-manager
@@ -106,14 +101,6 @@ resources:
           namespace: cert-manager
         - name: app-secret-generator
           namespace: secret-generator
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           stringSecrets:
@@ -171,14 +158,6 @@ resources:
       dependsOn:
         - ref:lldap-pre
         - ref:lldap-postgresql
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           configMaps:
@@ -300,14 +279,6 @@ resources:
     lldap-post:
       dependsOn:
         - ref:lldap
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           configMaps:
@@ -393,14 +364,6 @@ resources:
           namespace: cert-manager
         - name: app-gateway-api
           namespace: gateway-api
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           certManagerCertificates:

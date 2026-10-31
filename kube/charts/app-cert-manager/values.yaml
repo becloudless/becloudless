@@ -83,14 +83,6 @@ resources:
     cert-manager-post:
       dependsOn:
         - ref:cert-manager
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           certManagerClusterIssuers:

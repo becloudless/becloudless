@@ -163,14 +163,6 @@ resources:
           namespace: external-secrets
         - name: authelia-pre # the generated secret of the client and the right to read it
           namespace: authelia
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           serviceAccounts:
@@ -472,14 +464,6 @@ resources:
           namespace: cert-manager
         - name: app-gateway-api
           namespace: gateway-api
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           certManagerCertificates:

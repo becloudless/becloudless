@@ -301,14 +301,6 @@ resources:
           namespace: cert-manager
         - name: app-secret-generator
           namespace: secret-generator
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           stringSecrets:
@@ -608,14 +600,6 @@ resources:
           namespace: cert-manager
         - name: app-gateway-api
           namespace: gateway-api
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           # Web UI exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.

@@ -69,14 +69,6 @@ resources:
         - ref:cilium
         - name: app-gateway-api # the Gateway needs its CRDs
           namespace: gateway-api
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           # Advertise the LoadBalancer IPs of every service over BGP
@@ -160,14 +152,6 @@ resources:
           namespace: flux-system
         - name: app-coredns # nor before the rules of CoreDNS: nothing could resolve a name anymore
           namespace: kube-system
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           ciliumClusterwideNetworkPolicies:

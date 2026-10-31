@@ -66,14 +66,6 @@ resources:
           namespace: external-secrets
         - name: authelia-pre # the generated secret of the client and the right to read it
           namespace: authelia
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           stringSecrets:
@@ -122,14 +114,6 @@ resources:
     seafile-mariadb:
       dependsOn: # the generated passwords
         - ref:seafile-pre
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           persistentVolumeClaims:
@@ -200,11 +184,6 @@ resources:
       chart:
         spec:
           chart: ./kube/charts/valkey
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         clients:
           seafile:
@@ -216,14 +195,6 @@ resources:
         - ref:seafile-pre # the generated secrets and the OIDC client
         - ref:seafile-mariadb
         - ref:seafile-valkey
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           configMaps:
@@ -416,14 +387,6 @@ resources:
           namespace: cert-manager
         - name: app-gateway-api
           namespace: gateway-api
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           certManagerCertificates:

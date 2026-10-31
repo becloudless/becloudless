@@ -78,14 +78,6 @@ resources:
       dependsOn:
         - name: app-secret-generator
           namespace: secret-generator
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           stringSecrets:
@@ -144,14 +136,6 @@ resources:
         - ref:garage-pre # the secrets
         - name: app-longhorn
           namespace: longhorn-system
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           serviceAccounts:
@@ -334,14 +318,6 @@ resources:
     garage-post:
       dependsOn:
         - ref:garage
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           jobs:
@@ -444,14 +420,6 @@ resources:
         - ref:garage-post # the bucket and the key
         - name: app-external-secrets
           namespace: external-secrets
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           serviceAccounts:
@@ -504,14 +472,6 @@ resources:
           namespace: cert-manager
         - name: app-gateway-api
           namespace: gateway-api
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           certManagerCertificates:

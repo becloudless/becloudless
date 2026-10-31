@@ -84,14 +84,6 @@ resources:
           namespace: external-secrets
         - name: garage-pre # the key, and the right to read it
           namespace: garage
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           serviceAccounts:

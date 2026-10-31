@@ -50,11 +50,6 @@ resources:
       chart:
         spec:
           chart: ./kube/charts/postgresql
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       dependsOn: # the certificates, the cluster and the volume snapshots
         - name: app-cert-manager
           namespace: cert-manager
@@ -72,14 +67,6 @@ resources:
           namespace: external-secrets
         - name: app-secret-generator
           namespace: secret-generator
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           stringSecrets:
@@ -295,11 +282,6 @@ resources:
       chart:
         spec:
           chart: ./kube/charts/valkey
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         clients:
           authelia:
@@ -888,14 +870,6 @@ resources:
           namespace: cert-manager
         - name: app-gateway-api
           namespace: gateway-api
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           certManagerCertificates:

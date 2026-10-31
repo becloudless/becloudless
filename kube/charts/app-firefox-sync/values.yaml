@@ -59,25 +59,12 @@ resources:
       chart:
         spec:
           chart: ./kube/charts/postgresql
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
 
     # the secrets of the service, created before it starts
     firefox-sync-pre:
       dependsOn:
         - name: app-secret-generator
           namespace: secret-generator
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           stringSecrets:
@@ -90,14 +77,6 @@ resources:
       dependsOn:
         - ref:firefox-sync-postgresql # the database
         - ref:firefox-sync-pre # the generated secrets
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           deployments:
@@ -174,14 +153,6 @@ resources:
           namespace: cert-manager
         - name: app-gateway-api
           namespace: gateway-api
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           certManagerCertificates:

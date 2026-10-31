@@ -73,11 +73,6 @@ resources:
       chart:
         spec:
           chart: ./kube/charts/postgresql
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
 
     # the secrets of the services, created before they start
     paperless-pre:
@@ -88,14 +83,6 @@ resources:
           namespace: external-secrets
         - name: authelia-pre # the generated secret of the client and the right to read it
           namespace: authelia
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           stringSecrets:
@@ -146,11 +133,6 @@ resources:
       chart:
         spec:
           chart: ./kube/charts/valkey
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         clients:
           paperless:
@@ -162,14 +144,6 @@ resources:
         - ref:paperless-pre # the generated secrets and the OIDC client
         - ref:paperless-postgresql
         - ref:paperless-valkey
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           # the documents (`media`) and the data (the search index, the classifier) of paperless
@@ -294,14 +268,6 @@ resources:
           namespace: cert-manager
         - name: app-gateway-api
           namespace: gateway-api
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           certManagerCertificates:

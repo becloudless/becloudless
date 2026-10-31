@@ -242,14 +242,6 @@ resources:
   fluxHelmReleases:
     # the policy adding the PATH of NixOS to the pods, created before they start
     longhorn-pre:
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       dependsOn:
         - name: app-kyverno
           namespace: kyverno
@@ -434,14 +426,6 @@ resources:
         - ref:longhorn
         - name: app-external-snapshotter
           namespace: external-snapshotter
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         resources:
           longhornRecurringJobs:
@@ -566,14 +550,6 @@ resources:
           namespace: cert-manager
         - name: app-gateway-api
           namespace: gateway-api
-      chart:
-        spec:
-          chart: ./kube/charts/base-loader
-          reconcileStrategy: Revision
-          sourceRef:
-            kind: GitRepository
-            name: bcl
-            namespace: apps
       values:
         # UI behind the Cilium Gateway `shared` (kube-system) with Authelia forward auth.
         # The certificate is issued by the http-01 solver of the ClusterIssuer (gatewayHTTPRoute), which only needs the host to be

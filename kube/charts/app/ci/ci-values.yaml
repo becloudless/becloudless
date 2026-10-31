@@ -13,3 +13,23 @@ resources:
         domain: "{{ .Values.app.domain }}"
         name: "{{ .Values.app.name }}"
         lldapdn: "{{ .Values.app.lldapdn }}"
+
+  # a release with no source is a chart of this repository (base-loader by default)
+  fluxHelmReleases:
+    default: {}
+    local:
+      chart:
+        spec:
+          chart: ./kube/charts/postgresql
+    strategy:
+      chart:
+        spec:
+          reconcileStrategy: ChartVersion
+    helm-repository:
+      chart:
+        spec:
+          chart: mychart
+          version: 1.0.0
+          sourceRef:
+            kind: HelmRepository
+            name: myrepository
