@@ -23,7 +23,6 @@
 
 resources:
 
-  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     syncthing-relay:
       endpointSelector: ref:syncthing-relay
@@ -34,7 +33,6 @@ resources:
 
   fluxHelmReleases:
 
-    # the secrets of the relay, created before it and the instances start
     syncthing-pre:
       dependsOn:
         - name: app-cert-manager
@@ -65,7 +63,7 @@ resources:
 
     syncthing-relay:
       dependsOn:
-        - ref:syncthing-pre # the token and the certificate
+        - ref:syncthing-pre
         - name: app-gateway-api # the listener set and the route
           namespace: gateway-api
       values:

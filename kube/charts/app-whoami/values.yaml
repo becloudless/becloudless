@@ -5,7 +5,6 @@
 
 resources:
 
-  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     whoami:
       endpointSelector: ref:whoami
@@ -55,7 +54,6 @@ resources:
                 http:
                   port: 8080
 
-# the public exposure by the Cilium Gateway `shared` (kube-system), protected by the Authelia forward auth
 expose:
   whoami:
     port: 8080

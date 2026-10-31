@@ -5,9 +5,8 @@
 # The S3 API is `https://s3.<domain>` (path-style: `https://s3.<domain>/<bucket>/<key>`, the region is `garage`). The virtual-hosted
 # style (`<bucket>.s3.<domain>`) is not enabled, it needs a wildcard DNS entry and certificate. The pods of the cluster use the
 # service `garage` (`http://garage.garage:3900`) once the network policy of the client allows it.
-# It is not protected by forward auth: the S3 clients cannot follow a login redirect, the access keys of Garage are the protection.
-# Nothing is created in it: the buckets and the access keys are made by the administrator with the admin API (the token is in the
-# secret `garage`, key `admin-token`) or with the CLI in a pod (the image only has the `garage` binary, no shell), for example:
+# The buckets and the access keys are made by the administrator with the admin API (the token is in the secret `garage`, key
+# `admin-token`) or with the CLI in a pod (the image only has the `garage` binary, no shell), for example:
 #    kubectl -n garage exec garage-0 -- /garage bucket create my-bucket
 #    kubectl -n garage exec garage-0 -- /garage key create my-key
 #    kubectl -n garage exec garage-0 -- /garage bucket allow --read --write --owner my-bucket --key my-key
@@ -21,7 +20,7 @@
 # The nodes find each other with the `GarageNode` custom resources of Garage (the `kubernetes_discovery`), which also creates the CRD:
 # this is why the app is `clusterAdmin` (see `apps/values.yaml`).
 # The layout (which node has which zone and capacity) is applied once by `garage-post`: one zone per node, the capacity of the
-# data volume. Another node (a bigger `dbReplicas`) is added to the layout by the same job when its spec changes (the `1` of
+# data volume. Another node (a bigger `dbReplicas`) is added to the layout by the same job when its spec changes (the number in
 # its name below); removing a node from the layout is made by hand (`/garage layout remove`).
 # It is the backup target of longhorn (`longhorn-backup`): the bucket `longhorn-backups`, and its key, are created by `garage-layout`.
 # The jobs of app-backup-restore save the secrets of the apps in the same bucket, under `secrets/`, with the same key (Longhorn only
@@ -29,7 +28,6 @@
 
 resources:
 
-  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     garage:
       endpointSelector: ref:garage
@@ -73,7 +71,6 @@ resources:
           toPorts: [3903]
 
   fluxHelmReleases:
-    # the secrets, created before the nodes start
     garage-pre:
       dependsOn:
         - name: app-secret-generator
@@ -91,9 +88,8 @@ resources:
                   encoding: hex
                   length: "64"
 
-            # the access key of the backups of longhorn (see `longhorn-backup`): it is imported in Garage by `garage-layout`, and
-            # copied in the namespace of longhorn with the names that its backup target reads (the `AWS_*` variables), and in the
-            # namespace `backup-restore` (`backup-restore-pre` of app-backup-restore)
+            # the access key of the backups of longhorn: imported in Garage by `garage-layout`, copied in the namespaces of longhorn
+            # (`longhorn-backup`) and `backup-restore`
             garage-longhorn:
               data:
                 AWS_ENDPOINTS: http://garage.garage.svc.cluster.local:3900
@@ -107,9 +103,7 @@ resources:
                   encoding: hex
                   length: "64"
 
-          # lets the `garage-reader` service accounts of longhorn, used by the SecretStore of `longhorn-backup`, and of the namespace
-          # `backup-restore` (`backup-restore-pre` of app-backup-restore), read the `garage-longhorn` secret of this namespace,
-          # and only this one
+          # the `garage-reader` service accounts of longhorn and `backup-restore` read the `garage-longhorn` secret only
           roles:
             longhorn-secrets-reader:
               rules:
@@ -133,7 +127,7 @@ resources:
 
     garage:
       dependsOn:
-        - ref:garage-pre # the secrets
+        - ref:garage-pre
         - name: app-longhorn
           namespace: longhorn-system
       values:
@@ -404,15 +398,15 @@ resources:
                       configMap:
                         name: ref:garage-config
 
-    # The backup target of longhorn: the bucket `longhorn-backups` of Garage, with the key made by `garage-layout`. It is here and not
-    # in app-longhorn because the volumes of Garage are longhorn ones: longhorn can not wait for Garage. The release object is in
-    # this namespace (where `flux-garage` is allowed to create it), and installs in `longhorn-system`.
+    # The backup target of longhorn: the bucket `longhorn-backups` of Garage. It is here and not in app-longhorn because the volumes of
+    # Garage are longhorn ones: longhorn can not wait for Garage. The release object is in this namespace (where `flux-garage` is
+    # allowed to create it), and installs in `longhorn-system`.
     # The target `default` is created by longhorn: the first time, it has to be adopted by the release,
     #    kubectl -n longhorn-system label backuptarget default app.kubernetes.io/managed-by=Helm
     #    kubectl -n longhorn-system annotate backuptarget default meta.helm.sh/release-name=longhorn-backup meta.helm.sh/release-namespace=longhorn-system
     # and the backups of the CIFS share (secret `backupstore`) are not seen anymore (the data is still in the share).
-    # Longhorn backs up into a bucket of this same cluster, on volumes of this same cluster: it protects from the loss of a volume or
-    # of a node, not of the cluster. The volumes of Garage are backed up too (they are in the `default` group of recurring jobs).
+    # The backups are in this same cluster, on volumes of this same cluster: they protect from the loss of a volume or of a node, not of
+    # the cluster.
     longhorn-backup:
       targetNamespace: longhorn-system
       releaseName: longhorn-backup
@@ -424,7 +418,7 @@ resources:
         resources:
           serviceAccounts:
             garage-reader:
-              automountServiceAccountToken: false # only used by external-secrets to get a token
+              automountServiceAccountToken: false
 
           secretStores:
             garage:
@@ -440,7 +434,6 @@ resources:
                     serviceAccount:
                       name: ref:garage-reader
 
-          # the `AWS_*` variables read by the backup target of longhorn
           externalSecrets:
             garage-backup:
               refreshInterval: 1h
@@ -460,10 +453,8 @@ resources:
               credentialSecret: garage-backup
               pollInterval: 3m0s
 
-# the public exposure of the S3 API by the Cilium Gateway `shared` (kube-system). It is not protected by forward auth: the S3 clients
-# cannot follow the login redirect of authelia, the access keys of Garage are the protection.
 expose:
-  garage:
+  garage: # no forward auth: the S3 clients can not follow the login redirect, the access keys are the protection
     hostname: s3
     port: 3900
     timeouts:

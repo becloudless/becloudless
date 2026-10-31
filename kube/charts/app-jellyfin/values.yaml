@@ -1,12 +1,11 @@
 # yaml-language-server: $schema=../app/schema/values.schema.json
 
-# Nothing has to be done by hand, the pod configures jellyfin (see `configure.js`):
+# The pod configures jellyfin (see `configure.js`):
 #  - the setup wizard is completed: the `admin` user, its password is generated in `jellyfin-admin` (seerr uses it too), and the name of
 #    the server is `app.name`;
-#  - SSO with Authelia (OIDC client `jellyfin`) with the SSO plugin https://github.com/9p4/jellyfin-plugin-sso (archived, the last release
-#    is pinned and checked by its checksum), installed by the `sso-plugin` init container. The `Sign in with Authelia` button is added
-#    on the login page of the web UI. The users of the groups `app_jellyfin` are created at their first login, those of `role_admin` are
-#    administrators. The client secret is generated in the authelia namespace and copied by external-secrets (see `jellyfin-pre`).
+#  - SSO with Authelia with the SSO plugin https://github.com/9p4/jellyfin-plugin-sso (archived, the last release is pinned and checked
+#    by its checksum), installed by the `sso-plugin` init container. The `Sign in with Authelia` button is added on the login page of
+#    the web UI. The users of the groups `app_jellyfin` are created at their first login, those of `role_admin` are administrators.
 #    SSO works in the web UI (and Quick Connect for the other clients), the TV and mobile apps use the local users (a user created by
 #    SSO has a random password, set one in its profile). An SSO user with the name of an existing user (`admin`) takes its permissions.
 # The media library is the `/data/Media` directory of the node running the pod (read only), add it as a library in the UI (`/media`).
@@ -14,7 +13,6 @@
 
 resources:
 
-  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     jellyfin:
       endpointSelector: ref:jellyfin
@@ -43,7 +41,6 @@ resources:
           toPorts: [443]
 
   fluxHelmReleases:
-    # the secrets of jellyfin: the OIDC client (copied from authelia) and the administrator, before jellyfin starts
     jellyfin-pre:
       dependsOn:
         - name: app-external-secrets
@@ -79,7 +76,7 @@ resources:
 
     jellyfin:
       dependsOn:
-        - ref:jellyfin-pre # the secrets of the OIDC client and of the administrator
+        - ref:jellyfin-pre
       values:
         resources:
           configMaps:
@@ -214,7 +211,7 @@ resources:
             jellyfin:
               replicas: 1 # jellyfin is not HA ready
               strategy:
-                type: Recreate # the volume is ReadWriteOnce
+                type: Recreate
               template:
                 spec:
                   # the images of alpine and jellyfin run as root: every container runs as 1000, which owns the volume (`fsGroup`)
@@ -348,14 +345,11 @@ resources:
                 http:
                   port: 8096
 
-# the public exposure by the Cilium Gateway `shared` (kube-system). It is not protected by forward auth: the TV and mobile apps
-# cannot follow the login redirect of authelia, jellyfin has its own login.
 expose:
-  jellyfin:
+  jellyfin: # no forward auth: the TV and mobile apps can not follow the login redirect, jellyfin has its own login
     port: 8096
     timeouts:
       request: 0s # streams can be long
 
-# the OIDC client of authelia (see `oidcClients` in app-authelia), copied before jellyfin starts
 oidc:
   jellyfin: {}

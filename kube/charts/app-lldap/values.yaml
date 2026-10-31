@@ -34,8 +34,6 @@ lldapBootstrap:
 
 resources:
 
-  # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
-  # The database has its own policy, from the postgresql chart.
   ciliumNetworkPolicies:
     lldap:
       endpointSelector: ref:lldap
@@ -77,7 +75,7 @@ resources:
       chart:
         spec:
           chart: ./kube/charts/postgresql
-      dependsOn: # the certificates, the cluster and the volume snapshots
+      dependsOn:
         - name: app-cert-manager
           namespace: cert-manager
         - name: app-cnpg
@@ -94,7 +92,6 @@ resources:
           parameters:
             max_slot_wal_keep_size: 500MB
 
-    # the secrets and the certificate of the pod, created before it starts
     lldap-pre:
       dependsOn:
         - name: app-cert-manager
@@ -117,15 +114,13 @@ resources:
                 key-seed:
                   fieldName: LLDAP_KEY_SEED
 
-            # password of the `authelia` user of lldap (created by `lldap-post`), authelia binds with it to read the users and to
-            # reset their password. Copied to the authelia namespace by external-secrets (see `authelia-pre`).
+            # password of the `authelia` user (created by `lldap-post`), authelia binds with it to read the users and reset their password
             lldap-authelia:
               fields:
                 password: {}
 
-          # lets the `lldap-reader` service account of the authelia namespace, used by the SecretStore of authelia, read the
-          # `lldap-authelia` secret of this namespace, and only this one. external-secrets reads a secret by its name (`get`), and
-          # its check of the store only looks for `get` on `secrets` in the rules of the account (not at the names).
+          # the `lldap-reader` service account of authelia reads `lldap-authelia` only: external-secrets reads a secret by its name
+          # (`get`), and its check of the store only looks for `get` on `secrets` in the rules (not at the names)
           roles:
             authelia-secrets-reader:
               rules:
@@ -250,21 +245,16 @@ resources:
                 ldaps:
                   port: 6360
 
-    # the setup of the apps, applied through the API of lldap by its `bootstrap.sh`, once for each change of the setup:
-    # the Job is named after the hash of the setup (`lldap-bootstrap-<hash>`), so a change creates a new Job, which runs the
-    # script, and Helm deletes the previous one. The release waits for the Job: a failing script fails `lldap-post` (and
-    # blocks `lldap-integration`). To run it again, delete the Job: it is recreated by the next reconciliation.
-    #  - the groups the apps authorize (see the access control of authelia) and the custom attributes of the users:
-    #    `lldapBootstrap`, in the values of this chart
-    #  - the users: declared by the cluster in `app.lldapUsers` (`config.lldapUsers` of `apps` in the cluster),
-    #    their groups must be declared in `lldapBootstrap.groups`
-    #  - the `authelia` user, always declared here: the account authelia binds with (members of `lldap_password_manager` and
-    #    `lldap_strict_readonly`), its password is the generated `lldap-authelia` secret
+    # The setup of the apps is applied through the API of lldap by its `bootstrap.sh`, once for each change of the setup: the Job is
+    # named after the hash of the setup (`lldap-bootstrap-<hash>`), so a change creates a new Job and Helm deletes the previous one.
+    # A failing script fails `lldap-post`. To run it again, delete the Job.
+    #  - the groups the apps authorize and the custom attributes of the users: `lldapBootstrap`, in the values of this chart
+    #  - the users: `app.lldapUsers` (`config.lldapUsers` of `apps` in the cluster), their groups must be in `lldapBootstrap.groups`
+    #  - the `authelia` user, always declared here (members of `lldap_password_manager` and `lldap_strict_readonly`)
     # The groups and users that are not declared are deleted (`DO_CLEANUP`), the `admin` user is kept.
     #
     # app.lldapUsers: the key is the user id. The attributes are the ones of the bootstrap script, see
-    # https://github.com/lldap/lldap/blob/main/example_configs/bootstrap/bootstrap.md, and the custom attributes declared in
-    # `lldapBootstrap.userSchema`.
+    # https://github.com/lldap/lldap/blob/main/example_configs/bootstrap/bootstrap.md, and the custom attributes of `lldapBootstrap.userSchema`.
     #   lldapUsers:
     #     n0rad:
     #       displayName: n0rad
@@ -275,7 +265,7 @@ resources:
     # No password is set, a user gets one from the lldap web UI (admin).
     #
     # The hash covers the users, the groups, the schema, the image and `lldapBootstrap.revision`. Changing anything else in the Job
-    # (the script, the env...) is a change of an immutable field of the existing Job: bump `revision`, or delete the Job.
+    # (the script, the env...) changes an immutable field: bump `revision`, or delete the Job.
     lldap-post:
       dependsOn:
         - ref:lldap
@@ -389,7 +379,6 @@ resources:
                       name: lldap
                       port: 6360
 
-# the web UI exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway
 expose:
   lldap:
     port: 17170

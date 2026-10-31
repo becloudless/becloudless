@@ -137,10 +137,8 @@ resources:
                         scheme: https
                         statusCode: 301
 
-    # Baseline: default deny of all pod traffic (ingress and egress) and the DNS client side. The legitimate flows are allowed by each app
-    # (`ciliumNetworkPolicies` / `ciliumClusterwideNetworkPolicies` of its own chart, the server side of DNS is in app-coredns),
-    # so an app without its policies is isolated.
-    # Host networked pods (apiserver, etcd, cilium...) are not endpoints of Cilium and are not affected.
+    # Baseline: default deny of all pod traffic and the DNS client side. The flows are allowed by each app (the server side of DNS is
+    # in app-coredns). Host networked pods (apiserver, etcd, cilium...) are not endpoints of Cilium and are not affected.
     # To roll back quickly: `apps.cilium.values.resources.fluxHelmReleases.cilium-policies.enabled: false` in the cluster values.
     # To see what a policy blocks: `hubble observe --verdict DROPPED` (or set `policyAuditMode: true` on the cilium chart to only log).
     # The Envoy of the Gateway runs on every node: from another node its traffic reaches a pod as `remote-node`, not `ingress`.
@@ -148,7 +146,7 @@ resources:
     cilium-policies:
       dependsOn:
         - ref:cilium
-        - name: app-flux # the deny must not land before the rules of Flux: it could not reconcile anything anymore, including its own rules
+        - name: app-flux # the deny must not land before the rules of Flux: it could not reconcile anything anymore
           namespace: flux-system
         - name: app-coredns # nor before the rules of CoreDNS: nothing could resolve a name anymore
           namespace: kube-system

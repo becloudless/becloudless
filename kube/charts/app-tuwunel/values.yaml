@@ -8,20 +8,16 @@
 # reached from the pod. Enable it (`TUWUNEL_ALLOW_FEDERATION`) with the delegation (`TUWUNEL_WELL_KNOWN__SERVER`), the egress to the
 # internet in the network policy, and think about the abuse before. No mails, no push notifications (they need the egress to the push
 # gateway of the clients), no URL previews, no TURN (the voice and video calls between two users on different networks need one).
-# SSO: the OpenID Connect login with authelia (OIDC client `tuwunel`, see its access control in authelia). The login with a password is
-#    disabled and so is the registration: the only way in is authelia, and a user of the groups `app_tuwunel` and `role_admin` gets an
-#    account (`@<preferred_username>:matrix.<domain>`) at its first login. The first user to log in is the administrator of the server
-#    (it is invited in the admin room `#admins`, where the commands start with `!admin`). The others can be promoted with
-#    `!admin users make-user-admin <user>` there. If authelia is down nobody can log in. The client id and secret are generated in
-#    the authelia namespace and copied by external-secrets (see `tuwunel-pre`), the provider is given by the environment (the
-#    `TUWUNEL_IDENTITY_PROVIDER__0__*` variables). The OIDC server built in tuwunel (next-gen authentication, needed by Element X) is
-#    enabled by the SSO and `well_known.client`, the web and mobile clients of Element are vouched with
-#    `oidc_registration_allowed_redirect_hosts`, the other clients get an approval page at their login.
-# The database and the media are in the volume `tuwunel-data`, saved daily by longhorn (the `default` group).
+# SSO: the login with a password is disabled and so is the registration: the only way in is authelia, and a user of the groups
+#    `app_tuwunel` and `role_admin` gets an account (`@<preferred_username>:matrix.<domain>`) at its first login. The first user to log
+#    in is the administrator of the server (it is invited in the admin room `#admins`, where the commands start with `!admin`). The
+#    others can be promoted with `!admin users make-user-admin <user>` there. If authelia is down nobody can log in. The provider is
+#    given by the environment (the `TUWUNEL_IDENTITY_PROVIDER__0__*` variables). The OIDC server built in tuwunel (next-gen
+#    authentication, needed by Element X) is enabled by the SSO and `well_known.client`, the web and mobile clients of Element are
+#    vouched with `oidc_registration_allowed_redirect_hosts`, the other clients get an approval page at their login.
 
 resources:
 
-  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     tuwunel:
       endpointSelector: ref:tuwunel
@@ -41,7 +37,7 @@ resources:
   fluxHelmReleases:
     tuwunel:
       dependsOn:
-        - ref:tuwunel-pre # the OIDC client
+        - ref:tuwunel-pre
         - name: app-longhorn
           namespace: longhorn-system
       values:
@@ -58,7 +54,7 @@ resources:
             tuwunel:
               replicas: 1 # the embedded database is only for one instance
               strategy:
-                type: Recreate # the volume is ReadWriteOnce, and the database is locked by its server
+                type: Recreate
               template:
                 spec:
                   securityContext:
@@ -127,15 +123,12 @@ resources:
                 http:
                   port: 8008
 
-# the public exposure of the API by the Cilium Gateway `shared` (kube-system). It is not protected by forward auth: the Matrix
-# clients (Element, Element X, ...) cannot follow the login redirect of authelia, tuwunel has its own SSO login.
 expose:
-  tuwunel:
+  tuwunel: # no forward auth: the Matrix clients can not follow the login redirect, tuwunel has its own SSO
     hostname: matrix
     port: 8008
     timeouts:
       request: 0s # the long polling of the sync and the uploads of big files can be long
 
-# the OIDC client of authelia (see `oidcClients` in app-authelia), copied before tuwunel starts
 oidc:
   tuwunel: {}

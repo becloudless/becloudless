@@ -1,25 +1,18 @@
 # yaml-language-server: $schema=../app/schema/values.schema.json
 
-# Everything that gets the data of the apps back is in this namespace: the jobs that restore the volumes and the generated secrets of
-# the apps (chart `restore-app`, started by the `restore: true` of an app in the `apps` chart), the account they run as, and the
-# access to the bucket of the secrets. Longhorn keeps what is its own in `longhorn-system` (backup target, recurring jobs, volumes).
-#
-# The rights of the account of the jobs (`backup-restore`), none of them is given to the apps or to Flux:
+# The jobs that restore the volumes and the generated secrets of the apps (chart `restore-app`, started by the `restore: true` of an app
+# in the `apps` chart), and the account they run as. Longhorn keeps what is its own in `longhorn-system`.
+# The account `backup-restore` of the jobs, none of its rights are given to the apps or to Flux:
 #  - Longhorn: read the backups, create the volumes restored from them, ask for a sync of the backup target;
 #  - the cluster: create the PVs and the PVCs of the restored volumes, read the storage classes;
-#  - the namespace of each app with `restore: true`: its secrets and `StringSecret`s (created by the `apps` chart).
-# `flux-backup-restore` is cluster-admin to create the cluster-wide rights: only the jobs run as the account `backup-restore`, which has the
-# rights above and nothing else.
-#
-# The secrets of the apps are saved in the bucket of the backup target (`longhorn-backups` of Garage), under `secrets/` (Longhorn only
-# uses `backupstore/`), with the key of Longhorn: it is copied here as `s3-secrets` by external-secrets (`backup-restore-pre`). The
-# secrets are stored as they are in the cluster: the bucket is as sensitive as the secrets of the apps. TODO: a bucket and a key of
-# their own, created here, so Longhorn and the jobs can not read each other's data.
-# Needs Longhorn and Garage (the backup target and its bucket).
+#  - the namespace of each app with `restore: true`: its secrets and `StringSecret`s.
+# `flux-backup-restore` is cluster-admin to create these cluster-wide rights, only the jobs run as `backup-restore`.
+# The secrets of the apps are saved as they are in the bucket of the backup target (`longhorn-backups` of Garage), under `secrets/`,
+# with the key of Longhorn (copied as `s3-secrets`): the bucket is as sensitive as the secrets of the apps.
+# TODO: a bucket and a key of their own, created here, so Longhorn and the jobs can not read each other's data.
 
 resources:
 
-  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     restore-app: # the jobs of the chart `restore-app`
       endpointSelector:
@@ -77,7 +70,6 @@ resources:
           namespace: backup-restore
 
   fluxHelmReleases:
-    # the access key of the bucket of the secrets, copied from Garage before the jobs run
     backup-restore-pre:
       dependsOn:
         - name: app-external-secrets
@@ -88,7 +80,7 @@ resources:
         resources:
           serviceAccounts:
             garage-reader:
-              automountServiceAccountToken: false # only used by external-secrets to get a token
+              automountServiceAccountToken: false
 
           secretStores:
             garage:

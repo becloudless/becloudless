@@ -5,7 +5,7 @@ resources:
     descheduler:
       url: https://kubernetes-sigs.github.io/descheduler
 
-  # on top of the default deny of app-cilium. kube-system is shared with the other components, hence the selector.
+  # kube-system is shared with the other components, hence the selector.
   ciliumNetworkPolicies:
     descheduler:
       endpointSelector:

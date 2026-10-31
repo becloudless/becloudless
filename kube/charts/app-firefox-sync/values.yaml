@@ -1,13 +1,8 @@
 # yaml-language-server: $schema=../app/schema/values.schema.json
 
 # Firefox Sync: the sync storage and the token server of Mozilla (https://github.com/mozilla-services/syncstorage-rs), in one process.
-#
-# Nothing has to be created by hand: the secrets are generated (see `firefox-sync-pre`) and the database is a CloudNativePG cluster
-# (`firefox-sync-postgresql`, the password of its `app` user is created by CNPG), shared by the storage and the token server.
-#
-# The accounts stay the Mozilla ones: only the storage of the synced data is self-hosted. The Mozilla account protocol (FxA) has no
-# OIDC, so there is no SSO with Authelia, and the service is not behind the Authelia forward auth (the browsers cannot do it): the
-# token server checks the Mozilla OAuth token of each request on oauth.accounts.firefox.com.
+# The accounts stay the Mozilla ones (FxA has no OIDC): only the storage of the synced data is self-hosted, and the token server checks
+# the Mozilla OAuth token of each request on oauth.accounts.firefox.com.
 #
 # Configure the browsers:
 #  - desktop: `about:config`, `identity.sync.tokenserver.uri` = https://firefox-sync.<domain>/1.0/sync/1.5, restart, sign in
@@ -15,13 +10,10 @@
 #
 # Anybody with a Mozilla account can store data here while `SYNC_TOKENSERVER__ALLOW_NEW_USERS` is true: sign in with all your devices,
 # then set it to "false" (only the users already known can use the server).
-#
 # The image is only published for linux/amd64.
 
 resources:
 
-  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
-  # The database has its own policy, from the postgresql chart.
   ciliumNetworkPolicies:
     firefox-sync:
       endpointSelector: ref:firefox-sync
@@ -41,15 +33,13 @@ resources:
           toPorts: [443]
 
   fluxHelmReleases:
-    # the database is prepared by the postgresql chart (certificates, issuer, cluster and backups)
-    # the cluster is named after the release, which is the name of this HelmRelease
     firefox-sync-postgresql:
       values:
         instances: "{{ .Values.app.scaling.dbReplicas }}"
         clients:
           firefox-sync:
             matchLabels: {app.kubernetes.io/instance: firefox-sync, app.kubernetes.io/component: firefox-sync}
-      dependsOn: # the certificates, the cluster and the volume snapshots
+      dependsOn:
         - name: app-cert-manager
           namespace: cert-manager
         - name: app-cnpg
@@ -60,7 +50,6 @@ resources:
         spec:
           chart: ./kube/charts/postgresql
 
-    # the secrets of the service, created before it starts
     firefox-sync-pre:
       dependsOn:
         - name: app-secret-generator
@@ -75,8 +64,8 @@ resources:
 
     firefox-sync:
       dependsOn:
-        - ref:firefox-sync-postgresql # the database
-        - ref:firefox-sync-pre # the generated secrets
+        - ref:firefox-sync-postgresql
+        - ref:firefox-sync-pre
       values:
         resources:
           deployments:
@@ -141,8 +130,6 @@ resources:
                 http:
                   port: 8000
 
-# the public exposure by the Cilium Gateway `shared` (kube-system). Not behind the Authelia forward auth: the browsers authenticate
-# with their Mozilla account, which the service checks itself.
 expose:
-  firefox-sync:
+  firefox-sync: # no forward auth: the browsers authenticate with their Mozilla account, which the service checks
     port: 8000

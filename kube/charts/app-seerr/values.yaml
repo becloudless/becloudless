@@ -2,26 +2,20 @@
 
 # Nothing has to be done in the web UI: seerr has no way to be configured by environment, so the `configure` init container writes
 # `settings.json` (created if missing) at each start, the setup wizard is skipped:
-#  - jellyfin (`jellyfin.jellyfin:8096`) is the media server. Its setup wizard is completed by the jellyfin chart (the `admin` user, its
-#    password is generated there and copied in `seerr-jellyfin` by external-secrets, see `seerr-pre`), an API key `Seerr` is created, and
-#    the libraries are enabled. If jellyfin is not ready at the start, it is left as it was (restart the deployment once it is).
-#  - SSO with Authelia (OIDC client `seerr`): the users are created at their first login from their email, with the default
-#    permissions (an existing user with the same email has to link its account in its profile, `Linked Accounts`). The secret of the
-#    client is generated in the authelia namespace and copied by external-secrets (see `seerr-pre`).
+#  - jellyfin (`jellyfin.jellyfin:8096`) is the media server. Its `admin` password is copied in `seerr-jellyfin` by external-secrets,
+#    an API key `Seerr` is created, and the libraries are enabled. If jellyfin is not ready at the start, it is left as it was
+#    (restart the deployment once it is).
+#  - SSO with Authelia: the users are created at their first login from their email, with the default permissions (an existing user
+#    with the same email has to link its account in its profile, `Linked Accounts`).
 #  - the `admin` container creates the administrator of seerr once, from the jellyfin one (the first user of seerr is its administrator),
 #    then turns the password and jellyfin logins off: only the Authelia login is left. The administrator account can not sign in anymore,
 #    give the administrator permissions to your Authelia user (created at its first login, `Users`) with the API key of seerr
 #    (`main.apiKey` of `/app/config/settings.json`): `PUT /api/v1/user` with `{"ids": [<id>], "permissions": 2}` and the header `X-Api-Key`.
 # The OIDC support is not released yet: it is the preview image of the pull request https://github.com/seerr-team/seerr/pull/2715
 # (pinned by digest, the tag is moved by its authors). Go back to a release (and to the `oidc` settings of its UI) once it is released.
-#
-# The database is a CloudNativePG cluster (`seerr-postgresql`), the password of its `app` user is created by CNPG
-# (`seerr-postgresql-app`). The settings (`settings.json`) are still in the volume.
 
 resources:
 
-  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
-  # The database has its own policy, from the postgresql chart.
   ciliumNetworkPolicies:
     seerr:
       endpointSelector: ref:seerr
@@ -59,15 +53,13 @@ resources:
           toPorts: [443]
 
   fluxHelmReleases:
-    # the database is prepared by the postgresql chart (certificates, issuer, cluster and backups)
-    # the cluster is named after the release, which is the name of this HelmRelease
     seerr-postgresql:
       values:
         instances: "{{ .Values.app.scaling.dbReplicas }}"
         clients:
           seerr:
             matchLabels: {app.kubernetes.io/instance: seerr, app.kubernetes.io/component: seerr}
-      dependsOn: # the certificates, the cluster and the volume snapshots
+      dependsOn:
         - name: app-cert-manager
           namespace: cert-manager
         - name: app-cnpg
@@ -78,7 +70,6 @@ resources:
         spec:
           chart: ./kube/charts/postgresql
 
-    # the secrets of seerr: the OIDC client (copied from authelia) and the jellyfin administrator, before seerr starts
     seerr-pre:
       dependsOn:
         - name: app-external-secrets
@@ -119,8 +110,8 @@ resources:
 
     seerr:
       dependsOn:
-        - ref:seerr-postgresql # the database
-        - ref:seerr-pre # the secrets of the OIDC client and of the jellyfin administrator
+        - ref:seerr-postgresql
+        - ref:seerr-pre
       values:
         resources:
           persistentVolumeClaims:
@@ -313,7 +304,7 @@ resources:
             seerr:
               replicas: 1 # seerr is not HA ready
               strategy:
-                type: Recreate # the volume is ReadWriteOnce
+                type: Recreate
               template:
                 spec:
                   securityContext:
@@ -435,12 +426,9 @@ resources:
                 http:
                   port: 5055
 
-# the public exposure by the Cilium Gateway `shared` (kube-system). Not behind the Authelia forward auth: the login is the OIDC one
-# of seerr (and the API has to be reachable by the apps and the other services).
 expose:
-  seerr:
+  seerr: # no forward auth: the login is the OIDC one of seerr, and the API has to be reachable by the apps
     port: 5055
 
-# the OIDC client of authelia (see `oidcClients` in app-authelia), copied before seerr starts
 oidc:
   seerr: {}

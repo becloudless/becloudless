@@ -5,14 +5,13 @@ resources:
     cnpg:
       url: https://cloudnative-pg.github.io/charts
 
-  # on top of the default deny of app-cilium. Cluster wide because the instances are in the namespace of each app.
-  # Replication and clients are in the same namespace, see the policies of the apps.
+  # Cluster wide because the instances are in the namespace of each app.
   ciliumClusterwideNetworkPolicies:
     cnpg-operator:
       endpointSelector:
         matchLabels: {"k8s:io.kubernetes.pod.namespace": cnpg-system, "k8s:app.kubernetes.io/name": cloudnative-pg}
       ingress:
-        webhook: # the admission webhook: the API server is host networked, it is seen as the host or a remote node
+        webhook: # the admission webhook
           fromEntities: [kube-apiserver, host, remote-node]
           toPorts: [9443]
       egress:

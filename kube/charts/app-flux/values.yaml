@@ -17,9 +17,9 @@ resources:
       ingress:
        XXX: {}
 
-  # on top of the default deny of app-cilium, which waits for this release: without these rules Flux could not reconcile anything anymore.
-  # One policy for each controller (the `app` label), the selectors are in the namespace of the release. The NetworkPolicies bundled
-  # in the flux manifests allow everything (`allow-egress`) or whole namespaces: they are removed by the patches of the `flux` Kustomization.
+  # app-cilium waits for this release: without these rules Flux could not reconcile anything anymore.
+  # One policy for each controller (the `app` label). The NetworkPolicies bundled in the flux manifests allow everything
+  # (`allow-egress`) or whole namespaces: they are removed by the patches of the `flux` Kustomization.
   # Port 9090 is the artifacts of the sources (source-controller, source-watcher) and the events (notification-controller).
   ciliumNetworkPolicies:
     source-controller: # fetches the git repositories, the helm repositories and the OCI artifacts
@@ -341,10 +341,8 @@ resources:
               path: /spec/template/spec/containers/0/args/-
               value: --feature-gates=CancelHealthCheckOnNewRevision=true
 
-# The webhook receiver exposed by the Cilium Gateway `shared` (kube-system). Disabled by default: it needs the Gateway API CRDs and
-# cert-manager, which a cluster only gets with the apps of the server groups. A cluster enables it with
-# `apps.flux.values.resources.fluxHelmReleases.flux-integration.enabled: true`.
-# It is a separate release so it can wait for them: the apps flux belongs to are installed before.
+# Disabled by default: it needs the Gateway API CRDs and cert-manager, which a cluster only gets with the apps of the server groups.
+# A cluster enables it with `apps.flux.values.resources.fluxHelmReleases.flux-integration.enabled: true`.
 expose:
   flux-webhook:
     release: flux

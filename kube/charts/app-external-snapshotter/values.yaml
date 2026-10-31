@@ -8,7 +8,7 @@ resources:
       ref:
         tag: v8.7.0 # TODO renovate
 
-  # on top of the default deny of app-cilium. The controller runs in kube-system, shared with the other components, hence the selector.
+  # The controller runs in kube-system, shared with the other components, hence the selector.
   ciliumNetworkPolicies:
     snapshot-controller:
       namespace: kube-system

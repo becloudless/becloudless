@@ -5,7 +5,7 @@ resources:
     coredns:
       url: https://coredns.github.io/helm
 
-  # on top of the default deny of app-cilium, which waits for this release: without these rules nothing could resolve a name.
+  # app-cilium waits for this release: without these rules nothing could resolve a name.
   # Cluster wide because the clients are in every namespace.
   ciliumClusterwideNetworkPolicies:
     kube-dns:

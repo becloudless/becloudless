@@ -2,7 +2,6 @@
 
 resources:
 
-  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     homer:
       endpointSelector: ref:homer
@@ -321,7 +320,6 @@ resources:
                 http:
                   port: 8080
 
-# the public exposure by the Cilium Gateway `shared` (kube-system), protected by the Authelia forward auth
 expose:
   homer:
     port: 8080

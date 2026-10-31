@@ -2,7 +2,6 @@
 
 resources:
 
-  # on top of the default deny of app-cilium. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     landing:
       endpointSelector: ref:landing
@@ -89,7 +88,6 @@ resources:
                   port: 80
                   targetPort: 8080
 
-# the public exposure on the apex of the domain by the Cilium Gateway `shared` (kube-system)
 expose:
   landing:
     hostname: "{{ .Values.app.domain }}"

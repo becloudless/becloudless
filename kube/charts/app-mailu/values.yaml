@@ -1,7 +1,5 @@
 # yaml-language-server: $schema=../app/schema/values.schema.json
 
-# Generated: the secret key of mailu, the passwords of mariadb and of the roundcube database (`mailu`, `mailu-mariadb` and
-# `mailu-roundcube` secrets).
 # To create by hand in the `mailu` namespace, the wireguard configuration (`wg0.conf`) of the tunnels that forward the mail ports
 # (with the PROXY protocol) to the pods, one per pod having a vpn sidecar:
 #  - `mailu-front-vpn`
@@ -16,7 +14,6 @@ resources:
     mailu:
       url: https://mailu.github.io/helm-charts
 
-  # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
   # The mail ports do not reach the pods through the cluster: they come through the wireguard tunnel of the vpn sidecars of the front
   # and of postfix, so only these two need to go out. The ports between the components are the ones of Mailu, to check with
   # `hubble observe --verdict DROPPED` when a component is added or a feature is enabled.
@@ -294,7 +291,6 @@ resources:
           toPorts: [6379]
 
   fluxHelmReleases:
-    # the secrets and the certificate of the services, created before they start
     mailu-pre:
       dependsOn:
         - name: app-cert-manager
@@ -345,8 +341,8 @@ resources:
     mailu:
       timeout: 15m # the first start of the databases and of clamav is slow
       dependsOn:
-        - ref:mailu-pre # the secrets and the certificate
-        - name: app-longhorn # the volumes
+        - ref:mailu-pre
+        - name: app-longhorn
           namespace: longhorn-system
       chart:
         spec:
@@ -462,7 +458,6 @@ resources:
         persistence:
           single_pvc: false
 
-        # the web UI is exposed by the Gateway, see the `mailu-integration` release
         ingress:
           enabled: false
           existingSecret: tls-mailu # the certificate of the mail protocols

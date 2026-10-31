@@ -5,13 +5,12 @@ resources:
     kyverno:
       url: https://kyverno.github.io/kyverno
 
-  # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
   ciliumNetworkPolicies:
     kyverno-admission-controller:
       endpointSelector:
         matchLabels: {app.kubernetes.io/name: kyverno-admission-controller}
       ingress:
-        kube-apiserver: # the webhooks: the API server is host networked, it is seen as the host or a remote node
+        kube-apiserver: # the webhooks
           fromEntities: [kube-apiserver, host, remote-node]
           toPorts: [9443]
       egress:

@@ -6,7 +6,6 @@ resources:
     longhorn:
       url: https://charts.longhorn.io
 
-  # on top of the default deny of app-cilium: one policy for each component. The selectors are in the namespace of the release.
   # The nodes mount the volumes (iscsi of the instance managers, nfs of the share managers), the API server calls the webhooks of the
   # managers, the instance managers replicate the data to each other (ports 10000-30000).
   # The engine images do not use the network.
@@ -42,7 +41,7 @@ resources:
                   key: recurring-job.longhorn.io
                   operator: Exists
           toPorts: [9500]
-        webhooks: # the API server is host networked, it is seen as the host or a remote node
+        webhooks:
           fromEntities: [kube-apiserver, host, remote-node]
           toPorts: [9502, 9503]
       egress:
@@ -415,7 +414,7 @@ resources:
         defaultBackupStore:
           pollInterval: 180
 
-        # the UI has no authentication of its own: it is served by the Cilium Gateway with Authelia forward auth (see httpRoutes)
+        # the UI has no authentication of its own: it is behind the Authelia forward auth (see `expose`)
         ingress:
           enabled: false
 
@@ -538,9 +537,6 @@ resources:
                 type: bak
                 backupMode: full
 
-# the UI behind the Cilium Gateway `shared` (kube-system) with the Authelia forward auth. The certificate is issued by the http-01
-# solver of the ClusterIssuer (gatewayHTTPRoute), which only needs the host to be reachable on port 80 through the http listener of
-# the Gateway.
 expose:
   longhorn:
     service: longhorn-frontend
