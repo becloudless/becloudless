@@ -5,6 +5,8 @@ templates:
 release:
   name: test-release
   namespace: default
+set:
+  prefixNamesWithRelease: true # the assertions use the "<release>-<id>" names
 tests:
   - it: renders the resource when enabled is not set at all
     set:

@@ -1,0 +1,116 @@
+# yaml-language-server: $schema=./schema/values.schema.json
+
+# Restores the volumes of an app from the backups of Longhorn, so an app that is enabled again (or on a new cluster) finds its data.
+# It is installed by the `apps` chart (`restore: true` of an app), in the namespace `backup-restore` (app-backup-restore, which has the account and the
+# rights of the job), before the app.
+#
+# The script is `files/restore.sh`, in a ConfigMap (one by namespace of app, see `templates/_feature.tpl`) mounted in the pods of the Job and
+# of the CronJob; its hash is part of the name of the Job, so a change of the script starts a new Job.
+#
+# Nothing is declared: the job looks for the PVCs of the namespace in the backups of Longhorn (it saves the namespace and the name
+# of the PVC in each backup, the storage class and the access mode are the ones of the backed up volume). For each PVC that has a
+# backup and does not exist yet, it
+#  - takes the last completed backup (after a sync of the backup target `default`, which is skipped when every PVC that has a
+#    backup already exists: the job is a no-op on a running app, and does not need the backup target);
+#  - creates a Longhorn volume restored from this backup (`fromBackup`), and waits for the end of the restore;
+#  - creates the PV of this volume with a `claimRef` to the PVC, which is bound to it when the app creates it (with the same name,
+#    storage class and access mode, as it was when it was backed up).
+# Nothing is done when no backup target is configured, or when there is no backup of the namespace (a new app starts empty). The
+# PVCs that an app does not use anymore but are in the backups are restored too (a PV for a claim that never comes, delete it).
+#
+# The volumes of a CloudNativePG cluster (Longhorn saves the workload of the PVC, of type `Cluster`) are restored as the first
+# instance only: the most recent backup of any of its instances, as the PVC `<cluster>-1`, created by the job with the labels and
+# annotations of CloudNativePG (a PVC created by the operator would be initialised empty). The operator adopts it when the `Cluster`
+# is created, promotes it, and the other instances are cloned from it. The cluster is not restored when any of its PVCs exists.
+# The password of the `app` user is the one of the new secret of the cluster: the operator sets it in the database.
+#
+# The capacity of the PV is the size of the volume at the time of the backup: it is the size of the PVC when it was not resized,
+# and a PVC asking for more than this stays pending.
+# The data is the one of a crash-consistent snapshot: the databases recover like after a crash. There is no WAL archive: the
+# transactions after the last backup are lost.
+#
+# The secrets generated for the app (the ones owned by a `StringSecret` of secret-generator: a database encryption key, the password of
+# an administrator stored in the database... a new one would not match the restored data) are saved by the CronJob `secrets-backup`
+# in the bucket of the backup target (`longhorn-backups` of Garage, S3, see app-backup-restore), `secrets/<namespace>/<secret>/<date>.json`
+# (Longhorn only uses `backupstore/`), one
+# object by change of a secret (the previous values are kept). The job restores the last version of each one that does not exist, before
+# the volumes, when the namespace has no `StringSecret` yet (the app never ran): secret-generator does not touch a secret that it does
+# not own, so the app finds them as they were. The restored secrets are labelled `restore.becloudless/from-backup`, and owned by their
+# `StringSecret` by the CronJob when it exists (a field added later to the `StringSecret` is generated). The `apps` chart gives the
+# account of the jobs the right to read and create the secrets of the namespace (see `restore` in the apps chart).
+# Nothing is done for the secrets when the secret `s3Secret` (the key of the bucket) does not exist, the volumes do not need it.
+
+restore:
+  namespace: "" # the namespace of the app, where the PVCs and the secrets are
+  secretsBackupSchedule: "7 * * * *"
+  s3Secret: s3-secrets # the key of the bucket (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINTS`), copied by app-backup-restore
+  secretsBucket: longhorn-backups
+  secretsRegion: garage
+  # `scriptConfigMap` (the ConfigMap with the script, one by namespace: all the releases are installed in the same one) and `scriptHash`
+  # (of the script: a new script is a new Job, the spec of a Job is immutable) are set by the loader from `files/restore.sh`
+
+resources:
+  jobs:
+    restore-app:
+      fullNameOverride: 'restore-{{ .Values.restore.namespace | trunc 30 | trimSuffix "-" }}-{{ list 7 .Values.restore | toJson | sha256sum | trunc 10 }}' # the hash of the script is in `.Values.restore` (see the loader); change the 7 when the spec of the Job changes (immutable fields)
+      backoffLimit: 2
+      activeDeadlineSeconds: 3000
+      template: &template # the pod of the CronJob of the secrets is the same, it runs the same script in another `MODE`
+        # the pods have the label `app.kubernetes.io/name: restore-app` (the name of the chart), selected by the network policy of
+        # app-backup-restore and the one of app-garage
+        spec: &spec
+          restartPolicy: Never
+          serviceAccountName: backup-restore # see app-backup-restore
+          securityContext:
+            runAsUser: 65534
+            runAsGroup: 65534
+          containers:
+            restore: &container
+              name: restore
+              image: docker.io/alpine/k8s:1.36.5 # renovate: versioning=loose
+              command: [ bash, /scripts/restore.sh ] # `files/restore.sh`, in the ConfigMap `restore.scriptConfigMap`
+              env: &env
+                NAMESPACE: '{{ .Values.restore.namespace }}'
+                HOME: /tmp
+                MODE: restore
+                BUCKET: '{{ .Values.restore.secretsBucket }}'
+                AWS_DEFAULT_REGION: '{{ .Values.restore.secretsRegion }}'
+              envFrom:
+                s3: # the key of the bucket of the secrets, if there is one
+                  secretRef:
+                    name: '{{ .Values.restore.s3Secret }}'
+                    optional: true
+              securityContext:
+                capabilities:
+                  drop:
+                    all: ALL
+              volumeMounts:
+                script:
+                  name: script
+                  mountPath: /scripts
+                  readOnly: true
+          volumes:
+            script:
+              name: script
+              configMap:
+                name: '{{ .Values.restore.scriptConfigMap }}'
+
+  # Saves the secrets generated for the app, see the header of this file
+  cronJobs:
+    secrets-backup:
+      fullNameOverride: 'secrets-backup-{{ .Values.restore.namespace | trunc 30 | trimSuffix "-" }}'
+      schedule: '{{ .Values.restore.secretsBackupSchedule }}'
+      jobTemplate:
+        spec:
+          backoffLimit: 1
+          activeDeadlineSeconds: 600
+          template:
+            <<: *template
+            spec:
+              <<: *spec
+              containers:
+                restore:
+                  <<: *container
+                  env:
+                    <<: *env
+                    MODE: backup-secrets

@@ -7,7 +7,6 @@ metadata:
   annotations:
     storageclass.kubernetes.io/is-default-class: "false"
   name: test-release
-  namespace: default
 parameters:
   dataLocality: strict-local
   fsType: ext4

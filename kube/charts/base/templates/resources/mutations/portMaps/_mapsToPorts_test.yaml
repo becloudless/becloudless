@@ -1,0 +1,62 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: mapsToPorts mutation (service and container ports map key = port name)
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: converts service ports into a list named after the map keys, sorted by name
+    set:
+      resources:
+        services:
+          mysvc:
+            selector:
+              app: myapp
+            ports:
+              https:
+                port: 443
+                targetPort: 8443
+              http:
+                port: 80
+                targetPort: 8080
+    asserts:
+      - equal:
+          path: spec.ports
+          value:
+            - name: http
+              port: 80
+              targetPort: 8080
+            - name: https
+              port: 443
+              targetPort: 8443
+
+  - it: converts container ports into a list named after the map keys
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                    ports:
+                      metrics:
+                        containerPort: 9090
+                      http:
+                        containerPort: 8080
+                        protocol: TCP
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090

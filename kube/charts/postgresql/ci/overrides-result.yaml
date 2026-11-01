@@ -1,0 +1,142 @@
+---
+# Source: postgresql/templates/loader.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: test-release-app
+  namespace: myapp
+spec:
+  commonName: app
+  issuerRef:
+    name: test-release
+  secretName: test-release-app-tls
+  secretTemplate:
+    labels:
+      cnpg.io/reload: ""
+  usages:
+  - client auth
+---
+# Source: postgresql/templates/loader.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: test-release-ca
+  namespace: myapp
+spec:
+  commonName: test-release-ca
+  duration: 87600h
+  isCA: true
+  issuerRef:
+    kind: ClusterIssuer
+    name: self-signed
+  privateKey:
+    algorithm: ECDSA
+    rotationPolicy: Never
+    size: 256
+  secretName: test-release-ca
+---
+# Source: postgresql/templates/loader.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: test-release
+  namespace: myapp
+spec:
+  dnsNames:
+  - test-release-rw
+  - test-release-rw.myapp
+  - test-release-rw.myapp.svc
+  - test-release-rw.myapp.svc.cluster.local
+  - test-release-r
+  - test-release-r.myapp
+  - test-release-r.myapp.svc
+  - test-release-r.myapp.svc.cluster.local
+  - test-release-ro
+  - test-release-ro.myapp
+  - test-release-ro.myapp.svc
+  - test-release-ro.myapp.svc.cluster.local
+  issuerRef:
+    name: test-release
+  secretName: test-release-tls
+  secretTemplate:
+    labels:
+      cnpg.io/reload: ""
+---
+# Source: postgresql/templates/loader.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: test-release-replication
+  namespace: myapp
+spec:
+  commonName: streaming_replica
+  issuerRef:
+    name: test-release
+  secretName: test-release-replication-tls
+  secretTemplate:
+    labels:
+      cnpg.io/reload: ""
+  usages:
+  - client auth
+---
+# Source: postgresql/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: test-release
+  namespace: myapp
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        cnpg.io/cluster: test-release
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+      - port: "8000"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      cnpg.io/cluster: test-release
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        cnpg.io/cluster: test-release
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+      - port: "8000"
+        protocol: TCP
+---
+# Source: postgresql/templates/loader.yaml
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: test-release
+  namespace: myapp
+spec:
+  bootstrap:
+    recovery:
+      backup:
+        name: backup-example
+  certificates:
+    clientCASecret: test-release-ca
+    replicationTLSSecret: test-release-replication-tls
+    serverCASecret: test-release-tls
+    serverTLSSecret: test-release-tls
+  instances: 2
+  storage:
+    size: 1Gi
+    storageClass: longhorn-db
+---
+# Source: postgresql/templates/loader.yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: test-release
+  namespace: myapp
+spec:
+  ca:
+    secretName: test-release-ca

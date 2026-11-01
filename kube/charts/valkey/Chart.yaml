@@ -1,0 +1,11 @@
+apiVersion: v2
+name: valkey
+description: Valkey of an app, with its generated passwords and its network policy
+version: 0.0.0
+dependencies:
+  - name: base
+    version: 0.0.0
+    repository: "file://../base"
+  - name: valkey
+    version: 0.12.0
+    repository: "oci://ghcr.io/valkey-io/valkey-helm"

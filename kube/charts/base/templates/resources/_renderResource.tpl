@@ -3,13 +3,23 @@
   {{- $work := dict "enabled" true "object" dict "resource" (.resource | default dict) }}
 
   {{- range $mutation := (list "base.resources.mutations.defaults" 
+                               "base.resources.mutations.recreateStrategy"
+                               "base.resources.mutations.standardLabels"
                                "base.resources.mutations.stringifyFields"
                                "base.resources.mutations.enabled"
+                               "base.resources.mutations.refsIndex"
+                               "base.resources.mutations.listShorthands"
+                               "base.resources.mutations.refs"
+                               "base.resources.mutations.itemFields"
                                "base.resources.mutations.required"
                                "base.resources.mutations.apiVersionKind"
                                "base.resources.mutations.metadata"
                                "base.resources.mutations.mapsToArrays"
-                               "base.resources.mutations.content") }}
+                               "base.resources.mutations.probes"
+                               "base.resources.mutations.mapsToEnv"
+                               "base.resources.mutations.mapsToPorts"
+                               "base.resources.mutations.content"
+                               "base.resources.mutations.checksums") }}
     {{- $inputs := merge (dict "work" $work) $context }}
     {{- $work = include $mutation $inputs | fromYaml }}
   {{- end }}

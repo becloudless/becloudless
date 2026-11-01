@@ -1,0 +1,636 @@
+# yaml-language-server: $schema=../app/schema/values.schema.json
+
+# To create by hand in the `mailu` namespace, the wireguard configuration (`wg0.conf`) of the tunnels that forward the mail ports
+# (with the PROXY protocol) to the pods, one per pod having a vpn sidecar:
+#  - `mailu-front-vpn`
+#  - `mailu-postfix-vpn`
+# The pods do not start without them.
+# The first admin account is created from the pod of the admin: `flask mailu admin <user> <domain> <password>`.
+# Not configured: Authelia (the web UI has its own login: the authentication of mailu cannot rely on a forward auth while the mail
+# is the fallback of the factors enrollment), the external relay.
+
+resources:
+  fluxHelmRepositories:
+    mailu:
+      url: https://mailu.github.io/helm-charts
+
+  # The mail ports do not reach the pods through the cluster: they come through the wireguard tunnel of the vpn sidecars of the front
+  # and of postfix, so only these two need to go out. The ports between the components are the ones of Mailu, to check with
+  # `hubble observe --verdict DROPPED` when a component is added or a feature is enabled.
+  ciliumNetworkPolicies:
+    mailu-front: # the proxy of the mail protocols and of the web interfaces
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
+      ingress:
+        gateway:
+          fromEntities: [ingress, host, remote-node]
+          toPorts: [80]
+        webmail: # roundcube reaches the imap and the smtp of the users through the front
+          fromEndpoints:
+            webmail:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: webmail}
+          toPorts: [10143, 10025]
+      egress:
+        admin:
+          toEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+          toPorts: [8080]
+        dovecot:
+          toEndpoints:
+            dovecot:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
+          toPorts: [110, 143, 4190]
+        postfix:
+          toEndpoints:
+            postfix:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: postfix}
+          toPorts: [25]
+        webmail:
+          toEndpoints:
+            webmail:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: webmail}
+          toPorts: [80]
+        webdav:
+          toEndpoints:
+            webdav:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: webdav}
+          toPorts: [5232]
+        rspamd: # the web interface
+          toEndpoints:
+            rspamd:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
+          toPorts: [11334]
+        vpn: # the wireguard tunnel of the sidecar, the endpoint is a name of the `wg0.conf`, the port is the one of its peer
+          toFQDNs:
+            endpoint: {matchPattern: "*"}
+          toPorts:
+            wireguard: {ports: {p51820: {port: "51820", protocol: UDP}}}
+
+    mailu-admin:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+      ingress:
+        components: # the authentication and the configuration of the other components
+          fromEndpoints:
+            components:
+              matchExpressions:
+                component:
+                  key: app.kubernetes.io/component
+                  operator: In
+                  values: {front: front, postfix: postfix, dovecot: dovecot, rspamd: rspamd, webmail: webmail, webdav: webdav}
+          toPorts: [8080]
+      egress:
+        mariadb:
+          toEndpoints:
+            mariadb:
+              matchLabels: {app.kubernetes.io/name: mariadb}
+          toPorts: [3306]
+        redis:
+          toEndpoints:
+            redis:
+              matchLabels: {app.kubernetes.io/name: redis}
+          toPorts: [6379]
+
+    mailu-postfix: # receives and delivers the mails
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: postfix}
+      ingress:
+        senders:
+          fromEndpoints:
+            front:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
+            dovecot:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
+          toPorts: [25]
+      egress:
+        admin:
+          toEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+          toPorts: [8080]
+        dovecot: # the delivery to the mailboxes (lmtp) and the authentication (sasl)
+          toEndpoints:
+            dovecot:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
+          toPorts: [2525, 2102]
+        rspamd:
+          toEndpoints:
+            rspamd:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
+          toPorts: [11332]
+        vpn: # the wireguard tunnel of the sidecar, the endpoint is a name of the `wg0.conf`, the port is the one of its peer
+          toFQDNs:
+            endpoint: {matchPattern: "*"}
+          toPorts:
+            wireguard: {ports: {p51820: {port: "51820", protocol: UDP}}}
+        internet: # the delivery of the mails to the mail exchangers of the recipients
+          toFQDNs:
+            any: {matchPattern: "*"}
+          toPorts: [25]
+
+    mailu-dovecot: # the mailboxes
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
+      ingress:
+        front:
+          fromEndpoints:
+            front:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
+          toPorts: [110, 143, 4190]
+        postfix:
+          fromEndpoints:
+            postfix:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: postfix}
+          toPorts: [2525, 2102]
+      egress:
+        admin:
+          toEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+          toPorts: [8080]
+        postfix: # the redirections of the sieve filters
+          toEndpoints:
+            postfix:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: postfix}
+          toPorts: [25]
+        rspamd: # the learning of the spam
+          toEndpoints:
+            rspamd:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
+          toPorts: [11332]
+
+    mailu-rspamd: # the antispam
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
+      ingress:
+        milter:
+          fromEndpoints:
+            postfix:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: postfix}
+            dovecot:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
+          toPorts: [11332]
+        front:
+          fromEndpoints:
+            front:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
+          toPorts: [11334]
+      egress:
+        admin:
+          toEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+          toPorts: [8080]
+        redis:
+          toEndpoints:
+            redis:
+              matchLabels: {app.kubernetes.io/name: redis}
+          toPorts: [6379]
+        clamav:
+          toEndpoints:
+            clamav:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: clamav}
+          toPorts: [3310]
+        oletools:
+          toEndpoints:
+            oletools:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: oletools}
+          toPorts: [11343]
+
+    mailu-clamav: # the antivirus
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: clamav}
+      ingress:
+        rspamd:
+          fromEndpoints:
+            rspamd:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
+          toPorts: [3310]
+      egress:
+        signatures: # the updates of the virus database
+          toFQDNs:
+            clamav: {matchName: clamav.net}
+            clamav-subdomains: {matchPattern: "**.clamav.net"}
+          toPorts: [80, 443]
+
+    mailu-oletools: # the analysis of the office documents
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: oletools}
+      ingress:
+        rspamd:
+          fromEndpoints:
+            rspamd:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
+          toPorts: [11343]
+
+    mailu-webmail:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: webmail}
+      ingress:
+        front:
+          fromEndpoints:
+            front:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
+          toPorts: [80]
+      egress:
+        front:
+          toEndpoints:
+            front:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
+          toPorts: [10143, 10025]
+        admin:
+          toEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+          toPorts: [8080]
+        mariadb: # the database of roundcube
+          toEndpoints:
+            mariadb:
+              matchLabels: {app.kubernetes.io/name: mariadb}
+          toPorts: [3306]
+
+    mailu-webdav: # the contacts and the calendars
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: webdav}
+      ingress:
+        front:
+          fromEndpoints:
+            front:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
+          toPorts: [5232]
+      egress:
+        admin:
+          toEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+          toPorts: [8080]
+
+    mailu-mariadb:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mariadb}
+      ingress:
+        clients:
+          fromEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+            webmail:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: webmail}
+          toPorts: [3306]
+
+    mailu-redis:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: redis}
+      ingress:
+        clients:
+          fromEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+            rspamd:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
+          toPorts: [6379]
+
+  fluxHelmReleases:
+    mailu-pre:
+      dependsOn:
+        - name: app-cert-manager
+          namespace: cert-manager
+        - name: app-secret-generator
+          namespace: secret-generator
+      values:
+        resources:
+          stringSecrets:
+            mailu:
+              fields:
+                secret-key:
+                  encoding: hex
+                  length: "32"
+
+            mailu-mariadb:
+              fields:
+                root-password:
+                  fieldName: mariadb-root-password
+                  encoding: hex
+                  length: "32"
+                password:
+                  fieldName: mariadb-password
+                  encoding: hex
+                  length: "32"
+                replication-password:
+                  fieldName: mariadb-replication-password
+                  encoding: hex
+                  length: "32"
+
+            mailu-roundcube:
+              fields:
+                password:
+                  encoding: hex
+                  length: "32"
+
+          # certificate of the web UI (terminated by the Gateway) and of the mail protocols (served by the front of mailu)
+          certManagerCertificates:
+            mailu:
+              secretName: tls-mailu
+              dnsNames:
+                mail: mail.{{ .Values.app.domain }}
+                imap: imap.{{ .Values.app.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+    mailu:
+      timeout: 15m # the first start of the databases and of clamav is slow
+      dependsOn:
+        - ref:mailu-pre
+        - name: app-longhorn
+          namespace: longhorn-system
+      chart:
+        spec:
+          chart: mailu
+          version: 2.8.0
+          sourceRef:
+            kind: HelmRepository
+            name: mailu
+      # The mail ports reach the pods through a wireguard tunnel: the vpn sidecar joins the tunnel and routes the traffic of the
+      # cluster back through the pod gateway.
+      postRenderers:
+        vpn:
+          kustomize:
+            patches:
+              front:
+                target:
+                  kind: Deployment
+                  name: mailu-front
+                patch: |
+                  apiVersion: apps/v1
+                  kind: Deployment
+                  metadata:
+                    name: mailu-front
+                  spec:
+                    template:
+                      spec:
+                        containers:
+                        - name: vpn
+                          image: ghcr.io/becloudless/alpine-wireguard:1.260202.1735-H7074dbd
+                          securityContext:
+                            privileged: true
+                          command: [ sh, -x, -e, -c ]
+                          args:
+                          - |
+                            wg-quick down wg0 || true
+                            wg-quick up wg0
+                            KUBE_GATEWAY=$(/sbin/ip route | awk '/default/ { print $3 }')
+                            ip route add 172.16.42.0/24 via $KUBE_GATEWAY || true
+                            ip route add 10.42.0.0/16 via $KUBE_GATEWAY || true
+                            sleep infinity
+                          livenessProbe:
+                            exec:
+                              command: [ping, -c1, -W2, 10.0.0.1]
+                            initialDelaySeconds: 10
+                            periodSeconds: 10
+                          volumeMounts:
+                          - mountPath: /etc/wireguard
+                            name: conf
+                        volumes:
+                        - name: conf
+                          secret:
+                            secretName: mailu-front-vpn
+                            defaultMode: 0400
+
+              postfix:
+                target:
+                  kind: Deployment
+                  name: mailu-postfix
+                patch: |
+                  apiVersion: apps/v1
+                  kind: Deployment
+                  metadata:
+                    name: mailu-postfix
+                  spec:
+                    template:
+                      spec:
+                        containers:
+                        - name: vpn
+                          image: ghcr.io/becloudless/alpine-wireguard:1.260202.1735-H7074dbd
+                          securityContext:
+                            privileged: true
+                          command: [ sh, -x, -e, -c ]
+                          args:
+                          - |
+                            wg-quick down wg0 || true
+                            wg-quick up wg0
+                            KUBE_GATEWAY=$(/sbin/ip route | awk '/default/ { print $3 }')
+                            ip route add 172.16.42.0/24 via $KUBE_GATEWAY || true
+                            ip route add 10.42.0.0/16 via $KUBE_GATEWAY || true
+                            sleep infinity
+                          livenessProbe:
+                            exec:
+                              command: [ping, -c1, -W2, 10.0.0.1]
+                            initialDelaySeconds: 10
+                            periodSeconds: 10
+                          volumeMounts:
+                          - mountPath: /etc/wireguard
+                            name: conf
+                        volumes:
+                        - name: conf
+                          secret:
+                            secretName: mailu-postfix-vpn
+                            defaultMode: 0400
+      values:
+        domain: "{{ .Values.app.domain }}"
+        subnet: 10.42.0.0/16 # the pods of the cluster
+        hostnames:
+          - mail.{{ .Values.app.domain }}
+          - imap.{{ .Values.app.domain }}
+        timezone: Europe/Paris
+        sessionTimeout: 259201 # 3d
+        permanentSessionLifetime: 31536000 # 1y
+        existingSecret: mailu
+
+        global:
+          storageClass: longhorn-db
+          database:
+            roundcube:
+              database: roundcube
+              existingSecret: mailu-roundcube
+              existingSecretPasswordKey: password
+
+        persistence:
+          single_pvc: false
+
+        ingress:
+          enabled: false
+          existingSecret: tls-mailu # the certificate of the mail protocols
+          # the front serves the web UI in plain http, and the mail protocols with the certificate
+          tlsFlavorOverride: mail
+          realIpFrom: 10.0.0.0/8
+          realIpHeader: ""
+          proxyProtocol:
+            pop3: true
+            pop3s: true
+            imap: true
+            imaps: true
+            smtp: true
+            smtps: true
+            submission: true
+            manageSieve: true
+
+        front:
+          # on crio, root is needed to have the SYS_CHROOT capability, required by dovecot to run properly
+          # https://github.com/Mailu/Mailu/issues/1714
+          containerSecurityContext:
+            capabilities:
+              add:
+                - SYS_CHROOT
+            enabled: true
+            runAsUser: 0
+
+          updateStrategy:
+            type: Recreate # the volumes are ReadWriteOnce
+
+          # useless with the vpn, but required to have the proxy protocol
+          externalService:
+            enabled: true
+            type: LoadBalancer
+            externalTrafficPolicy: Cluster
+
+        mariadb:
+          enabled: true
+          # TODO replicas from `app.scaling.dbReplicas`: it is a single standalone instance for now (architecture standalone)
+          auth:
+            existingSecret: mailu-mariadb
+          primary:
+            # workaround of https://github.com/Mailu/helm-charts/issues/463#issuecomment-3406122198
+            extraEnvVars:
+              - name: ROUNDCUBE_DB_PW
+                valueFrom:
+                  secretKeyRef:
+                    name: mailu-roundcube
+                    key: password
+              - name: ROUNDCUBE_DB_NAME
+                value: roundcube
+              - name: ROUNDCUBE_DB_USER
+                value: roundcube
+            persistence:
+              enabled: true
+              storageClass: longhorn-db
+
+        admin:
+          updateStrategy:
+            type: Recreate
+
+        postfix:
+          updateStrategy:
+            type: Recreate
+
+        dovecot:
+          persistence:
+            storageClass: longhorn-files
+          # on crio, root is needed to have the SYS_CHROOT capability, required by dovecot to run properly
+          # https://github.com/Mailu/Mailu/issues/1714
+          containerSecurityContext:
+            capabilities:
+              add:
+                - SYS_CHROOT
+            enabled: true
+            runAsUser: 0
+
+          updateStrategy:
+            type: Recreate
+          resources:
+            requests:
+              memory: 500Mi
+              cpu: 100m
+            limits:
+              memory: 1.5Gi
+              cpu: 2
+
+        rspamd:
+          updateStrategy:
+            type: Recreate
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+            limits:
+              memory: 400M
+              cpu: 1
+
+        clamav:
+          persistence:
+            storageClass: longhorn-files
+          resources:
+            requests:
+              memory: 1.5Gi
+              cpu: 100m
+            limits:
+              memory: 3Gi
+              cpu: 1
+
+        webmail:
+          updateStrategy:
+            type: Recreate
+          resources:
+            requests:
+              memory: 100Mi
+              cpu: 100m
+            limits:
+              memory: 200Mi
+              cpu: 1
+
+        webdav:
+          enabled: true
+          updateStrategy:
+            type: Recreate
+
+    # the public exposure, applied once mailu is deployed and not waited for
+    mailu-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        - ref:mailu
+        - name: app-cert-manager
+          namespace: cert-manager
+        - name: app-gateway-api
+          namespace: gateway-api
+      values:
+        resources:
+          # Web UI exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
+          # It is not protected by forward auth: mailu has its own login.
+          # The mail protocols are not exposed by the Gateway, they come through the vpn sidecars of the front and postfix pods.
+          listenerSets:
+            mailu:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: kube-system
+              listeners:
+                https:
+                  name: https
+                  hostname: mail.{{ .Values.app.domain }}
+                  port: 443
+                  protocol: HTTPS
+                  tls:
+                    mode: Terminate
+                    certificateRefs:
+                      tls:
+                        name: ref:certManagerCertificates/mailu
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          httpRoutes:
+            mailu:
+              parentRefs:
+                mailu: ref:mailu
+              hostnames:
+                mail: mail.{{ .Values.app.domain }}
+              rules:
+                root:
+                  backendRefs:
+                    front:
+                      name: mailu-front
+                      port: 80

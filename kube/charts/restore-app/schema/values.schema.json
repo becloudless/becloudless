@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "restore": {
+      "additionalProperties": false,
+      "description": "The app whose volumes and secrets are restored, and where the secrets are saved.",
+      "properties": {
+        "namespace": {
+          "description": "The namespace of the app, where its PVCs and its secrets are. Required, set by the `apps` chart.",
+          "type": "string"
+        },
+        "secretsBackupSchedule": {
+          "description": "The cron schedule of the CronJob `secrets-backup`, which saves the secrets generated for the app.",
+          "type": "string"
+        },
+        "s3Secret": {
+          "description": "The secret, in the namespace of the release, with the key of the bucket of the secrets: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_ENDPOINTS`. The secrets are not handled when it does not exist.",
+          "type": "string"
+        },
+        "secretsBucket": {
+          "description": "The bucket of the secrets, under the prefix `secrets/`.",
+          "type": "string"
+        },
+        "secretsRegion": {
+          "description": "The region of the bucket (`garage` for Garage).",
+          "type": "string"
+        },
+        "scriptConfigMap": {
+          "description": "The ConfigMap with the script `files/restore.sh`, one by namespace of app. Set by the loader.",
+          "type": "string"
+        },
+        "scriptHash": {
+          "description": "The hash of the script, part of the name of the Job: a new script is a new Job (the spec of a Job is immutable). Set by the loader.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "checkRequiredValues": {
+      "$ref": "../../base/schema/values.schema.json#/properties/checkRequiredValues"
+    },
+    "prefixNamesWithRelease": {
+      "$ref": "../../base/schema/values.schema.json#/properties/prefixNamesWithRelease"
+    },
+    "defaults": {
+      "$ref": "../../base/schema/values.schema.json#/properties/defaults"
+    },
+    "resources": {
+      "$ref": "../../base/schema/values.schema.json#/properties/resources"
+    }
+  },
+  "type": "object"
+}

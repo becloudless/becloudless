@@ -1,0 +1,311 @@
+---
+# Source: app-cilium/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cilium
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: cilium
+      sourceRef:
+        kind: HelmRepository
+        name: cilium
+      version: 1.20.2
+  dependsOn:
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  uninstall:
+    deletionPropagation: orphan
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    bgpControlPlane:
+      enabled: true
+    cni:
+      exclusive: false
+    devices: br0
+    envoy:
+      podAnnotations:
+        policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
+        policy.bcl/skipContainerRequireRunAsNonRoot: "true"
+      streamIdleTimeoutDurationSeconds: 600
+    extraEnv:
+    - name: PATH
+      value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/run/wrappers/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin
+    gatewayAPI:
+      enabled: true
+    ingressController:
+      enabled: false
+    ipam:
+      mode: kubernetes
+    k8sServiceHost: kube.test.com
+    k8sServicePort: 8443
+    kubeProxyReplacement: true
+    nodePort:
+      directRoutingDevice: br0
+    operator:
+      podAnnotations:
+        policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
+        policy.bcl/skipContainerRequireRunAsNonRoot: "true"
+      replicas: 2
+---
+# Source: app-cilium/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cilium-policies
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: cilium
+  - name: app-flux
+    namespace: flux-system
+  - name: app-coredns
+    namespace: kube-system
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      cilium-policies:
+        ciliumClusterwideNetworkPolicies:
+          allow-dns:
+            name: allow-dns
+            namespace: default
+          default-deny:
+            name: default-deny
+            namespace: default
+      cilium-post:
+        ciliumBGPAdvertisements:
+          bgp-advertisement:
+            name: bgp-advertisement
+            namespace: default
+        ciliumBGPPeerConfigs:
+          bgp-peer-config:
+            name: bgp-peer-config
+            namespace: default
+        gateways:
+          shared:
+            name: shared
+            namespace: default
+        httpRoutes:
+          https-redirect:
+            name: https-redirect
+            namespace: default
+    resources:
+      ciliumClusterwideNetworkPolicies:
+        allow-dns:
+          egress:
+            kube-dns:
+              toEndpoints:
+                kube-dns:
+                  matchLabels:
+                    k8s:io.kubernetes.pod.namespace: kube-system
+                    k8s:k8s-app: kube-dns
+              toPorts:
+                dns:
+                  ports:
+                    tcp:
+                      port: "53"
+                    udp:
+                      port: "53"
+                      protocol: UDP
+                  rules:
+                    dns:
+                      all:
+                        matchPattern: '*'
+          endpointSelector:
+            matchExpressions:
+              any-namespace:
+                key: k8s:io.kubernetes.pod.namespace
+                operator: Exists
+        default-deny:
+          egress:
+            deny:
+              toEntities:
+              - none
+          endpointSelector:
+            matchExpressions:
+              any-namespace:
+                key: k8s:io.kubernetes.pod.namespace
+                operator: Exists
+          ingress:
+            deny:
+              fromEntities:
+              - none
+---
+# Source: app-cilium/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cilium-post
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: cilium
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      cilium-policies:
+        ciliumClusterwideNetworkPolicies:
+          allow-dns:
+            name: allow-dns
+            namespace: default
+          default-deny:
+            name: default-deny
+            namespace: default
+      cilium-post:
+        ciliumBGPAdvertisements:
+          bgp-advertisement:
+            name: bgp-advertisement
+            namespace: default
+        ciliumBGPPeerConfigs:
+          bgp-peer-config:
+            name: bgp-peer-config
+            namespace: default
+        gateways:
+          shared:
+            name: shared
+            namespace: default
+        httpRoutes:
+          https-redirect:
+            name: https-redirect
+            namespace: default
+    resources:
+      ciliumBGPAdvertisements:
+        bgp-advertisement:
+          advertisements:
+            service:
+              advertisementType: Service
+              selector:
+                matchExpressions:
+                  never:
+                    key: somekey
+                    operator: NotIn
+                    values:
+                      never-used-value: never-used-value
+              service:
+                addresses:
+                  loadBalancerIP: LoadBalancerIP
+          labels:
+            advertise: bgp
+      ciliumBGPPeerConfigs:
+        bgp-peer-config:
+          families:
+            ipv4-unicast:
+              advertisements:
+                matchLabels:
+                  advertise: bgp
+              afi: ipv4
+              safi: unicast
+      gateways:
+        shared:
+          allowedListeners:
+            namespaces:
+              from: All
+          gatewayClassName: cilium
+          listeners:
+            http:
+              allowedRoutes:
+                namespaces:
+                  from: All
+              name: http
+              port: 80
+              protocol: HTTP
+      httpRoutes:
+        https-redirect:
+          parentRefs:
+            shared:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: shared
+              sectionName: http
+          rules:
+            redirect:
+              filters:
+                redirect:
+                  requestRedirect:
+                    scheme: https
+                    statusCode: 301
+                  type: RequestRedirect
+---
+# Source: app-cilium/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: cilium
+  namespace: default
+spec:
+  interval: 10m
+  url: https://helm.cilium.io

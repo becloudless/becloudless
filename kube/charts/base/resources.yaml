@@ -33,6 +33,7 @@ resources:
     apiVersion: v1
     kind: Service
   - name: persistentVolumes
+    clusterScoped: true
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
       component: io.k8s.api.core.v1.PersistentVolume
@@ -45,6 +46,7 @@ resources:
     apiVersion: v1
     kind: PersistentVolumeClaim
   - name: namespaces
+    clusterScoped: true
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
       component: io.k8s.api.core.v1.Namespace
@@ -63,6 +65,15 @@ resources:
           - template.spec.containers.args
           - template.spec.initContainers.command
           - template.spec.initContainers.args
+      refs: &podRefs
+        template.spec.serviceAccountName: {kinds: [serviceAccounts], as: name}
+        template.spec.volumes.persistentVolumeClaim.claimName: {kinds: [persistentVolumeClaims], as: name}
+        template.spec.volumes.configMap.name: {kinds: [configMaps], as: name}
+        template.spec.volumes.secret.secretName: {kinds: &secretKinds [certManagerCertificates, externalSecrets, stringSecrets, secrets, sealedSecrets], as: secretName}
+        template.spec.containers.env.configMapKeyRef.name: {kinds: [configMaps], as: name}
+        template.spec.containers.env.secretKeyRef.name: {kinds: *secretKinds, as: secretName}
+        template.spec.initContainers.env.configMapKeyRef.name: {kinds: [configMaps], as: name}
+        template.spec.initContainers.env.secretKeyRef.name: {kinds: *secretKinds, as: secretName}
   - name: statefulSets
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__apps__v1_openapi.json
@@ -76,6 +87,7 @@ resources:
           - template.spec.containers.args
           - template.spec.initContainers.command
           - template.spec.initContainers.args
+      refs: *podRefs
   - name: daemonSets
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__apps__v1_openapi.json
@@ -89,6 +101,7 @@ resources:
           - template.spec.containers.args
           - template.spec.initContainers.command
           - template.spec.initContainers.args
+      refs: *podRefs
   - name: cronJobs
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__batch__v1_openapi.json
@@ -102,6 +115,15 @@ resources:
           - jobTemplate.spec.template.spec.containers.args
           - jobTemplate.spec.template.spec.initContainers.command
           - jobTemplate.spec.template.spec.initContainers.args
+      refs:
+        jobTemplate.spec.template.spec.serviceAccountName: {kinds: [serviceAccounts], as: name}
+        jobTemplate.spec.template.spec.volumes.persistentVolumeClaim.claimName: {kinds: [persistentVolumeClaims], as: name}
+        jobTemplate.spec.template.spec.volumes.configMap.name: {kinds: [configMaps], as: name}
+        jobTemplate.spec.template.spec.volumes.secret.secretName: {kinds: *secretKinds, as: secretName}
+        jobTemplate.spec.template.spec.containers.env.configMapKeyRef.name: {kinds: [configMaps], as: name}
+        jobTemplate.spec.template.spec.containers.env.secretKeyRef.name: {kinds: *secretKinds, as: secretName}
+        jobTemplate.spec.template.spec.initContainers.env.configMapKeyRef.name: {kinds: [configMaps], as: name}
+        jobTemplate.spec.template.spec.initContainers.env.secretKeyRef.name: {kinds: *secretKinds, as: secretName}
   - name: jobs
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__batch__v1_openapi.json
@@ -115,6 +137,7 @@ resources:
           - template.spec.containers.args
           - template.spec.initContainers.command
           - template.spec.initContainers.args
+      refs: *podRefs
   - name: serviceAccounts
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/api__v1_openapi.json
@@ -142,7 +165,11 @@ resources:
     mutations:
       extractContent:
         contentIsOutOfSpec: true
+      refs:
+        roleRef: {kinds: [roles, clusterRoles], as: roleRef}
+        subjects: {kinds: [serviceAccounts], as: serviceAccountSubject}
   - name: clusterRoles
+    clusterScoped: true
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
       component: io.k8s.api.rbac.v1.ClusterRole
@@ -152,6 +179,7 @@ resources:
       extractContent:
         contentIsOutOfSpec: true
   - name: clusterRoleBindings
+    clusterScoped: true
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json
       component: io.k8s.api.rbac.v1.ClusterRoleBinding
@@ -160,6 +188,9 @@ resources:
     mutations:
       extractContent:
         contentIsOutOfSpec: true
+      refs:
+        roleRef: {kinds: [clusterRoles], as: roleRef}
+        subjects: {kinds: [serviceAccounts], as: serviceAccountSubject}
   - name: podDisruptionBudgets
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__policy__v1_openapi.json
@@ -183,13 +214,26 @@ resources:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_gateways.yaml
       crdVersion: v1
   - name: gatewayClasses
+    clusterScoped: true
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_gatewayclasses.yaml
       crdVersion: v1
   - name: httpRoutes
     sourceCRD:
-      url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml
+      # experimental channel for the ExternalAuth filter (forward auth), keep in sync with app-gateway-api
+      url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.6.1/config/crd/experimental/gateway.networking.k8s.io_httproutes.yaml
       crdVersion: v1
+    mutations:
+      refs:
+        parentRefs: {kinds: [listenerSets, gateways], as: gatewayRef}
+        rules.backendRefs.name: {kinds: [services], as: name}
+  - name: listenerSets
+    sourceCRD:
+      url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.6.1/config/crd/standard/gateway.networking.k8s.io_listenersets.yaml
+      crdVersion: v1
+    mutations:
+      refs:
+        listeners.tls.certificateRefs.name: {kinds: *secretKinds, as: secretName}
   - name: grpcRoutes
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_grpcroutes.yaml
@@ -211,6 +255,7 @@ resources:
       url: https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/main/config/crd/standard/gateway.networking.k8s.io_udproutes.yaml
       crdVersion: v1
   - name: storageClasses
+    clusterScoped: true
     sourceOpenAPI:
       url: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/v3/apis__storage.k8s.io__v1_openapi.json
       component: io.k8s.api.storage.v1.StorageClass
@@ -220,6 +265,7 @@ resources:
       extractContent:
         contentIsOutOfSpec: true
   - name: volumeSnapshotClasses
+    clusterScoped: true
     sourceCRD:
       url: https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
       crdVersion: v1
@@ -231,14 +277,23 @@ resources:
       url: https://raw.githubusercontent.com/bitnami-labs/sealed-secrets/main/helm/sealed-secrets/crds/bitnami.com_sealedsecrets.yaml
       crdVersion: v1alpha1
   - name: kyvernoClusterPolicies
+    clusterScoped: true
     sourceCRD:
       url: https://raw.githubusercontent.com/kyverno/kyverno/main/config/crds/kyverno/kyverno.io_clusterpolicies.yaml
       crdVersion: v1
+    mutations:
+      arraysToMaps:
+        disabled: true
   - name: longhornRecurringJobs
     sourceCRD:
       url: https://raw.githubusercontent.com/longhorn/longhorn/master/deploy/longhorn.yaml
       crdVersion: v1beta2
       kind: RecurringJob
+  - name: longhornBackupTargets
+    sourceCRD:
+      url: https://raw.githubusercontent.com/longhorn/longhorn/master/deploy/longhorn.yaml
+      crdVersion: v1beta2
+      kind: BackupTarget
   - name: longhornSettings
     sourceCRD:
       url: https://raw.githubusercontent.com/longhorn/longhorn/master/deploy/longhorn.yaml
@@ -251,6 +306,12 @@ resources:
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/helm-controller/main/config/crd/bases/helm.toolkit.fluxcd.io_helmreleases.yaml
       crdVersion: v2
+    mutations:
+      arraysToMaps:
+        ignore:
+          - dependsOn # a list of the HelmReleases, there is nothing to merge: `- ref:db`, or `- {name, namespace}` for another release
+      refs:
+        dependsOn: {kinds: [fluxHelmReleases], as: helmReleaseRef}
   - name: fluxKustomizations
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/kustomize-controller/main/config/crd/bases/kustomize.toolkit.fluxcd.io_kustomizations.yaml
@@ -288,6 +349,7 @@ resources:
       url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_issuers.yaml
       crdVersion: v1
   - name: certManagerClusterIssuers
+    clusterScoped: true
     sourceCRD:
       url: https://raw.githubusercontent.com/cert-manager/cert-manager/master/deploy/crds/cert-manager.io_clusterissuers.yaml
       crdVersion: v1
@@ -311,6 +373,16 @@ resources:
     sourceCRD:
       url: https://raw.githubusercontent.com/external-secrets/external-secrets/main/config/crds/bases/external-secrets.io_secretstores.yaml
       crdVersion: v1
+    mutations:
+      refs:
+        provider.kubernetes.auth.serviceAccount.name: {kinds: [serviceAccounts], as: name}
+  - name: externalSecrets
+    sourceCRD:
+      url: https://raw.githubusercontent.com/external-secrets/external-secrets/main/config/crds/bases/external-secrets.io_externalsecrets.yaml
+      crdVersion: v1
+    mutations:
+      refs:
+        secretStoreRef: {kinds: [secretStores], as: secretStoreRef}
   - name: fluxAlerts
     sourceCRD:
       url: https://raw.githubusercontent.com/fluxcd/notification-controller/main/config/crd/bases/notification.toolkit.fluxcd.io_alerts.yaml
@@ -327,6 +399,10 @@ resources:
     sourceCRD:
       url: https://raw.githubusercontent.com/mittwald/kubernetes-secret-generator/master/deploy/crds/secretgenerator.mittwald.de_stringsecrets_crd.yaml
       crdVersion: v1alpha1
+    mutations:
+      itemFields:
+        fields:
+          keyField: fieldName # `fields.password: {}` is `fields: [{fieldName: password}]`
   - name: traefikIngressRouteTCPs
     sourceCRD:
       url: https://raw.githubusercontent.com/traefik/traefik/master/docs/content/reference/dynamic-configuration/traefik.io_ingressroutetcps.yaml
@@ -344,6 +420,7 @@ resources:
       url: https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml
       crdVersion: v1
   - name: kyvernoValidatingPolicies
+    clusterScoped: true
     sourceCRD:
       url: https://raw.githubusercontent.com/kyverno/kyverno/main/config/crds/policies.kyverno.io/policies.kyverno.io_validatingpolicies.yaml
       crdVersion: v1
@@ -352,3 +429,56 @@ resources:
       url: https://raw.githubusercontent.com/kubernetes/autoscaler/master/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
       crdVersion: v1
       kind: VerticalPodAutoscaler
+  - name: ciliumLoadBalancerIPPools
+    clusterScoped: true
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumloadbalancerippools.yaml
+      crdVersion: v2
+  - name: ciliumBGPAdvertisements
+    clusterScoped: true
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumbgpadvertisements.yaml
+      crdVersion: v2
+  - name: ciliumBGPPeerConfigs
+    clusterScoped: true
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumbgppeerconfigs.yaml
+      crdVersion: v2
+  - name: ciliumBGPClusterConfigs
+    clusterScoped: true
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumbgpclusterconfigs.yaml
+      crdVersion: v2
+  - name: ciliumNetworkPolicies
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumnetworkpolicies.yaml
+      crdVersion: v2
+    mutations: &ciliumPolicyMutations
+      arraysToMaps:
+        ignore: # plain lists of entities (`toEntities: [kube-apiserver]`), they are not merged
+          - ingress.fromEntities
+          - ingressDeny.fromEntities
+          - egress.toEntities
+          - egressDeny.toEntities
+      itemFields: # `toPorts.https.ports.443: {}` is TCP on the port 443
+        ingress.toPorts.ports: &ciliumPort {keyField: port, defaults: {protocol: TCP}}
+        ingressDeny.toPorts.ports: *ciliumPort
+        egress.toPorts.ports: *ciliumPort
+        egressDeny.toPorts.ports: *ciliumPort
+      listShorthands: # `toPorts: [443, 80]` is the TCP ports 443 and 80, when the rule has only one group of ports
+        ingress.toPorts: &ciliumToPorts {key: main, field: ports}
+        ingressDeny.toPorts: *ciliumToPorts
+        egress.toPorts: *ciliumToPorts
+        egressDeny.toPorts: *ciliumToPorts
+      refs: # `toEndpoints: {db: ref:db}` selects the pods of a workload of the release, `endpointSelector: ref:web` the ones of the policy
+        ingress.fromEndpoints: &ciliumPodSelector {kinds: [deployments, statefulSets, daemonSets, jobs, cronJobs], as: podSelector}
+        ingressDeny.fromEndpoints: *ciliumPodSelector
+        egress.toEndpoints: *ciliumPodSelector
+        egressDeny.toEndpoints: *ciliumPodSelector
+        endpointSelector: *ciliumPodSelector
+  - name: ciliumClusterwideNetworkPolicies
+    clusterScoped: true
+    sourceCRD:
+      url: https://raw.githubusercontent.com/cilium/cilium/v1.20.2/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumclusterwidenetworkpolicies.yaml
+      crdVersion: v2
+    mutations: *ciliumPolicyMutations

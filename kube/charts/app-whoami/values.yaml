@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=../app/schema/values.schema.json
+
+# Tiny HTTP server that echoes the request (headers, IP, ...). Useful to check the Gateway, the TLS termination and what
+# the Authelia forward auth passes to the upstream (remote-user, remote-groups, ...). Protected by Authelia forward auth.
+
+resources:
+
+  ciliumNetworkPolicies:
+    whoami:
+      endpointSelector: ref:whoami
+      ingress:
+        gateway:
+          fromEntities: [ingress, host, remote-node]
+          toPorts: [8080]
+
+  fluxHelmReleases:
+    whoami:
+      values:
+        resources:
+          deployments:
+            whoami:
+              replicas: "{{ .Values.app.scaling.replicas }}"
+              template:
+                spec:
+                  containers:
+                    whoami:
+                      name: whoami
+                      image: traefik/whoami:v1.12.0 # renovate: versioning=loose
+                      args:
+                        - --port=8080
+                        - --verbose
+                      ports:
+                        http:
+                          containerPort: 8080
+                      probe:
+                        httpGet:
+                          path: /health
+                      resources:
+                        requests:
+                          cpu: 10m
+                          memory: 16Mi
+                        limits:
+                          memory: 64Mi
+                      securityContext:
+                        runAsUser: 1000
+                        runAsGroup: 1000
+                        capabilities:
+                          drop:
+                            all: ALL
+
+          services:
+            whoami:
+              ports:
+                http:
+                  port: 8080
+
+expose:
+  whoami:
+    port: 8080
+    auth: authelia

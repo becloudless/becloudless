@@ -31,6 +31,19 @@ tests:
           path: metadata.namespace
           value: custom-ns
 
+  - it: does not set a namespace on cluster scoped kinds
+    set:
+      resources:
+        namespaces:
+          cluster-scoped:
+            namespace: ignored
+    asserts:
+      - equal:
+          path: kind
+          value: Namespace
+      - notExists:
+          path: metadata.namespace
+
   - it: renders labels and annotations when provided
     set:
       resources:

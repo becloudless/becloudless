@@ -11,10 +11,14 @@
   {{- $globalMetadataAll := $defaultsAll.metadata | default dict }}
   {{- $globalMetadataAll = tpl (toYaml $globalMetadataAll) $rootContext | fromYaml }}
   {{- $namespace := $resource.namespace | default $globalMetadataAll.namespace | default $rootContext.Release.Namespace }}
+  {{- /* The cluster scoped kinds (`clusterScoped: true` in resources.yaml) get no metadata.namespace. */}}
   {{- $labels := merge ($resource.labels | default dict) ($globalMetadataAll.labels | default dict) }}
   {{- $annotations := merge ($resource.annotations | default dict) ($globalMetadataAll.annotations | default dict) }}
 
-  {{- $metadata := dict "name" $name "namespace" $namespace }}
+  {{- $metadata := dict "name" $name }}
+  {{- if not .clusterScoped }}
+    {{- $metadata = set $metadata "namespace" $namespace }}
+  {{- end }}
   {{- if $labels }}
     {{- $metadata = set $metadata "labels" $labels }}
   {{- end }}

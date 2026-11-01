@@ -74,6 +74,26 @@ func WalkSchemaNodesWithPath(node any, path string, visit func(node map[string]a
 	visit(m, path)
 }
 
+// DeepCopy returns an independent copy of a JSON-decoded value (maps, lists and scalars), so that a schema node can be
+// reused in another place of the schema and be mutated there without changing the original.
+func DeepCopy(v any) any {
+	switch t := v.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(t))
+		for k, val := range t {
+			out[k] = DeepCopy(val)
+		}
+		return out
+	case []any:
+		out := make([]any, len(t))
+		for i, val := range t {
+			out[i] = DeepCopy(val)
+		}
+		return out
+	}
+	return v
+}
+
 // SchemaTypeIncludes reports whether a JSON schema "type" value - either a
 // single string or an array of strings (e.g. ["object", "null"]) - includes
 // want.

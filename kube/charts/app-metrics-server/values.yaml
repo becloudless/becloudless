@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+
+resources:
+  fluxHelmRepositories:
+    metrics-server:
+      url: https://kubernetes-sigs.github.io/metrics-server
+
+  # kube-system is shared with the other components, hence the selector.
+  ciliumNetworkPolicies:
+    metrics-server:
+      endpointSelector:
+        matchLabels: {"app.kubernetes.io/name": metrics-server}
+      ingress:
+        kube-apiserver: # the aggregated API
+          fromEntities: [kube-apiserver, host, remote-node]
+          toPorts: [10250]
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+        kubelets: # scrapes the kubelet of every node
+          toEntities: [host, remote-node]
+          toPorts: [10250]
+
+  fluxHelmReleases:
+    metrics-server:
+      chart:
+        spec:
+          chart: metrics-server
+          version: 3.14.0
+          sourceRef:
+            kind: HelmRepository
+            name: metrics-server
+      values:
+        args:
+          - --kubelet-insecure-tls
+          - --metric-resolution=10s
+          - --kubelet-request-timeout=2s
+
+        metrics:
+          enabled: true
+        serviceMonitor:
+          enabled: false # TODO what about pop clusters, since it requires prom stack ?

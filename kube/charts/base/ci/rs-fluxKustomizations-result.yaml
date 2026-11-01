@@ -9,7 +9,9 @@ spec:
   interval: 10m
   path: ./deploy/overlays/production
   prune: true
+  retryInterval: 1m
   sourceRef:
     kind: GitRepository
     name: myapp-repo
   targetNamespace: default
+  wait: true

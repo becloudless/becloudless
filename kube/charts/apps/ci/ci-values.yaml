@@ -1,0 +1,27 @@
+
+config:
+  domain: test.com
+
+apps:
+  longhorn:
+    enabled: true
+  garage:
+    enabled: true
+  backup-restore:
+    enabled: true
+  something:
+    namespace: something
+    appChart:
+      name: app-something
+    restore: true
+    values:
+      resources:
+        fluxHelmReleases:
+          something-config:
+            enabled: true
+
+resources:
+  fluxGitRepositories:
+    bcl:
+      ref:
+        branch: n0/kube-proxy

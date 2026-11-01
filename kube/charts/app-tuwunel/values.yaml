@@ -1,0 +1,134 @@
+# yaml-language-server: $schema=../app/schema/values.schema.json
+
+# Tuwunel (https://github.com/matrix-construct/tuwunel): a Matrix homeserver (chat, in the Element client of `app-element`), written in
+# Rust, with its own embedded database (RocksDB), so there is no postgresql here.
+#
+# The server is `matrix.<domain>` and the users are `@<name>:matrix.<domain>`. The server name can NOT be changed afterwards without
+# wiping the database. The federation is disabled: the server is private, only its own users can talk, and nothing but authelia is
+# reached from the pod. Enable it (`TUWUNEL_ALLOW_FEDERATION`) with the delegation (`TUWUNEL_WELL_KNOWN__SERVER`), the egress to the
+# internet in the network policy, and think about the abuse before. No mails, no push notifications (they need the egress to the push
+# gateway of the clients), no URL previews, no TURN (the voice and video calls between two users on different networks need one).
+# SSO: the login with a password is disabled and so is the registration: the only way in is authelia, and a user of the groups
+#    `app_tuwunel` and `role_admin` gets an account (`@<preferred_username>:matrix.<domain>`) at its first login. The first user to log
+#    in is the administrator of the server (it is invited in the admin room `#admins`, where the commands start with `!admin`). The
+#    others can be promoted with `!admin users make-user-admin <user>` there. If authelia is down nobody can log in. The provider is
+#    given by the environment (the `TUWUNEL_IDENTITY_PROVIDER__0__*` variables). The OIDC server built in tuwunel (next-gen
+#    authentication, needed by Element X) is enabled by the SSO and `well_known.client`, the web and mobile clients of Element are
+#    vouched with `oidc_registration_allowed_redirect_hosts`, the other clients get an approval page at their login.
+
+resources:
+
+  ciliumNetworkPolicies:
+    tuwunel:
+      endpointSelector: ref:tuwunel
+      ingress:
+        gateway:
+          fromEntities: [ingress, host, remote-node]
+          toPorts: [8008]
+      egress:
+        authelia: # the OIDC issuer is the public address of authelia
+          toFQDNs:
+            authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
+          toPorts: [443]
+        gateway: # the public addresses of the cluster are the gateway for the pods
+          toEntities: [ingress]
+          toPorts: [443]
+
+  fluxHelmReleases:
+    tuwunel:
+      dependsOn:
+        - ref:tuwunel-pre
+        - name: app-longhorn
+          namespace: longhorn-system
+      values:
+        resources:
+          # the database (RocksDB) and the media
+          persistentVolumeClaims:
+            tuwunel-data:
+              storageClassName: longhorn-db
+              resources:
+                requests:
+                  storage: 10Gi
+
+          deployments:
+            tuwunel:
+              replicas: 1 # the embedded database is only for one instance
+              strategy:
+                type: Recreate
+              template:
+                spec:
+                  securityContext:
+                    fsGroup: 1000 # the volume is writable by the user of the container
+                  containers:
+                    tuwunel:
+                      name: tuwunel
+                      image: ghcr.io/matrix-construct/tuwunel:v1.9.4
+                      ports:
+                        http:
+                          containerPort: 8008
+                      # Every option of the configuration file is a `TUWUNEL_<OPTION>` variable (`__` goes down in a table), and a
+                      # provider of the `identity_provider` list is `TUWUNEL_IDENTITY_PROVIDER__<index>__<FIELD>`.
+                      # The variables are sorted by name when the pod is rendered, and `$(NAME)` only gets the variables defined before it:
+                      # the secrets used by other variables are named before `TUWUNEL_*`.
+                      env:
+                        OIDC_CLIENT_ID:
+                          secretKeyRef:
+                            name: ref:tuwunel-oidc
+                            key: client-id
+                        TUWUNEL_SERVER_NAME: matrix.{{ .Values.app.domain }} # can not be changed
+                        TUWUNEL_ADDRESS: 0.0.0.0
+                        # the subdirectory of the volume, the root has a `lost+found` directory
+                        TUWUNEL_DATABASE_PATH: /var/lib/tuwunel/data
+                        TUWUNEL_ALLOW_FEDERATION: "false"
+                        TUWUNEL_LOGIN_WITH_PASSWORD: "false" # the registration is disabled by default
+                        TUWUNEL_NEW_USER_DISPLAYNAME_SUFFIX: "" # the default is an emoji
+                        # the client well-known (the address of the server for the clients) also enables the built in OIDC server
+                        TUWUNEL_WELL_KNOWN__CLIENT: https://matrix.{{ .Values.app.domain }}
+                        # the clients that can sign in without the approval page: Element (`app-element`), and Element X on the phones
+                        TUWUNEL_OIDC_REGISTRATION_ALLOWED_REDIRECT_HOSTS: '["element.{{ .Values.app.domain }}", "io.element.android"]'
+                        # SSO with authelia: the callback is /_matrix/client/unstable/login/sso/callback/<client id>
+                        TUWUNEL_IDENTITY_PROVIDER__0__BRAND: Authelia
+                        TUWUNEL_IDENTITY_PROVIDER__0__NAME: Authelia
+                        TUWUNEL_IDENTITY_PROVIDER__0__ISSUER_URL: https://authelia.{{ .Values.app.domain }}
+                        TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_ID: $(OIDC_CLIENT_ID)
+                        TUWUNEL_IDENTITY_PROVIDER__0__CLIENT_SECRET:
+                          secretKeyRef:
+                            name: ref:tuwunel-oidc
+                            key: secret
+                        TUWUNEL_IDENTITY_PROVIDER__0__CALLBACK_URL: https://matrix.{{ .Values.app.domain }}/_matrix/client/unstable/login/sso/callback/$(OIDC_CLIENT_ID)
+                        # the user is the `preferred_username` of authelia: no random name when it is taken, the login fails
+                        TUWUNEL_IDENTITY_PROVIDER__0__UNIQUE_ID_FALLBACKS: "false"
+                      probe:
+                        httpGet:
+                          path: /_matrix/client/versions
+                      securityContext:
+                        runAsUser: 1000
+                        runAsGroup: 1000
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        data:
+                          name: data
+                          mountPath: /var/lib/tuwunel
+                  volumes:
+                    data:
+                      name: data
+                      persistentVolumeClaim:
+                        claimName: ref:tuwunel-data
+
+          services:
+            tuwunel:
+              ports:
+                http:
+                  port: 8008
+
+expose:
+  tuwunel: # no forward auth: the Matrix clients can not follow the login redirect, tuwunel has its own SSO
+    hostname: matrix
+    port: 8008
+    timeouts:
+      request: 0s # the long polling of the sync and the uploads of big files can be long
+
+oidc:
+  tuwunel: {}

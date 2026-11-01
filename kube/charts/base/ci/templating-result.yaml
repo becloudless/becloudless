@@ -5,7 +5,7 @@ kind: Secret
 metadata:
   annotations:
     computed: ns-default
-  name: test-release-plain
+  name: plain
   namespace: default
 stringData:
   own: plain-value

@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+
+resources:
+  fluxHelmRepositories:
+    cnpg:
+      url: https://cloudnative-pg.github.io/charts
+
+  # Cluster wide because the instances are in the namespace of each app.
+  ciliumClusterwideNetworkPolicies:
+    cnpg-operator:
+      endpointSelector:
+        matchLabels: {"k8s:io.kubernetes.pod.namespace": cnpg-system, "k8s:app.kubernetes.io/name": cloudnative-pg}
+      ingress:
+        webhook: # the admission webhook
+          fromEntities: [kube-apiserver, host, remote-node]
+          toPorts: [9443]
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+        instances: # status API of the instances
+          toEndpoints:
+            instances:
+              matchExpressions:
+                cnpg-cluster: {key: "k8s:cnpg.io/cluster", operator: Exists}
+          toPorts: [8000, 5432]
+
+    cnpg-cluster-instances:
+      endpointSelector:
+        matchExpressions:
+          cnpg-cluster: {key: "k8s:cnpg.io/cluster", operator: Exists}
+      ingress:
+        operator:
+          fromEndpoints:
+            operator:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": cnpg-system}
+          toPorts: [8000, 5432]
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+
+  fluxHelmReleases:
+    cnpg:
+      chart:
+        spec:
+          chart: cloudnative-pg
+          version: 0.29.1
+          sourceRef:
+            kind: HelmRepository
+            name: cnpg
+      dependsOn:
+        - name: app-external-snapshotter # cnpg snapshot support needs the CRDs before starting, or will require manual restart
+          namespace: external-snapshotter

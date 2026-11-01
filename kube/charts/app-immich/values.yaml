@@ -1,0 +1,307 @@
+# yaml-language-server: $schema=../app/schema/values.schema.json
+
+# The first user to register in the web UI becomes the admin of immich: not used, `immich-post` creates the account `immich-admin`
+# and the admins are the users of lldap whose `immichrole` is `admin`.
+# SSO: the OAuth login with authelia, the users are created at their first login. The configuration file of immich holds only the
+# OAuth settings, so these settings are read only in the web UI.
+# Not configured: mails, the other settings of the immich configuration file (everything else can be set in the UI).
+
+resources:
+
+  # the photos and videos, shared by the pods of the server
+  persistentVolumeClaims:
+    immich-data:
+      accessModes:
+        - ReadWriteMany
+      storageClassName: longhorn-files
+      resources:
+        requests:
+          storage: 10Gi
+
+  fluxHelmRepositories:
+    immich:
+      url: https://immich-app.github.io/immich-charts
+
+  ciliumNetworkPolicies:
+    immich-server:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/instance: immich, app.kubernetes.io/name: server}
+      ingress:
+        gateway:
+          fromEntities: [ingress, host, remote-node]
+          toPorts: [2283]
+        bootstrap:
+          fromEndpoints:
+            bootstrap:
+              matchExpressions:
+                job: {key: job-name, operator: Exists}
+          toPorts: [2283]
+      egress:
+        postgresql:
+          toEndpoints:
+            postgresql:
+              matchLabels: {cnpg.io/cluster: immich-postgresql}
+          toPorts: [5432]
+        valkey:
+          toEndpoints:
+            valkey:
+              matchLabels: {app.kubernetes.io/name: valkey}
+          toPorts: [6379]
+        machine-learning:
+          toEndpoints:
+            machine-learning:
+              matchLabels: {app.kubernetes.io/name: machine-learning}
+          toPorts: [3003]
+        authelia: # the OIDC issuer is the public address of authelia
+          toFQDNs:
+            authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
+          toPorts: [443]
+        gateway: # the public addresses of the cluster are the gateway for the pods
+          toEntities: [ingress]
+          toPorts: [443]
+
+    immich-machine-learning: # the models are downloaded on first use
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: machine-learning}
+      ingress:
+        server:
+          fromEndpoints:
+            server:
+              matchLabels: {app.kubernetes.io/instance: immich, app.kubernetes.io/name: server}
+          toPorts: [3003]
+      egress:
+        huggingface: # the models, served by the CDNs of the hub
+          toFQDNs:
+            hub: {matchName: huggingface.co}
+            hub-subdomains: {matchPattern: "**.huggingface.co"}
+            cdn: {matchName: hf.co}
+            cdn-subdomains: {matchPattern: "**.hf.co"}
+          toPorts: [443]
+
+    immich-bootstrap: # the job creating the admin, its name changes with its content
+      endpointSelector:
+        matchExpressions:
+          job: {key: job-name, operator: Exists}
+      egress:
+        server:
+          toEndpoints:
+            server:
+              matchLabels: {app.kubernetes.io/instance: immich, app.kubernetes.io/name: server}
+          toPorts: [2283]
+
+  fluxHelmReleases:
+    immich-postgresql:
+      chart:
+        spec:
+          chart: ./kube/charts/postgresql
+      dependsOn:
+        - name: app-cert-manager
+          namespace: cert-manager
+        - name: app-cnpg
+          namespace: cnpg-system
+        - name: app-longhorn
+          namespace: longhorn-system
+      values:
+        storageSize: 5Gi
+        instances: "{{ .Values.app.scaling.dbReplicas }}"
+        clients:
+          server:
+            matchLabels: {app.kubernetes.io/instance: immich, app.kubernetes.io/name: server}
+        postgresql:
+          shared_preload_libraries:
+            - vchord.so
+          parameters:
+            max_connections: "400"
+            shared_buffers: 256MB
+        resources:
+          cnpgClusters:
+            main:
+              # https://github.com/tensorchord/cloudnative-vectorchord/pkgs/container/cloudnative-vectorchord/versions?filters%5Bversion_type%5D=tagged
+              imageName: tensorchord/cloudnative-vectorchord:18.3-1.1.1
+              bootstrap:
+                initdb:
+                  postInitApplicationSQL:
+                    - CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
+                    - CREATE EXTENSION IF NOT EXISTS earthdistance CASCADE;
+
+    immich-pre:
+      dependsOn:
+        - name: app-secret-generator
+          namespace: secret-generator
+        - name: app-external-secrets
+          namespace: external-secrets
+      values:
+        resources:
+          stringSecrets:
+            # password of the `immich-admin` account created by `immich-post`, only used if the password login is enabled again
+            immich-admin:
+              fields:
+                password: {}
+
+          # The configuration file of immich with the OAuth settings, the client id and the secret of the client are the only values read from authelia.
+          # The template of external-secrets is escaped twice: the values are rendered by the app chart, then by the base chart.
+          externalSecrets:
+            immich-config:
+              refreshInterval: 1h
+              secretStoreRef: ref:authelia
+              target:
+                template:
+                  data:
+                    immich-config.yaml: |
+                      oauth:
+                        enabled: true
+                        issuerUrl: https://authelia.{{ .Values.app.domain }}
+                        clientId: {{ "{{ \"{{ .clientId }}\" }}" }}
+                        clientSecret: {{ "{{ \"{{ .secret }}\" }}" }}
+                        scope: openid profile email immich_scope
+                        buttonText: Login with Authelia
+                        tokenEndpointAuthMethod: client_secret_post
+                        signingAlgorithm: RS256
+                        profileSigningAlgorithm: RS256
+                        storageLabelClaim: preferred_username
+                        storageQuotaClaim: immich_quota
+                        roleClaim: immich_role
+                        autoRegister: true
+                        autoLaunch: true # `/auth/login?autoLaunch=0` shows the login page
+                      passwordLogin:
+                        enabled: false # the users and admins come from lldap, see `immich-post`
+              data:
+                clientId:
+                  secretKey: clientId
+                  remoteRef:
+                    key: authelia-oidc-immich
+                    property: client-id
+                secret:
+                  secretKey: secret
+                  remoteRef:
+                    key: authelia-oidc-immich
+                    property: secret
+
+    immich-valkey:
+      dependsOn:
+        - name: app-secret-generator
+          namespace: secret-generator
+      chart:
+        spec:
+          chart: ./kube/charts/valkey
+      values:
+        clients:
+          server:
+            matchLabels: {app.kubernetes.io/instance: immich, app.kubernetes.io/name: server}
+        valkey:
+          auth:
+            aclUsers:
+              default:
+                permissions: "~* -@all"
+              app:
+                permissions: "~* &* +@all"
+
+    immich:
+      dependsOn:
+        - ref:immich-pre
+        - ref:immich-postgresql
+        - ref:immich-valkey
+      chart:
+        spec:
+          chart: immich
+          version: 0.12.0
+          sourceRef:
+            kind: HelmRepository
+            name: immich
+      values:
+        # https://github.com/immich-app/immich-charts/blob/main/charts/immich/values.yaml
+        immich:
+          configurationKind: Secret
+          existingConfiguration: immich-config # the OAuth settings, see `immich-pre`
+          persistence:
+            library:
+              existingClaim: immich-data
+
+        controllers:
+          main:
+            containers:
+              main:
+                image:
+                  tag: v2.5.6
+                env:
+                  TZ: Europe/Paris
+                  PGUSER: app
+                  PGDATABASE: app
+                  PGHOST: immich-postgresql-rw
+                  PGPASSWORD:
+                    valueFrom:
+                      secretKeyRef:
+                        name: immich-postgresql-app
+                        key: password
+                  # immich does not do the client certificate authentication of libpq, only the password is used
+                  DB_URL: postgresql://?uselibpqcompat=true
+
+                  REDIS_HOSTNAME: immich-valkey
+                  REDIS_USERNAME: app
+                  REDIS_PASSWORD:
+                    valueFrom:
+                      secretKeyRef:
+                        name: immich-valkey
+                        key: app
+
+        machine-learning:
+          persistence:
+            cache:
+              type: persistentVolumeClaim
+              accessMode: ReadWriteMany
+              storageClass: longhorn-files
+
+    # The web UI shows the registration of the first admin until an admin exists, and the OAuth login is on the login page that
+    # it redirects from: an account of immich has to exist before anyone can log in with authelia. It is created here through the API,
+    # before the public exposure (`immich-integration` waits for this release). From then on the admins are the users whose
+    # `immichrole` attribute is `admin` in lldap, and the registration is refused by immich (the server already has an admin).
+    # The account is only a way back if the password login is enabled again (the `enable-password-login` command of `immich-admin`
+    # in the server pod), its password is the `immich-admin` secret.
+    immich-post:
+      dependsOn:
+        - ref:immich
+        - ref:immich-pre
+      values:
+        resources:
+          jobs:
+            immich-bootstrap:
+              fullNameOverride: 'immich-bootstrap-{{ list 1 .Values.app.domain | toJson | sha256sum | trunc 10 }}' # change the 1 when the spec of the Job changes (immutable fields)
+              backoffLimit: 0
+              activeDeadlineSeconds: 900
+              template:
+                spec:
+                  restartPolicy: Never
+                  securityContext:
+                    runAsUser: 1000
+                    runAsGroup: 1000
+                  containers:
+                    bootstrap:
+                      name: bootstrap
+                      image: curlimages/curl:8.19.0 # renovate: versioning=loose
+                      command: [ sh, -ec ]
+                      args:
+                        - |
+                          until curl -fsS http://immich-server:2283/api/server/config > /tmp/config; do sleep 5; done
+                          if grep -q '"isInitialized":true' /tmp/config; then echo 'an admin already exists'; exit 0; fi
+                          password=$(printf '%s' "$ADMIN_PASSWORD" | sed 's/\\/\\\\/g; s/"/\\"/g')
+                          curl -fsS -X POST http://immich-server:2283/api/auth/admin-sign-up -H 'Content-Type: application/json' \
+                            -d "{\"email\":\"$ADMIN_EMAIL\",\"name\":\"immich admin\",\"password\":\"$password\"}"
+                      env:
+                        ADMIN_EMAIL: immich-admin@{{ .Values.app.domain }}
+                        ADMIN_PASSWORD:
+                          secretKeyRef:
+                            name: ref:immich-admin
+                            key: password
+
+expose:
+  immich: # no forward auth: the mobile apps can not follow the login redirect, immich has its own login
+    service: immich-server
+    port: 2283
+    timeouts:
+      request: 0s # uploads and downloads of videos can be long
+    dependsOn:
+      - ref:immich-post # the admin exists, nobody can register as the admin
+
+oidc:
+  immich:
+    externalSecret: false # `immich-config` (the configuration file with the OAuth settings) is its own

@@ -6,6 +6,9 @@ import (
 
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/arraysToMaps"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/content"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/itemFields"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/listShorthands"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/refs"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/stringifyFields"
 
 	"gopkg.in/yaml.v3"
@@ -21,6 +24,7 @@ type resource struct {
 	Kind          string            `yaml:"kind"`          // required for sourceOpenAPI; self-deduced from the CRD manifest for sourceCRD, no need to set it
 	SourceOpenAPI *SourceOpenAPI    `yaml:"sourceOpenAPI"` // set to fetch the schema from a Kubernetes OpenAPI v3 spec document
 	SourceCRD     *SourceCRD        `yaml:"sourceCRD"`     // set to fetch the schema from a CRD manifest (YAML)
+	ClusterScoped bool              `yaml:"clusterScoped"` // set for the kinds that are not namespaced: they get no metadata.namespace
 	Mutations     resourceMutations `yaml:"mutations"`
 
 	helmTemplateRenderArgs map[string]string
@@ -41,6 +45,9 @@ type resourceMutations struct {
 	ExtractContent  *content.ExtractContent          `yaml:"extractContent"`
 	ArraysToMaps    *arraysToMaps.ArraysToMaps       `yaml:"arraysToMaps"`
 	StringifyFields *stringifyFields.StringifyFields `yaml:"stringifyFields"`
+	ItemFields      itemFields.ItemFields            `yaml:"itemFields"`
+	ListShorthands  listShorthands.ListShorthands    `yaml:"listShorthands"`
+	Refs            refs.Refs                        `yaml:"refs"`
 }
 
 func newResourcesFile(path string) (resourcesFile, error) {

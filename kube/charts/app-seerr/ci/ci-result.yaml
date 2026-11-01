@@ -1,0 +1,819 @@
+---
+# Source: app-seerr/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: seerr
+  namespace: default
+spec:
+  egress:
+  - toFQDNs:
+    - matchName: authelia.test.com
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toEntities:
+    - ingress
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/component: jellyfin
+        k8s:app.kubernetes.io/instance: jellyfin
+        k8s:io.kubernetes.pod.namespace: jellyfin
+    toPorts:
+    - ports:
+      - port: "8096"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        cnpg.io/cluster: seerr-postgresql
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+  - toFQDNs:
+    - matchName: api.themoviedb.org
+    - matchName: image.tmdb.org
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toFQDNs:
+    - matchName: api4.thetvdb.com
+    - matchName: artworks.thetvdb.com
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: seerr
+      app.kubernetes.io/instance: seerr
+  ingress:
+  - fromEntities:
+    - ingress
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "5055"
+        protocol: TCP
+---
+# Source: app-seerr/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: seerr
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: seerr-postgresql
+  - name: seerr-pre
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      seerr:
+        configMaps:
+          seerr-scripts:
+            name: seerr-scripts
+            namespace: default
+        deployments:
+          seerr:
+            labels:
+              app.kubernetes.io/component: seerr
+              app.kubernetes.io/instance: seerr
+            name: seerr
+            namespace: default
+        persistentVolumeClaims:
+          seerr-config:
+            name: seerr-config
+            namespace: default
+        services:
+          seerr:
+            name: seerr
+            namespace: default
+      seerr-integration:
+        certManagerCertificates:
+          seerr-gateway:
+            name: seerr-gateway
+            namespace: default
+            secretName: tls-seerr-gateway
+        httpRoutes:
+          seerr:
+            name: seerr
+            namespace: default
+        listenerSets:
+          seerr:
+            name: seerr
+            namespace: default
+      seerr-pre:
+        externalSecrets:
+          seerr-jellyfin:
+            name: seerr-jellyfin
+            namespace: default
+          seerr-oidc:
+            name: seerr-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+          jellyfin:
+            name: jellyfin
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+          jellyfin-reader:
+            name: jellyfin-reader
+            namespace: default
+    resources:
+      configMaps:
+        seerr-scripts:
+          data:
+            admin.js: |-
+              const fs = require('fs');
+              const env = process.env;
+              const marker = '/app/config/.admin-created';
+              const api = 'http://127.0.0.1:5055/api/v1';
+              const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+              const idle = () => setInterval(() => {}, 1 << 30); // the container has to keep running
+
+              (async () => {
+                if (fs.existsSync(marker)) return idle();
+                for (let i = 0; i < 120; i++) { // 10 minutes
+                  try {
+                    const res = await fetch(api + '/settings/public', { signal: AbortSignal.timeout(10000) });
+                    if (res.ok) {
+                      const pub = await res.json();
+                      if (!pub.initialized || pub.mediaServerType !== 2) {
+                        console.log('seerr is not configured with jellyfin, no administrator to create');
+                        return idle();
+                      }
+                      const signIn = (extra) => fetch(api + '/auth/jellyfin', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(Object.assign({ username: env.JELLYFIN_USER, password: env.JELLYFIN_PASSWORD, email: env.ADMIN_EMAIL, serverType: 2 }, extra)),
+                        signal: AbortSignal.timeout(30000),
+                      });
+                      // seerr takes the address of jellyfin from the first login, and refuses it when it already has one (existing install)
+                      let login = await signIn({ hostname: env.JELLYFIN_HOST, port: 8096, useSsl: false, urlBase: '' });
+                      if (!login.ok) login = await signIn({});
+                      if (login.ok) {
+                        fs.writeFileSync(marker, new Date().toISOString());
+                        // turns the other logins off now (`configure.js` does it at each start from now on)
+                        const cookie = (login.headers.getSetCookie() || []).map((c) => c.split(';')[0]).join('; ');
+                        const off = await fetch(api + '/settings/main', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', Cookie: cookie },
+                          body: JSON.stringify({ localLogin: false, mediaServerLogin: false, newPlexLogin: false }),
+                          signal: AbortSignal.timeout(30000),
+                        });
+                        console.log('administrator created, the other logins are turned off: ' + off.status);
+                        return idle();
+                      }
+                      console.log('administrator not created: ' + login.status + ' ' + (await login.text()));
+                    }
+                  } catch (e) {
+                    console.log('waiting for seerr: ' + e.message);
+                  }
+                  await sleep(5000);
+                }
+                idle();
+              })();
+            configure.js: |-
+              const fs = require('fs');
+              const env = process.env;
+              const file = '/app/config/settings.json';
+              const marker = '/app/config/.admin-created';
+              const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+              const header = (token) =>
+                'MediaBrowser Client="Seerr", Device="Seerr", DeviceId="seerr-configure", Version="1.0"' +
+                (token ? ', Token="' + token + '"' : '');
+
+              async function jellyfin(method, path, body, token) {
+                const res = await fetch(env.JELLYFIN_URL + path, {
+                  method: method,
+                  headers: { Authorization: header(token), 'Content-Type': 'application/json', Accept: 'application/json' },
+                  body: body === undefined ? undefined : JSON.stringify(body),
+                  signal: AbortSignal.timeout(15000),
+                });
+                if (!res.ok) throw new Error(method + ' ' + path + ': ' + res.status);
+                const text = await res.text();
+                return text ? JSON.parse(text) : undefined;
+              }
+
+              async function configureJellyfin(settings) {
+                let info;
+                for (let i = 0; i < 60 && !(info && info.StartupWizardCompleted); i++) { // 5 minutes
+                  try {
+                    info = await jellyfin('GET', '/System/Info/Public');
+                    if (info.StartupWizardCompleted) break;
+                    console.log('waiting for the setup wizard of jellyfin');
+                  } catch (e) {
+                    console.log('waiting for jellyfin: ' + e.message);
+                  }
+                  await sleep(5000);
+                }
+                if (!info || !info.StartupWizardCompleted) {
+                  console.log('jellyfin is not ready, its settings are left as they are');
+                  return;
+                }
+
+                const login = await jellyfin('POST', '/Users/AuthenticateByName', { Username: env.JELLYFIN_USER, Pw: env.JELLYFIN_PASSWORD });
+                const keys = async () => (await jellyfin('GET', '/Auth/Keys', undefined, login.AccessToken)).Items.filter((k) => k.AppName === 'Seerr');
+                let found = await keys();
+                if (found.length === 0) {
+                  await jellyfin('POST', '/Auth/Keys?App=Seerr', undefined, login.AccessToken);
+                  found = await keys();
+                }
+                const apiKey = found[found.length - 1].AccessToken;
+
+                const known = new Map((((settings.jellyfin || {}).libraries) || []).map((l) => [l.id, l]));
+                const excluded = ['music', 'books', 'musicvideos', 'homevideos', 'boxsets'];
+                const folders = await jellyfin('GET', '/Library/MediaFolders', undefined, apiKey);
+                const libraries = folders.Items
+                  .filter((f) => f.Type === 'CollectionFolder' && !excluded.includes(f.CollectionType))
+                  .map((f) => ({
+                    id: f.Id,
+                    name: f.Name,
+                    type: f.CollectionType === 'movies' ? 'movie' : 'show',
+                    enabled: known.has(f.Id) ? known.get(f.Id).enabled : true,
+                  }));
+
+                // The first login (`admin.js`) gives the address itself and seerr refuses it when it is already set: it stays empty
+                // until the administrator is created (an existing seerr already has its address).
+                const keepIp = fs.existsSync(marker) || !!(settings.jellyfin && settings.jellyfin.ip);
+                settings.main.mediaServerType = 2; // jellyfin
+                settings.jellyfin = Object.assign({}, settings.jellyfin, {
+                  name: info.ServerName,
+                  ip: keepIp ? env.JELLYFIN_HOST : '',
+                  port: Number(env.JELLYFIN_PORT),
+                  useSsl: false,
+                  urlBase: '',
+                  externalHostname: env.JELLYFIN_EXTERNAL_URL,
+                  serverId: info.Id,
+                  apiKey: apiKey,
+                  libraries: libraries,
+                });
+                settings.public = Object.assign({}, settings.public, { initialized: true }); // no setup wizard
+                console.log('jellyfin configured, ' + libraries.length + ' libraries');
+              }
+
+              (async () => {
+                const settings = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
+                settings.main = settings.main || {};
+                // the values the settings migrations of seerr set when they are missing
+                if (settings.main.discoverRegion === undefined) settings.main.discoverRegion = '';
+                if (settings.main.streamingRegion === undefined) settings.main.streamingRegion = '';
+
+                try {
+                  await configureJellyfin(settings);
+                } catch (e) {
+                  console.log('jellyfin is not configured: ' + e.message);
+                }
+
+                settings.main.oidcLogin = true;
+                // Only the SSO login is left once the administrator exists (`admin.js` needs the jellyfin login to create it, and
+                // turns the others off right after). No password, no jellyfin login, and no new user from jellyfin (quick connect).
+                if (fs.existsSync(marker)) {
+                  settings.main.localLogin = false;
+                  settings.main.mediaServerLogin = false;
+                  settings.main.newPlexLogin = false;
+                }
+                settings.main.applicationUrl = env.APP_URL; // the redirect uri of the login
+                settings.network = settings.network || {};
+                settings.network.trustProxy = true; // behind the gateway
+                settings.oidc = {
+                  providers: [{
+                    slug: 'authelia',
+                    name: 'Authelia',
+                    issuerUrl: env.ISSUER_URL,
+                    clientId: env.CLIENT_ID,
+                    clientSecret: env.CLIENT_SECRET,
+                    scopes: 'openid profile email',
+                    newUserLogin: true,
+                  }],
+                };
+
+                fs.writeFileSync(file + '.tmp', JSON.stringify(settings, null, 1));
+                fs.renameSync(file + '.tmp', file);
+              })().catch((e) => {
+                console.error(e);
+                process.exit(1);
+              });
+      deployments:
+        seerr:
+          replicas: 1
+          strategy:
+            type: Recreate
+          template:
+            spec:
+              containers:
+                admin:
+                  command:
+                  - node
+                  - /scripts/admin.js
+                  env:
+                    ADMIN_EMAIL: admin@test.com
+                    JELLYFIN_HOST: jellyfin.jellyfin
+                    JELLYFIN_PASSWORD:
+                      secretKeyRef:
+                        key: password
+                        name: ref:seerr-jellyfin
+                    JELLYFIN_USER: admin
+                  image: ghcr.io/seerr-team/seerr:preview-new-oidc@sha256:28744b1ced522beb7af8e5c966b73c6e46b1dc2c4c8cb497ad2f12d3139699a3
+                  name: admin
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                    runAsGroup: 1000
+                    runAsUser: 1000
+                  volumeMounts:
+                    config:
+                      mountPath: /app/config
+                      name: config
+                    scripts:
+                      mountPath: /scripts
+                      name: scripts
+                      readOnly: true
+                seerr:
+                  env:
+                    DB_HOST: seerr-postgresql-rw
+                    DB_NAME: app
+                    DB_PASS:
+                      secretKeyRef:
+                        key: password
+                        name: seerr-postgresql-app
+                    DB_PORT: "5432"
+                    DB_SSL_REJECT_UNAUTHORIZED: "false"
+                    DB_TYPE: postgres
+                    DB_USE_SSL: "true"
+                    DB_USER: app
+                    TZ: Europe/Paris
+                  image: ghcr.io/seerr-team/seerr:preview-new-oidc@sha256:28744b1ced522beb7af8e5c966b73c6e46b1dc2c4c8cb497ad2f12d3139699a3
+                  name: seerr
+                  ports:
+                    http:
+                      containerPort: 5055
+                  probe:
+                    httpGet:
+                      path: /api/v1/settings/public
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                    runAsGroup: 1000
+                    runAsUser: 1000
+                  volumeMounts:
+                    config:
+                      mountPath: /app/config
+                      name: config
+              initContainers:
+                configure:
+                  command:
+                  - node
+                  - /scripts/configure.js
+                  env:
+                    APP_URL: https://seerr.test.com
+                    CLIENT_ID:
+                      secretKeyRef:
+                        key: client-id
+                        name: ref:seerr-oidc
+                    CLIENT_SECRET:
+                      secretKeyRef:
+                        key: secret
+                        name: ref:seerr-oidc
+                    ISSUER_URL: https://authelia.test.com
+                    JELLYFIN_EXTERNAL_URL: https://jellyfin.test.com
+                    JELLYFIN_HOST: jellyfin.jellyfin
+                    JELLYFIN_PASSWORD:
+                      secretKeyRef:
+                        key: password
+                        name: ref:seerr-jellyfin
+                    JELLYFIN_PORT: "8096"
+                    JELLYFIN_URL: http://jellyfin.jellyfin:8096
+                    JELLYFIN_USER: admin
+                  image: ghcr.io/seerr-team/seerr:preview-new-oidc@sha256:28744b1ced522beb7af8e5c966b73c6e46b1dc2c4c8cb497ad2f12d3139699a3
+                  name: configure
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                    runAsGroup: 1000
+                    runAsUser: 1000
+                  volumeMounts:
+                    config:
+                      mountPath: /app/config
+                      name: config
+                    scripts:
+                      mountPath: /scripts
+                      name: scripts
+                      readOnly: true
+              securityContext:
+                fsGroup: 1000
+                fsGroupChangePolicy: OnRootMismatch
+              volumes:
+                config:
+                  name: config
+                  persistentVolumeClaim:
+                    claimName: ref:seerr-config
+                scripts:
+                  configMap:
+                    name: ref:seerr-scripts
+                  name: scripts
+      persistentVolumeClaims:
+        seerr-config:
+          resources:
+            requests:
+              storage: 5Gi
+          storageClassName: longhorn-files
+      services:
+        seerr:
+          ports:
+            http:
+              port: 5055
+---
+# Source: app-seerr/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: seerr-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: seerr
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      seerr:
+        configMaps:
+          seerr-scripts:
+            name: seerr-scripts
+            namespace: default
+        deployments:
+          seerr:
+            labels:
+              app.kubernetes.io/component: seerr
+              app.kubernetes.io/instance: seerr
+            name: seerr
+            namespace: default
+        persistentVolumeClaims:
+          seerr-config:
+            name: seerr-config
+            namespace: default
+        services:
+          seerr:
+            name: seerr
+            namespace: default
+      seerr-integration:
+        certManagerCertificates:
+          seerr-gateway:
+            name: seerr-gateway
+            namespace: default
+            secretName: tls-seerr-gateway
+        httpRoutes:
+          seerr:
+            name: seerr
+            namespace: default
+        listenerSets:
+          seerr:
+            name: seerr
+            namespace: default
+      seerr-pre:
+        externalSecrets:
+          seerr-jellyfin:
+            name: seerr-jellyfin
+            namespace: default
+          seerr-oidc:
+            name: seerr-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+          jellyfin:
+            name: jellyfin
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+          jellyfin-reader:
+            name: jellyfin-reader
+            namespace: default
+    resources:
+      certManagerCertificates:
+        seerr-gateway:
+          dnsNames:
+            seerr: seerr.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-seerr-gateway
+      httpRoutes:
+        seerr:
+          hostnames:
+            seerr: seerr.test.com
+          parentRefs:
+            seerr:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: seerr
+              sectionName: seerr
+          rules:
+            root:
+              backendRefs:
+                backend:
+                  name: ref:seerr
+                  port: 5055
+      listenerSets:
+        seerr:
+          listeners:
+            seerr:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: seerr.test.com
+              name: seerr
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: ref:seerr-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+---
+# Source: app-seerr/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: seerr-postgresql
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/postgresql
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-cnpg
+    namespace: cnpg-system
+  - name: app-longhorn
+    namespace: longhorn-system
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    clients:
+      seerr:
+        matchLabels:
+          app.kubernetes.io/component: seerr
+          app.kubernetes.io/instance: seerr
+    instances: 2
+---
+# Source: app-seerr/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: seerr-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-external-secrets
+    namespace: external-secrets
+  - name: jellyfin-pre
+    namespace: jellyfin
+  - name: authelia-pre
+    namespace: authelia
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      seerr:
+        configMaps:
+          seerr-scripts:
+            name: seerr-scripts
+            namespace: default
+        deployments:
+          seerr:
+            labels:
+              app.kubernetes.io/component: seerr
+              app.kubernetes.io/instance: seerr
+            name: seerr
+            namespace: default
+        persistentVolumeClaims:
+          seerr-config:
+            name: seerr-config
+            namespace: default
+        services:
+          seerr:
+            name: seerr
+            namespace: default
+      seerr-integration:
+        certManagerCertificates:
+          seerr-gateway:
+            name: seerr-gateway
+            namespace: default
+            secretName: tls-seerr-gateway
+        httpRoutes:
+          seerr:
+            name: seerr
+            namespace: default
+        listenerSets:
+          seerr:
+            name: seerr
+            namespace: default
+      seerr-pre:
+        externalSecrets:
+          seerr-jellyfin:
+            name: seerr-jellyfin
+            namespace: default
+          seerr-oidc:
+            name: seerr-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+          jellyfin:
+            name: jellyfin
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+          jellyfin-reader:
+            name: jellyfin-reader
+            namespace: default
+    resources:
+      externalSecrets:
+        seerr-jellyfin:
+          data:
+            password:
+              remoteRef:
+                key: jellyfin-admin
+                property: password
+              secretKey: password
+          refreshInterval: 1h
+          secretStoreRef: ref:jellyfin
+        seerr-oidc:
+          data:
+            client-id:
+              remoteRef:
+                key: authelia-oidc-seerr
+                property: client-id
+              secretKey: client-id
+            secret:
+              remoteRef:
+                key: authelia-oidc-seerr
+                property: secret
+              secretKey: secret
+          refreshInterval: 1h
+          secretStoreRef: ref:authelia
+      secretStores:
+        authelia:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: ref:authelia-reader
+              remoteNamespace: authelia
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+        jellyfin:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: ref:jellyfin-reader
+              remoteNamespace: jellyfin
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        authelia-reader:
+          automountServiceAccountToken: false
+        jellyfin-reader:
+          automountServiceAccountToken: false

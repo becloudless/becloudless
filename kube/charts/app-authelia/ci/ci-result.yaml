@@ -1,0 +1,1333 @@
+---
+# Source: app-authelia/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: authelia
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/component: lldap
+        k8s:app.kubernetes.io/instance: lldap
+        k8s:io.kubernetes.pod.namespace: lldap
+    toPorts:
+    - ports:
+      - port: "6360"
+        protocol: TCP
+  - toFQDNs:
+    - matchName: time.cloudflare.com
+    toPorts:
+    - ports:
+      - port: "123"
+        protocol: UDP
+  - toEndpoints:
+    - matchLabels:
+        cnpg.io/cluster: authelia-postgresql
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: valkey
+    toPorts:
+    - ports:
+      - port: "6379"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: authelia
+  ingress:
+  - fromEntities:
+    - ingress
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "9091"
+        protocol: TCP
+---
+# Source: app-authelia/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: authelia
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: authelia
+      sourceRef:
+        kind: HelmRepository
+        name: authelia
+      version: 0.11.22
+  dependsOn:
+  - name: authelia-pre
+  - name: authelia-postgresql
+  - name: authelia-valkey
+  - name: app-lldap
+    namespace: lldap
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    configMap:
+      access_control:
+        default_policy: deny
+        rules:
+        - domain:
+          - forgejo.test.com
+          - homer.test.com
+          - lldap.test.com
+          - longhorn.test.com
+          - mail.test.com
+          - grafana.test.com
+          - alertmanager.test.com
+          - prometheus.test.com
+          - fluxwebhook.test.com
+          - rutorrent.test.com
+          policy: two_factor
+          subject:
+          - - group:role_admin
+        - domain_regex:
+          - ^(?P<User>[a-z0-9-]+)\.syncthing\.test\.com$
+          policy: two_factor
+        - domain:
+          - homer.test.com
+          policy: one_factor
+          subject:
+          - - group:role_user
+          - - group:role_admin
+        - domain:
+          - seerr.test.com
+          policy: two_factor
+          subject:
+          - - group:app_seerr
+          - - group:role_admin
+        - domain:
+          - jellyfin.test.com
+          policy: two_factor
+          subject:
+          - - group:app_jellyfin
+          - - group:role_admin
+        - domain:
+          - forgejo.test.com
+          policy: two_factor
+          subject:
+          - - group:app_forgejo
+          - - group:role_admin
+        - domain:
+          - pushprox.test.com
+          policy: one_factor
+          subject:
+          - - group:app_pushprox
+          - - group:role_admin
+        - domain:
+          - immich.test.com
+          policy: two_factor
+          subject:
+          - - group:app_immich
+          - - group:role_admin
+        - domain:
+          - immich.test.com
+          policy: one_factor
+          subject:
+          - - group:app_immich_one_factor
+        - domain:
+          - whoami.test.com
+          policy: one_factor
+      authentication_backend:
+        file:
+          enabled: false
+        ldap:
+          address: ldaps://lldap.lldap.svc.cluster.local:6360
+          attributes:
+            extra:
+              immichquota:
+                multi_valued: false
+                name: immichquota
+                value_type: integer
+              immichrole:
+                multi_valued: false
+                name: immichrole
+                value_type: string
+          base_dn: dc=test,dc=com
+          enabled: true
+          implementation: lldap
+          password:
+            path: password
+            secret_name: authelia-ldap
+            value: password
+          tls:
+            minimum_version: TLS1.2
+            server_name: lldaps.test.com
+            skip_verify: false
+          user: UID=authelia,OU=people,dc=test,dc=com
+      identity_providers:
+        oidc:
+          authorization_policies:
+            forgejo_authz:
+              default_policy: deny
+              rules:
+              - policy: two_factor
+                subject:
+                - group:role_admin
+                - group:app_forgejo
+            immich_authz:
+              default_policy: deny
+              rules:
+              - policy: two_factor
+                subject:
+                - group:role_admin
+                - group:app_immich
+              - policy: one_factor
+                subject:
+                - group:app_immich_one_factor
+            jellyfin_authz:
+              default_policy: deny
+              rules:
+              - policy: two_factor
+                subject:
+                - group:role_admin
+                - group:app_jellyfin
+            paperless_authz:
+              default_policy: deny
+              rules:
+              - policy: two_factor
+                subject:
+                - group:role_admin
+                - group:app_paperless
+            seafile_authz:
+              default_policy: deny
+              rules:
+              - policy: two_factor
+                subject:
+                - group:role_admin
+                - group:app_seafile
+            seerr_authz:
+              default_policy: deny
+              rules:
+              - policy: two_factor
+                subject:
+                - group:role_admin
+                - group:app_seerr
+            tuwunel_authz:
+              default_policy: deny
+              rules:
+              - policy: two_factor
+                subject:
+                - group:role_admin
+                - group:app_tuwunel
+          claims_policies:
+            grafana:
+              id_token:
+              - email
+              - name
+              - groups
+              - preferred_username
+            immich_policy:
+              custom_claims:
+                immich_quota:
+                  attribute: immichquota
+                immich_role:
+                  attribute: immichrole
+            tuwunel:
+              id_token:
+              - email
+              - name
+              - groups
+              - preferred_username
+          clients:
+          - access_token_signed_response_alg: none
+            authorization_policy: forgejo_authz
+            client_id: '{{ secret "/secrets/authelia-oidc-forgejo/client-id" }}'
+            client_name: Forgejo
+            client_secret:
+              path: /config/oidc-forgejo.hash
+            grant_types:
+            - authorization_code
+            pkce_challenge_method: ""
+            pre_configured_consent_duration: 1 year
+            public: false
+            redirect_uris:
+            - https://forgejo.test.com/user/oauth2/authelia/callback
+            require_pkce: false
+            response_types:
+            - code
+            scopes:
+            - openid
+            - email
+            - profile
+            token_endpoint_auth_method: client_secret_basic
+            userinfo_signed_response_alg: none
+          - access_token_signed_response_alg: none
+            authorization_policy: two_factor
+            claims_policy: grafana
+            client_id: '{{ secret "/secrets/authelia-oidc-grafana/client-id" }}'
+            client_name: Grafana
+            client_secret:
+              path: /config/oidc-grafana.hash
+            grant_types:
+            - authorization_code
+            pkce_challenge_method: S256
+            pre_configured_consent_duration: 1 year
+            public: false
+            redirect_uris:
+            - https://grafana.test.com/login/generic_oauth
+            require_pkce: true
+            response_types:
+            - code
+            scopes:
+            - openid
+            - profile
+            - groups
+            - email
+            token_endpoint_auth_method: client_secret_basic
+            userinfo_signed_response_alg: none
+          - access_token_signed_response_alg: RS256
+            authorization_policy: immich_authz
+            claims_policy: immich_policy
+            client_id: '{{ secret "/secrets/authelia-oidc-immich/client-id" }}'
+            client_name: immich
+            client_secret:
+              path: /config/oidc-immich.hash
+            grant_types:
+            - authorization_code
+            pkce_challenge_method: ""
+            pre_configured_consent_duration: 1 year
+            public: false
+            redirect_uris:
+            - https://immich.test.com/auth/login
+            - https://immich.test.com/user-settings
+            - app.immich:///oauth-callback
+            require_pkce: false
+            response_types:
+            - code
+            scopes:
+            - openid
+            - profile
+            - email
+            - immich_scope
+            token_endpoint_auth_method: client_secret_post
+            userinfo_signed_response_alg: RS256
+          - access_token_signed_response_alg: none
+            authorization_policy: jellyfin_authz
+            client_id: '{{ secret "/secrets/authelia-oidc-jellyfin/client-id" }}'
+            client_name: Jellyfin
+            client_secret:
+              path: /config/oidc-jellyfin.hash
+            grant_types:
+            - authorization_code
+            pkce_challenge_method: S256
+            pre_configured_consent_duration: 1 year
+            public: false
+            redirect_uris:
+            - https://jellyfin.test.com/sso/OID/redirect/authelia
+            require_pkce: true
+            response_types:
+            - code
+            scopes:
+            - openid
+            - profile
+            - groups
+            token_endpoint_auth_method: client_secret_post
+            userinfo_signed_response_alg: none
+          - access_token_signed_response_alg: none
+            authorization_policy: paperless_authz
+            client_id: '{{ secret "/secrets/authelia-oidc-paperless/client-id" }}'
+            client_name: Paperless
+            client_secret:
+              path: /config/oidc-paperless.hash
+            grant_types:
+            - authorization_code
+            pkce_challenge_method: S256
+            pre_configured_consent_duration: 1 year
+            public: false
+            redirect_uris:
+            - https://paperless.test.com/accounts/oidc/authelia/login/callback/
+            require_pkce: true
+            response_types:
+            - code
+            scopes:
+            - openid
+            - profile
+            - email
+            - groups
+            token_endpoint_auth_method: client_secret_basic
+            userinfo_signed_response_alg: none
+          - access_token_signed_response_alg: none
+            authorization_policy: seafile_authz
+            client_id: '{{ secret "/secrets/authelia-oidc-seafile/client-id" }}'
+            client_name: Seafile
+            client_secret:
+              path: /config/oidc-seafile.hash
+            grant_types:
+            - authorization_code
+            pkce_challenge_method: ""
+            pre_configured_consent_duration: 1 year
+            public: false
+            redirect_uris:
+            - https://seafile.test.com/oauth/callback/
+            require_pkce: false
+            response_types:
+            - code
+            scopes:
+            - openid
+            - profile
+            - email
+            token_endpoint_auth_method: client_secret_basic
+            userinfo_signed_response_alg: none
+          - access_token_signed_response_alg: none
+            authorization_policy: seerr_authz
+            client_id: '{{ secret "/secrets/authelia-oidc-seerr/client-id" }}'
+            client_name: Seerr
+            client_secret:
+              path: /config/oidc-seerr.hash
+            grant_types:
+            - authorization_code
+            pkce_challenge_method: S256
+            pre_configured_consent_duration: 1 year
+            public: false
+            redirect_uris:
+            - https://seerr.test.com/login
+            - https://seerr.test.com/profile/settings/linked-accounts
+            require_pkce: true
+            response_types:
+            - code
+            scopes:
+            - openid
+            - profile
+            - email
+            token_endpoint_auth_method: client_secret_post
+            userinfo_signed_response_alg: none
+          - access_token_signed_response_alg: none
+            authorization_policy: tuwunel_authz
+            claims_policy: tuwunel
+            client_id: '{{ secret "/secrets/authelia-oidc-tuwunel/client-id" }}'
+            client_name: Matrix
+            client_secret:
+              path: /config/oidc-tuwunel.hash
+            grant_types:
+            - authorization_code
+            - refresh_token
+            pkce_challenge_method: ""
+            pre_configured_consent_duration: 1 year
+            public: false
+            redirect_uris:
+            - https://matrix.test.com/_matrix/client/unstable/login/sso/callback/{{
+              secret "/secrets/authelia-oidc-tuwunel/client-id" }}
+            require_pkce: false
+            response_modes:
+            - form_post
+            - query
+            response_types:
+            - code
+            scopes:
+            - openid
+            - profile
+            - email
+            - groups
+            token_endpoint_auth_method: client_secret_post
+            userinfo_signed_response_alg: none
+          enabled: true
+          hmac_secret:
+            secret_name: authelia-generated
+          jwks:
+          - algorithm: RS256
+            certificate_chain:
+              path: /secrets/authelia-jwks/tls.crt
+            key:
+              path: /secrets/authelia-jwks/tls.key
+            key_id: ""
+            use: sig
+          scopes:
+            immich_scope:
+              claims:
+              - immich_quota
+              - immich_role
+      identity_validation:
+        reset_password:
+          secret:
+            secret_name: authelia-generated
+      notifier:
+        disable_startup_check: false
+        filesystem:
+          enabled: true
+        smtp:
+          address: submissions://mail.test.com:465
+          enabled: false
+          password: {}
+          sender: test Authelia <authelia@test.com>
+          username: authelia@test.com
+      password_policy:
+        zxcvbn:
+          enabled: true
+          min_score: 4
+      server:
+        endpoints:
+          authz:
+            ext-authz:
+              implementation: ExtAuthz
+      session:
+        cookies:
+        - domain: test.com
+          subdomain: authelia
+        encryption_key:
+          secret_name: authelia-generated
+        expiration: 16 hours
+        inactivity: 8 hours
+        redis:
+          enabled: true
+          host: authelia-valkey
+          password:
+            path: authelia
+            secret_name: authelia-valkey
+            value: authelia
+          username: authelia
+        remember_me: -1
+      storage:
+        postgres:
+          address: tcp://authelia-postgresql-rw
+          database: app
+          enabled: true
+          password:
+            path: password
+            secret_name: authelia-postgresql-app
+            value: password
+          username: app
+      telemetry:
+        metrics:
+          enabled: true
+      theme: dark
+      totp:
+        issuer: test Authelia
+      webauthn:
+        display_name: test Authelia
+    ingress:
+      enabled: false
+    pod:
+      env:
+      - name: TZ
+        value: Europe/Paris
+      extraVolumeMounts:
+      - mountPath: /config
+        name: authelia
+      extraVolumes:
+      - emptyDir:
+          sizeLimit: 100Mi
+        name: authelia
+      initContainers:
+      - command:
+        - sh
+        - -ec
+        - |
+          for dir in /secrets/authelia-oidc-*; do
+            client=${dir#/secrets/authelia-oidc-}
+            hash=$(authelia crypto hash generate pbkdf2 --variant sha512 --password "$(cat $dir/secret)" | sed 's/^Digest: //')
+            printf '%s' "$hash" > /config/oidc-$client.hash
+          done
+        image: ghcr.io/authelia/authelia:4.39.27
+        name: oidc-hashes
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /config
+          name: authelia
+        - mountPath: /secrets/authelia-oidc-forgejo
+          name: secret-authelia-oidc-forgejo
+          readOnly: true
+        - mountPath: /secrets/authelia-oidc-grafana
+          name: secret-authelia-oidc-grafana
+          readOnly: true
+        - mountPath: /secrets/authelia-oidc-immich
+          name: secret-authelia-oidc-immich
+          readOnly: true
+        - mountPath: /secrets/authelia-oidc-jellyfin
+          name: secret-authelia-oidc-jellyfin
+          readOnly: true
+        - mountPath: /secrets/authelia-oidc-paperless
+          name: secret-authelia-oidc-paperless
+          readOnly: true
+        - mountPath: /secrets/authelia-oidc-seafile
+          name: secret-authelia-oidc-seafile
+          readOnly: true
+        - mountPath: /secrets/authelia-oidc-seerr
+          name: secret-authelia-oidc-seerr
+          readOnly: true
+        - mountPath: /secrets/authelia-oidc-tuwunel
+          name: secret-authelia-oidc-tuwunel
+          readOnly: true
+      kind: Deployment
+      replicas: 1
+      securityContext:
+        container:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        pod:
+          runAsGroup: 2000
+          runAsNonRoot: true
+          runAsUser: 2000
+          seccompProfile:
+            type: RuntimeDefault
+    secret:
+      additionalSecrets:
+        authelia-generated: {}
+        authelia-jwks: {}
+        authelia-ldap: {}
+        authelia-oidc-forgejo: {}
+        authelia-oidc-grafana: {}
+        authelia-oidc-immich: {}
+        authelia-oidc-jellyfin: {}
+        authelia-oidc-paperless: {}
+        authelia-oidc-seafile: {}
+        authelia-oidc-seerr: {}
+        authelia-oidc-tuwunel: {}
+        authelia-postgresql-app: {}
+        authelia-valkey: {}
+---
+# Source: app-authelia/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: authelia-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: authelia
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      authelia-integration:
+        certManagerCertificates:
+          authelia-gateway:
+            name: authelia-gateway
+            namespace: default
+            secretName: tls-authelia-gateway
+        httpRoutes:
+          authelia:
+            name: authelia
+            namespace: default
+        listenerSets:
+          authelia:
+            name: authelia
+            namespace: default
+        referenceGrants:
+          ext-authz:
+            name: ext-authz
+            namespace: default
+      authelia-pre:
+        certManagerCertificates:
+          authelia-jwks:
+            name: authelia-jwks
+            namespace: default
+        externalSecrets:
+          authelia-ldap:
+            name: authelia-ldap
+            namespace: default
+        roleBindings:
+          forgejo-secrets-reader:
+            name: forgejo-secrets-reader
+            namespace: default
+          grafana-secrets-reader:
+            name: grafana-secrets-reader
+            namespace: default
+          immich-secrets-reader:
+            name: immich-secrets-reader
+            namespace: default
+          jellyfin-secrets-reader:
+            name: jellyfin-secrets-reader
+            namespace: default
+          paperless-secrets-reader:
+            name: paperless-secrets-reader
+            namespace: default
+          seafile-secrets-reader:
+            name: seafile-secrets-reader
+            namespace: default
+          seerr-secrets-reader:
+            name: seerr-secrets-reader
+            namespace: default
+          tuwunel-secrets-reader:
+            name: tuwunel-secrets-reader
+            namespace: default
+        roles:
+          forgejo-secrets-reader:
+            name: forgejo-secrets-reader
+            namespace: default
+          grafana-secrets-reader:
+            name: grafana-secrets-reader
+            namespace: default
+          immich-secrets-reader:
+            name: immich-secrets-reader
+            namespace: default
+          jellyfin-secrets-reader:
+            name: jellyfin-secrets-reader
+            namespace: default
+          paperless-secrets-reader:
+            name: paperless-secrets-reader
+            namespace: default
+          seafile-secrets-reader:
+            name: seafile-secrets-reader
+            namespace: default
+          seerr-secrets-reader:
+            name: seerr-secrets-reader
+            namespace: default
+          tuwunel-secrets-reader:
+            name: tuwunel-secrets-reader
+            namespace: default
+        secretStores:
+          lldap:
+            name: lldap
+            namespace: default
+        serviceAccounts:
+          lldap-reader:
+            name: lldap-reader
+            namespace: default
+        stringSecrets:
+          authelia-generated:
+            name: authelia-generated
+            namespace: default
+          authelia-oidc-forgejo:
+            name: authelia-oidc-forgejo
+            namespace: default
+          authelia-oidc-grafana:
+            name: authelia-oidc-grafana
+            namespace: default
+          authelia-oidc-immich:
+            name: authelia-oidc-immich
+            namespace: default
+          authelia-oidc-jellyfin:
+            name: authelia-oidc-jellyfin
+            namespace: default
+          authelia-oidc-paperless:
+            name: authelia-oidc-paperless
+            namespace: default
+          authelia-oidc-seafile:
+            name: authelia-oidc-seafile
+            namespace: default
+          authelia-oidc-seerr:
+            name: authelia-oidc-seerr
+            namespace: default
+          authelia-oidc-tuwunel:
+            name: authelia-oidc-tuwunel
+            namespace: default
+    resources:
+      certManagerCertificates:
+        authelia-gateway:
+          dnsNames:
+            authelia: authelia.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-authelia-gateway
+      httpRoutes:
+        authelia:
+          hostnames:
+            authelia: authelia.test.com
+          parentRefs:
+            authelia:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: authelia
+              sectionName: authelia
+          rules:
+            root:
+              backendRefs:
+                backend:
+                  name: authelia
+                  port: 80
+      listenerSets:
+        authelia:
+          listeners:
+            authelia:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: authelia.test.com
+              name: authelia
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: ref:authelia-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+      referenceGrants:
+        ext-authz:
+          from:
+            homer:
+              group: gateway.networking.k8s.io
+              kind: HTTPRoute
+              namespace: homer
+            longhorn:
+              group: gateway.networking.k8s.io
+              kind: HTTPRoute
+              namespace: longhorn-system
+            prometheus:
+              group: gateway.networking.k8s.io
+              kind: HTTPRoute
+              namespace: prometheus
+            seerr:
+              group: gateway.networking.k8s.io
+              kind: HTTPRoute
+              namespace: seerr
+            syncthing:
+              group: gateway.networking.k8s.io
+              kind: HTTPRoute
+              namespace: syncthing
+            whoami:
+              group: gateway.networking.k8s.io
+              kind: HTTPRoute
+              namespace: whoami
+          to:
+            authelia:
+              group: ""
+              kind: Service
+              name: authelia
+---
+# Source: app-authelia/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: authelia-postgresql
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/postgresql
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-cnpg
+    namespace: cnpg-system
+  - name: app-longhorn
+    namespace: longhorn-system
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    clients:
+      authelia:
+        matchLabels:
+          app.kubernetes.io/name: authelia
+    instances: 2
+---
+# Source: app-authelia/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: authelia-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-external-secrets
+    namespace: external-secrets
+  - name: app-secret-generator
+    namespace: secret-generator
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      authelia-integration:
+        certManagerCertificates:
+          authelia-gateway:
+            name: authelia-gateway
+            namespace: default
+            secretName: tls-authelia-gateway
+        httpRoutes:
+          authelia:
+            name: authelia
+            namespace: default
+        listenerSets:
+          authelia:
+            name: authelia
+            namespace: default
+        referenceGrants:
+          ext-authz:
+            name: ext-authz
+            namespace: default
+      authelia-pre:
+        certManagerCertificates:
+          authelia-jwks:
+            name: authelia-jwks
+            namespace: default
+        externalSecrets:
+          authelia-ldap:
+            name: authelia-ldap
+            namespace: default
+        roleBindings:
+          forgejo-secrets-reader:
+            name: forgejo-secrets-reader
+            namespace: default
+          grafana-secrets-reader:
+            name: grafana-secrets-reader
+            namespace: default
+          immich-secrets-reader:
+            name: immich-secrets-reader
+            namespace: default
+          jellyfin-secrets-reader:
+            name: jellyfin-secrets-reader
+            namespace: default
+          paperless-secrets-reader:
+            name: paperless-secrets-reader
+            namespace: default
+          seafile-secrets-reader:
+            name: seafile-secrets-reader
+            namespace: default
+          seerr-secrets-reader:
+            name: seerr-secrets-reader
+            namespace: default
+          tuwunel-secrets-reader:
+            name: tuwunel-secrets-reader
+            namespace: default
+        roles:
+          forgejo-secrets-reader:
+            name: forgejo-secrets-reader
+            namespace: default
+          grafana-secrets-reader:
+            name: grafana-secrets-reader
+            namespace: default
+          immich-secrets-reader:
+            name: immich-secrets-reader
+            namespace: default
+          jellyfin-secrets-reader:
+            name: jellyfin-secrets-reader
+            namespace: default
+          paperless-secrets-reader:
+            name: paperless-secrets-reader
+            namespace: default
+          seafile-secrets-reader:
+            name: seafile-secrets-reader
+            namespace: default
+          seerr-secrets-reader:
+            name: seerr-secrets-reader
+            namespace: default
+          tuwunel-secrets-reader:
+            name: tuwunel-secrets-reader
+            namespace: default
+        secretStores:
+          lldap:
+            name: lldap
+            namespace: default
+        serviceAccounts:
+          lldap-reader:
+            name: lldap-reader
+            namespace: default
+        stringSecrets:
+          authelia-generated:
+            name: authelia-generated
+            namespace: default
+          authelia-oidc-forgejo:
+            name: authelia-oidc-forgejo
+            namespace: default
+          authelia-oidc-grafana:
+            name: authelia-oidc-grafana
+            namespace: default
+          authelia-oidc-immich:
+            name: authelia-oidc-immich
+            namespace: default
+          authelia-oidc-jellyfin:
+            name: authelia-oidc-jellyfin
+            namespace: default
+          authelia-oidc-paperless:
+            name: authelia-oidc-paperless
+            namespace: default
+          authelia-oidc-seafile:
+            name: authelia-oidc-seafile
+            namespace: default
+          authelia-oidc-seerr:
+            name: authelia-oidc-seerr
+            namespace: default
+          authelia-oidc-tuwunel:
+            name: authelia-oidc-tuwunel
+            namespace: default
+    resources:
+      certManagerCertificates:
+        authelia-jwks:
+          commonName: authelia-jwks
+          issuerRef:
+            kind: ClusterIssuer
+            name: self-signed
+          secretName: authelia-jwks
+      externalSecrets:
+        authelia-ldap:
+          data:
+            password:
+              remoteRef:
+                key: lldap-authelia
+                property: password
+              secretKey: password
+          refreshInterval: 1h
+          secretStoreRef: ref:lldap
+      roleBindings:
+        forgejo-secrets-reader:
+          roleRef: ref:forgejo-secrets-reader
+          subjects:
+            authelia-reader:
+              kind: ServiceAccount
+              name: authelia-reader
+              namespace: forgejo
+        grafana-secrets-reader:
+          roleRef: ref:grafana-secrets-reader
+          subjects:
+            authelia-reader:
+              kind: ServiceAccount
+              name: authelia-reader
+              namespace: prometheus
+        immich-secrets-reader:
+          roleRef: ref:immich-secrets-reader
+          subjects:
+            authelia-reader:
+              kind: ServiceAccount
+              name: authelia-reader
+              namespace: immich
+        jellyfin-secrets-reader:
+          roleRef: ref:jellyfin-secrets-reader
+          subjects:
+            authelia-reader:
+              kind: ServiceAccount
+              name: authelia-reader
+              namespace: jellyfin
+        paperless-secrets-reader:
+          roleRef: ref:paperless-secrets-reader
+          subjects:
+            authelia-reader:
+              kind: ServiceAccount
+              name: authelia-reader
+              namespace: paperless
+        seafile-secrets-reader:
+          roleRef: ref:seafile-secrets-reader
+          subjects:
+            authelia-reader:
+              kind: ServiceAccount
+              name: authelia-reader
+              namespace: seafile
+        seerr-secrets-reader:
+          roleRef: ref:seerr-secrets-reader
+          subjects:
+            authelia-reader:
+              kind: ServiceAccount
+              name: authelia-reader
+              namespace: seerr
+        tuwunel-secrets-reader:
+          roleRef: ref:tuwunel-secrets-reader
+          subjects:
+            authelia-reader:
+              kind: ServiceAccount
+              name: authelia-reader
+              namespace: tuwunel
+      roles:
+        forgejo-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - authelia-oidc-forgejo
+              resources:
+              - secrets
+              verbs:
+              - get
+        grafana-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - authelia-oidc-grafana
+              resources:
+              - secrets
+              verbs:
+              - get
+        immich-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - authelia-oidc-immich
+              resources:
+              - secrets
+              verbs:
+              - get
+        jellyfin-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - authelia-oidc-jellyfin
+              resources:
+              - secrets
+              verbs:
+              - get
+        paperless-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - authelia-oidc-paperless
+              resources:
+              - secrets
+              verbs:
+              - get
+        seafile-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - authelia-oidc-seafile
+              resources:
+              - secrets
+              verbs:
+              - get
+        seerr-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - authelia-oidc-seerr
+              resources:
+              - secrets
+              verbs:
+              - get
+        tuwunel-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - authelia-oidc-tuwunel
+              resources:
+              - secrets
+              verbs:
+              - get
+      secretStores:
+        lldap:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: ref:lldap-reader
+              remoteNamespace: lldap
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        lldap-reader:
+          automountServiceAccountToken: false
+      stringSecrets:
+        authelia-generated:
+          fields:
+            oidc-hmac:
+              fieldName: identity_providers.oidc.hmac.key
+            reset-password-hmac:
+              fieldName: identity_validation.reset_password.jwt.hmac.key
+            session-encryption:
+              fieldName: session.encryption.key
+        authelia-oidc-forgejo:
+          fields:
+            client-id: {}
+            secret: {}
+        authelia-oidc-grafana:
+          fields:
+            client-id: {}
+            secret: {}
+        authelia-oidc-immich:
+          fields:
+            client-id: {}
+            secret: {}
+        authelia-oidc-jellyfin:
+          fields:
+            client-id: {}
+            secret: {}
+        authelia-oidc-paperless:
+          fields:
+            client-id: {}
+            secret: {}
+        authelia-oidc-seafile:
+          fields:
+            client-id: {}
+            secret: {}
+        authelia-oidc-seerr:
+          fields:
+            client-id: {}
+            secret: {}
+        authelia-oidc-tuwunel:
+          fields:
+            client-id: {}
+            secret: {}
+---
+# Source: app-authelia/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: authelia-valkey
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/valkey
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-secret-generator
+    namespace: secret-generator
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    clients:
+      authelia:
+        matchLabels:
+          app.kubernetes.io/name: authelia
+    valkey:
+      auth:
+        aclUsers:
+          authelia:
+            permissions: ~* &* +@all
+          default:
+            permissions: ~* -@all
+---
+# Source: app-authelia/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: authelia
+  namespace: default
+spec:
+  interval: 10m
+  url: https://charts.authelia.com

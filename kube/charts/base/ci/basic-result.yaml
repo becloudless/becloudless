@@ -6,7 +6,7 @@ metadata:
   labels:
     app: genre2
     truc: bidule2
-  name: test-release-titi
+  name: titi
   namespace: default
 stringData:
   something: interesting
@@ -31,18 +31,23 @@ metadata:
   labels:
     app: genre
     truc: bidule
-  name: test-release-toto
+  name: toto
   namespace: default
 ---
 # Source: base-test/templates/loader.yaml
 apiVersion: v1
 kind: Service
 metadata:
+  labels:
+    app.kubernetes.io/component: myservice
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: base-test
   name: fulloverride
   namespace: default
 spec:
   ports:
-  - port: 80
+  - name: main
+    port: 80
     targetPort: 8080
   selector:
     app: myapp
@@ -51,30 +56,67 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: test-release-myapp
+  labels:
+    app.kubernetes.io/component: myapp
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/name: base-test
+  name: myapp
   namespace: default
 spec:
   replicas: 2
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app: myapp
+      app.kubernetes.io/component: myapp
+      app.kubernetes.io/instance: test-release
+      app.kubernetes.io/name: base-test
+  strategy:
+    rollingUpdate:
+      maxSurge: 33%
+      maxUnavailable: 0
+    type: RollingUpdate
   template:
     metadata:
       labels:
         app: myapp
+        app.kubernetes.io/component: myapp
+        app.kubernetes.io/instance: test-release
+        app.kubernetes.io/name: base-test
     spec:
       containers:
       - image: myimage:latest
         name: myapp
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+      - emptyDir: {}
+        name: tmp
 ---
 # Source: base-test/templates/loader.yaml
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: test-release-override
+  name: override
   namespace: default
 spec:
   maxReplicas: 3
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 70
+        type: Utilization
+    type: Resource
   minReplicas: 1
   scaleTargetRef:
     apiVersion: apps/v1

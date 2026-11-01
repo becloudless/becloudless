@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=../../../base/schema/resources/kyvernoClusterPolicies.json
+
+# Every pod runs in a user namespace (https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/): root of the
+# container is an unprivileged user of the host. A `hostUsers` already set on the pod is kept.
+# Not applied to:
+#  - the pods using the host namespaces (`hostNetwork`, `hostPID`, `hostIPC`), the API server rejects them with `hostUsers: false`
+#    (static pods of the control plane, cilium, ...);
+#  - the pods using raw block devices (`volumeDevices`), not supported with user namespaces;
+#  - the pods with the annotation `policy.bcl/skipPodSetHostUsers: "true"`, to opt out an app that does not work with it (set in the pod
+#    template, for the pods of a chart). For the pods an operator creates, a policy of the app sets `spec.hostUsers: true`
+#    (see app-longhorn), as the order of the mutate policies is not guaranteed.
+# `Ignore`: a Kyverno outage must not block the creation of pods.
+failurePolicy: Ignore
+rules:
+  - name: pod-set-host-users
+    match:
+      any:
+        - resources:
+            kinds:
+              - Pod
+            operations:
+              - CREATE
+    exclude:
+      any:
+        - resources:
+            annotations:
+              policy.bcl/skipPodSetHostUsers: "true"
+    preconditions:
+      all:
+        - key: "{{ request.object.spec.hostNetwork || `false` }}"
+          operator: Equals
+          value: false
+        - key: "{{ request.object.spec.hostPID || `false` }}"
+          operator: Equals
+          value: false
+        - key: "{{ request.object.spec.hostIPC || `false` }}"
+          operator: Equals
+          value: false
+        - key: "{{ length(request.object.spec.containers[?volumeDevices]) }}"
+          operator: Equals
+          value: 0
+    mutate:
+      patchStrategicMerge:
+        spec:
+          +(hostUsers): false

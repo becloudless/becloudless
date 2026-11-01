@@ -1,0 +1,1155 @@
+---
+# Source: app-garage/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: garage
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: garage
+        app.kubernetes.io/instance: garage
+    toPorts:
+    - ports:
+      - port: "3901"
+        protocol: TCP
+  - toEntities:
+    - kube-apiserver
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: garage
+      app.kubernetes.io/instance: garage
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/name: restore-app
+        k8s:io.kubernetes.pod.namespace: backup-restore
+    toPorts:
+    - ports:
+      - port: "3900"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: garage
+        app.kubernetes.io/instance: garage
+    toPorts:
+    - ports:
+      - port: "3901"
+        protocol: TCP
+  - fromEntities:
+    - ingress
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "3900"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: garage-layout
+        app.kubernetes.io/instance: garage-post
+    toPorts:
+    - ports:
+      - port: "3903"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        k8s:io.kubernetes.pod.namespace: longhorn-system
+        k8s:longhorn.io/component: instance-manager
+    - matchLabels:
+        k8s:app: longhorn-manager
+        k8s:io.kubernetes.pod.namespace: longhorn-system
+    toPorts:
+    - ports:
+      - port: "3900"
+        protocol: TCP
+---
+# Source: app-garage/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: garage-layout
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: garage
+        app.kubernetes.io/instance: garage
+    toPorts:
+    - ports:
+      - port: "3903"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: garage-layout
+      app.kubernetes.io/instance: garage-post
+---
+# Source: app-garage/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: garage
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: garage-pre
+  - name: app-longhorn
+    namespace: longhorn-system
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      garage:
+        clusterRoleBindings:
+          garage-crds:
+            name: garage-crds
+            namespace: default
+        clusterRoles:
+          garage-crds:
+            name: garage-crds
+            namespace: default
+        configMaps:
+          garage-config:
+            name: garage-config
+            namespace: default
+        roleBindings:
+          garage-nodes:
+            name: garage-nodes
+            namespace: default
+        roles:
+          garage-nodes:
+            name: garage-nodes
+            namespace: default
+        serviceAccounts:
+          garage:
+            name: garage
+            namespace: default
+        services:
+          garage:
+            name: garage
+            namespace: default
+          garage-headless:
+            name: garage-headless
+            namespace: default
+        statefulSets:
+          garage:
+            labels:
+              app.kubernetes.io/component: garage
+              app.kubernetes.io/instance: garage
+            name: garage
+            namespace: default
+      garage-integration:
+        certManagerCertificates:
+          garage-gateway:
+            name: garage-gateway
+            namespace: default
+            secretName: tls-garage-gateway
+        httpRoutes:
+          garage:
+            name: garage
+            namespace: default
+        listenerSets:
+          garage:
+            name: garage
+            namespace: default
+      garage-post:
+        jobs:
+          garage-layout:
+            labels:
+              app.kubernetes.io/component: garage-layout
+              app.kubernetes.io/instance: garage-post
+            name: ""
+            namespace: default
+      garage-pre:
+        roleBindings:
+          longhorn-secrets-reader:
+            name: longhorn-secrets-reader
+            namespace: default
+        roles:
+          longhorn-secrets-reader:
+            name: longhorn-secrets-reader
+            namespace: default
+        stringSecrets:
+          garage:
+            name: garage
+            namespace: default
+          garage-longhorn:
+            name: garage-longhorn
+            namespace: default
+      longhorn-backup:
+        externalSecrets:
+          garage-backup:
+            name: garage-backup
+            namespace: longhorn-system
+        longhornBackupTargets:
+          default:
+            name: default
+            namespace: longhorn-system
+        secretStores:
+          garage:
+            name: garage
+            namespace: longhorn-system
+        serviceAccounts:
+          garage-reader:
+            name: garage-reader
+            namespace: longhorn-system
+    resources:
+      clusterRoleBindings:
+        garage-crds:
+          roleRef: ref:garage-crds
+          subjects:
+            garage:
+              kind: ServiceAccount
+              name: garage
+              namespace: garage
+      clusterRoles:
+        garage-crds:
+          rules:
+            crds:
+              apiGroups:
+              - apiextensions.k8s.io
+              resources:
+              - customresourcedefinitions
+              verbs:
+              - get
+              - list
+              - watch
+              - create
+              - patch
+      configMaps:
+        garage-config:
+          data:
+            garage.toml: |-
+              replication_factor = 2
+              consistency_mode = "consistent"
+
+              metadata_dir = "/var/lib/garage/meta"
+              data_dir = "/var/lib/garage/data"
+              # LMDB can be corrupted by an unclean shutdown: the snapshots are in the metadata volume, and the metadata
+              # can also be rebuilt from the other nodes
+              db_engine = "lmdb"
+              metadata_auto_snapshot_interval = "6h"
+
+              rpc_bind_addr = "0.0.0.0:3901"
+
+              [kubernetes_discovery]
+              namespace = "garage"
+              service_name = "garage"
+
+              [s3_api]
+              api_bind_addr = "0.0.0.0:3900"
+              s3_region = "garage"
+
+              [admin]
+              api_bind_addr = "0.0.0.0:3903"
+      roleBindings:
+        garage-nodes:
+          roleRef: ref:garage-nodes
+          subjects:
+            garage:
+              kind: ServiceAccount
+              name: garage
+              namespace: garage
+      roles:
+        garage-nodes:
+          rules:
+            garagenodes:
+              apiGroups:
+              - deuxfleurs.fr
+              resources:
+              - garagenodes
+              verbs:
+              - get
+              - list
+              - watch
+              - create
+              - update
+              - patch
+              - delete
+      serviceAccounts:
+        garage:
+          automountServiceAccountToken: true
+      services:
+        garage:
+          ports:
+            s3:
+              port: 3900
+        garage-headless:
+          clusterIP: None
+          ports:
+            admin:
+              port: 3903
+            rpc:
+              port: 3901
+            s3:
+              port: 3900
+          selector:
+            app.kubernetes.io/component: garage
+      statefulSets:
+        garage:
+          replicas: 2
+          serviceName: garage-headless
+          template:
+            spec:
+              containers:
+                garage:
+                  env:
+                    GARAGE_ADMIN_TOKEN:
+                      secretKeyRef:
+                        key: admin-token
+                        name: ref:garage
+                    GARAGE_RPC_SECRET:
+                      secretKeyRef:
+                        key: rpc-secret
+                        name: ref:garage
+                  image: docker.io/dxflrs/garage:v2.5.0
+                  name: garage
+                  ports:
+                    admin:
+                      containerPort: 3903
+                    rpc:
+                      containerPort: 3901
+                    s3:
+                      containerPort: 3900
+                  probe:
+                    tcpSocket:
+                      port: admin
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                    runAsGroup: 1000
+                    runAsUser: 1000
+                  volumeMounts:
+                    config:
+                      mountPath: /etc/garage.toml
+                      name: config
+                      readOnly: true
+                      subPath: garage.toml
+                    data:
+                      mountPath: /var/lib/garage/data
+                      name: garage-data
+                    meta:
+                      mountPath: /var/lib/garage/meta
+                      name: garage-meta
+              securityContext:
+                fsGroup: 1000
+                fsGroupChangePolicy: OnRootMismatch
+                runAsGroup: 1000
+                runAsUser: 1000
+              serviceAccountName: ref:garage
+              topologySpreadConstraints:
+                host:
+                  labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/component: garage
+                      app.kubernetes.io/instance: garage
+                  maxSkew: 1
+                  topologyKey: kubernetes.io/hostname
+                  whenUnsatisfiable: ScheduleAnyway
+              volumes:
+                config:
+                  configMap:
+                    name: ref:garage-config
+                  name: config
+          volumeClaimTemplates:
+            garage-data:
+              metadata:
+                name: garage-data
+              spec:
+                accessModes:
+                - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 10Gi
+                storageClassName: longhorn-files
+            garage-meta:
+              metadata:
+                name: garage-meta
+              spec:
+                accessModes:
+                - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+                storageClassName: longhorn-db
+---
+# Source: app-garage/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: garage-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: garage-post
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      garage:
+        clusterRoleBindings:
+          garage-crds:
+            name: garage-crds
+            namespace: default
+        clusterRoles:
+          garage-crds:
+            name: garage-crds
+            namespace: default
+        configMaps:
+          garage-config:
+            name: garage-config
+            namespace: default
+        roleBindings:
+          garage-nodes:
+            name: garage-nodes
+            namespace: default
+        roles:
+          garage-nodes:
+            name: garage-nodes
+            namespace: default
+        serviceAccounts:
+          garage:
+            name: garage
+            namespace: default
+        services:
+          garage:
+            name: garage
+            namespace: default
+          garage-headless:
+            name: garage-headless
+            namespace: default
+        statefulSets:
+          garage:
+            labels:
+              app.kubernetes.io/component: garage
+              app.kubernetes.io/instance: garage
+            name: garage
+            namespace: default
+      garage-integration:
+        certManagerCertificates:
+          garage-gateway:
+            name: garage-gateway
+            namespace: default
+            secretName: tls-garage-gateway
+        httpRoutes:
+          garage:
+            name: garage
+            namespace: default
+        listenerSets:
+          garage:
+            name: garage
+            namespace: default
+      garage-post:
+        jobs:
+          garage-layout:
+            labels:
+              app.kubernetes.io/component: garage-layout
+              app.kubernetes.io/instance: garage-post
+            name: ""
+            namespace: default
+      garage-pre:
+        roleBindings:
+          longhorn-secrets-reader:
+            name: longhorn-secrets-reader
+            namespace: default
+        roles:
+          longhorn-secrets-reader:
+            name: longhorn-secrets-reader
+            namespace: default
+        stringSecrets:
+          garage:
+            name: garage
+            namespace: default
+          garage-longhorn:
+            name: garage-longhorn
+            namespace: default
+      longhorn-backup:
+        externalSecrets:
+          garage-backup:
+            name: garage-backup
+            namespace: longhorn-system
+        longhornBackupTargets:
+          default:
+            name: default
+            namespace: longhorn-system
+        secretStores:
+          garage:
+            name: garage
+            namespace: longhorn-system
+        serviceAccounts:
+          garage-reader:
+            name: garage-reader
+            namespace: longhorn-system
+    resources:
+      certManagerCertificates:
+        garage-gateway:
+          dnsNames:
+            garage: s3.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-garage-gateway
+      httpRoutes:
+        garage:
+          hostnames:
+            garage: s3.test.com
+          parentRefs:
+            garage:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: garage
+              sectionName: garage
+          rules:
+            root:
+              backendRefs:
+                backend:
+                  name: ref:garage
+                  port: 3900
+              timeouts:
+                request: 0s
+      listenerSets:
+        garage:
+          listeners:
+            garage:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: s3.test.com
+              name: garage
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: ref:garage-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+---
+# Source: app-garage/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: garage-post
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: garage
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      garage:
+        clusterRoleBindings:
+          garage-crds:
+            name: garage-crds
+            namespace: default
+        clusterRoles:
+          garage-crds:
+            name: garage-crds
+            namespace: default
+        configMaps:
+          garage-config:
+            name: garage-config
+            namespace: default
+        roleBindings:
+          garage-nodes:
+            name: garage-nodes
+            namespace: default
+        roles:
+          garage-nodes:
+            name: garage-nodes
+            namespace: default
+        serviceAccounts:
+          garage:
+            name: garage
+            namespace: default
+        services:
+          garage:
+            name: garage
+            namespace: default
+          garage-headless:
+            name: garage-headless
+            namespace: default
+        statefulSets:
+          garage:
+            labels:
+              app.kubernetes.io/component: garage
+              app.kubernetes.io/instance: garage
+            name: garage
+            namespace: default
+      garage-integration:
+        certManagerCertificates:
+          garage-gateway:
+            name: garage-gateway
+            namespace: default
+            secretName: tls-garage-gateway
+        httpRoutes:
+          garage:
+            name: garage
+            namespace: default
+        listenerSets:
+          garage:
+            name: garage
+            namespace: default
+      garage-post:
+        jobs:
+          garage-layout:
+            labels:
+              app.kubernetes.io/component: garage-layout
+              app.kubernetes.io/instance: garage-post
+            name: ""
+            namespace: default
+      garage-pre:
+        roleBindings:
+          longhorn-secrets-reader:
+            name: longhorn-secrets-reader
+            namespace: default
+        roles:
+          longhorn-secrets-reader:
+            name: longhorn-secrets-reader
+            namespace: default
+        stringSecrets:
+          garage:
+            name: garage
+            namespace: default
+          garage-longhorn:
+            name: garage-longhorn
+            namespace: default
+      longhorn-backup:
+        externalSecrets:
+          garage-backup:
+            name: garage-backup
+            namespace: longhorn-system
+        longhornBackupTargets:
+          default:
+            name: default
+            namespace: longhorn-system
+        secretStores:
+          garage:
+            name: garage
+            namespace: longhorn-system
+        serviceAccounts:
+          garage-reader:
+            name: garage-reader
+            namespace: longhorn-system
+    resources:
+      jobs:
+        garage-layout:
+          activeDeadlineSeconds: 900
+          backoffLimit: 0
+          fullNameOverride: garage-layout-91e427ff8c
+          template:
+            spec:
+              containers:
+                layout:
+                  args:
+                  - |-
+                    replicas=$(sed -n 's/^replication_factor = //p' /etc/garage/garage.toml)
+                    api=http://garage-0.garage-headless:3903/v2
+                    get() { wget -qO- --header "Authorization: Bearer $ADMIN_TOKEN" "$api/$1"; }
+                    post() { wget -qO- --header "Authorization: Bearer $ADMIN_TOKEN" --header 'Content-Type: application/json' --post-data "$2" "$api/$1"; }
+                    retry() { n=0; until "$@" > /dev/null; do n=$((n + 1)); [ "$n" -lt 30 ] || exit 1; sleep 2; done; }
+                    until status=$(get GetClusterStatus) && [ "$(echo "$status" | grep -o '"isUp": *true' | wc -l)" -ge "$replicas" ]; do
+                      echo 'waiting for the nodes'; sleep 5
+                    done
+                    have=$(get GetClusterLayout | grep -o '"id": *"[0-9a-f]*"' | cut -d'"' -f4 | tr '\n' ' ')
+                    zone=$(echo $have | wc -w)
+                    roles=
+                    for id in $(echo "$status" | grep -o '"id": *"[0-9a-f]*"' | cut -d'"' -f4); do
+                      case " $have " in *" $id "*) continue;; esac
+                      zone=$((zone + 1))
+                      roles="$roles${roles:+,}{\"id\":\"$id\",\"zone\":\"z$zone\",\"capacity\":$CAPACITY,\"tags\":[]}"
+                    done
+                    if [ -n "$roles" ]; then
+                      post UpdateClusterLayout "{\"roles\":[$roles]}"
+                      version=$(echo "$status" | grep -o '"layoutVersion": *[0-9]*' | cut -d: -f2)
+                      post ApplyClusterLayout "{\"version\":$((version + 1))}"
+                      echo 'the layout is applied'
+                    fi
+                    # bucket, access key id, secret access key, name of the key
+                    bucket_and_key() {
+                      get "GetBucketInfo?globalAlias=$1" > /dev/null 2>&1 || retry post CreateBucket "{\"globalAlias\":\"$1\"}"
+                      bucket_id=$(get "GetBucketInfo?globalAlias=$1" | grep -o '"id": *"[0-9a-f]*"' | head -n 1 | cut -d'"' -f4)
+                      get "GetKeyInfo?id=$2" > /dev/null 2>&1 || retry post ImportKey "{\"accessKeyId\":\"$2\",\"secretAccessKey\":\"$3\",\"name\":\"$4\"}"
+                      post AllowBucketKey "{\"bucketId\":\"$bucket_id\",\"accessKeyId\":\"$2\",\"permissions\":{\"read\":true,\"write\":true,\"owner\":false}}" > /dev/null
+                      echo "the bucket $1 and the key $4 are ready"
+                    }
+                    bucket_and_key longhorn-backups "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" longhorn
+                  command:
+                  - sh
+                  - -ec
+                  env:
+                    ADMIN_TOKEN:
+                      secretKeyRef:
+                        key: admin-token
+                        name: ref:garage
+                    AWS_ACCESS_KEY_ID:
+                      secretKeyRef:
+                        key: AWS_ACCESS_KEY_ID
+                        name: ref:garage-longhorn
+                    AWS_SECRET_ACCESS_KEY:
+                      secretKeyRef:
+                        key: AWS_SECRET_ACCESS_KEY
+                        name: ref:garage-longhorn
+                    CAPACITY: "10737418240"
+                  image: docker.io/library/alpine:3.24.3
+                  name: layout
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                    runAsGroup: 65534
+                    runAsUser: 65534
+                  volumeMounts:
+                    config:
+                      mountPath: /etc/garage
+                      name: config
+                      readOnly: true
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 65534
+                runAsUser: 65534
+              volumes:
+                config:
+                  configMap:
+                    name: ref:garage-config
+                  name: config
+---
+# Source: app-garage/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: garage-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-secret-generator
+    namespace: secret-generator
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      garage:
+        clusterRoleBindings:
+          garage-crds:
+            name: garage-crds
+            namespace: default
+        clusterRoles:
+          garage-crds:
+            name: garage-crds
+            namespace: default
+        configMaps:
+          garage-config:
+            name: garage-config
+            namespace: default
+        roleBindings:
+          garage-nodes:
+            name: garage-nodes
+            namespace: default
+        roles:
+          garage-nodes:
+            name: garage-nodes
+            namespace: default
+        serviceAccounts:
+          garage:
+            name: garage
+            namespace: default
+        services:
+          garage:
+            name: garage
+            namespace: default
+          garage-headless:
+            name: garage-headless
+            namespace: default
+        statefulSets:
+          garage:
+            labels:
+              app.kubernetes.io/component: garage
+              app.kubernetes.io/instance: garage
+            name: garage
+            namespace: default
+      garage-integration:
+        certManagerCertificates:
+          garage-gateway:
+            name: garage-gateway
+            namespace: default
+            secretName: tls-garage-gateway
+        httpRoutes:
+          garage:
+            name: garage
+            namespace: default
+        listenerSets:
+          garage:
+            name: garage
+            namespace: default
+      garage-post:
+        jobs:
+          garage-layout:
+            labels:
+              app.kubernetes.io/component: garage-layout
+              app.kubernetes.io/instance: garage-post
+            name: ""
+            namespace: default
+      garage-pre:
+        roleBindings:
+          longhorn-secrets-reader:
+            name: longhorn-secrets-reader
+            namespace: default
+        roles:
+          longhorn-secrets-reader:
+            name: longhorn-secrets-reader
+            namespace: default
+        stringSecrets:
+          garage:
+            name: garage
+            namespace: default
+          garage-longhorn:
+            name: garage-longhorn
+            namespace: default
+      longhorn-backup:
+        externalSecrets:
+          garage-backup:
+            name: garage-backup
+            namespace: longhorn-system
+        longhornBackupTargets:
+          default:
+            name: default
+            namespace: longhorn-system
+        secretStores:
+          garage:
+            name: garage
+            namespace: longhorn-system
+        serviceAccounts:
+          garage-reader:
+            name: garage-reader
+            namespace: longhorn-system
+    resources:
+      roleBindings:
+        longhorn-secrets-reader:
+          roleRef: ref:longhorn-secrets-reader
+          subjects:
+            backup-restore-garage-reader:
+              kind: ServiceAccount
+              name: garage-reader
+              namespace: backup-restore
+            garage-reader:
+              kind: ServiceAccount
+              name: garage-reader
+              namespace: longhorn-system
+      roles:
+        longhorn-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - garage-longhorn
+              resources:
+              - secrets
+              verbs:
+              - get
+      stringSecrets:
+        garage:
+          fields:
+            admin-token:
+              encoding: hex
+              length: "64"
+            rpc-secret:
+              encoding: hex
+              length: "64"
+        garage-longhorn:
+          data:
+            AWS_ENDPOINTS: http://garage.garage.svc.cluster.local:3900
+          fields:
+            access-key-id:
+              encoding: hex
+              fieldName: AWS_ACCESS_KEY_ID
+              length: "32"
+            secret-access-key:
+              encoding: hex
+              fieldName: AWS_SECRET_ACCESS_KEY
+              length: "64"
+---
+# Source: app-garage/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: longhorn-backup
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: garage-post
+  - name: app-external-secrets
+    namespace: external-secrets
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  releaseName: longhorn-backup
+  targetNamespace: longhorn-system
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      garage:
+        clusterRoleBindings:
+          garage-crds:
+            name: garage-crds
+            namespace: default
+        clusterRoles:
+          garage-crds:
+            name: garage-crds
+            namespace: default
+        configMaps:
+          garage-config:
+            name: garage-config
+            namespace: default
+        roleBindings:
+          garage-nodes:
+            name: garage-nodes
+            namespace: default
+        roles:
+          garage-nodes:
+            name: garage-nodes
+            namespace: default
+        serviceAccounts:
+          garage:
+            name: garage
+            namespace: default
+        services:
+          garage:
+            name: garage
+            namespace: default
+          garage-headless:
+            name: garage-headless
+            namespace: default
+        statefulSets:
+          garage:
+            labels:
+              app.kubernetes.io/component: garage
+              app.kubernetes.io/instance: garage
+            name: garage
+            namespace: default
+      garage-integration:
+        certManagerCertificates:
+          garage-gateway:
+            name: garage-gateway
+            namespace: default
+            secretName: tls-garage-gateway
+        httpRoutes:
+          garage:
+            name: garage
+            namespace: default
+        listenerSets:
+          garage:
+            name: garage
+            namespace: default
+      garage-post:
+        jobs:
+          garage-layout:
+            labels:
+              app.kubernetes.io/component: garage-layout
+              app.kubernetes.io/instance: garage-post
+            name: ""
+            namespace: default
+      garage-pre:
+        roleBindings:
+          longhorn-secrets-reader:
+            name: longhorn-secrets-reader
+            namespace: default
+        roles:
+          longhorn-secrets-reader:
+            name: longhorn-secrets-reader
+            namespace: default
+        stringSecrets:
+          garage:
+            name: garage
+            namespace: default
+          garage-longhorn:
+            name: garage-longhorn
+            namespace: default
+      longhorn-backup:
+        externalSecrets:
+          garage-backup:
+            name: garage-backup
+            namespace: longhorn-system
+        longhornBackupTargets:
+          default:
+            name: default
+            namespace: longhorn-system
+        secretStores:
+          garage:
+            name: garage
+            namespace: longhorn-system
+        serviceAccounts:
+          garage-reader:
+            name: garage-reader
+            namespace: longhorn-system
+    resources:
+      externalSecrets:
+        garage-backup:
+          dataFrom:
+            all:
+              extract:
+                key: garage-longhorn
+          refreshInterval: 1h
+          secretStoreRef: ref:garage
+      longhornBackupTargets:
+        default:
+          annotations:
+            helm.sh/resource-policy: keep
+          backupTargetURL: s3://longhorn-backups@garage/
+          credentialSecret: garage-backup
+          fullNameOverride: default
+          pollInterval: 3m0s
+      secretStores:
+        garage:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: ref:garage-reader
+              remoteNamespace: garage
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        garage-reader:
+          automountServiceAccountToken: false

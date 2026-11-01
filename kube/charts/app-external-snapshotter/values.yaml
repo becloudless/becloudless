@@ -1,0 +1,69 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+
+resources:
+  fluxGitRepositories:
+    external-snapshotter:
+      url: https://github.com/kubernetes-csi/external-snapshotter
+      interval: 24h
+      ref:
+        tag: v8.7.0 # TODO renovate
+
+  # The controller runs in kube-system, shared with the other components, hence the selector.
+  ciliumNetworkPolicies:
+    snapshot-controller:
+      namespace: kube-system
+      endpointSelector:
+        matchLabels: {"app.kubernetes.io/name": snapshot-controller}
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+
+  fluxKustomizations:
+    external-snapshotter-crds:
+      interval: 24h
+      timeout: 1m
+      path: ./client/config/crd
+      prune: false
+      sourceRef:
+        kind: GitRepository
+        name: external-snapshotter
+
+    # the controller (deployed in kube-system by upstream manifests) needs the CRDs
+    external-snapshotter:
+      interval: 24h
+      timeout: 1m
+      path: ./deploy/kubernetes/snapshot-controller
+      prune: false
+      sourceRef:
+        kind: GitRepository
+        name: external-snapshotter
+      dependsOn:
+        - name: external-snapshotter-crds
+      # the upstream manifest sets no security context: compliant with container-require-run-as-non-root and
+      # container-require-read-only-root-filesystem (see app-kyverno)
+      patches:
+        security-context:
+          target:
+            kind: Deployment
+            name: snapshot-controller
+          patch: |
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: snapshot-controller
+            spec:
+              template:
+                spec:
+                  securityContext:
+                    runAsNonRoot: true
+                    runAsUser: 65534
+                    runAsGroup: 65534
+                    seccompProfile:
+                      type: RuntimeDefault
+                  containers:
+                    - name: snapshot-controller
+                      securityContext:
+                        readOnlyRootFilesystem: true
+                        allowPrivilegeEscalation: false
+                        capabilities:
+                          drop: [ ALL ]

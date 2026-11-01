@@ -1,0 +1,297 @@
++++
+title = "App Charts"
+weight = 60
+description = "Helm chart layout of the apps installed by the apps chart"
++++
+
+Apps are Helm charts `kube/charts/app-<name>`, built on the `base` library chart and installed by the `apps` chart.
+This page describes how an app chart splits its resources in several `HelmRelease`s (sub-HRs) so that they are
+created in the right order.
+
+## Installation
+
+The `apps` chart (`kube/charts/apps`) has a registry of apps in its `apps` values, each in one or more groups
+(`minimal`, `cluster`, `extra`). For each enabled app it creates:
+
+- the namespace of the app, `<name>` by default (`namespace:` to change it)
+- the service account `flux-<name>`, cluster-admin on the namespace of the app only
+  (`clusterAdmin: true` for an app that installs cluster-scoped resources: CRDs, ClusterRoles, webhooks, ClusterIssuers...)
+- the `HelmRelease` `app-<name>` installing `kube/charts/<appChart.name>` as `flux-<name>`
+
+The resources of the chart are created in the namespace of its `HelmRelease`, so charts do not set a default
+namespace. Resource names are the id of the resource: `prefixNamesWithRelease` is `false` by default in `base`.
+
+## App values
+
+The cluster values every app needs are the `app` values of the `app` library chart (`kube/charts/app`), which
+inherits from `base`:
+
+| Value | Description |
+|---|---|
+| `app.domain` | domain of the cluster |
+| `app.name` | name of the cluster, deduced from the domain by default |
+| `app.lldapdn` | base DN of lldap, deduced from the domain by default (`dc=example,dc=com`) |
+| `app.lldapUsers` | users of the cluster, created in lldap and given an instance by some apps |
+
+The `apps` chart computes them from its `config` and gives them to each app as a `global-values` ConfigMap in the
+namespace of the app, used as `valuesFrom` of the `HelmRelease`. In an app chart they are read with `.Values.app.domain`,
+`.Values.app.name`... and are required (`checkRequiredValues`).
+
+An app chart declares both `app` and `base` in its `dependencies`, uses `app.loader.all` (or `app.loader.init` to
+render with its own templates) instead of `base.loader.all`, and gets its default values merged with those of `app`
+and `base`. Its editor schema (`schema/values.schema.json`) references `../app/schema/values.schema.json`, where the
+`app` schema lives. A chart that does not use the cluster values (`app-external-secrets`, `app-gateway-api`) stays
+on `base.loader.all`.
+
+## Restoring the volumes of an app
+
+The volumes of the apps are backed up daily by Longhorn into the bucket of Garage (the `default` group of recurring jobs). An
+app can get its volumes back from the last backup when it is enabled, with `restore: true` in its entry of the `apps` chart. The
+PVCs are not listed: nothing about them is declared in the chart of the app, the job finds the PVCs of the namespace in the
+backups (Longhorn saves the namespace and the name of the PVC in each one, and the storage class and access mode are those of the
+backed up volume).
+
+```yaml
+apps:
+  tuwunel:
+    restore: true
+```
+
+For such an app the `apps` chart also creates the HelmRelease `restore-<name>` in the namespace `backup-restore` (the app `backup-restore`, `app-backup-restore`,
+must be enabled next to `longhorn` and `garage`; it waits for them, and for the backup target of Garage), and `app-<name>` waits for it.
+Its job (`kube/charts/restore-app`), for each PVC that does not
+exist yet: syncs the backup target, finds the last completed backup of the PVC (Longhorn saves its namespace and name in the backup),
+creates a Longhorn volume restored from it and the PV of this volume with a `claimRef` to the PVC, so the PVC of the app is bound to it
+when it is created. It does nothing when the PVC exists, when there is no backup target or backup (the app starts empty), and fails (the
+app waits, the job is retried) when the target is not reachable.
+
+- The claim of the app has to use the same name, storage class and access mode as when it was backed up, and not ask for more than the size
+  of the volume at that time. A PVC the app does not use anymore but that is in the backups is restored too: delete its PV.
+- It is the flag that opts in, because the job needs rights on the whole cluster (PVs): they are given to the job, not to the apps.
+- A CloudNativePG cluster is restored too (Longhorn saves the workload of the PVC in the backup). Its instances are one PVC: the job takes
+  the most recent backup of any instance and creates it as `<cluster>-1`, with the labels and annotations of the operator (a PVC created
+  by the operator would be initialised empty). When the `Cluster` is created the operator adopts the PVC, promotes it, sets the password of
+  the `app` user from the new secret, and clones the other instances from it. Nothing is restored when a PVC of the cluster exists. There
+  is no WAL archive: the transactions after the backup are lost.
+- The secrets generated for the app (the ones owned by a `StringSecret` of secret-generator: a database encryption key, the password of an
+  administrator stored in the database) are saved too, hourly, by a CronJob of the namespace `backup-restore`, in the bucket of the backup target (`longhorn-backups` of
+  Garage, under `secrets/<namespace>/<secret>/<date>.json`, one object by change, the previous values are kept). The key is the one of
+  Longhorn, which uses `backupstore/` only. The job restores the
+  last version of each secret before the volumes, when the app never ran (it has no `StringSecret` yet): secret-generator does not touch a
+  secret it does not own, so the app finds them as they were, and owns them from the next run of the CronJob. The secrets are stored as
+  they are in the cluster, the bucket is as sensitive as them. Only what was saved by a CronJob can be restored: a secret generated before
+  the first run is lost.
+- Only for the apps that keep all their state in their PVCs, databases and generated secrets. Not for `garage` (it holds the backups) nor
+  `longhorn`.
+- Everything that restores is in the namespace `backup-restore`: its account `backup-restore` is the only one with the rights (create PVs and PVCs,
+  the volumes of Longhorn, the secrets of the apps), and `flux-backup-restore` is cluster-admin to create them.
+- The backups are in the cluster itself (the bucket of Garage is on Longhorn volumes), so this restores an app that was removed or whose
+  volume was lost, not a lost cluster.
+
+## Sub-HRs
+
+A chart does not create everything in its own release. A resource that needs something that does not exist yet
+(a secret, a CRD, a running service) goes in a sub-HR created by the chart, which waits for it with `dependsOn`.
+A sub-HR is either a chart of its own (`postgresql`, `valkey`: charts of this repository) or `./kube/charts/base-loader`,
+which renders the `resources` given in its `values`.
+
+| HR | Contains | Waits for | Waited for |
+|---|---|---|---|
+| `<app>-pre` | what the service needs to start: generated secrets (`stringSecrets`), certificates mounted by the pods, Kyverno policies | external apps (`app-cert-manager`, `app-secret-generator`, `app-kyverno`...) | yes |
+| `<app>` | the service: public Helm chart, or `configMaps`, `deployments`, `services`, `persistentVolumeClaims` through `base-loader` | `<app>-pre`, `<app>-postgresql`, `<app>-valkey` | yes |
+| `<app>-post` | resources of the CRDs declared by the service (Longhorn settings and storage classes, cert-manager ClusterIssuers, Kyverno policies, Cilium Gateway...) | `<app>` | yes |
+| `<app>-integration` | public exposure: gateway certificate, `listenerSets`, `httpRoutes`, `tlsRoutes`, `referenceGrants` | `<app>-post` or `<app>`, `app-cert-manager`, `app-gateway-api` | no |
+
+Rules:
+
+- The service always starts after `-pre`: what a pod mounts or reads at start (a secret, a certificate) is in `-pre`,
+  never in the service or in `-integration`.
+- `-post` always starts after the service, because the CRDs it needs come with it.
+- `-integration` starts after `-post` (or the service when there is none), but nothing waits for it:
+  `install.disableWait` and `upgrade.disableWait` are `true`. A slow or failing public part (a rate limited
+  Let's Encrypt certificate, a route not accepted) does not keep `app-<name>`, and the apps depending on it, from being ready.
+  Its state is visible on its own `HelmRelease`.
+- Only create the sub-HRs the app needs. `-pre` and `-post` are only for apps that have something to put in them.
+- A sub-HR that has to depend on an app does it with `dependsOn` in the chart, not in the `apps` chart.
+- A certificate that a pod mounts (`tls-lldaps`) is in `-pre`, the one only used by the Gateway (`lldap-gateway`) is in `-integration`.
+- The sub-HRs of an app run as `flux-<name>`, they can only create resources in the namespace of the app, except for
+  apps with `clusterAdmin`.
+- The postgres cluster of an app is a sub-HR `<app>-postgresql` (chart `postgresql`) depending on `app-cert-manager`,
+  `app-cnpg` and `app-longhorn`. The chart sets `prefixNamesWithRelease: true`, its resources are named `<release>-<id>`.
+- The valkey of an app is a sub-HR `<app>-valkey` (chart `valkey`) depending on `app-secret-generator`. The chart wraps the public
+  valkey chart: `valkey.auth.aclUsers` lists the users, whose passwords are generated in the secret `<app>-valkey` (one key per
+  user), and `clients` lists the pods that can connect to it (network policy).
+
+```mermaid
+flowchart LR
+  ext["external apps<br/>cert-manager, secret-generator, kyverno"] --> pre
+  pre["&lt;app&gt;-pre"] --> svc["&lt;app&gt;"]
+  db["&lt;app&gt;-postgresql<br/>&lt;app&gt;-valkey"] --> svc
+  svc --> post["&lt;app&gt;-post"]
+  post -.-> integration["&lt;app&gt;-integration<br/>(not waited for)"]
+  svc -.-> integration
+```
+
+## Labels and selectors
+
+The `base` chart gives the standard labels to the workloads and the services, nothing has to be written by hand:
+
+| Label | Value |
+|---|---|
+| `app.kubernetes.io/name` | the name of the chart (`base-loader` for the releases of `base-loader`, `restore-app`, `syncthing`...) |
+| `app.kubernetes.io/instance` | the name of the release (the name of the sub-HR) |
+| `app.kubernetes.io/component` | the id of the resource (`deployments.seerr` is the component `seerr`) |
+
+- `Deployment`, `StatefulSet`, `DaemonSet`: `metadata.labels`, `spec.selector.matchLabels` and the labels of the pods have the 3 labels.
+  Do not write `selector` or `template.metadata.labels`.
+- `Job` and `CronJob`: the labels of the resource and of its pods.
+- `Service`: `metadata.labels` and, when there is no `selector`, `spec.selector` with the 3 labels (the service of the workload of
+  the same id). A service for the workload of another id only gives `selector: {app.kubernetes.io/component: <id>}`, the other 2 labels
+  are added. Any other selector is kept (pods of another chart), as for `ExternalName` services that have none.
+- A label or a selector given in the values wins over the generated one.
+- A Cilium policy, a `clients` of `postgresql` and `valkey`... selecting these pods use the release and the id, in the namespace of the
+  release: `matchLabels: {app.kubernetes.io/instance: seerr, app.kubernetes.io/component: seerr}`. From another namespace, the keys are
+  prefixed with `k8s:` and `k8s:io.kubernetes.pod.namespace` is added. The pods of a public chart keep the labels of their chart.
+
+Changing the selector of an existing `Deployment`, `StatefulSet` or `DaemonSet` is refused by Kubernetes (`field is immutable`):
+delete it without its pods (`kubectl delete --cascade=orphan`) and let Flux recreate it. The volumes of a `StatefulSet` are kept.
+
+## Example
+
+`app-lldap`:
+
+```yaml
+resources:
+  fluxHelmReleases:
+    lldap-postgresql:            # the database
+      chart:
+        spec:
+          chart: ./kube/charts/postgresql
+          ...
+
+    lldap-pre:                   # secrets and certificate mounted by the pod
+      dependsOn:
+        cert-manager: { name: app-cert-manager, namespace: cert-manager }
+        secret-generator: { name: app-secret-generator, namespace: secret-generator }
+      chart:
+        spec:
+          chart: ./kube/charts/base-loader
+          ...
+      values:
+        resources:
+          stringSecrets: ...
+          certManagerCertificates: ...
+
+    lldap:                       # the service
+      dependsOn:
+        lldap-pre: { name: lldap-pre }
+        lldap-postgresql: { name: lldap-postgresql }
+      ...
+      values:
+        resources:
+          configMaps: ...
+          deployments: ...
+          services: ...
+
+    lldap-integration:           # exposed by the Gateway, not waited for: generated by `expose`, merged with this one
+      values:
+        resources:
+          listenerSets: ...      # the ldaps listener, `expose` does not do the TLS passthrough
+          tlsRoutes: ...
+
+expose:
+  lldap:
+    port: 17170
+    dependsOn: [ref:lldap-post]
+```
+
+## Public exposure (`expose`)
+
+`expose` is the shorthand of the public exposure of an app by the Gateway `shared` (kube-system), TLS terminated by the Gateway. The key
+is the id of an exposed hostname, the value its options:
+
+| Option | Description |
+|---|---|
+| `hostname` | the subdomain of `app.domain` (the id by default). A value with a dot is used as it is (`"{{ .Values.app.domain }}"` for the apex) |
+| `service`, `port` | the Service that gets the requests (`ref:<id>` by default), and its port (not set by default) |
+| `auth` | `none` (default) or `authelia`, the forward auth. The ReferenceGrant to the authelia service is in `app-authelia` |
+| `timeouts` | the timeouts of the route (`{request: 0s}` for the uploads, the downloads and the streams) |
+| `release` | the hostnames of a same release are exposed together, in one ListenerSet (the id by default) |
+| `dependsOn` | what the release waits for (`[ref:<release>]` by default) |
+| `enabled` | `false` disables the release (a cluster enables it with `fluxHelmReleases.<release>-integration.enabled: true`) |
+
+It generates the release `<release>-integration` (not waited for, it waits for `app-cert-manager` and `app-gateway-api`) with the
+Certificate `<id>-gateway` (secret `tls-<id>-gateway`), a listener `<id>` of the ListenerSet `<release>` and the HTTPRoute `<id>`.
+A release of the same name in `resources.fluxHelmReleases` is merged with the generated one and wins, to add what the shorthand does
+not do (the ldaps passthrough of `app-lldap`, the ReferenceGrant of `app-authelia`).
+
+```yaml
+expose:
+  whoami:
+    port: 8080
+    auth: authelia
+  tuwunel:
+    hostname: matrix
+    port: 8008
+    timeouts:
+      request: 0s
+```
+
+`app-kube` (TLS passthrough, no certificate) and `app-mailu` (the certificate is shared with the mail protocols) keep a manual release.
+
+## OIDC clients (`oidc` and `oidcClients`)
+
+An app that logs in with authelia has an OIDC client, in two parts that share the secret `authelia-oidc-<id>` (keys `client-id` and
+`secret`, generated in the authelia namespace):
+
+- `oidcClients` in `app-authelia` only (its templates, `app-authelia/templates/features/_oidcClients.tpl`; its schema is
+  `app-authelia/schema/values.schema.json`), the key is the id of the client. It generates the secret, the Role that lets the app read only this
+  secret (and its RoleBinding for the namespace `namespace`, the id by default), the secret mounted in the init container `oidc-hashes`
+  (which makes the hash of the secret) and in the chart, the authorization policy `<id>_authz` and the client.
+
+  | Option | Description |
+  |---|---|
+  | `redirectUris` | required, `{clientId}` is replaced by the client id |
+  | `name`, `scopes` | the display name (the id with a capital), the scopes (`openid profile email`) |
+  | `groups`, `oneFactorGroups` | the groups with the second factor (`role_admin` and `app_<id>`), with the first factor only (none) |
+  | `policy` | a policy of authelia (`two_factor`) instead of `<id>_authz` |
+  | `pkce`, `claimsPolicy` | requires PKCE (S256), a claims policy of the configuration |
+  | `tokenEndpointAuthMethod`, `signingAlgorithm` | `client_secret_basic`, `none` |
+  | `grantTypes`, `responseModes` | `authorization_code`, not set |
+
+- `oidc` in the app, the key is the id of the client. It generates, in the release `release` (`<id>-pre` by default, merged with the
+  one of the chart, which waits for `authelia-pre`), the ServiceAccount `authelia-reader`, the SecretStore `authelia` and the
+  ExternalSecret `name` (`<id>-oidc`, keys `clientIdKey` and `secret`). `externalSecret: false` keeps the ExternalSecret out, for a
+  chart that builds its own (the configuration file of immich).
+
+```yaml
+# app-seafile
+oidc:
+  seafile: {}
+
+# app-authelia
+oidcClients:
+  seafile:
+    redirectUris:
+      - https://seafile.{{ .Values.app.domain }}/oauth/callback/
+```
+
+Apps that are only static resources (`homer`, `jellyfin`, `landing`, `seerr`) put them in the `<app>` sub-HR, so that
+`<app>-integration` has a service to wait for. `app-longhorn` has the four: `longhorn-pre` (NixOS PATH policy), `longhorn`
+(the Helm chart), `longhorn-post` (settings, recurring jobs, storage and snapshot classes) and `longhorn-integration` (the UI).
+
+## Exceptions
+
+- `flux-integration` (`app-flux`, from `expose`, disabled by default) and `kube-integration` (`app-kube`) only have the public part,
+  without a `-pre`, a service or a `-post` sub-HR. They are not waited for either, and wait for `app-gateway-api`
+  (and `app-cert-manager` for flux), which these apps are installed before.
+- `cert-manager-post`, `kyverno-post` and `cilium-post` only have resources of the CRDs of the service.
+
+## Checking a chart
+
+```bash
+cd kube/charts/app-<name>
+bcl k chart build   # unit tests, schema validation, renders ci/*-values.yaml into ci/*-result.yaml
+```
+
+`ci/*-result.yaml` shows every HR with its `dependsOn` and `disableWait`.

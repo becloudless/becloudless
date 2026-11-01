@@ -1,0 +1,420 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: probes mutation (enabled false removes a probe, the field is stripped from the others)
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: removes the probes with enabled false and strips the field from the others
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                    livenessProbe:
+                      enabled: false
+                      httpGet:
+                        path: /live
+                        port: 8080
+                    readinessProbe:
+                      enabled: true
+                      httpGet:
+                        path: /ready
+                        port: 8080
+                    startupProbe:
+                      httpGet:
+                        path: /start
+                        port: 8080
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - isSubset:
+          path: spec.template.spec.containers[0].readinessProbe
+          content:
+            httpGet:
+              path: /ready
+              port: 8080
+      - notExists:
+          path: spec.template.spec.containers[0].readinessProbe.enabled
+      - isSubset:
+          path: spec.template.spec.containers[0].startupProbe
+          content:
+            httpGet:
+              path: /start
+              port: 8080
+
+  - it: removes a probe set by the defaults of the containers, from a container only
+    set:
+      defaults:
+        container:
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                  sidecar:
+                    name: sidecar
+                    image: busybox
+                    readinessProbe:
+                      enabled: false
+    asserts:
+      - isSubset:
+          path: spec.template.spec.containers[0].readinessProbe
+          content:
+            httpGet:
+              path: /ready
+              port: 8080
+      - notExists:
+          path: spec.template.spec.containers[1].readinessProbe
+
+  - it: handles the probes of the initContainers
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                initContainers:
+                  init:
+                    name: init
+                    image: busybox
+                    startupProbe:
+                      enabled: false
+                      periodSeconds: 5
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+    asserts:
+      - notExists:
+          path: spec.template.spec.initContainers[0].startupProbe
+
+  - it: removes the probes without handler, which the defaults of the containers leave on a container that sets none
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                initContainers:
+                  init:
+                    name: init
+                    image: busybox
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                    readinessProbe:
+                      httpGet:
+                        path: /ready
+                        port: 8080
+                  other:
+                    name: other
+                    image: busybox
+    asserts:
+      - notExists:
+          path: spec.template.spec.initContainers[0].livenessProbe
+      - notExists:
+          path: spec.template.spec.initContainers[0].readinessProbe
+      - notExists:
+          path: spec.template.spec.initContainers[0].startupProbe
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - notExists:
+          path: spec.template.spec.containers[0].startupProbe
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe
+          value:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+      - notExists:
+          path: spec.template.spec.containers[1].readinessProbe
+
+  - it: gives the handler of the probe field to the three probes, and strips the field
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                    ports:
+                      http:
+                        containerPort: 8080
+                    probe:
+                      httpGet:
+                        path: /health
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].probe
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet
+          value:
+            path: /health
+            port: http
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe
+          value:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 30
+
+  - it: keeps the handler of a probe and its timings, removes a disabled one, with the probe field
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                    ports:
+                      http:
+                        containerPort: 8080
+                    probe:
+                      httpGet:
+                        path: /health
+                    readinessProbe:
+                      tcpSocket:
+                        port: 9000
+                      periodSeconds: 30
+                    startupProbe:
+                      enabled: false
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.tcpSocket
+          value:
+            port: 9000
+      - notExists:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.periodSeconds
+          value: 30
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet
+          value:
+            path: /health
+            port: http
+      - notExists:
+          path: spec.template.spec.containers[0].startupProbe
+
+  - it: the probe of the probe field is overridden per key by the probes
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                    ports:
+                      http:
+                        containerPort: 8080
+                    probe:
+                      httpGet:
+                        path: /health
+                    livenessProbe:
+                      periodSeconds: 20
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.periodSeconds
+          value: 20
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /health
+
+  - it: defaults the port of a handler to the only port of the container
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                    ports:
+                      metrics:
+                        containerPort: 9090
+                    readinessProbe:
+                      tcpSocket: {}
+                    livenessProbe:
+                      httpGet:
+                        path: /live
+                        port: 8080
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.tcpSocket
+          value:
+            port: metrics
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.port
+          value: 8080
+
+  - it: defaults the port of a handler to the port named http when the container has several
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                    ports:
+                      metrics:
+                        containerPort: 9090
+                      http:
+                        containerPort: 8080
+                    readinessProbe:
+                      httpGet:
+                        path: /ready
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet
+          value:
+            path: /ready
+            port: http
+
+  - it: defaults the port of a grpc handler to the number of the port
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                    ports:
+                      grpc:
+                        containerPort: 9000
+                    readinessProbe:
+                      grpc: {}
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.grpc
+          value:
+            port: 9000
+
+  - it: fails when the port of a handler is missing and the container has several ports, none named http
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                    ports:
+                      metrics:
+                        containerPort: 9090
+                      web:
+                        containerPort: 8080
+                    readinessProbe:
+                      httpGet:
+                        path: /ready
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.deployments.mydep: container "main": readinessProbe: httpGet has no port and the container has several ports (metrics, web): set the port, or name one of them http'
+
+  - it: fails when the port of a handler is missing and the container has no port
+    set:
+      resources:
+        deployments:
+          mydep:
+            selector:
+              matchLabels:
+                app: myapp
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+                    readinessProbe:
+                      tcpSocket: {}
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.deployments.mydep: container "main": readinessProbe: tcpSocket has no port and the container has no ports: set the port'

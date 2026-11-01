@@ -1,0 +1,135 @@
+# yaml-language-server: $schema=../app/schema/values.schema.json
+
+# Firefox Sync: the sync storage and the token server of Mozilla (https://github.com/mozilla-services/syncstorage-rs), in one process.
+# The accounts stay the Mozilla ones (FxA has no OIDC): only the storage of the synced data is self-hosted, and the token server checks
+# the Mozilla OAuth token of each request on oauth.accounts.firefox.com.
+#
+# Configure the browsers:
+#  - desktop: `about:config`, `identity.sync.tokenserver.uri` = https://firefox-sync.<domain>/1.0/sync/1.5, restart, sign in
+#  - android: Settings > About Firefox, tap the logo 5 times, Settings > Sync Debug > Custom Sync server, then stop Firefox
+#
+# Anybody with a Mozilla account can store data here while `SYNC_TOKENSERVER__ALLOW_NEW_USERS` is true: sign in with all your devices,
+# then set it to "false" (only the users already known can use the server).
+# The image is only published for linux/amd64.
+
+resources:
+
+  ciliumNetworkPolicies:
+    firefox-sync:
+      endpointSelector: ref:firefox-sync
+      ingress:
+        gateway:
+          fromEntities: [ingress, host, remote-node]
+          toPorts: [8000]
+      egress:
+        postgresql:
+          toEndpoints:
+            postgresql:
+              matchLabels: {cnpg.io/cluster: firefox-sync-postgresql}
+          toPorts: [5432]
+        fxa: # the verification of the OAuth tokens of the Mozilla accounts
+          toFQDNs:
+            oauth: {matchName: oauth.accounts.firefox.com}
+          toPorts: [443]
+
+  fluxHelmReleases:
+    firefox-sync-postgresql:
+      values:
+        instances: "{{ .Values.app.scaling.dbReplicas }}"
+        clients:
+          firefox-sync:
+            matchLabels: {app.kubernetes.io/instance: firefox-sync, app.kubernetes.io/component: firefox-sync}
+      dependsOn:
+        - name: app-cert-manager
+          namespace: cert-manager
+        - name: app-cnpg
+          namespace: cnpg-system
+        - name: app-longhorn
+          namespace: longhorn-system
+      chart:
+        spec:
+          chart: ./kube/charts/postgresql
+
+    firefox-sync-pre:
+      dependsOn:
+        - name: app-secret-generator
+          namespace: secret-generator
+      values:
+        resources:
+          stringSecrets:
+            firefox-sync-generated:
+              fields:
+                master-secret: {} # derives the secrets of the tokens, changing it signs everybody out
+                metrics-hash-secret: {}
+
+    firefox-sync:
+      dependsOn:
+        - ref:firefox-sync-postgresql
+        - ref:firefox-sync-pre
+      values:
+        resources:
+          deployments:
+            firefox-sync:
+              replicas: 1 # the schemas are migrated by the pod at its start
+              template:
+                spec:
+                  nodeSelector:
+                    kubernetes.io/arch: amd64 # the image is not published for arm64
+                  containers:
+                    firefox-sync:
+                      name: firefox-sync
+                      image: ghcr.io/mozilla-services/syncstorage-rs/syncserver-postgres:0.24.0 # renovate: versioning=loose
+                      ports:
+                        http:
+                          containerPort: 8000
+                      env:
+                        SYNC_HOST: 0.0.0.0
+                        SYNC_PORT: "8000"
+                        SYNC_MASTER_SECRET:
+                          secretKeyRef:
+                            name: ref:firefox-sync-generated
+                            key: master-secret
+                        # storage and token server share the database, the postgres backend has no TLS. The password has to be defined
+                        # before the urls that use it.
+                        DB_PASSWORD:
+                          secretKeyRef:
+                            name: firefox-sync-postgresql-app
+                            key: password
+                        SYNC_SYNCSTORAGE__DATABASE_URL: postgres://app:$(DB_PASSWORD)@firefox-sync-postgresql-rw:5432/app
+                        SYNC_TOKENSERVER__DATABASE_URL: postgres://app:$(DB_PASSWORD)@firefox-sync-postgresql-rw:5432/app
+                        SYNC_TOKENSERVER__ENABLED: "true"
+                        SYNC_TOKENSERVER__NODE_TYPE: postgres
+                        SYNC_TOKENSERVER__RUN_MIGRATIONS: "true"
+                        # the node the clients are sent to, inserted in the database at the start
+                        SYNC_TOKENSERVER__INIT_NODE_URL: https://firefox-sync.{{ .Values.app.domain }}
+                        # Mozilla accounts
+                        SYNC_TOKENSERVER__FXA_EMAIL_DOMAIN: api.accounts.firefox.com
+                        SYNC_TOKENSERVER__FXA_OAUTH_SERVER_URL: https://oauth.accounts.firefox.com
+                        SYNC_TOKENSERVER__FXA_METRICS_HASH_SECRET:
+                          secretKeyRef:
+                            name: ref:firefox-sync-generated
+                            key: metrics-hash-secret
+                        SYNC_TOKENSERVER__ALLOW_NEW_USERS: "true" # set to "false" once the devices are signed in
+                        SYNC_ENVIRONMENT: prod
+                      probe:
+                        httpGet:
+                          path: /__heartbeat__
+                      livenessProbe:
+                        httpGet:
+                          path: /__lbheartbeat__
+                      securityContext:
+                        runAsUser: 10001
+                        runAsGroup: 10001
+                        capabilities:
+                          drop:
+                            all: ALL
+
+          services:
+            firefox-sync:
+              ports:
+                http:
+                  port: 8000
+
+expose:
+  firefox-sync: # no forward auth: the browsers authenticate with their Mozilla account, which the service checks
+    port: 8000

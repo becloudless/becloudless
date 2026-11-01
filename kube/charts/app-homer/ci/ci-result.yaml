@@ -1,0 +1,532 @@
+---
+# Source: app-homer/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: homer
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: homer
+      app.kubernetes.io/instance: homer
+  ingress:
+  - fromEntities:
+    - ingress
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+---
+# Source: app-homer/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: homer
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      homer:
+        configMaps:
+          homer-config:
+            name: homer-config
+            namespace: default
+        deployments:
+          homer:
+            labels:
+              app.kubernetes.io/component: homer
+              app.kubernetes.io/instance: homer
+            name: homer
+            namespace: default
+        services:
+          homer:
+            name: homer
+            namespace: default
+      homer-integration:
+        certManagerCertificates:
+          homer-gateway:
+            name: homer-gateway
+            namespace: default
+            secretName: tls-homer-gateway
+        httpRoutes:
+          homer:
+            name: homer
+            namespace: default
+        listenerSets:
+          homer:
+            name: homer
+            namespace: default
+    resources:
+      configMaps:
+        homer-config:
+          data:
+            config.yml: |-
+              documentTitle: "test.com - Home"
+              logo: "assets/logo.png"
+              # Alternatively a fa icon can be provided:
+              icon: https://gitea.test.com/test/test.com/src/branch/master/docs/logo/v2/favicon.ico
+              header: false
+              footer: false
+              columns: "4" # "auto" or number (must be a factor of 12: 1, 2, 3, 4, 6, 12)
+              connectivityCheck: false # whether you want to display a message when the apps are not accessible anymore (VPN disconnected for example).
+              # Optional: Proxy / hosting option
+              proxy:
+                useCredentials: false # send cookies & authorization headers when fetching service specific data. Set to `true` if you use an authentication proxy. Can be overrided on service level.
+              defaults:
+                layout: columns
+                colorTheme: dark
+              # Optional theming
+              theme: default # 'default' or one of the themes available in 'src/assets/themes'.
+              stylesheet:
+                - "assets/custom.css"
+              # Here is the exhaustive list of customization parameters
+              # However all value are optional and will fallback to default if not set.
+              # if you want to change only some of the colors, feel free to remove all unused key.
+              colors:
+                light:
+                  highlight-primary: "#3367d6"
+                  highlight-secondary: "#4285f4"
+                  highlight-hover: "#5a95f5"
+                  background: "#f5f5f5"
+                  card-background: "#ffffff"
+                  text: "#363636"
+                  text-header: "#424242"
+                  text-title: "#303030"
+                  text-subtitle: "#424242"
+                  card-shadow: rgba(0, 0, 0, 0.1)
+                  link: "#3273dc"
+                  link-hover: "#363636"
+                  background-image: "assets/your/light/bg.png"
+                dark:
+                  highlight-primary: "#666"
+                  highlight-secondary: "#666"
+                  highlight-hover: "#666"
+                  background: "#12152B"
+                  card-background: "rgba(0, 0, 0, 0.7)"
+                  text: "#eaeaea"
+                  text-header: "#FFFFFF"
+                  text-title: "#fafafa"
+                  text-subtitle: "#8B8D9C"
+                  card-shadow: rgba(0, 0, 0, 0.5)
+                  link: "#c1c1c1"
+                  link-hover: "#fafafa"
+                  #                highlight-primary: "#3367d6"
+                  #                highlight-secondary: "#4285f4"
+                  #                highlight-hover: "#5a95f5"
+                  #                background: "#131313"
+                  #                card-background: "#2b2b2b"
+                  #                text: "#eaeaea"
+                  #                text-header: "#ffffff"
+                  #                text-title: "#fafafa"
+                  #                text-subtitle: "#f5f5f5"
+                  #                card-shadow: rgba(0, 0, 0, 0.4)
+                  #                link: "#3273dc"
+                  #                link-hover: "#ffdd57"
+                  background-image: "https://unsplash.com/photos/ESkw2ayO2As/download?ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzQ2MjE4MDQyfA&force=true"
+              # Services
+              # First level array represents a group.
+              # Leave only a "items" key if not using group (group name, icon & tagstyle are optional, section separation will not be displayed).
+              services:
+                - name: "Media"
+                  icon: "fas fa-photo-video"
+                  items:
+                    - name: Jellyfin
+                      subtitle: Media player
+                      logo: https://jellyfin.org/images/favicon.ico # assets on the service are hashed, so we cannot use them directly
+                      url: https://jellyfin.test.com
+                    - name: Seerr
+                      subtitle: Media discovery
+                      logo: https://seerr.test.com/favicon.ico
+                      url: https://seerr.test.com
+                    - name: Immich
+                      subtitle: Photos management
+                      logo: https://immich.test.com/favicon.ico
+                      url: https://immich.test.com
+                - name: "Personal"
+                  icon: "fas fa-user"
+                  items:
+                    - name: Seafile
+                      subtitle: Files hosting
+                      logo: https://seafile.test.com/media/favicons/favicon.png
+                      url: https://seafile.test.com
+                    - name: Paperless
+                      subtitle: Document management
+                      icon: "fas fa-file-alt"
+                      url: https://paperless.test.com
+                    - name: Mailu
+                      subtitle: Emails
+                      logo: https://mail.test.com/favicon.ico
+                      url: https://mail.test.com
+                    - name: Element
+                      subtitle: Chat (Matrix)
+                      logo: https://element.test.com/favicon.ico
+                      url: https://element.test.com
+                - name: "Development"
+                  icon: "fas fa-code-branch"
+                  items:
+                    - name: Forgejo
+                      subtitle: Source code management
+                      logo: https://forgejo.test.com/assets/img/favicon.png
+                      url: https://forgejo.test.com
+                - name: "System"
+                  icon: "fas fa-cogs"
+                  items:
+                    - name: Authelia
+                      subtitle: Login portal
+                      logo: https://authelia.test.com/favicon.ico
+                      url: https://authelia.test.com
+                    - name: Lldap
+                      subtitle: Accounts management
+                      icon: "fas fa-users"
+                      url: https://lldap.test.com
+                    - name: Longhorn
+                      subtitle: Distributed cluster storage
+                      logo: https://longhorn.test.com/favicon.ico
+                      url: https://longhorn.test.com
+                    - name: WhoAmI
+                      subtitle: Info about current connection
+                      icon: "fas fa-id-card"
+                      url: https://whoami.test.com
+                - name: "Observability"
+                  icon: "fas fa-chart-line"
+                  items:
+                    - name: Grafana
+                      subtitle: Graph dashboards
+                      logo: https://grafana.test.com/public/build/img/fav32.png
+                      url: https://grafana.test.com
+                    - name: Prometheus
+                      subtitle: Metrics monitoring
+                      logo: https://prometheus.test.com/favicon.svg
+                      url: https://prometheus.test.com
+                    - name: AlertManager
+                      subtitle: Alerting
+                      logo: https://alertmanager.test.com/favicon.ico
+                      url: https://alertmanager.test.com
+            custom.css: |-
+              @charset "UTF-8";
+              /* raleway-regular - latin */
+              @font-face {
+                font-family: 'Raleway';
+                font-style: normal;
+                font-weight: 400;
+                src: url('./fonts/raleway-v22-latin-regular.eot'); /* IE9 Compat Modes */
+                src: local(''),
+                    url('./fonts/raleway-v22-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+                    url('./fonts/raleway-v22-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+                    url('./fonts/raleway-v22-latin-regular.woff') format('woff'), /* Modern Browsers */
+                    url('./fonts/raleway-v22-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+                    url('./fonts/raleway-v22-latin-regular.svg#Raleway') format('svg'); /* Legacy iOS */
+              }
+
+              /* lato-regular - latin */
+              @font-face {
+                font-family: 'Lato';
+                font-style: normal;
+                font-weight: 400;
+                src: url('./fonts/lato-v20-latin-regular.eot'); /* IE9 Compat Modes */
+                src: local(''),
+                    url('./fonts/lato-v20-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+                    url('./fonts/lato-v20-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+                    url('./fonts/lato-v20-latin-regular.woff') format('woff'), /* Modern Browsers */
+                    url('./fonts/lato-v20-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+                    url('./fonts/lato-v20-latin-regular.svg#Lato') format('svg'); /* Legacy iOS */
+              }
+
+              /* lato-700 - latin */
+              @font-face {
+                font-family: 'Lato';
+                font-style: normal;
+                font-weight: 700;
+                src: url('./fonts/lato-v20-latin-700.eot'); /* IE9 Compat Modes */
+                src: local(''),
+                    url('./fonts/lato-v20-latin-700.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+                    url('./fonts/lato-v20-latin-700.woff2') format('woff2'), /* Super Modern Browsers */
+                    url('./fonts/lato-v20-latin-700.woff') format('woff'), /* Modern Browsers */
+                    url('./fonts/lato-v20-latin-700.ttf') format('truetype'), /* Safari, Android, iOS */
+                    url('./fonts/lato-v20-latin-700.svg#Lato') format('svg'); /* Legacy iOS */
+              }
+
+              /* lato-900 - latin */
+              @font-face {
+                font-family: 'Lato';
+                font-style: normal;
+                font-weight: 900;
+                src: url('./fonts/lato-v20-latin-900.eot'); /* IE9 Compat Modes */
+                src: local(''),
+                    url('./fonts/lato-v20-latin-900.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+                    url('./fonts/lato-v20-latin-900.woff2') format('woff2'), /* Super Modern Browsers */
+                    url('./fonts/lato-v20-latin-900.woff') format('woff'), /* Modern Browsers */
+                    url('./fonts/lato-v20-latin-900.ttf') format('truetype'), /* Safari, Android, iOS */
+                    url('./fonts/lato-v20-latin-900.svg#Lato') format('svg'); /* Legacy iOS */
+              }
+
+              /* Sets the group title to be a bolder font */
+              .group-title {
+                font-family: Lato;
+                font-weight: 800;
+                text-shadow: 1px 1px 2px black;
+              }
+
+              /* Changes the card title to be a bolder font */
+              .title {
+                font-weight: 700;
+              }
+
+              /* Changes the subtitle to be a bolder font */
+              .subtitle {
+                font-weight: 500;
+              }
+
+              /* Adds spacing to the bottom of cards */
+              body #app .card-content {
+                margin-bottom: 0.75rem;
+              }
+
+              /*Adds more border radius to the cards */
+              body .layout-vertical .column div:first-of-type .card {
+                border-radius: 1rem;
+              }
+              body .layout-vertical .card {
+                border-radius: 1rem;
+              }
+              .card {
+                  border-radius: 1rem;
+              }
+              body .layout-vertical .column div:last-of-type .card {
+                  border-radius: 1rem;
+              }
+
+              /* Changes Header Opacity */
+              body #bighead .first-line {
+                background-color: rgba(0, 0, 0, 0);
+              }
+              body #bighead .navbar {
+                background-color: rgba(0, 0, 0, 0);
+              }
+
+              body .search-bar input {
+                  opacity: 80%;
+              }
+
+              body #bighead .navbar a:focus, body #bighead .navbar a:hover {
+                background-color: rgba(0, 0, 0, 0);
+                color: var(--link-hover);
+              }
+      deployments:
+        homer:
+          replicas: 2
+          template:
+            spec:
+              containers:
+                homer:
+                  env:
+                    INIT_ASSETS: "0"
+                  image: b4bz/homer:v26.08.3
+                  name: homer
+                  ports:
+                    http:
+                      containerPort: 8080
+                  probe:
+                    httpGet:
+                      path: /
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                  volumeMounts:
+                    config:
+                      mountPath: /www/assets/config.yml
+                      name: config
+                      readOnly: true
+                      subPath: config.yml
+                    css:
+                      mountPath: /www/assets/custom.css
+                      name: config
+                      readOnly: true
+                      subPath: custom.css
+              securityContext:
+                runAsGroup: 1000
+                runAsUser: 1000
+              volumes:
+                config:
+                  configMap:
+                    name: ref:homer-config
+                  name: config
+      services:
+        homer:
+          ports:
+            http:
+              port: 8080
+---
+# Source: app-homer/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: homer-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: homer
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      homer:
+        configMaps:
+          homer-config:
+            name: homer-config
+            namespace: default
+        deployments:
+          homer:
+            labels:
+              app.kubernetes.io/component: homer
+              app.kubernetes.io/instance: homer
+            name: homer
+            namespace: default
+        services:
+          homer:
+            name: homer
+            namespace: default
+      homer-integration:
+        certManagerCertificates:
+          homer-gateway:
+            name: homer-gateway
+            namespace: default
+            secretName: tls-homer-gateway
+        httpRoutes:
+          homer:
+            name: homer
+            namespace: default
+        listenerSets:
+          homer:
+            name: homer
+            namespace: default
+    resources:
+      certManagerCertificates:
+        homer-gateway:
+          dnsNames:
+            homer: homer.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-homer-gateway
+      httpRoutes:
+        homer:
+          hostnames:
+            homer: homer.test.com
+          parentRefs:
+            homer:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: homer
+              sectionName: homer
+          rules:
+            root:
+              backendRefs:
+                backend:
+                  name: ref:homer
+                  port: 8080
+              filters:
+                authelia:
+                  externalAuth:
+                    backendRef:
+                      name: authelia
+                      namespace: authelia
+                      port: 80
+                    http:
+                      allowedHeaders:
+                        accept: accept
+                        cookie: cookie
+                        proxy-authorization: proxy-authorization
+                        x-forwarded-for: x-forwarded-for
+                        x-forwarded-proto: x-forwarded-proto
+                      allowedResponseHeaders:
+                        remote-email: remote-email
+                        remote-groups: remote-groups
+                        remote-name: remote-name
+                        remote-user: remote-user
+                      path: /api/authz/ext-authz/
+                    protocol: HTTP
+                  type: ExternalAuth
+      listenerSets:
+        homer:
+          listeners:
+            homer:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: homer.test.com
+              name: homer
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: ref:homer-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system

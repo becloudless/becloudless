@@ -24,9 +24,11 @@ tests:
       - equal:
           path: spec.ports
           value:
-            - port: 80
+            - name: http
+              port: 80
               targetPort: 8080
-            - port: 443
+            - name: https
+              port: 443
               targetPort: 8443
 
   - it: leaves a field at a configured arrayPath untouched when it is already given as a plain list
@@ -82,17 +84,29 @@ tests:
                     name: api
                     image: myapi:latest
     asserts:
-      - equal:
+      # only the fields of the test: the containers also get the defaults of the chart (defaults.container)
+      - lengthEqual:
           path: spec.template.spec.containers
+          count: 2
+      # sorted by id
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: api
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: myapi:latest
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: web
+      - equal:
+          path: spec.template.spec.containers[1].image
+          value: nginx:1.27
+      - equal:
+          path: spec.template.spec.containers[1].command
           value:
-            - name: api
-              image: myapi:latest
-            - name: web
-              image: nginx:1.27
-              command:
-                - sh
-                - -c
-                - echo hi
+            - sh
+            - -c
+            - echo hi
 
   - it: leaves an ignored array-typed field (container command/args) untouched as a plain list, not reinterpreted as an id-keyed map
     set:
@@ -148,13 +162,17 @@ tests:
                         name: cache
                         mountPath: /cache
     asserts:
-      - equal:
+      # only the mounts of the test: the container also gets the ones of the defaults (defaults.container)
+      - contains:
           path: spec.template.spec.containers[0].volumeMounts
-          value:
-            - mountPath: /cache
-              name: cache
-            - mountPath: /data
-              name: data
+          content:
+            mountPath: /cache
+            name: cache
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /data
+            name: data
 
   - it: leaves nested maps untouched for kinds with no configured arrayPaths at all (ConfigMap.binaryData)
     set:

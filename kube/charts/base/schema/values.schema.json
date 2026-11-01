@@ -9,6 +9,10 @@
     "defaults": {
       "additionalProperties": false,
       "properties": {
+        "container": {
+          "$ref": "./resources/deployments.json#/properties/template/properties/spec/properties/containers/additionalProperties",
+          "description": "Defaults of every container and initContainer of the deployments, statefulSets, daemonSets, jobs and cronJobs. The fields set by a container win, even `false` or `0`."
+        },
         "metadata": {
           "additionalProperties": false,
           "properties": {
@@ -33,6 +37,10 @@
           },
           "type": "object"
         },
+        "pod": {
+          "$ref": "./resources/deployments.json#/properties/template/properties/spec",
+          "description": "Defaults of the pod spec of the deployments, statefulSets, daemonSets, jobs and cronJobs. The fields set by the resource win, even `false` or `0`."
+        },
         "resources": {
           "additionalProperties": false,
           "properties": {
@@ -53,6 +61,24 @@
             },
             "certManagerOrders": {
               "$ref": "./resources/certManagerOrders.json"
+            },
+            "ciliumBGPAdvertisements": {
+              "$ref": "./resources/ciliumBGPAdvertisements.json"
+            },
+            "ciliumBGPClusterConfigs": {
+              "$ref": "./resources/ciliumBGPClusterConfigs.json"
+            },
+            "ciliumBGPPeerConfigs": {
+              "$ref": "./resources/ciliumBGPPeerConfigs.json"
+            },
+            "ciliumClusterwideNetworkPolicies": {
+              "$ref": "./resources/ciliumClusterwideNetworkPolicies.json"
+            },
+            "ciliumLoadBalancerIPPools": {
+              "$ref": "./resources/ciliumLoadBalancerIPPools.json"
+            },
+            "ciliumNetworkPolicies": {
+              "$ref": "./resources/ciliumNetworkPolicies.json"
             },
             "clusterRoleBindings": {
               "$ref": "./resources/clusterRoleBindings.json"
@@ -77,6 +103,9 @@
             },
             "deployments": {
               "$ref": "./resources/deployments.json"
+            },
+            "externalSecrets": {
+              "$ref": "./resources/externalSecrets.json"
             },
             "fluxAlerts": {
               "$ref": "./resources/fluxAlerts.json"
@@ -134,6 +163,12 @@
             },
             "kyvernoValidatingPolicies": {
               "$ref": "./resources/kyvernoValidatingPolicies.json"
+            },
+            "listenerSets": {
+              "$ref": "./resources/listenerSets.json"
+            },
+            "longhornBackupTargets": {
+              "$ref": "./resources/longhornBackupTargets.json"
             },
             "longhornRecurringJobs": {
               "$ref": "./resources/longhornRecurringJobs.json"
@@ -225,6 +260,14 @@
     "global": {
       "type": "object"
     },
+    "prefixNamesWithRelease": {
+      "description": "Whether the name of the resources is prefixed with the release name (\u003crelease\u003e-\u003cid\u003e). When false, the name is the id (or nameOverride). Defaults to false.",
+      "type": "boolean"
+    },
+    "refs": {
+      "description": "What the resources of the sibling releases are, by release id, kind and resource id: the name, the namespace, the labels of the pods and the name of the Secret. Set by the parent chart (refsIndex mutation), for the references (`ref:\u003cid\u003e`) to resources of a sibling release.",
+      "type": "object"
+    },
     "resources": {
       "additionalProperties": false,
       "properties": {
@@ -268,6 +311,48 @@
             "$ref": "./resources/certManagerOrders.json"
           },
           "description": "Order instances, keyed by id.",
+          "type": "object"
+        },
+        "ciliumBGPAdvertisements": {
+          "additionalProperties": {
+            "$ref": "./resources/ciliumBGPAdvertisements.json"
+          },
+          "description": "CiliumBGPAdvertisement instances, keyed by id.",
+          "type": "object"
+        },
+        "ciliumBGPClusterConfigs": {
+          "additionalProperties": {
+            "$ref": "./resources/ciliumBGPClusterConfigs.json"
+          },
+          "description": "CiliumBGPClusterConfig instances, keyed by id.",
+          "type": "object"
+        },
+        "ciliumBGPPeerConfigs": {
+          "additionalProperties": {
+            "$ref": "./resources/ciliumBGPPeerConfigs.json"
+          },
+          "description": "CiliumBGPPeerConfig instances, keyed by id.",
+          "type": "object"
+        },
+        "ciliumClusterwideNetworkPolicies": {
+          "additionalProperties": {
+            "$ref": "./resources/ciliumClusterwideNetworkPolicies.json"
+          },
+          "description": "CiliumClusterwideNetworkPolicy instances, keyed by id.",
+          "type": "object"
+        },
+        "ciliumLoadBalancerIPPools": {
+          "additionalProperties": {
+            "$ref": "./resources/ciliumLoadBalancerIPPools.json"
+          },
+          "description": "CiliumLoadBalancerIPPool instances, keyed by id.",
+          "type": "object"
+        },
+        "ciliumNetworkPolicies": {
+          "additionalProperties": {
+            "$ref": "./resources/ciliumNetworkPolicies.json"
+          },
+          "description": "CiliumNetworkPolicy instances, keyed by id.",
           "type": "object"
         },
         "clusterRoleBindings": {
@@ -324,6 +409,13 @@
             "$ref": "./resources/deployments.json"
           },
           "description": "Deployment instances, keyed by id.",
+          "type": "object"
+        },
+        "externalSecrets": {
+          "additionalProperties": {
+            "$ref": "./resources/externalSecrets.json"
+          },
+          "description": "ExternalSecret instances, keyed by id.",
           "type": "object"
         },
         "fluxAlerts": {
@@ -457,6 +549,20 @@
             "$ref": "./resources/kyvernoValidatingPolicies.json"
           },
           "description": "ValidatingPolicy instances, keyed by id.",
+          "type": "object"
+        },
+        "listenerSets": {
+          "additionalProperties": {
+            "$ref": "./resources/listenerSets.json"
+          },
+          "description": "ListenerSet instances, keyed by id.",
+          "type": "object"
+        },
+        "longhornBackupTargets": {
+          "additionalProperties": {
+            "$ref": "./resources/longhornBackupTargets.json"
+          },
+          "description": "BackupTarget instances, keyed by id.",
           "type": "object"
         },
         "longhornRecurringJobs": {

@@ -1,0 +1,15 @@
+app:
+  domain: test.com
+  name: test
+  lldapdn: dc=test,dc=com
+  lldapUsers:
+    n0rad:
+      displayName: n0rad
+      email: n0rad@test.com
+      groups:
+        - role_admin
+        - role_user
+      immichrole: admin
+      immichquota: 45
+    guest:
+      email: guest@test.com

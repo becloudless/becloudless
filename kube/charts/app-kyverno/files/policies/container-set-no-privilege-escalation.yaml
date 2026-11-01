@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=../../../base/schema/resources/kyvernoClusterPolicies.json
+
+# `allowPrivilegeEscalation: false` on the containers: no_new_privs, a process can not gain more privileges than its parent
+# (setuid binaries). A value already set on a container is kept.
+# The capabilities are not dropped: the containers that start as root and switch user (valkey, postgres, s6-overlay) need
+# `SETUID`/`SETGID`. Drop them in the values of the apps that can.
+# Not applied to:
+#  - the pods with a privileged container or the capability `SYS_ADMIN`, the API server rejects them with
+#    `allowPrivilegeEscalation: false`;
+#  - the static pods (mirror pods), only the kubelet manages them;
+#  - the pods with the annotation `policy.bcl/skipContainerSetNoPrivilegeEscalation: "true"`, to opt out an app that does not work with it.
+# `Ignore`: a Kyverno outage must not block the creation of pods.
+failurePolicy: Ignore
+rules:
+  - name: container-set-no-privilege-escalation
+    match:
+      any:
+        - resources:
+            kinds:
+              - Pod
+            operations:
+              - CREATE
+    exclude:
+      any:
+        - resources:
+            annotations:
+              kubernetes.io/config.mirror: "?*"
+        - resources:
+            annotations:
+              policy.bcl/skipContainerSetNoPrivilegeEscalation: "true"
+    preconditions:
+      all:
+        - key: "{{ request.object.spec.[containers, initContainers][] | [?securityContext.privileged == `true`] | length(@) }}"
+          operator: Equals
+          value: 0
+        - key: "{{ request.object.spec.[containers, initContainers][] | [?contains(securityContext.capabilities.add || `[]`, 'SYS_ADMIN')] | length(@) }}"
+          operator: Equals
+          value: 0
+    mutate:
+      patchStrategicMerge:
+        spec:
+          initContainers:
+            - (name): "*"
+              securityContext:
+                +(allowPrivilegeEscalation): false
+          containers:
+            - (name): "*"
+              securityContext:
+                +(allowPrivilegeEscalation): false

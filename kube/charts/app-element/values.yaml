@@ -1,0 +1,102 @@
+# yaml-language-server: $schema=../app/schema/values.schema.json
+
+# Element Web (https://element.io): the Matrix client of `app-tuwunel`, on `element.<domain>`. A static app: no network, volume or secret.
+# The server is fixed (`disable_custom_urls`), guests and the login with an email address or a phone number are disabled: the only way in
+# is the SSO of tuwunel. The client contacts nothing else (no identity server, integration manager, analytics or bug reports); the voice
+# and video calls (jitsi) are not configured.
+# `element.<domain>` is vouched for the sign in by the OIDC server of tuwunel (`oidc_registration_allowed_redirect_hosts`): keep both
+# charts in sync if it changes.
+
+resources:
+
+  ciliumNetworkPolicies:
+    element:
+      endpointSelector: ref:element
+      ingress:
+        gateway:
+          fromEntities: [ingress, host, remote-node]
+          toPorts: [8080]
+
+  fluxHelmReleases:
+    element:
+      values:
+        resources:
+          # https://github.com/element-hq/element-web/blob/develop/docs/config.md
+          configMaps:
+            element-config:
+              data:
+                config.json: |
+                  {
+                    "default_server_config": {
+                      "m.homeserver": {
+                        "base_url": "https://matrix.{{ .Values.app.domain }}",
+                        "server_name": "matrix.{{ .Values.app.domain }}"
+                      }
+                    },
+                    "disable_custom_urls": true,
+                    "disable_guests": true,
+                    "disable_3pid_login": true,
+                    "sso_redirect_options": {
+                      "on_welcome_page": true
+                    },
+                    "room_directory": {
+                      "servers": ["matrix.{{ .Values.app.domain }}"]
+                    },
+                    "brand": "Element",
+                    "show_labs_settings": false
+                  }
+
+          deployments:
+            element:
+              replicas: "{{ .Values.app.scaling.replicas }}"
+              template:
+                spec:
+                  securityContext:
+                    runAsUser: 101
+                    runAsGroup: 101
+                    fsGroup: 101
+                  containers:
+                    element:
+                      name: element
+                      image: vectorim/element-web:v1.12.32
+                      ports:
+                        http:
+                          containerPort: 8080
+                      env:
+                        ELEMENT_WEB_PORT: "8080" # the default is 80, which an unprivileged user can not bind
+                      probe:
+                        httpGet:
+                          path: /
+                      securityContext:
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        config:
+                          name: config
+                          mountPath: /app/config.json
+                          subPath: config.json
+                          readOnly: true
+                        # the entrypoint writes the configuration of nginx from its template
+                        nginx-conf:
+                          name: nginx-conf
+                          mountPath: /etc/nginx/conf.d
+                  volumes:
+                    config:
+                      name: config
+                      configMap:
+                        name: ref:element-config
+                    nginx-conf:
+                      name: nginx-conf
+                      emptyDir: {}
+
+          services:
+            element:
+              ports:
+                http:
+                  port: 80
+                  targetPort: 8080
+
+expose:
+  element: # no forward auth: the login is the SSO of tuwunel, and the page holds nothing
+    port: 80

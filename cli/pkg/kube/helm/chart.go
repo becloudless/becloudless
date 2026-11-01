@@ -100,6 +100,17 @@ func (c *Chart) UpdateDependencies() error {
 		return errs.WithE(err, "Failed to update dependencies")
 	}
 
+	// Reload the chart now that dependencies have been downloaded into the
+	// charts/ directory. The in-memory chart was loaded before they existed on
+	// disk, so without this it lacks the dependencies' templates (e.g. named
+	// templates like "base.loader.all") and rendering fails on the first run,
+	// when dependencies are not cached yet.
+	reloadedChart, err := loader.LoadDir(c.path)
+	if err != nil {
+		return errs.WithE(err, "Failed to reload chart after updating dependencies")
+	}
+	c.chart = reloadedChart
+
 	return nil
 }
 
@@ -314,17 +325,6 @@ func (c *Chart) PrepareTestChart() error {
 	if err := c.testChart.UpdateDependencies(); err != nil {
 		return errs.WithE(err, "Failed to update dependencies")
 	}
-
-	// Reload the chart now that dependencies have been downloaded into the
-	// charts/ directory, otherwise the in-memory chart (loaded above, before
-	// dependencies existed on disk) won't include the dependency's templates
-	// (e.g. named templates like "base.loader.all"), causing rendering to
-	// fail or produce no output.
-	reloadedChart, err := loader.LoadDir(tempDir)
-	if err != nil {
-		return errs.WithE(err, "Failed to reload chart after updating dependencies")
-	}
-	c.testChart.chart = reloadedChart
 
 	return nil
 }

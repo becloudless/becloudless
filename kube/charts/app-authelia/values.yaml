@@ -1,0 +1,518 @@
+# yaml-language-server: $schema=schema/values.schema.json
+
+resources:
+
+  fluxHelmRepositories:
+    authelia:
+      url: https://charts.authelia.com
+
+  ciliumNetworkPolicies:
+    authelia:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: authelia}
+      ingress:
+        gateway: # the portal and the forward auth of every protected route
+          fromEntities: [ingress, host, remote-node]
+          toPorts: [9091]
+      egress:
+        lldap:
+          toEndpoints:
+            lldap:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": lldap, "k8s:app.kubernetes.io/instance": lldap, "k8s:app.kubernetes.io/component": lldap}
+          toPorts: [6360]
+        valkey:
+          toEndpoints:
+            valkey:
+              matchLabels: {app.kubernetes.io/name: valkey}
+          toPorts: [6379]
+        postgresql:
+          toEndpoints:
+            postgresql:
+              matchLabels: {cnpg.io/cluster: authelia-postgresql}
+          toPorts: [5432]
+        ntp: # the startup check of the clock (`ntp` of the configuration)
+          toFQDNs:
+            cloudflare: {matchName: time.cloudflare.com} # TODO check why
+          toPorts:
+            ntp: {ports: {p123: {port: "123", protocol: UDP}}}
+
+  fluxHelmReleases:
+    authelia-postgresql:
+      values:
+        instances: "{{ .Values.app.scaling.dbReplicas }}"
+        clients:
+          authelia:
+            matchLabels: {app.kubernetes.io/name: authelia}
+      chart:
+        spec:
+          chart: ./kube/charts/postgresql
+      dependsOn:
+        - name: app-cert-manager
+          namespace: cert-manager
+        - name: app-cnpg
+          namespace: cnpg-system
+        - name: app-longhorn
+          namespace: longhorn-system
+
+    authelia-pre:
+      dependsOn:
+        - name: app-cert-manager
+          namespace: cert-manager
+        - name: app-external-secrets
+          namespace: external-secrets
+        - name: app-secret-generator
+          namespace: secret-generator
+      values:
+        resources:
+          stringSecrets:
+            authelia-generated:
+              fields:
+                oidc-hmac:
+                  fieldName: identity_providers.oidc.hmac.key
+                reset-password-hmac:
+                  fieldName: identity_validation.reset_password.jwt.hmac.key
+                session-encryption:
+                  fieldName: session.encryption.key
+
+          # key pair signing the OIDC tokens, mounted from /secrets/authelia-jwks
+          certManagerCertificates:
+            authelia-jwks:
+              secretName: authelia-jwks
+              commonName: authelia-jwks
+              issuerRef:
+                name: self-signed
+                kind: ClusterIssuer
+
+          # the password authelia binds to lldap with is generated in the lldap namespace (`lldap-authelia`), read as `lldap-reader`
+          serviceAccounts:
+            lldap-reader:
+              automountServiceAccountToken: false
+
+          secretStores:
+            lldap:
+              provider:
+                kubernetes:
+                  remoteNamespace: lldap
+                  server:
+                    caProvider:
+                      type: ConfigMap
+                      name: kube-root-ca.crt
+                      key: ca.crt
+                  auth:
+                    serviceAccount:
+                      name: ref:lldap-reader
+
+          externalSecrets:
+            authelia-ldap:
+              refreshInterval: 1h
+              secretStoreRef: ref:lldap
+              data:
+                password:
+                  secretKey: password
+                  remoteRef:
+                    key: lldap-authelia
+                    property: password
+
+    authelia-valkey:
+      dependsOn:
+        - name: app-secret-generator
+          namespace: secret-generator
+      chart:
+        spec:
+          chart: ./kube/charts/valkey
+      values:
+        clients:
+          authelia:
+            matchLabels: {app.kubernetes.io/name: authelia}
+        valkey:
+          auth:
+            aclUsers:
+              default:
+                permissions: "~* -@all"
+              authelia:
+                permissions: "~* &* +@all"
+
+    authelia:
+      dependsOn:
+        - ref:authelia-pre
+        - ref:authelia-postgresql
+        - ref:authelia-valkey
+        - name: app-lldap # the ldap backend
+          namespace: lldap
+      chart:
+        spec:
+          chart: authelia
+          version: 0.11.22
+          sourceRef:
+            kind: HelmRepository
+            name: authelia
+      values:
+        ingress:
+          enabled: false # Gateway instead
+
+        pod:
+          kind: Deployment
+          replicas: 1 # TODO the notifications are files of the pod
+          env:
+            - name: TZ
+              value: Europe/Paris
+          # compliant with the policies of app-kyverno (container-require-run-as-non-root, container-require-read-only-root-filesystem).
+          # The only writable path is /config, an emptyDir (see extraVolumes)
+          securityContext:
+            pod:
+              runAsNonRoot: true
+              runAsUser: 2000
+              runAsGroup: 2000
+              seccompProfile:
+                type: RuntimeDefault
+            container:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: [ ALL ]
+          # the hashes of the OIDC client secrets are built from the generated secrets, the hashes change at each start but the secrets do not.
+          # The secrets of the clients (`oidcClients` below) are mounted by the generated volumeMounts.
+          initContainers:
+            - name: oidc-hashes
+              image: ghcr.io/authelia/authelia:4.39.27
+              securityContext:
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: [ ALL ]
+              command:
+                - sh
+                - -ec
+                - |
+                  for dir in /secrets/authelia-oidc-*; do
+                    client=${dir#/secrets/authelia-oidc-}
+                    hash=$(authelia crypto hash generate pbkdf2 --variant sha512 --password "$(cat $dir/secret)" | sed 's/^Digest: //')
+                    printf '%s' "$hash" > /config/oidc-$client.hash
+                  done
+              volumeMounts:
+                - name: authelia
+                  mountPath: /config
+          # setting extra volumes removes the default /config volume of the chart
+          extraVolumes:
+            - name: authelia
+              emptyDir:
+                sizeLimit: 100Mi
+          extraVolumeMounts:
+            - name: authelia
+              mountPath: /config
+
+        secret:
+          additionalSecrets:
+            authelia-generated: {}
+            authelia-ldap: {}
+            authelia-postgresql-app: {}
+            authelia-valkey: {}
+            authelia-jwks: {}
+
+        configMap:
+          theme: dark
+
+          server:
+            endpoints:
+              authz:
+                ext-authz: # called by the Envoy of the Cilium Gateway on /api/authz/ext-authz/
+                  implementation: ExtAuthz
+
+          telemetry:
+            metrics:
+              enabled: true
+          storage:
+            postgres:
+              enabled: true
+              address: tcp://authelia-postgresql-rw
+              database: app
+              username: app
+              password:
+                secret_name: authelia-postgresql-app
+                value: password
+                path: password
+          notifier:
+            filesystem:
+              enabled: true
+            disable_startup_check: false # in case of emergency
+            smtp:
+              enabled: false
+              address: submissions://mail.{{ .Values.app.domain }}:465
+              sender: '{{ .Values.app.name }} Authelia <authelia@{{ .Values.app.domain }}>'
+              username: authelia@{{ .Values.app.domain }}
+              password: {}
+
+          authentication_backend:
+            file:
+              enabled: false
+            ldap:
+              enabled: true
+              implementation: lldap
+              # the service of lldap, with the name of the publicly trusted certificate of its ldaps listener (`tls-lldaps`)
+              address: ldaps://lldap.lldap.svc.cluster.local:6360
+              base_dn: "{{ .Values.app.lldapdn }}"
+              # created by `lldap-post`, its password is copied from the lldap namespace by the ExternalSecret `authelia-ldap`
+              user: 'UID=authelia,OU=people,{{ .Values.app.lldapdn }}'
+              password:
+                secret_name: authelia-ldap
+                value: password
+                path: password
+              tls:
+                server_name: lldaps.{{ .Values.app.domain }}
+                skip_verify: false
+                minimum_version: TLS1.2
+              attributes:
+                extra:
+                  immichquota: # The attribute name from LDAP
+                    name: 'immichquota'
+                    multi_valued: false
+                    value_type: 'integer'
+                  immichrole:
+                    name: 'immichrole'
+                    multi_valued: false
+                    value_type: 'string'
+
+          session:
+            expiration: 16 hours # sessions expires every day
+            inactivity: 8 hours # destroy sessions if nothing is done
+            remember_me: -1      # always apply the same behavior
+            redis:
+              enabled: true
+              host: authelia-valkey
+              username: authelia
+              password:
+                secret_name: authelia-valkey
+                value: authelia
+                path: authelia
+            cookies:
+              - domain: "{{ .Values.app.domain }}"
+                subdomain: authelia
+            encryption_key:
+              secret_name: authelia-generated
+
+          password_policy:
+            zxcvbn:
+              enabled: true
+              min_score: 4
+
+          totp:
+            issuer: "{{ .Values.app.name }} Authelia"
+          webauthn:
+            display_name: "{{ .Values.app.name }} Authelia"
+
+          access_control:
+            default_policy: deny
+            rules:
+              - domain:
+                  - forgejo.{{ .Values.app.domain }}
+                  - homer.{{ .Values.app.domain }}
+                  - lldap.{{ .Values.app.domain }}
+                  - longhorn.{{ .Values.app.domain }}
+                  - mail.{{ .Values.app.domain }}
+                  - grafana.{{ .Values.app.domain }}
+                  - alertmanager.{{ .Values.app.domain }}
+                  - prometheus.{{ .Values.app.domain }}
+                  - fluxwebhook.{{ .Values.app.domain }}
+                  - rutorrent.{{ .Values.app.domain }}
+                subject:
+                  - [ 'group:role_admin' ]
+                policy: two_factor
+              - domain_regex: # the Syncthing instance of a user (app-syncthing): the `User` named group has to be the username (no subject needed)
+                  - '^(?P<User>[a-z0-9-]+)\.syncthing\.{{ regexQuoteMeta .Values.app.domain }}$'
+                policy: two_factor
+              - domain:
+                  - homer.{{ .Values.app.domain }}
+                subject:
+                  - [ 'group:role_user' ]
+                  - [ 'group:role_admin' ]
+                policy: one_factor
+              - domain:
+                  - seerr.{{ .Values.app.domain }}
+                subject:
+                  - [ 'group:app_seerr' ]
+                  - [ 'group:role_admin' ]
+                policy: two_factor
+              - domain:
+                  - jellyfin.{{ .Values.app.domain }}
+                subject:
+                  - [ 'group:app_jellyfin' ]
+                  - [ 'group:role_admin' ]
+                policy: two_factor
+              - domain:
+                  - forgejo.{{ .Values.app.domain }}
+                subject:
+                  - [ 'group:app_forgejo' ]
+                  - [ 'group:role_admin' ]
+                policy: two_factor
+              - domain:
+                  - pushprox.{{ .Values.app.domain }}
+                subject:
+                  - [ 'group:app_pushprox' ]
+                  - [ 'group:role_admin' ]
+                policy: one_factor
+              - domain:
+                  - immich.{{ .Values.app.domain }}
+                subject:
+                  - [ 'group:app_immich' ]
+                  - [ 'group:role_admin' ]
+                policy: two_factor
+              - domain:
+                  - immich.{{ .Values.app.domain }}
+                subject:
+                  - [ 'group:app_immich_one_factor' ]
+                policy: one_factor
+              - domain:
+                  - whoami.{{ .Values.app.domain }}
+                policy: one_factor
+
+          identity_validation:
+            reset_password:
+              secret:
+                secret_name: authelia-generated
+
+          identity_providers:
+            oidc:
+              enabled: true
+              hmac_secret:
+                secret_name: authelia-generated
+              jwks:
+                - key_id: ''
+                  algorithm: 'RS256'
+                  use: 'sig'
+                  key:
+                    path: '/secrets/authelia-jwks/tls.key'
+                  certificate_chain:
+                    path: '/secrets/authelia-jwks/tls.crt'
+              claims_policies:
+                grafana:
+                  id_token: [ 'email', 'name', 'groups', 'preferred_username' ]
+                tuwunel:
+                  id_token: [ 'email', 'name', 'groups', 'preferred_username' ]
+                immich_policy:
+                  custom_claims:
+                    immich_quota:
+                      attribute: 'immichquota'
+                    immich_role:
+                      attribute: 'immichrole'
+              scopes:
+                immich_scope:
+                  claims:
+                    - 'immich_quota'
+                    - 'immich_role'
+              ## See: https://www.authelia.com/c/oidc
+              # The clients are generated from `oidcClients` below.
+
+    authelia-integration:
+      values:
+        resources:
+          # an HTTPRoute can only call the authelia service (`ExternalAuth` filter) when its namespace is granted here
+          referenceGrants:
+            ext-authz:
+              from:
+                longhorn:
+                  group: gateway.networking.k8s.io
+                  kind: HTTPRoute
+                  namespace: longhorn-system
+                homer:
+                  group: gateway.networking.k8s.io
+                  kind: HTTPRoute
+                  namespace: homer
+                prometheus:
+                  group: gateway.networking.k8s.io
+                  kind: HTTPRoute
+                  namespace: prometheus
+                seerr:
+                  group: gateway.networking.k8s.io
+                  kind: HTTPRoute
+                  namespace: seerr
+                whoami:
+                  group: gateway.networking.k8s.io
+                  kind: HTTPRoute
+                  namespace: whoami
+                syncthing:
+                  group: gateway.networking.k8s.io
+                  kind: HTTPRoute
+                  namespace: syncthing
+              to:
+                authelia:
+                  group: ""
+                  kind: Service
+                  name: authelia
+
+expose:
+  authelia:
+    service: authelia
+    port: 80
+
+# The access control of a client is the groups `role_admin` and `app_<id>` (second factor) by default. To get a client secret by hand:
+#   docker run --rm authelia/authelia:latest authelia crypto hash generate pbkdf2 --variant sha512 --random --random.length 72 --random.charset rfc3986
+oidcClients:
+  # forgejo admin auth add-oauth --provider=openidConnect --name=authelia --key=<client id> --secret=<client secret> --auto-discover-url=https://authelia.<domain>/.well-known/openid-configuration --scopes='openid email profile'
+  forgejo:
+    name: Forgejo
+    scopes: [openid, email, profile]
+    redirectUris:
+      - https://forgejo.{{ .Values.app.domain }}/user/oauth2/authelia/callback
+
+  grafana:
+    namespace: prometheus
+    policy: two_factor
+    pkce: true
+    claimsPolicy: grafana
+    scopes: [openid, profile, groups, email]
+    redirectUris:
+      - https://grafana.{{ .Values.app.domain }}/login/generic_oauth
+
+  jellyfin:
+    pkce: true
+    scopes: [openid, profile, groups]
+    tokenEndpointAuthMethod: client_secret_post
+    redirectUris:
+      - https://jellyfin.{{ .Values.app.domain }}/sso/OID/redirect/authelia
+
+  immich:
+    name: immich
+    oneFactorGroups: [app_immich_one_factor]
+    claimsPolicy: immich_policy
+    scopes: [openid, profile, email, immich_scope]
+    tokenEndpointAuthMethod: client_secret_post
+    signingAlgorithm: RS256
+    redirectUris:
+      - https://immich.{{ .Values.app.domain }}/auth/login
+      - https://immich.{{ .Values.app.domain }}/user-settings
+      - app.immich:///oauth-callback
+
+  # seerr (the preview image of the pending OIDC support, https://github.com/seerr-team/seerr/pull/2715): the id token and the userinfo
+  # give the email (the user is created from it) and the preferred_username
+  seerr:
+    pkce: true
+    tokenEndpointAuthMethod: client_secret_post
+    redirectUris:
+      - https://seerr.{{ .Values.app.domain }}/login
+      - https://seerr.{{ .Values.app.domain }}/profile/settings/linked-accounts
+
+  # seafile: its OAuth library authenticates with the HTTP basic scheme and has no PKCE. The access token is not signed, the userinfo
+  # gives the preferred_username (the unique id of the user) and the email
+  seafile:
+    redirectUris:
+      - https://seafile.{{ .Values.app.domain }}/oauth/callback/
+
+  # paperless (django-allauth): the user is created from the preferred_username and the email, the groups of the userinfo give the
+  # superusers (`role_admin`) and the groups of paperless
+  paperless:
+    pkce: true
+    scopes: [openid, profile, email, groups]
+    redirectUris:
+      - https://paperless.{{ .Values.app.domain }}/accounts/oidc/authelia/login/callback/
+
+  # tuwunel (Matrix homeserver): the user is created from the preferred_username, the claims are read in the id token. The callback of
+  # tuwunel ends with the client id, and the answer can be a form post.
+  tuwunel:
+    name: Matrix
+    claimsPolicy: tuwunel
+    scopes: [openid, profile, email, groups]
+    tokenEndpointAuthMethod: client_secret_post
+    grantTypes: [authorization_code, refresh_token]
+    responseModes: [form_post, query]
+    redirectUris:
+      - https://matrix.{{ .Values.app.domain }}/_matrix/client/unstable/login/sso/callback/{clientId}

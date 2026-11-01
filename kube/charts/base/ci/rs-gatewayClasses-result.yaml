@@ -4,6 +4,5 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: test-release
-  namespace: default
 spec:
   controllerName: example.com/gateway-controller

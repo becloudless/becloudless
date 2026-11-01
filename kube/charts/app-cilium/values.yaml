@@ -1,0 +1,185 @@
+# yaml-language-server: $schema=../app/schema/values.schema.json
+
+resources:
+  fluxHelmRepositories:
+    cilium:
+      url: https://helm.cilium.io
+
+  fluxHelmReleases:
+    cilium:
+      dependsOn:
+        - name: app-gateway-api
+          namespace: gateway-api
+
+      uninstall:
+        deletionPropagation: orphan
+
+      chart:
+        spec:
+          chart: cilium
+          version: 1.20.2
+          sourceRef:
+            kind: HelmRepository
+            name: cilium
+      values:
+        extraEnv:
+        - name: PATH
+          value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/run/wrappers/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin # TODO why it's working?
+
+        k8sServiceHost: kube.{{.Values.app.domain}}
+        k8sServicePort: 8443
+
+        devices: br0
+        nodePort:
+          directRoutingDevice: br0
+
+        kubeProxyReplacement: true
+
+        operator:
+          replicas: "{{ .Values.app.scaling.replicas }}"
+          # The operator and the envoy are the network of the cluster, they run as root with a writable root filesystem (the envoy
+          # has the capabilities NET_ADMIN and SYS_ADMIN): opted out of the audit policies of app-kyverno.
+          podAnnotations:
+            policy.bcl/skipContainerRequireRunAsNonRoot: "true"
+            policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
+        ipam:
+          mode: kubernetes
+
+        bgpControlPlane:
+          enabled: true
+        cni:
+          exclusive: false # let multus install
+
+        # No ingress controller: every app is exposed by the shared Gateway (see `cilium-post`), which is the only entry point.
+        ingressController:
+          enabled: false
+        # Needs the CRDs of app-gateway-api at operator start, restart the cilium-operator once after they are first installed.
+        gatewayAPI:
+          enabled: true
+        envoy:
+          streamIdleTimeoutDurationSeconds: 600 # required by immich for big files upload
+          podAnnotations: # see operator
+            policy.bcl/skipContainerRequireRunAsNonRoot: "true"
+            policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
+
+    # LoadBalancer pool and BGP need the Cilium CRDs, so they are installed once cilium is ready.
+    # The cluster sets its pool and BGP cluster config through `resources.fluxHelmReleases.cilium-post.values.resources`.
+    cilium-post:
+      dependsOn:
+        - ref:cilium
+        - name: app-gateway-api # the Gateway needs its CRDs
+          namespace: gateway-api
+      values:
+        resources:
+          # Advertise the LoadBalancer IPs of every service over BGP
+          ciliumBGPAdvertisements:
+            bgp-advertisement:
+              labels:
+                advertise: bgp
+              advertisements:
+                service:
+                  advertisementType: Service
+                  service:
+                    addresses:
+                      loadBalancerIP: LoadBalancerIP
+                  selector: # an always true selector, an empty one matches nothing
+                    matchExpressions:
+                      never:
+                        key: somekey
+                        operator: NotIn
+                        values:
+                          never-used-value: never-used-value
+
+          ciliumBGPPeerConfigs:
+            bgp-peer-config:
+              families:
+                ipv4-unicast:
+                  afi: ipv4
+                  safi: unicast
+                  advertisements:
+                    matchLabels:
+                      advertise: bgp
+
+          # Single entry point of the apps (http, https and tls passthrough), with its own LoadBalancer IP that the cluster pins with `addresses`.
+          # Each app attaches its listeners and certificate with a ListenerSet in its own namespace, and its routes to that ListenerSet.
+          # Apps needing authentication use the `ExternalAuth` filter of their HTTPRoute to call authelia.
+          gateways:
+            shared:
+              gatewayClassName: cilium
+              allowedListeners:
+                namespaces:
+                  from: All
+              listeners: # a Gateway needs at least one valid listener of its own
+                http:
+                  name: http
+                  protocol: HTTP
+                  port: 80
+                  allowedRoutes: # the http-01 solver of cert-manager creates its route in the namespace of each certificate
+                    namespaces:
+                      from: All
+
+          # Every plain http request is redirected to the same address over https. The route has no hostname, so it is the fallback of the
+          # listener: the http-01 solver routes of cert-manager (one hostname and a path each) are more specific and keep working.
+          httpRoutes:
+            https-redirect:
+              parentRefs:
+                shared:
+                  group: gateway.networking.k8s.io
+                  kind: Gateway
+                  name: shared
+                  sectionName: http
+              rules:
+                redirect:
+                  filters:
+                    redirect:
+                      type: RequestRedirect
+                      requestRedirect:
+                        scheme: https
+                        statusCode: 301
+
+    # Baseline: default deny of all pod traffic and the DNS client side. The flows are allowed by each app (the server side of DNS is
+    # in app-coredns). Host networked pods (apiserver, etcd, cilium...) are not endpoints of Cilium and are not affected.
+    # To roll back quickly: `apps.cilium.values.resources.fluxHelmReleases.cilium-policies.enabled: false` in the cluster values.
+    # To see what a policy blocks: `hubble observe --verdict DROPPED` (or set `policyAuditMode: true` on the cilium chart to only log).
+    # The Envoy of the Gateway runs on every node: from another node its traffic reaches a pod as `remote-node`, not `ingress`.
+    # A flow needs an egress rule on the source side and an ingress rule on the destination side (the same-namespace rules do both).
+    cilium-policies:
+      dependsOn:
+        - ref:cilium
+        - name: app-flux # the deny must not land before the rules of Flux: it could not reconcile anything anymore
+          namespace: flux-system
+        - name: app-coredns # nor before the rules of CoreDNS: nothing could resolve a name anymore
+          namespace: kube-system
+      values:
+        resources:
+          ciliumClusterwideNetworkPolicies:
+
+            # ---------------------------------------------------------------- baseline
+            # `none` matches nothing: selecting a pod with an ingress/egress section is what turns on the default deny.
+            default-deny:
+              endpointSelector:
+                matchExpressions:
+                  any-namespace: {key: "k8s:io.kubernetes.pod.namespace", operator: Exists}
+              ingress:
+                deny: {fromEntities: [none]}
+              egress:
+                deny: {toEntities: [none]}
+
+            allow-dns:
+              endpointSelector:
+                matchExpressions:
+                  any-namespace: {key: "k8s:io.kubernetes.pod.namespace", operator: Exists}
+              egress:
+                kube-dns:
+                  toEndpoints:
+                    kube-dns:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": kube-system, "k8s:k8s-app": kube-dns}
+                  toPorts:
+                    dns:
+                      ports:
+                        udp: {port: "53", protocol: UDP}
+                        tcp: {port: "53"}
+                      rules: # the DNS proxy of Cilium learns the addresses behind the names, needed by the `toFQDNs` rules of the apps
+                        dns:
+                          all: {matchPattern: "*"}
+

@@ -1,0 +1,601 @@
+---
+# Source: app-paperless/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: paperless
+  namespace: default
+spec:
+  egress:
+  - toFQDNs:
+    - matchName: authelia.test.com
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toEntities:
+    - ingress
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        cnpg.io/cluster: paperless-postgresql
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: valkey
+    toPorts:
+    - ports:
+      - port: "6379"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: paperless
+      app.kubernetes.io/instance: paperless
+  ingress:
+  - fromEntities:
+    - ingress
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "8000"
+        protocol: TCP
+---
+# Source: app-paperless/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: paperless
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: paperless-pre
+  - name: paperless-postgresql
+  - name: paperless-valkey
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 15m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      paperless:
+        deployments:
+          paperless:
+            labels:
+              app.kubernetes.io/component: paperless
+              app.kubernetes.io/instance: paperless
+            name: paperless
+            namespace: default
+        persistentVolumeClaims:
+          paperless-data:
+            name: paperless-data
+            namespace: default
+        services:
+          paperless:
+            name: paperless
+            namespace: default
+      paperless-integration:
+        certManagerCertificates:
+          paperless-gateway:
+            name: paperless-gateway
+            namespace: default
+            secretName: tls-paperless-gateway
+        httpRoutes:
+          paperless:
+            name: paperless
+            namespace: default
+        listenerSets:
+          paperless:
+            name: paperless
+            namespace: default
+      paperless-pre:
+        externalSecrets:
+          paperless-oidc:
+            name: paperless-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          paperless-generated:
+            name: paperless-generated
+            namespace: default
+    resources:
+      deployments:
+        paperless:
+          replicas: 1
+          strategy:
+            type: Recreate
+          template:
+            spec:
+              containers:
+                paperless:
+                  env:
+                    BROKER_PASSWORD:
+                      secretKeyRef:
+                        key: default
+                        name: paperless-valkey
+                    OIDC_CLIENT_ID:
+                      secretKeyRef:
+                        key: client-id
+                        name: ref:paperless-oidc
+                    OIDC_CLIENT_SECRET:
+                      secretKeyRef:
+                        key: secret
+                        name: ref:paperless-oidc
+                    PAPERLESS_ACCOUNT_EMAIL_VERIFICATION: none
+                    PAPERLESS_ADMIN_MAIL: paperless_admin@test.com
+                    PAPERLESS_ADMIN_PASSWORD:
+                      secretKeyRef:
+                        key: admin-password
+                        name: ref:paperless-generated
+                    PAPERLESS_ADMIN_USER: paperless_admin
+                    PAPERLESS_APPS: allauth.socialaccount.providers.openid_connect
+                    PAPERLESS_CONSUMER_DISABLE: "true"
+                    PAPERLESS_DB_OPTIONS: sslmode=require
+                    PAPERLESS_DBENGINE: postgresql
+                    PAPERLESS_DBHOST: paperless-postgresql-rw
+                    PAPERLESS_DBNAME: app
+                    PAPERLESS_DBPASS:
+                      secretKeyRef:
+                        key: password
+                        name: paperless-postgresql-app
+                    PAPERLESS_DBUSER: app
+                    PAPERLESS_DISABLE_REGULAR_LOGIN: "true"
+                    PAPERLESS_OCR_LANGUAGE: fra+eng
+                    PAPERLESS_PROXY_SSL_HEADER: '["HTTP_X_FORWARDED_PROTO", "https"]'
+                    PAPERLESS_REDIRECT_LOGIN_TO_SSO: "true"
+                    PAPERLESS_REDIS: redis://:$(BROKER_PASSWORD)@paperless-valkey:6379
+                    PAPERLESS_SECRET_KEY:
+                      secretKeyRef:
+                        key: secret-key
+                        name: ref:paperless-generated
+                    PAPERLESS_SOCIAL_ACCOUNT_SYNC_GROUPS: "true"
+                    PAPERLESS_SOCIAL_ACCOUNT_SYNC_SUPERUSER_GROUP: role_admin
+                    PAPERLESS_SOCIAL_AUTO_SIGNUP: "true"
+                    PAPERLESS_SOCIALACCOUNT_PROVIDERS: '{"openid_connect":{"SCOPE":["openid","profile","email","groups"],"OAUTH_PKCE_ENABLED":true,"APPS":[{"provider_id":"authelia","name":"Authelia","client_id":"$(OIDC_CLIENT_ID)","secret":"$(OIDC_CLIENT_SECRET)","settings":{"server_url":"https://authelia.test.com","token_auth_method":"client_secret_basic"}}]}}'
+                    PAPERLESS_TIME_ZONE: Europe/Paris
+                    PAPERLESS_URL: https://paperless.test.com
+                  image: ghcr.io/paperless-ngx/paperless-ngx:3.3.4
+                  name: paperless
+                  ports:
+                    http:
+                      containerPort: 8000
+                  probe:
+                    httpGet:
+                      httpHeaders:
+                        host:
+                          name: Host
+                          value: localhost
+                      path: /
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                    runAsGroup: 1000
+                    runAsUser: 1000
+                  startupProbe:
+                    failureThreshold: 120
+                  volumeMounts:
+                    data:
+                      mountPath: /usr/src/paperless/data
+                      name: data
+                      subPath: data
+                    media:
+                      mountPath: /usr/src/paperless/media
+                      name: data
+                      subPath: media
+              securityContext:
+                fsGroup: 1000
+              volumes:
+                data:
+                  name: data
+                  persistentVolumeClaim:
+                    claimName: ref:paperless-data
+      persistentVolumeClaims:
+        paperless-data:
+          resources:
+            requests:
+              storage: 20Gi
+          storageClassName: longhorn-files
+      services:
+        paperless:
+          ports:
+            http:
+              port: 8000
+---
+# Source: app-paperless/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: paperless-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: paperless
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      paperless:
+        deployments:
+          paperless:
+            labels:
+              app.kubernetes.io/component: paperless
+              app.kubernetes.io/instance: paperless
+            name: paperless
+            namespace: default
+        persistentVolumeClaims:
+          paperless-data:
+            name: paperless-data
+            namespace: default
+        services:
+          paperless:
+            name: paperless
+            namespace: default
+      paperless-integration:
+        certManagerCertificates:
+          paperless-gateway:
+            name: paperless-gateway
+            namespace: default
+            secretName: tls-paperless-gateway
+        httpRoutes:
+          paperless:
+            name: paperless
+            namespace: default
+        listenerSets:
+          paperless:
+            name: paperless
+            namespace: default
+      paperless-pre:
+        externalSecrets:
+          paperless-oidc:
+            name: paperless-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          paperless-generated:
+            name: paperless-generated
+            namespace: default
+    resources:
+      certManagerCertificates:
+        paperless-gateway:
+          dnsNames:
+            paperless: paperless.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-paperless-gateway
+      httpRoutes:
+        paperless:
+          hostnames:
+            paperless: paperless.test.com
+          parentRefs:
+            paperless:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: paperless
+              sectionName: paperless
+          rules:
+            root:
+              backendRefs:
+                backend:
+                  name: ref:paperless
+                  port: 8000
+              timeouts:
+                request: 0s
+      listenerSets:
+        paperless:
+          listeners:
+            paperless:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: paperless.test.com
+              name: paperless
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: ref:paperless-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+---
+# Source: app-paperless/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: paperless-postgresql
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/postgresql
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-cnpg
+    namespace: cnpg-system
+  - name: app-longhorn
+    namespace: longhorn-system
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    clients:
+      paperless:
+        matchLabels:
+          app.kubernetes.io/component: paperless
+          app.kubernetes.io/instance: paperless
+    instances: 2
+    storageSize: 5Gi
+---
+# Source: app-paperless/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: paperless-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-secret-generator
+    namespace: secret-generator
+  - name: app-external-secrets
+    namespace: external-secrets
+  - name: authelia-pre
+    namespace: authelia
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      paperless:
+        deployments:
+          paperless:
+            labels:
+              app.kubernetes.io/component: paperless
+              app.kubernetes.io/instance: paperless
+            name: paperless
+            namespace: default
+        persistentVolumeClaims:
+          paperless-data:
+            name: paperless-data
+            namespace: default
+        services:
+          paperless:
+            name: paperless
+            namespace: default
+      paperless-integration:
+        certManagerCertificates:
+          paperless-gateway:
+            name: paperless-gateway
+            namespace: default
+            secretName: tls-paperless-gateway
+        httpRoutes:
+          paperless:
+            name: paperless
+            namespace: default
+        listenerSets:
+          paperless:
+            name: paperless
+            namespace: default
+      paperless-pre:
+        externalSecrets:
+          paperless-oidc:
+            name: paperless-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+        stringSecrets:
+          paperless-generated:
+            name: paperless-generated
+            namespace: default
+    resources:
+      externalSecrets:
+        paperless-oidc:
+          data:
+            client-id:
+              remoteRef:
+                key: authelia-oidc-paperless
+                property: client-id
+              secretKey: client-id
+            secret:
+              remoteRef:
+                key: authelia-oidc-paperless
+                property: secret
+              secretKey: secret
+          refreshInterval: 1h
+          secretStoreRef: ref:authelia
+      secretStores:
+        authelia:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: ref:authelia-reader
+              remoteNamespace: authelia
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        authelia-reader:
+          automountServiceAccountToken: false
+      stringSecrets:
+        paperless-generated:
+          fields:
+            admin-password: {}
+            secret-key: {}
+---
+# Source: app-paperless/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: paperless-valkey
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/valkey
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-secret-generator
+    namespace: secret-generator
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    clients:
+      paperless:
+        matchLabels:
+          app.kubernetes.io/component: paperless
+          app.kubernetes.io/instance: paperless

@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "app": {
+      "$ref": "../../app/schema/values.schema.json#/properties/app"
+    },
+    "checkRequiredValues": {
+      "$ref": "../../app/schema/values.schema.json#/properties/checkRequiredValues"
+    },
+    "expose": {
+      "$ref": "../../app/schema/values.schema.json#/properties/expose"
+    },
+    "oidc": {
+      "$ref": "../../app/schema/values.schema.json#/properties/oidc"
+    },
+    "prefixNamesWithRelease": {
+      "$ref": "../../app/schema/values.schema.json#/properties/prefixNamesWithRelease"
+    },
+    "defaults": {
+      "$ref": "../../app/schema/values.schema.json#/properties/defaults"
+    },
+    "resources": {
+      "$ref": "../../app/schema/values.schema.json#/properties/resources"
+    },
+    "oidcClients": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "claimsPolicy": {
+            "description": "The name of a claims policy of the configuration of authelia.",
+            "type": "string"
+          },
+          "grantTypes": {
+            "default": [
+              "authorization_code"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "groups": {
+            "description": "The groups that pass with the second factor (`role_admin` and `app_<id>` by default).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "name": {
+            "description": "The display name of the client (the id with a capital by default).",
+            "type": "string"
+          },
+          "namespace": {
+            "description": "The namespace of the app, whose ServiceAccount `authelia-reader` reads the secret of the client (the id by default).",
+            "type": "string"
+          },
+          "oneFactorGroups": {
+            "description": "The groups that pass with the first factor only.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "pkce": {
+            "default": false,
+            "description": "Requires PKCE (S256).",
+            "type": "boolean"
+          },
+          "policy": {
+            "description": "The name of a policy of authelia (`two_factor`...) used instead of the generated `<id>_authz`.",
+            "type": "string"
+          },
+          "redirectUris": {
+            "description": "The redirect URIs, `{clientId}` is replaced by the client id.",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "responseModes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "scopes": {
+            "default": [
+              "openid",
+              "profile",
+              "email"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "signingAlgorithm": {
+            "default": "none",
+            "description": "The signing algorithm of the access token and of the userinfo.",
+            "type": "string"
+          },
+          "tokenEndpointAuthMethod": {
+            "default": "client_secret_basic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "redirectUris"
+        ],
+        "type": "object"
+      },
+      "description": "The OIDC clients of authelia, for app-authelia: the key is the id of the client. Generates the secrets, the access to them, the authorization policy and the client.",
+      "type": "object"
+    }
+  },
+  "type": "object"
+}

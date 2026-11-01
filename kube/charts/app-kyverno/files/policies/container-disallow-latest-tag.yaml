@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=../../../base/schema/resources/kyvernoClusterPolicies.json
+
+# The images must be pinned: a tag (or a digest) that is not `latest`, otherwise a restart can change the version of an app and
+# the updates (Renovate) have nothing to track.
+# `Ignore`: a Kyverno outage must not block the creation of pods.
+failurePolicy: Ignore
+validationFailureAction: Enforce
+rules:
+  - name: container-require-image-tag
+    match:
+      any:
+        - resources:
+            kinds:
+              - Pod
+            operations:
+              - CREATE
+    validate:
+      message: the images must have a tag or a digest
+      pattern:
+        spec:
+          =(initContainers):
+            - image: "*:*"
+          containers:
+            - image: "*:*"
+
+  - name: container-disallow-latest-tag
+    match:
+      any:
+        - resources:
+            kinds:
+              - Pod
+            operations:
+              - CREATE
+    validate:
+      message: the images must not use the `latest` tag
+      pattern:
+        spec:
+          =(initContainers):
+            - image: "!*:latest"
+          containers:
+            - image: "!*:latest"

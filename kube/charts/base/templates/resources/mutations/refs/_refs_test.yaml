@@ -1,0 +1,583 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: refs mutation (ref:<id> points to a resource of the release or of a sibling release, whatever is not a reference is kept)
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: replaces the references of a route and a listener by the parent, the backends and the secret
+    set:
+      resources:
+        services:
+          web:
+            ports: {http: {port: 80}}
+          api:
+            nameOverride: api-service # the name of the service is not its id
+            ports: {http: {port: 80}}
+        certManagerCertificates:
+          web-tls:
+            secretName: tls-web
+            dnsNames: {web: web.example.com}
+            issuerRef: {name: letsencrypt, kind: ClusterIssuer}
+        listenerSets:
+          web:
+            parentRef: {group: gateway.networking.k8s.io, kind: Gateway, name: shared, namespace: kube-system}
+            listeners:
+              https:
+                name: https
+                port: 443
+                protocol: HTTPS
+                tls:
+                  mode: Terminate
+                  certificateRefs:
+                    tls: {name: "ref:certManagerCertificates/web-tls"}
+        httpRoutes:
+          web:
+            parentRefs:
+              web: ref:listenerSets/web
+            rules:
+              root:
+                backendRefs:
+                  web: {name: ref:web, port: 80}
+                  api: {name: ref:api, port: 80}
+                  external: {name: external-service, port: 80}
+    asserts:
+      - equal:
+          path: spec.parentRefs
+          value:
+            - {group: gateway.networking.k8s.io, kind: ListenerSet, name: web}
+        documentSelector: {path: kind, value: HTTPRoute}
+      - equal:
+          path: spec.rules[0].backendRefs
+          value:
+            - {name: api-service, port: 80}
+            - {name: external-service, port: 80}
+            - {name: web, port: 80}
+        documentSelector: {path: kind, value: HTTPRoute}
+      - equal:
+          path: spec.listeners[0].tls.certificateRefs
+          value:
+            - {name: tls-web}
+        documentSelector: {path: kind, value: ListenerSet}
+
+  - it: replaces the references of a pod by the names of the secrets, config maps, volume claims and service account
+    set:
+      resources:
+        stringSecrets:
+          db-generated:
+            fields: {password: {}}
+        configMaps:
+          web-config:
+            data: {a: b}
+        persistentVolumeClaims:
+          web-data:
+            resources: {requests: {storage: 1Gi}}
+        serviceAccounts:
+          web: {automountServiceAccountToken: false}
+        deployments:
+          web:
+            template:
+              spec:
+                serviceAccountName: ref:web
+                containers:
+                  web:
+                    name: web
+                    image: img
+                    env:
+                      PASSWORD:
+                        secretKeyRef: {name: "ref:stringSecrets/db-generated", key: password}
+                      CONF:
+                        configMapKeyRef: {name: ref:web-config, key: a}
+                      PLAIN: ref-is-only-a-prefix-of-a-reference-at-the-field-of-a-reference
+                volumes:
+                  data:
+                    name: data
+                    persistentVolumeClaim: {claimName: ref:web-data}
+                  conf:
+                    name: conf
+                    configMap: {name: ref:web-config}
+                  secret:
+                    name: secret
+                    secret: {secretName: "ref:stringSecrets/db-generated"}
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env
+          value:
+            - {name: CONF, valueFrom: {configMapKeyRef: {key: a, name: web-config}}}
+            - {name: PASSWORD, valueFrom: {secretKeyRef: {key: password, name: db-generated}}}
+            - {name: PLAIN, value: ref-is-only-a-prefix-of-a-reference-at-the-field-of-a-reference}
+        documentSelector: {path: kind, value: Deployment}
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: web
+        documentSelector: {path: kind, value: Deployment}
+      - equal:
+          path: spec.template.spec.volumes[0].configMap.name
+          value: web-config
+        documentSelector: {path: kind, value: Deployment}
+      - equal:
+          path: spec.template.spec.volumes[1].persistentVolumeClaim.claimName
+          value: web-data
+        documentSelector: {path: kind, value: Deployment}
+      - equal:
+          path: spec.template.spec.volumes[2].secret.secretName
+          value: db-generated
+        documentSelector: {path: kind, value: Deployment}
+
+  - it: replaces the references of a Cilium policy by the selectors of the pods, as a map, a list or the whole selector
+    set:
+      resources:
+        deployments:
+          web:
+            template:
+              spec:
+                containers:
+                  web: {name: web, image: img}
+        statefulSets:
+          db:
+            serviceName: db
+            template:
+              metadata:
+                labels:
+                  app.kubernetes.io/component: database # the pods do not use the id
+              spec:
+                containers:
+                  db: {name: db, image: img}
+        ciliumNetworkPolicies:
+          web:
+            endpointSelector: ref:deployments/web
+            egress:
+              db:
+                toEndpoints:
+                  db: ref:statefulSets/db
+                toPorts: [5432]
+              both:
+                toEndpoints: [ref:deployments/web, ref:statefulSets/db]
+                toPorts: [80]
+              other:
+                toEndpoints:
+                  other: {matchLabels: {app.kubernetes.io/name: valkey}}
+                toPorts: [6379]
+    asserts:
+      - equal:
+          path: spec.endpointSelector
+          value:
+            matchLabels:
+              app.kubernetes.io/component: web
+              app.kubernetes.io/instance: test-release
+        documentSelector: {path: kind, value: CiliumNetworkPolicy}
+      - equal:
+          path: spec.egress[0].toEndpoints
+          value:
+            - matchLabels:
+                app.kubernetes.io/component: database
+                app.kubernetes.io/instance: test-release
+            - matchLabels:
+                app.kubernetes.io/component: web
+                app.kubernetes.io/instance: test-release
+        documentSelector: {path: kind, value: CiliumNetworkPolicy}
+      - equal:
+          path: spec.egress[1].toEndpoints
+          value:
+            - matchLabels:
+                app.kubernetes.io/component: database
+                app.kubernetes.io/instance: test-release
+        documentSelector: {path: kind, value: CiliumNetworkPolicy}
+      - equal:
+          path: spec.egress[2].toEndpoints
+          value:
+            - matchLabels:
+                app.kubernetes.io/name: valkey
+        documentSelector: {path: kind, value: CiliumNetworkPolicy}
+
+  - it: gives the namespace of the pods of another namespace to the selector
+    set:
+      resources:
+        deployments:
+          web:
+            namespace: elsewhere
+            template:
+              spec:
+                containers:
+                  web: {name: web, image: img}
+        ciliumNetworkPolicies:
+          local:
+            endpointSelector: {matchLabels: {app: local}}
+            egress:
+              web:
+                toEndpoints:
+                  web: ref:deployments/web
+        ciliumClusterwideNetworkPolicies:
+          everywhere:
+            endpointSelector: {matchLabels: {app: local}}
+            egress:
+              web:
+                toEndpoints:
+                  web: ref:deployments/web
+    asserts:
+      - equal:
+          path: spec.egress[0].toEndpoints
+          value:
+            - matchLabels:
+                app.kubernetes.io/component: web
+                app.kubernetes.io/instance: test-release
+                k8s:io.kubernetes.pod.namespace: elsewhere
+        documentSelector: {path: kind, value: CiliumNetworkPolicy}
+      - equal:
+          path: spec.egress[0].toEndpoints
+          value:
+            - matchLabels:
+                app.kubernetes.io/component: web
+                app.kubernetes.io/instance: test-release
+                k8s:io.kubernetes.pod.namespace: elsewhere
+        documentSelector: {path: kind, value: CiliumClusterwideNetworkPolicy}
+
+  - it: replaces the references of a binding by the role and the subjects
+    set:
+      resources:
+        serviceAccounts:
+          web: {automountServiceAccountToken: false}
+        roles:
+          web-reader:
+            rules:
+              pods: {apiGroups: [""], resources: [pods], verbs: [get]}
+        roleBindings:
+          web-reader:
+            roleRef: ref:roles/web-reader
+            subjects:
+              web: ref:web
+    asserts:
+      - equal:
+          path: roleRef
+          value: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: web-reader}
+        documentSelector: {path: kind, value: RoleBinding}
+      - equal:
+          path: subjects
+          value:
+            - {kind: ServiceAccount, name: web, namespace: default}
+        documentSelector: {path: kind, value: RoleBinding}
+
+  - it: replaces the references of a HelmRelease by the ones it depends on, in a list
+    set:
+      resources:
+        fluxHelmReleases:
+          a:
+            chart: {spec: {chart: x, sourceRef: {kind: GitRepository, name: bcl}}}
+          b:
+            chart: {spec: {chart: x, sourceRef: {kind: GitRepository, name: bcl}}}
+            dependsOn: [ref:a]
+          c:
+            chart: {spec: {chart: x, sourceRef: {kind: GitRepository, name: bcl}}}
+            dependsOn:
+              - ref:a
+              - {name: other, namespace: elsewhere}
+              - ref:b
+    asserts:
+      - equal:
+          path: spec.dependsOn
+          value:
+            - {name: a}
+        documentSelector: {path: metadata.name, value: b}
+      - equal:
+          path: spec.dependsOn
+          value:
+            - {name: a}
+            - {name: other, namespace: elsewhere}
+            - {name: b}
+        documentSelector: {path: metadata.name, value: c}
+
+  - it: resolves a reference to a resource of a sibling release, with what its parent shares in refs
+    set:
+      refs:
+        db-pre:
+          stringSecrets:
+            db-generated: {name: db-generated, namespace: default}
+          certManagerCertificates:
+            db-tls: {name: db-tls, namespace: default, secretName: tls-db}
+          deployments:
+            db: {name: db, namespace: elsewhere, labels: {app.kubernetes.io/instance: db-pre, app.kubernetes.io/component: db}}
+      resources:
+        deployments:
+          web:
+            template:
+              spec:
+                containers:
+                  web:
+                    name: web
+                    image: img
+                    env:
+                      PASSWORD:
+                        secretKeyRef: {name: "ref:stringSecrets/db-generated@db-pre", key: password}
+                      TLS:
+                        secretKeyRef: {name: "ref:certManagerCertificates/db-tls@db-pre", key: tls.crt}
+        ciliumNetworkPolicies:
+          web:
+            endpointSelector: ref:deployments/web
+            egress:
+              db:
+                toEndpoints:
+                  db: ref:deployments/db@db-pre
+                toPorts: [5432]
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env
+          value:
+            - {name: PASSWORD, valueFrom: {secretKeyRef: {key: password, name: db-generated}}}
+            - {name: TLS, valueFrom: {secretKeyRef: {key: tls.crt, name: tls-db}}}
+        documentSelector: {path: kind, value: Deployment}
+      - equal:
+          path: spec.egress[0].toEndpoints
+          value:
+            - matchLabels:
+                app.kubernetes.io/component: db
+                app.kubernetes.io/instance: db-pre
+                k8s:io.kubernetes.pod.namespace: elsewhere
+        documentSelector: {path: kind, value: CiliumNetworkPolicy}
+
+  - it: fails for a reference to a resource that does not exist
+    set:
+      resources:
+        listenerSets:
+          other:
+            parentRef: {name: shared}
+            listeners: {https: {name: https, port: 443, protocol: HTTPS}}
+        httpRoutes:
+          web:
+            parentRefs: {web: "ref:listenerSets/nope"}
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.httpRoutes.web: parentRefs: "ref:listenerSets/nope": no listenerSets "nope" in this release or its siblings (known: other)'
+
+  - it: resolves a reference to the resource of a sibling release without naming the release, this release first
+    set:
+      refs:
+        db-pre:
+          stringSecrets:
+            db-generated: {name: db-generated, namespace: default}
+            shared: {name: shared-pre, namespace: default}
+        cache:
+          stringSecrets:
+            cache-generated: {name: cache-generated, namespace: default}
+      resources:
+        stringSecrets:
+          shared: {fields: {a: {}}}
+        deployments:
+          web:
+            template:
+              spec:
+                containers:
+                  web:
+                    name: web
+                    image: img
+                    env:
+                      DB: {secretKeyRef: {name: "ref:stringSecrets/db-generated", key: password}}
+                      CACHE: {secretKeyRef: {name: "ref:stringSecrets/cache-generated", key: password}}
+                      SHARED: {secretKeyRef: {name: "ref:stringSecrets/shared", key: password}}
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env
+          value:
+            - {name: CACHE, valueFrom: {secretKeyRef: {key: password, name: cache-generated}}}
+            - {name: DB, valueFrom: {secretKeyRef: {key: password, name: db-generated}}}
+            - {name: SHARED, valueFrom: {secretKeyRef: {key: password, name: shared}}}
+        documentSelector: {path: kind, value: Deployment}
+
+  - it: fails for a reference to an id that is the one of several sibling releases, unless the release is named
+    set:
+      refs:
+        a:
+          stringSecrets:
+            s: {name: s-a, namespace: default}
+        b:
+          stringSecrets:
+            s: {name: s-b, namespace: default}
+      resources:
+        deployments:
+          web:
+            template:
+              spec:
+                containers:
+                  web:
+                    name: web
+                    image: img
+                    env:
+                      S: {secretKeyRef: {name: "ref:stringSecrets/s", key: a}}
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.deployments.web: template.spec.containers.env.secretKeyRef.name: "ref:stringSecrets/s": several resources have this id (stringSecrets@a, stringSecrets@b), choose with `ref:<kind>/<id>@<release>`'
+
+  - it: fails for a reference to a kind the field does not accept
+    set:
+      resources:
+        httpRoutes:
+          web:
+            parentRefs: {web: "ref:deployments/web"}
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.httpRoutes.web: parentRefs: "ref:deployments/web" is a deployments, only listenerSets, gateways can be referenced here'
+
+  - it: finds the kind of a reference without it when only one kind has the id
+    set:
+      resources:
+        stringSecrets:
+          s:
+            fields: {a: {}}
+        deployments:
+          web:
+            template:
+              spec:
+                containers:
+                  web: {name: web, image: img, env: {A: {secretKeyRef: {name: "ref:s", key: a}}}}
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env
+          value:
+            - {name: A, valueFrom: {secretKeyRef: {key: a, name: s}}}
+        documentSelector: {path: kind, value: Deployment}
+
+  - it: fails for a reference without the kind when several kinds have the id
+    set:
+      resources:
+        stringSecrets:
+          s:
+            fields: {a: {}}
+        externalSecrets:
+          s:
+            secretStoreRef: {name: store, kind: SecretStore}
+            data: {a: {remoteRef: {key: a}}}
+        deployments:
+          web:
+            template:
+              spec:
+                containers:
+                  web: {name: web, image: img, env: {A: {secretKeyRef: {name: "ref:s", key: a}}}}
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.deployments.web: template.spec.containers.env.secretKeyRef.name: "ref:s": several resources have this id (externalSecrets, stringSecrets), choose with `ref:<kind>/<id>@<release>`'
+
+  - it: fails for a reference to a disabled resource
+    set:
+      resources:
+        serviceAccounts:
+          web:
+            enabled: false
+        deployments:
+          web:
+            template:
+              spec:
+                serviceAccountName: ref:web
+                containers:
+                  web: {name: web, image: img}
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.deployments.web: template.spec.serviceAccountName: "ref:web": the serviceAccounts "web" is disabled'
+
+  - it: fails for a reference to an unknown sibling release
+    set:
+      resources:
+        deployments:
+          web:
+            template:
+              spec:
+                containers:
+                  web: {name: web, image: img, env: {A: {secretKeyRef: {name: "ref:stringSecrets/s@nope", key: a}}}}
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.deployments.web: template.spec.containers.env.secretKeyRef.name: "ref:stringSecrets/s@nope": no sibling release "nope" with resources'
+
+  - it: fails when two references of a list have the same id
+    set:
+      resources:
+        listenerSets:
+          web:
+            parentRef: {name: shared}
+            listeners: {https: {name: https, port: 443, protocol: HTTPS}}
+        httpRoutes:
+          web:
+            parentRefs: ["ref:listenerSets/web", "ref:listenerSets/web"]
+    asserts:
+      - failedTemplate:
+          errorMessage: 'resources.httpRoutes.web: parentRefs: two references have the id "web", use the map (`<key>: ref:...`) to name them'
+
+  - it: resolves a reference to a resource of the HelmReleases of the release, in a parent chart
+    set:
+      resources:
+        fluxHelmReleases:
+          db: # the release is `db`, its pods have the standard labels of this release
+            chart: {spec: {chart: ./kube/charts/base-loader, sourceRef: {kind: GitRepository, name: bcl}}}
+            values:
+              resources:
+                statefulSets:
+                  db:
+                    serviceName: db
+                    template:
+                      spec:
+                        containers:
+                          db: {name: db, image: img}
+        ciliumNetworkPolicies:
+          web:
+            endpointSelector: {matchLabels: {app: web}}
+            egress:
+              db:
+                toEndpoints:
+                  db: ref:statefulSets/db@db
+                toPorts: [5432]
+    asserts:
+      - equal:
+          path: spec.egress[0].toEndpoints
+          value:
+            - matchLabels:
+                app.kubernetes.io/component: db
+                app.kubernetes.io/instance: db
+        documentSelector: {path: kind, value: CiliumNetworkPolicy}
+
+  - it: selects the pods of a resource whose name is templated, which cannot be referenced by its name
+    set:
+      app: {domain: example.com}
+      resources:
+        fluxHelmReleases:
+          post:
+            chart: {spec: {chart: ./kube/charts/base-loader, sourceRef: {kind: GitRepository, name: bcl}}}
+            values:
+              resources:
+                jobs:
+                  layout:
+                    fullNameOverride: 'layout-{{ list 5 .Values.app.domain | toJson | sha256sum | trunc 10 }}'
+                    template:
+                      spec:
+                        containers:
+                          layout: {name: layout, image: img}
+        ciliumNetworkPolicies:
+          web:
+            endpointSelector: {matchLabels: {app: web}}
+            egress:
+              layout:
+                toEndpoints:
+                  layout: ref:jobs/layout@post
+                toPorts: [3903]
+    asserts:
+      - equal:
+          path: spec.egress[0].toEndpoints
+          value:
+            - matchLabels:
+                app.kubernetes.io/component: layout
+                app.kubernetes.io/instance: post
+        documentSelector: {path: kind, value: CiliumNetworkPolicy}
+
+  - it: replaces the reference to a secret store by the whole secretStoreRef
+    set:
+      resources:
+        secretStores:
+          vault:
+            provider: {fake: {data: []}}
+        externalSecrets:
+          web:
+            secretStoreRef: ref:vault
+            data:
+              password: {secretKey: password, remoteRef: {key: web}}
+    asserts:
+      - equal:
+          path: spec.secretStoreRef
+          value: {name: vault, kind: SecretStore}
+        documentSelector: {path: kind, value: ExternalSecret}

@@ -1,59 +1,205 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
-
-global:
-  name:
-  domain:
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 resources:
-
-  namespaces:
-    flux-system: {}
-
   fluxOCIRepositories:
     flux-manifests:
       url: oci://ghcr.io/fluxcd/flux-manifests
       ref:
-        tag: v2.9.5
+        tag: v2.9.6
 
   networkPolicies:
     allow-cert-manager-http-solver:
       policyTypes:
-        Ingress: {}
+        XXX: Ingress
       podSelector:
         matchLabels:
           acme.cert-manager.io/http01-solver: "true"
       ingress:
-       something: {}
+       XXX: {}
 
-  ingresses:
-    flux-webhook:
-      annotations:
-        kubernetes.io/tls-acme: "true"
-      rules:
-        main:
-          host: flux-webhook.{{ .Values.global.domain }}
-          http:
-            paths:
-              main:
-                path: /
-                pathType: Prefix
-                backend:
-                  service:
-                    name: webhook-receiver
-                    port:
-                      number: 80
-      tls:
-        main:
-          hosts:
-            flux-webhook.{{ .Values.global.domain }}: {}
-          secretName: tls-flux-webhook
+  # app-cilium waits for this release: without these rules Flux could not reconcile anything anymore.
+  # One policy for each controller (the `app` label). The NetworkPolicies bundled in the flux manifests allow everything
+  # (`allow-egress`) or whole namespaces: they are removed by the patches of the `flux` Kustomization.
+  # Port 9090 is the artifacts of the sources (source-controller, source-watcher) and the events (notification-controller).
+  ciliumNetworkPolicies:
+    source-controller: # fetches the git repositories, the helm repositories and the OCI artifacts
+      endpointSelector:
+        matchLabels: {app: source-controller}
+      ingress:
+        artifacts:
+          fromEndpoints:
+            consumers:
+              matchExpressions:
+                app:
+                  key: app
+                  operator: In
+                  values: {helm-controller: helm-controller, kustomize-controller: kustomize-controller, image-automation-controller: image-automation-controller, source-watcher: source-watcher}
+          toPorts: [9090]
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+        notification-controller:
+          toEndpoints:
+            notification-controller:
+              matchLabels: {app: notification-controller}
+          toPorts: [9090]
+        gateway: # the public addresses of the sources hosted in the cluster are the gateway
+          toEntities: [ingress]
+          toPorts: [22, 80, 443]
+        internet: # the git repositories, the helm repositories and the OCI registries: any name, the sources are set by the clusters
+          toFQDNs:
+            any: {matchPattern: "*"} # TODO being explicit about public targets.
+          toPorts: [22, 80, 443]
+
+    source-watcher:
+      endpointSelector:
+        matchLabels: {app: source-watcher}
+      ingress:
+        artifacts:
+          fromEndpoints:
+            consumers:
+              matchExpressions:
+                app:
+                  key: app
+                  operator: In
+                  values: {helm-controller: helm-controller, kustomize-controller: kustomize-controller}
+          toPorts: [9090]
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+        source-controller:
+          toEndpoints:
+            source-controller:
+              matchLabels: {app: source-controller}
+          toPorts: [9090]
+        notification-controller:
+          toEndpoints:
+            notification-controller:
+              matchLabels: {app: notification-controller}
+          toPorts: [9090]
+
+    helm-controller:
+      endpointSelector:
+        matchLabels: {app: helm-controller}
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+        source-controller:
+          toEndpoints:
+            source-controller:
+              matchLabels: {app: source-controller}
+          toPorts: [9090]
+        source-watcher:
+          toEndpoints:
+            source-watcher:
+              matchLabels: {app: source-watcher}
+          toPorts: [9090]
+        notification-controller:
+          toEndpoints:
+            notification-controller:
+              matchLabels: {app: notification-controller}
+          toPorts: [9090]
+        # TODO
+        chart-schemas: # the values schema of the authelia chart references `definitions.json`, loaded by helm at each install/upgrade
+          toFQDNs:
+            authelia: {matchName: charts.authelia.com}
+          toPorts: [443]
+
+    kustomize-controller:
+      endpointSelector:
+        matchLabels: {app: kustomize-controller}
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+        source-controller:
+          toEndpoints:
+            source-controller:
+              matchLabels: {app: source-controller}
+          toPorts: [9090]
+        source-watcher:
+          toEndpoints:
+            source-watcher:
+              matchLabels: {app: source-watcher}
+          toPorts: [9090]
+        notification-controller:
+          toEndpoints:
+            notification-controller:
+              matchLabels: {app: notification-controller}
+          toPorts: [9090]
+
+    notification-controller: # the events of the controllers, and the webhook receiver exposed by the gateway
+      endpointSelector:
+        matchLabels: {app: notification-controller}
+      ingress:
+        events:
+          fromEndpoints:
+            controllers:
+              matchExpressions:
+                app:
+                  key: app
+                  operator: In
+                  values: {helm-controller: helm-controller, kustomize-controller: kustomize-controller, source-controller: source-controller, source-watcher: source-watcher, image-automation-controller: image-automation-controller, image-reflector-controller: image-reflector-controller}
+          toPorts: [9090]
+        webhook-receiver:
+          fromEntities: [ingress, host, remote-node]
+          toPorts: [9292]
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+        gateway: # the public addresses of the providers hosted in the cluster are the gateway
+          toEntities: [ingress]
+          toPorts: [80, 443]
+        providers: # the notification providers: any name, the providers are set by the clusters
+          toFQDNs:
+            any: {matchPattern: "*"}
+          toPorts: [80, 443]
+
+    image-automation-controller:
+      endpointSelector:
+        matchLabels: {app: image-automation-controller}
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+        source-controller:
+          toEndpoints:
+            source-controller:
+              matchLabels: {app: source-controller}
+          toPorts: [9090]
+        notification-controller:
+          toEndpoints:
+            notification-controller:
+              matchLabels: {app: notification-controller}
+          toPorts: [9090]
+        gateway: # the public addresses of the repositories hosted in the cluster are the gateway
+          toEntities: [ingress]
+          toPorts: [22, 443]
+        git: # the push of the updates: any name, the repositories are set by the clusters
+          toFQDNs:
+            any: {matchPattern: "*"}
+          toPorts: [22, 443]
+
+    image-reflector-controller: # scans the registries
+      endpointSelector:
+        matchLabels: {app: image-reflector-controller}
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+        notification-controller:
+          toEndpoints:
+            notification-controller:
+              matchLabels: {app: notification-controller}
+          toPorts: [9090]
+        gateway: # the public addresses of the registries hosted in the cluster are the gateway
+          toEntities: [ingress]
+          toPorts: [443]
+        registries: # any name, the registries are set by the clusters
+          toFQDNs:
+            any: {matchPattern: "*"}
+          toPorts: [443]
 
   fluxKustomizations:
     flux:
-      interval: 10m # TODO default
       path: ./ # TODO default
-      prune: true # TODO default
-      wait: true # TODO default
       sourceRef:
         kind: OCIRepository
         name: flux-manifests
@@ -88,6 +234,23 @@ resources:
               path: /spec/template/spec/containers/0/args/-
               value: --helm-index-max-size=102428800
 
+        # The controllers that elect a leader run `app.scaling.replicas` pods: one reconciles, the others take over when it is gone.
+        # It is availability, not throughput (see `--concurrent`). Their readiness probe (`/readyz`) does not wait for the lease, so the
+        # standby pods are Ready.
+        # TODO source-controller and source-watcher: a standby could rebuild its own artifacts when it becomes the leader (as a restart
+        # does, from their emptyDir), but they only start their artifact server (the readiness probe, `/`) once elected: a standby is
+        # never Ready, and the `flux` Kustomization waits for its Deployments. It needs the probe to be changed (to the health port,
+        # `/readyz`) before they can be scaled.
+        replicas:
+          target:
+            kind: Deployment
+            name: (helm-controller|kustomize-controller|notification-controller)
+            namespace: flux-system
+          patch: |
+            - op: replace
+              path: /spec/replicas
+              value: {{ .Values.app.scaling.replicas }}
+
         kustomizeControllerConcurrent:
           target:
             kind: Deployment
@@ -98,3 +261,93 @@ resources:
               path: /spec/template/spec/containers/0/args/-
               value: --concurrent=10
 
+        # a HR waiting for its health check holds a worker, so keep enough free for the downstream HR
+        helmControllerConcurrent:
+          target:
+            kind: Deployment
+            name: helm-controller
+            namespace: flux-system
+          patch: |
+            - op: add
+              path: /spec/template/spec/containers/0/args/-
+              value: --concurrent=20
+
+        # a resource without serviceAccountName would be reconciled as the controller itself (cluster-admin): it runs as the
+        # unprivileged `default` service account of its namespace instead, so an app cannot escape its service account by omitting it
+        helmControllerDefaultServiceAccount:
+          target:
+            kind: Deployment
+            name: helm-controller
+            namespace: flux-system
+          patch: |
+            - op: add
+              path: /spec/template/spec/containers/0/args/-
+              value: --default-service-account=default
+
+        kustomizeControllerDefaultServiceAccount:
+          target:
+            kind: Deployment
+            name: kustomize-controller
+            namespace: flux-system
+          patch: |
+            - op: add
+              path: /spec/template/spec/containers/0/args/-
+              value: --default-service-account=default
+
+        # the NetworkPolicies of the manifests allow everything (`allow-egress`) or whole namespaces (`allow-scraping`, `allow-webhooks`):
+        # the rules of each controller are the CiliumNetworkPolicies above
+        noAllowEgress:
+          target:
+            kind: NetworkPolicy
+            name: allow-egress
+            namespace: flux-system
+          patch: |
+            $patch: delete
+            apiVersion: networking.k8s.io/v1
+            kind: NetworkPolicy
+            metadata:
+              name: allow-egress
+        noAllowScraping:
+          target:
+            kind: NetworkPolicy
+            name: allow-scraping
+            namespace: flux-system
+          patch: |
+            $patch: delete
+            apiVersion: networking.k8s.io/v1
+            kind: NetworkPolicy
+            metadata:
+              name: allow-scraping
+        noAllowWebhooks:
+          target:
+            kind: NetworkPolicy
+            name: allow-webhooks
+            namespace: flux-system
+          patch: |
+            $patch: delete
+            apiVersion: networking.k8s.io/v1
+            kind: NetworkPolicy
+            metadata:
+              name: allow-webhooks
+
+        # cancel the running health check when a new revision is available
+        helmControllerCancelHealthCheck:
+          target:
+            kind: Deployment
+            name: helm-controller
+            namespace: flux-system
+          patch: |
+            - op: add
+              path: /spec/template/spec/containers/0/args/-
+              value: --feature-gates=CancelHealthCheckOnNewRevision=true
+
+# Disabled by default: it needs the Gateway API CRDs and cert-manager, which a cluster only gets with the apps of the server groups.
+# A cluster enables it with `apps.flux.values.resources.fluxHelmReleases.flux-integration.enabled: true`.
+expose:
+  flux-webhook:
+    release: flux
+    hostname: flux-webhook
+    service: webhook-receiver
+    port: 80
+    enabled: false
+    dependsOn: []

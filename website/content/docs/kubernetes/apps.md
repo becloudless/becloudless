@@ -18,8 +18,10 @@ All applications are defined under `kube/apps/`, one directory per app.
 | `cnpg` | Storage | CloudNativePG operator for PostgreSQL clusters |
 | `coredns` | Networking | Cluster DNS resolver |
 | `descheduler` | Platform | Rebalances pods across nodes based on policy |
+| `element` | Productivity | Web client of Matrix (Element Web), for tuwunel |
 | `external-secrets` | Security | Syncs secrets from external stores into Kubernetes Secrets |
 | `external-snapshotter` | Storage | CSI volume snapshot controller and CRDs |
+| `firefox-sync` | Productivity | Self-hosted storage for Firefox Sync (Mozilla accounts, data on your own server) |
 | `flux` | Platform | Flux CD GitOps controllers |
 | `gitea` | DevOps | Self-hosted Git service and container registry |
 | `homer` | Dashboard | Static application dashboard / home page |
@@ -34,13 +36,18 @@ All applications are defined under `kube/apps/`, one directory per app.
 | `metrics-server` | Platform | Kubernetes resource metrics (used by HPA and `kubectl top`) |
 | `multus` | Networking | Meta-CNI plugin for attaching multiple network interfaces to pods |
 | `multus-config` | Networking | NetworkAttachmentDefinitions for Multus |
+| `paperless` | Productivity | Document management with OCR and full text search (Paperless-ngx), SSO with Authelia |
 | `prometheus` | Observability | Prometheus + Grafana monitoring stack |
 | `renovate` | DevOps | Automated dependency update PRs |
+| `seafile` | Productivity | Self-hosted file sync and share (Dropbox alternative), SSO with Authelia |
 | `secret-generator` | Security | Generates random secrets and stores them as Kubernetes Secrets |
 | `seerr` | Media | Overseerr/Jellyseerr media request management |
+| `syncthing` | Productivity | Continuous file synchronization (one instance for each user, web UI behind Authelia, and a public relay on TCP 22067 of the Gateway) |
 | `terraform` | Platform | Terraform runner for cloud resources |
 | `traefik` | Networking | Ingress controller and reverse proxy |
 | `traefik-config` | Networking | Traefik middlewares and IngressRoute defaults |
+| `tuwunel` | Productivity | Private Matrix homeserver (chat, no federation), SSO with Authelia |
+| `whoami` | Networking | Request echo server to check the Gateway, TLS and the Authelia forward auth headers |
 
 ## App Directory Layout
 

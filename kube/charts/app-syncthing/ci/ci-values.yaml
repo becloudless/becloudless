@@ -1,0 +1,14 @@
+app:
+  domain: test.com
+  name: test
+  lldapdn: dc=test,dc=com
+  lldapUsers:
+    n0rad:
+      displayName: n0rad
+      groups:
+        - role_admin
+        - app_syncthing
+    kwiskas:
+      displayName: kwiskas # not in the group: no instance
+      groups:
+        - role_user

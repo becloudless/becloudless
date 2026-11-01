@@ -100,3 +100,41 @@ func TestArraysToMaps_EmptySchemaDoesNotPanic(t *testing.T) {
 		t.Errorf("type = %v, want %q", got.Schema["type"], "object")
 	}
 }
+
+func TestArraysToMaps_DisabledKeepsEveryArray(t *testing.T) {
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"rules": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"kinds": map[string]any{
+							"type":  "array",
+							"items": map[string]any{"type": "string"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	got, err := (ArraysToMaps{Disabled: true}).Mutate(schema)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	rules := got.Schema["properties"].(map[string]any)["rules"].(map[string]any)
+	if rules["type"] != "array" {
+		t.Errorf("rules.type = %v, want unchanged %q", rules["type"], "array")
+	}
+	items := rules["items"].(map[string]any)
+	kinds := items["properties"].(map[string]any)["kinds"].(map[string]any)
+	if kinds["type"] != "array" {
+		t.Errorf("kinds.type = %v, want unchanged %q", kinds["type"], "array")
+	}
+	if got.TemplateArgs["arrayPaths"] != "(list )" {
+		t.Errorf("arrayPaths = %q, want an empty list", got.TemplateArgs["arrayPaths"])
+	}
+}

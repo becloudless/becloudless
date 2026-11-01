@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: recreateStrategy mutation (the default rollingUpdate is dropped for the Recreate strategy)
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+set:
+  prefixNamesWithRelease: true # the assertions use the "<release>-<id>" names
+tests:
+  - it: drops the default rollingUpdate of a deployment that uses the Recreate strategy, and keeps it for the others
+    set:
+      defaults:
+        resources:
+          deployments:
+            strategy:
+              type: RollingUpdate
+              rollingUpdate:
+                maxUnavailable: 0
+      resources:
+        deployments:
+          recreated:
+            strategy:
+              type: Recreate
+            selector:
+              matchLabels:
+                app: recreated
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+          rolled:
+            selector:
+              matchLabels:
+                app: rolled
+            template:
+              spec:
+                containers:
+                  main:
+                    name: main
+                    image: busybox
+    asserts:
+      - equal:
+          path: spec.strategy
+          value:
+            type: Recreate
+        documentSelector:
+          path: metadata.name
+          value: test-release-recreated
+      - equal:
+          path: spec.strategy.rollingUpdate.maxUnavailable
+          value: 0
+        documentSelector:
+          path: metadata.name
+          value: test-release-rolled

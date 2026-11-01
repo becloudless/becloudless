@@ -1,0 +1,121 @@
+# yaml-language-server: $schema=../app/schema/values.schema.json
+
+resources:
+  fluxHelmRepositories:
+    cert-manager:
+      url: https://charts.jetstack.io
+
+  ciliumNetworkPolicies:
+    cert-manager-controller:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/instance: cert-manager, app.kubernetes.io/component: controller}
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+        acme: # the ACME servers of the issuers (production and staging)
+          toFQDNs:
+            letsencrypt: {matchName: acme-v02.api.letsencrypt.org}
+            letsencrypt-staging: {matchName: acme-staging-v02.api.letsencrypt.org}
+          toPorts: [443]
+        self-check: # the self check of the http-01 challenge: the names of the domain served by an external address (mail)
+          toFQDNs:
+            domain: {matchName: "{{ .Values.app.domain }}"}
+            subdomains: {matchPattern: "**.{{ .Values.app.domain }}"}
+          toPorts: [80, 443]
+        gateway: # the self check of the http-01 challenge goes through the public address of the gateway
+          toEntities: [ingress]
+          toPorts: [80, 443]
+
+    cert-manager-cainjector: # injects the CA bundles into the webhooks and the CRDs
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/instance: cert-manager, app.kubernetes.io/component: cainjector}
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+
+    cert-manager-webhook:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/instance: cert-manager, app.kubernetes.io/component: webhook}
+      ingress:
+        kube-apiserver:
+          fromEntities: [kube-apiserver, host, remote-node]
+          toPorts: [10250]
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+
+  ciliumClusterwideNetworkPolicies:
+    cert-manager-http01-solver: # the pod created by cert-manager in the namespace of each certificate: only the gateway reaches it
+      endpointSelector:
+        matchLabels: {"k8s:acme.cert-manager.io/http01-solver": "true"}
+      ingress:
+        gateway:
+          fromEntities: [ingress, host, remote-node]
+          toPorts: [8089]
+
+  fluxHelmReleases:
+    cert-manager:
+      chart:
+        spec:
+          chart: cert-manager
+          version: v1.21.2
+          sourceRef:
+            kind: HelmRepository
+            name: cert-manager
+      dependsOn:
+        - name: app-gateway-api # the Gateway API CRDs must exist when cert-manager starts, for the gatewayHTTPRoute http-01 solver
+          namespace: gateway-api
+      values:
+        crds:
+          enabled: true
+        # needed by the `gatewayHTTPRoute` http-01 solver of the issuers. Gateway API CRDs must exist when cert-manager starts, see dependsOn
+        config:
+          gatewayAPI:
+            enabled: true
+        ingressShim:
+          defaultIssuerName: letsencrypt-prod
+          defaultIssuerKind: ClusterIssuer
+        prometheus:
+          enabled: true
+
+    # ClusterIssuers need the cert-manager CRDs, so they are installed once cert-manager is ready
+    cert-manager-post:
+      dependsOn:
+        - ref:cert-manager
+      values:
+        resources:
+          certManagerClusterIssuers:
+            letsencrypt-prod:
+              acme:
+                email: admin@{{ .Values.app.domain }}
+                server: https://acme-v02.api.letsencrypt.org/directory
+                privateKeySecretRef:
+                  name: letsencrypt-prod
+                solvers:
+                  - http01:
+                      gatewayHTTPRoute: # the route is created in the namespace of the certificate and attached to the http listener of the shared Gateway
+                        parentRefs:
+                          - group: gateway.networking.k8s.io
+                            kind: Gateway
+                            name: shared
+                            namespace: kube-system
+                            sectionName: http
+
+            letsencrypt-staging:
+              acme:
+                email: admin@{{ .Values.app.domain }}
+                server: https://acme-staging-v02.api.letsencrypt.org/directory
+                privateKeySecretRef:
+                  name: letsencrypt-staging
+                solvers:
+                  - http01:
+                      gatewayHTTPRoute:
+                        parentRefs:
+                          - group: gateway.networking.k8s.io
+                            kind: Gateway
+                            name: shared
+                            namespace: kube-system
+                            sectionName: http
+
+            self-signed:
+              selfSigned: {}

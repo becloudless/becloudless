@@ -12,7 +12,7 @@ stringData:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: test-release-my-custom-id
+  name: my-custom-id
   namespace: default
 stringData:
   a: b
@@ -21,7 +21,7 @@ stringData:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: test-release-plain
+  name: plain
   namespace: default
 stringData:
   a: b

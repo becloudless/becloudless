@@ -1,0 +1,90 @@
+app:
+  domain: test.com
+  name: test
+  lldapdn: dc=test,dc=com
+  lldapUsers:
+    n0rad:
+      displayName: n0rad
+
+resources:
+  configMaps:
+    app:
+      data:
+        domain: "{{ .Values.app.domain }}"
+        name: "{{ .Values.app.name }}"
+        lldapdn: "{{ .Values.app.lldapdn }}"
+
+  # a release with no source is a chart of this repository (base-loader by default)
+  fluxHelmReleases:
+    default: {}
+    simple-pre:
+      dependsOn:
+        - name: app-external-secrets
+          namespace: external-secrets
+    simple: {}
+    apex: {}
+    protected: {}
+    disabled: {}
+    grouped: {}
+    merged: {}
+    merged-integration:
+      values:
+        resources:
+          referenceGrants:
+            extra:
+              spec:
+                from: []
+    local:
+      chart:
+        spec:
+          chart: ./kube/charts/postgresql
+    strategy:
+      chart:
+        spec:
+          reconcileStrategy: ChartVersion
+    helm-repository:
+      chart:
+        spec:
+          chart: mychart
+          version: 1.0.0
+          sourceRef:
+            kind: HelmRepository
+            name: myrepository
+
+# the public exposure: a release `<release>-integration` with the certificate, the listener and the route of each id
+expose:
+  simple: {}
+  apex:
+    hostname: "{{ .Values.app.domain }}"
+    service: apex-service
+    port: 8080
+    timeouts:
+      request: 0s
+  protected:
+    auth: authelia
+    service: protected-http
+    port: 80
+  disabled:
+    enabled: false
+  # the hostnames of a release are exposed together
+  grouped-a:
+    release: grouped
+    hostname: a
+    service: grouped-a
+  grouped-b:
+    release: grouped
+    hostname: b
+    service: grouped-b
+    auth: authelia
+  # merged with the release of the same name of fluxHelmReleases, which wins
+  merged: {}
+
+# the OIDC clients of authelia the app uses: the ServiceAccount, the SecretStore and the ExternalSecret in `<id>-pre`
+oidc:
+  client:
+    release: simple-pre
+  other:
+    name: other-secret
+    clientIdKey: key
+  own:
+    externalSecret: false

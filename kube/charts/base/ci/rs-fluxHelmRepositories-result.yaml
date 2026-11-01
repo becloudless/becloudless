@@ -6,4 +6,5 @@ metadata:
   name: test-release
   namespace: default
 spec:
+  interval: 10m
   url: https://charts.bitnami.com/bitnami

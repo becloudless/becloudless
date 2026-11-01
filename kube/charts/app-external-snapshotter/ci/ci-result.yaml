@@ -1,0 +1,87 @@
+---
+# Source: app-external-snapshotter/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: snapshot-controller
+  namespace: kube-system
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: snapshot-controller
+---
+# Source: app-external-snapshotter/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: external-snapshotter
+  namespace: default
+spec:
+  interval: 24h
+  ref:
+    tag: v8.7.0
+  url: https://github.com/kubernetes-csi/external-snapshotter
+---
+# Source: app-external-snapshotter/templates/loader.yaml
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: external-snapshotter
+  namespace: default
+spec:
+  dependsOn:
+  - name: external-snapshotter-crds
+  interval: 24h
+  patches:
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: snapshot-controller
+      spec:
+        template:
+          spec:
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 65534
+              runAsGroup: 65534
+              seccompProfile:
+                type: RuntimeDefault
+            containers:
+              - name: snapshot-controller
+                securityContext:
+                  readOnlyRootFilesystem: true
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop: [ ALL ]
+    target:
+      kind: Deployment
+      name: snapshot-controller
+  path: ./deploy/kubernetes/snapshot-controller
+  prune: false
+  retryInterval: 1m
+  sourceRef:
+    kind: GitRepository
+    name: external-snapshotter
+  timeout: 1m
+  wait: true
+---
+# Source: app-external-snapshotter/templates/loader.yaml
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: external-snapshotter-crds
+  namespace: default
+spec:
+  interval: 24h
+  path: ./client/config/crd
+  prune: false
+  retryInterval: 1m
+  sourceRef:
+    kind: GitRepository
+    name: external-snapshotter
+  timeout: 1m
+  wait: true

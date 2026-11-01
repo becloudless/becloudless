@@ -6,8 +6,11 @@ import (
 	"reflect"
 	"testing"
 
-	"resourceschart/templates/resources/mutations/arraysToMaps"
-	"resourceschart/templates/resources/mutations/stringifyFields"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/arraysToMaps"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/itemFields"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/listShorthands"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/refs"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/stringifyFields"
 )
 
 func writeResourcesYAML(t *testing.T, content string) string {
@@ -124,5 +127,116 @@ func TestParseCRDs_NoMutationsLeavesFieldsZero(t *testing.T) {
 	// the first, and vice versa.
 	if entries[1].Mutations.ArraysToMaps == nil {
 		t.Errorf("secrets.Mutations.ArraysToMaps = nil, want non-nil")
+	}
+}
+
+func TestParseCRDs_ParsesClusterScoped(t *testing.T) {
+	path := writeResourcesYAML(t, `resources:
+  - name: namespaces
+    clusterScoped: true
+    sourceOpenAPI:
+      url: https://example.invalid/namespace.json
+      component: io.k8s.api.core.v1.Namespace
+    apiVersion: v1
+    kind: Namespace
+  - name: configMaps
+    sourceOpenAPI:
+      url: https://example.invalid/configmap.json
+      component: io.k8s.api.core.v1.ConfigMap
+    apiVersion: v1
+    kind: ConfigMap
+`)
+
+	file, err := newResourcesFile(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !file.Resources[0].ClusterScoped {
+		t.Errorf("namespaces.ClusterScoped = false, want true")
+	}
+	if file.Resources[1].ClusterScoped {
+		t.Errorf("configMaps.ClusterScoped = true, want false")
+	}
+}
+
+func TestParseCRDs_ParsesItemFieldsWithAnchors(t *testing.T) {
+	path := writeResourcesYAML(t, `resources:
+  - name: policies
+    sourceCRD:
+      url: https://example.invalid/policies.yaml
+      crdVersion: v2
+    mutations: &policyMutations
+      itemFields:
+        ingress.toPorts.ports: &port {keyField: port, defaults: {protocol: TCP}}
+        egress.toPorts.ports: *port
+  - name: clusterPolicies
+    sourceCRD:
+      url: https://example.invalid/clusterpolicies.yaml
+      crdVersion: v2
+    mutations: *policyMutations
+`)
+
+	file, err := newResourcesFile(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := itemFields.ItemFields{
+		"ingress.toPorts.ports": {KeyField: "port", Defaults: map[string]string{"protocol": "TCP"}},
+		"egress.toPorts.ports":  {KeyField: "port", Defaults: map[string]string{"protocol": "TCP"}},
+	}
+	for _, e := range file.Resources {
+		if !reflect.DeepEqual(e.Mutations.ItemFields, want) {
+			t.Errorf("%s: Mutations.ItemFields = %#v, want %#v", e.Name, e.Mutations.ItemFields, want)
+		}
+	}
+}
+
+func TestParseCRDs_ParsesListShorthands(t *testing.T) {
+	path := writeResourcesYAML(t, `resources:
+  - name: policies
+    sourceCRD:
+      url: https://example.invalid/policies.yaml
+      crdVersion: v2
+    mutations:
+      listShorthands:
+        ingress.toPorts: &toPorts {key: main, field: ports}
+        egress.toPorts: *toPorts
+`)
+
+	file, err := newResourcesFile(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := listShorthands.ListShorthands{
+		"ingress.toPorts": {Key: "main", Field: "ports"},
+		"egress.toPorts":  {Key: "main", Field: "ports"},
+	}
+	if got := file.Resources[0].Mutations.ListShorthands; !reflect.DeepEqual(got, want) {
+		t.Errorf("Mutations.ListShorthands = %#v, want %#v", got, want)
+	}
+}
+
+func TestParseCRDs_ParsesRefs(t *testing.T) {
+	path := writeResourcesYAML(t, `resources:
+  - name: routes
+    sourceCRD:
+      url: https://example.invalid/routes.yaml
+      crdVersion: v1
+    mutations:
+      refs:
+        parentRefs: {kinds: [listenerSets, gateways], as: gatewayRef}
+        rules.backendRefs.name: {kinds: [services], as: name}
+`)
+
+	file, err := newResourcesFile(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := refs.Refs{
+		"parentRefs":             {Kinds: []string{"listenerSets", "gateways"}, As: "gatewayRef"},
+		"rules.backendRefs.name": {Kinds: []string{"services"}, As: "name"},
+	}
+	if got := file.Resources[0].Mutations.Refs; !reflect.DeepEqual(got, want) {
+		t.Errorf("Mutations.Refs = %#v, want %#v", got, want)
 	}
 }

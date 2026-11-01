@@ -19,11 +19,23 @@ import (
 // Every converted path is reported back via MutationResult.TemplateArgs
 // (key "arrayPaths"), so templates/mutations/_mapsToArrays.tpl can reverse
 // the conversion at render time and emit valid Kubernetes arrays again.
+//
+// Disabled leaves every array as is (declared per-resource-kind in resources.yaml as
+// mutations.arraysToMaps.disabled), for the resources whose arrays are better written as real arrays, ex: the
+// ClusterPolicies of Kyverno, which are given as files. No path is reported then, nothing is reversed at render time.
 type ArraysToMaps struct {
-	Ignore []string `yaml:"ignore"`
+	Ignore   []string `yaml:"ignore"`
+	Disabled bool     `yaml:"disabled"`
 }
 
 func (m ArraysToMaps) Mutate(schema map[string]any) (mutations.MutationResult, error) {
+	if m.Disabled {
+		return mutations.MutationResult{
+			Schema:       schema,
+			TemplateArgs: map[string]string{"arrayPaths": "(list )"},
+		}, nil
+	}
+
 	ignore := map[string]bool{}
 	for _, path := range m.Ignore {
 		ignore[path] = true

@@ -6,6 +6,7 @@ metadata:
   name: test-release
   namespace: default
 spec:
+  maxUnavailable: 10%
   minAvailable: 1
   selector:
     matchLabels:

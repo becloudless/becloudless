@@ -1,0 +1,430 @@
+---
+# Source: app-forgejo/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: forgejo
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - ingress
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toFQDNs:
+    - matchPattern: '*'
+    toPorts:
+    - ports:
+      - port: "22"
+        protocol: TCP
+      - port: "443"
+        protocol: TCP
+      - port: "80"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        cnpg.io/cluster: forgejo-postgresql
+    toPorts:
+    - ports:
+      - port: "5432"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: forgejo
+  ingress:
+  - fromEntities:
+    - ingress
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "3000"
+        protocol: TCP
+---
+# Source: app-forgejo/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: forgejo
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: forgejo
+      sourceRef:
+        kind: HelmRepository
+        name: forgejo
+      version: 17.3.1
+  dependsOn:
+  - name: forgejo-postgresql
+  - name: forgejo-pre
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    gitea:
+      additionalConfigFromEnvs:
+      - name: FORGEJO__database__PASSWD
+        valueFrom:
+          secretKeyRef:
+            key: password
+            name: forgejo-postgresql-app
+      admin:
+        email: forgejo@test.com
+        passwordMode: initialOnlyNoReset
+        username: forgejo_admin
+      config:
+        APP_NAME: test forgejo
+        actions:
+          ENABLED: true
+        attachment:
+          MAX_SIZE: 2000
+        cache:
+          ADAPTER: memory
+        database:
+          DB_TYPE: postgres
+          HOST: forgejo-postgresql-rw:5432
+          NAME: app
+          SSL_MODE: require
+          USER: app
+        oauth2_client:
+          ENABLE_AUTO_REGISTRATION: true
+          USERNAME: preferred_username
+        queue:
+          TYPE: level
+        server:
+          DOMAIN: forgejo.test.com
+          ROOT_URL: https://forgejo.test.com
+          SSH_DOMAIN: forgejo.test.com
+          SSH_LISTEN_PORT: 2222
+          SSH_PORT: 22
+        service:
+          ALLOW_ONLY_EXTERNAL_REGISTRATION: true
+          DEFAULT_KEEP_EMAIL_PRIVATE: true
+          DEFAULT_USER_VISIBILITY: private
+          DISABLE_REGISTRATION: true
+        session:
+          PROVIDER: db
+        ui:
+          DEFAULT_THEME: forgejo-dark
+          ISSUE_PAGING_NUM: 100
+        webhook:
+          ALLOWED_HOST_LIST: '*'
+      metrics:
+        enabled: true
+        serviceMonitor:
+          enabled: false
+      oauth:
+      - autoDiscoverUrl: https://authelia.test.com/.well-known/openid-configuration
+        existingSecret: forgejo-oidc
+        name: authelia
+        provider: openidConnect
+        scopes: openid email profile
+    ingress:
+      enabled: false
+    persistence:
+      claimName: forgejo-shared-storage
+      enabled: true
+      size: 10Gi
+      storageClass: longhorn-files
+    replicaCount: 1
+    test:
+      enabled: false
+---
+# Source: app-forgejo/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: forgejo-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: forgejo
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      forgejo-integration:
+        certManagerCertificates:
+          forgejo-gateway:
+            name: forgejo-gateway
+            namespace: default
+            secretName: tls-forgejo-gateway
+        httpRoutes:
+          forgejo:
+            name: forgejo
+            namespace: default
+        listenerSets:
+          forgejo:
+            name: forgejo
+            namespace: default
+      forgejo-pre:
+        externalSecrets:
+          forgejo-oidc:
+            name: forgejo-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+    resources:
+      certManagerCertificates:
+        forgejo-gateway:
+          dnsNames:
+            forgejo: forgejo.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-forgejo-gateway
+      httpRoutes:
+        forgejo:
+          hostnames:
+            forgejo: forgejo.test.com
+          parentRefs:
+            forgejo:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: forgejo
+              sectionName: forgejo
+          rules:
+            root:
+              backendRefs:
+                backend:
+                  name: forgejo-http
+                  port: 3000
+              timeouts:
+                request: 0s
+      listenerSets:
+        forgejo:
+          listeners:
+            forgejo:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: forgejo.test.com
+              name: forgejo
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: ref:forgejo-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+---
+# Source: app-forgejo/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: forgejo-postgresql
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/postgresql
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-cnpg
+    namespace: cnpg-system
+  - name: app-longhorn
+    namespace: longhorn-system
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    clients:
+      forgejo:
+        matchLabels:
+          app.kubernetes.io/name: forgejo
+    instances: 2
+---
+# Source: app-forgejo/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: forgejo-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-external-secrets
+    namespace: external-secrets
+  - name: authelia-pre
+    namespace: authelia
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      forgejo-integration:
+        certManagerCertificates:
+          forgejo-gateway:
+            name: forgejo-gateway
+            namespace: default
+            secretName: tls-forgejo-gateway
+        httpRoutes:
+          forgejo:
+            name: forgejo
+            namespace: default
+        listenerSets:
+          forgejo:
+            name: forgejo
+            namespace: default
+      forgejo-pre:
+        externalSecrets:
+          forgejo-oidc:
+            name: forgejo-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+    resources:
+      externalSecrets:
+        forgejo-oidc:
+          data:
+            key:
+              remoteRef:
+                key: authelia-oidc-forgejo
+                property: client-id
+              secretKey: key
+            secret:
+              remoteRef:
+                key: authelia-oidc-forgejo
+                property: secret
+              secretKey: secret
+          refreshInterval: 1h
+          secretStoreRef: ref:authelia
+      secretStores:
+        authelia:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: ref:authelia-reader
+              remoteNamespace: authelia
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        authelia-reader:
+          automountServiceAccountToken: false
+---
+# Source: app-forgejo/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: forgejo
+  namespace: default
+spec:
+  interval: 10m
+  type: oci
+  url: oci://code.forgejo.org/forgejo-helm

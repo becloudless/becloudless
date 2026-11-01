@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "app": {
+      "additionalProperties": false,
+      "description": "The values shared by every app chart (library chart `app`), set by the cluster for all the apps with the `global-values` ConfigMap of the `apps` chart.",
+      "properties": {
+        "domain": {
+          "description": "The domain of the cluster.",
+          "type": "string"
+        },
+        "lldapUsers": {
+          "description": "The users of the cluster, the key is the user id.",
+          "type": "object"
+        },
+        "lldapdn": {
+          "description": "The base DN of the LDAP directory of lldap.",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name of the cluster.",
+          "type": "string"
+        },
+        "scaling": {
+          "additionalProperties": false,
+          "description": "The scale of the apps. Used in the values of the app charts as `\"{{ .Values.app.scaling.replicas }}\"`, which is replaced by an integer.",
+          "properties": {
+            "dbReplicas": {
+              "description": "The number of instances of the databases (the `instances` of the postgresql chart).",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "replicas": {
+              "description": "The number of replicas of the stateless parts (the pods that have no volume and no state of their own).",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "checkRequiredValues": {
+      "$ref": "../../base/schema/values.schema.json#/properties/checkRequiredValues"
+    },
+    "expose": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "auth": {
+            "default": "none",
+            "description": "The forward auth of the route: `none`, or `authelia`.",
+            "enum": [
+              "none",
+              "authelia"
+            ],
+            "type": "string"
+          },
+          "dependsOn": {
+            "description": "What the release waits for (`[ref:<release>]` by default). The Certificates and the Gateway API CRDs are added.",
+            "type": "array"
+          },
+          "enabled": {
+            "description": "`false` disables the release of the exposure.",
+            "type": "boolean"
+          },
+          "hostname": {
+            "description": "The subdomain of `app.domain` (the id by default). A value with a dot is used as it is.",
+            "type": "string"
+          },
+          "port": {
+            "description": "The port of the Service (not set by default).",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "release": {
+            "description": "The hostnames of a same release are exposed together, as `<release>-integration` (the id by default).",
+            "type": "string"
+          },
+          "service": {
+            "description": "The name of the Service that gets the requests (`ref:<id>` by default).",
+            "type": "string"
+          },
+          "timeouts": {
+            "description": "The timeouts of the HTTPRoute rule (ex: `{request: 0s}`).",
+            "type": "object"
+          }
+        },
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "description": "The public exposure of the app by the shared Gateway: the key is the id of an exposed hostname. Generates the Certificate, the listener of the ListenerSet and the HTTPRoute, in the release `<release>-integration`.",
+      "type": "object"
+    },
+    "oidc": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "clientIdKey": {
+            "default": "client-id",
+            "description": "The key of the client id in the Secret created by the ExternalSecret.",
+            "type": "string"
+          },
+          "externalSecret": {
+            "default": true,
+            "description": "`false` does not create the ExternalSecret, the chart has its own with the SecretStore `authelia`.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the ExternalSecret and of its Secret (`<id>-oidc` by default).",
+            "type": "string"
+          },
+          "release": {
+            "description": "The release that gets the ServiceAccount, the SecretStore and the ExternalSecret (`<id>-pre` by default), merged with the one of the chart.",
+            "type": "string"
+          }
+        },
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "description": "The OIDC clients of authelia the app uses: the key is the id of the client (see `oidcClients` in app-authelia).",
+      "type": "object"
+    },
+    "prefixNamesWithRelease": {
+      "$ref": "../../base/schema/values.schema.json#/properties/prefixNamesWithRelease"
+    },
+    "defaults": {
+      "$ref": "../../base/schema/values.schema.json#/properties/defaults"
+    },
+    "resources": {
+      "$ref": "../../base/schema/values.schema.json#/properties/resources"
+    }
+  },
+  "type": "object"
+}

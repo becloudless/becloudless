@@ -1,0 +1,9 @@
+apiVersion: v2
+name: app
+description: Library of the app charts, built on the base library chart, with the values shared by every app (`app.domain`, `app.name`, `app.lldapdn`)
+version: 0.0.0
+type: library
+dependencies:
+  - name: base
+    version: 0.0.0
+    repository: "file://../base"

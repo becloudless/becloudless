@@ -2,7 +2,149 @@
 
 checkRequiredValues: true
 
+prefixNamesWithRelease: false
+
 defaults:
   metadata:
     namespace: "{{ .Release.Namespace }}"
 
+  # The pods are compliant by default with the kyverno policies of app-kyverno (container-require-run-as-non-root,
+  # container-require-read-only-root-filesystem, pod-disable-service-links, pod-set-seccomp-profile). An app that needs more
+  # overrides the field in its own `securityContext` (e.g. `runAsNonRoot: false`, `readOnlyRootFilesystem: false`) or opts out
+  # with the annotation `policy.bcl/skip...` of the policy.
+
+  # applied to the pod spec of the deployments, statefulSets, daemonSets, jobs and cronJobs
+  pod:
+    enableServiceLinks: false
+    securityContext:
+      runAsNonRoot: true
+      seccompProfile:
+        type: RuntimeDefault
+    # the root filesystem is read only: a writable /tmp for every container, see `container.volumeMounts`
+    volumes:
+      tmp:
+        name: tmp
+        emptyDir: {}
+
+  # applied to every container and initContainer of the deployments, statefulSets, daemonSets, jobs and cronJobs
+  container:
+    livenessProbe:
+      initialDelaySeconds: 0
+      periodSeconds: 10
+      timeoutSeconds: 1
+      successThreshold: 1
+      failureThreshold: 3      
+
+    readinessProbe:
+      initialDelaySeconds: 0
+      periodSeconds: 10
+      timeoutSeconds: 1
+      successThreshold: 1
+      failureThreshold: 3
+
+    startupProbe:
+      initialDelaySeconds: 0
+      timeoutSeconds: 1
+      ## This means it has a maximum of 5*30=150 seconds to start up before it fails
+      periodSeconds: 5
+      successThreshold: 1
+      failureThreshold: 30
+
+    securityContext:
+      readOnlyRootFilesystem: true
+      # the API rejects `false` with `privileged: true` or the capability `SYS_ADMIN`: such a container sets `true`
+      allowPrivilegeEscalation: false
+    # The volumes and the mounts are maps keyed by id: a resource that has its own `tmp` volume or mount (e.g. an emptyDir in
+    # memory) is merged with these, and the ones it does not name are kept. A container that mounts another volume on /tmp must
+    # name it `tmp` too, or the pod has two mounts on /tmp.
+    volumeMounts:
+      tmp:
+        name: tmp
+        mountPath: /tmp
+
+  resources:
+
+    deployments:
+      strategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxUnavailable: 0 # Do not decrease capacity
+          maxSurge: 33%
+      revisionHistoryLimit: 3
+
+    statefulSets:
+      podManagementPolicy: Parallel
+    
+
+    cronJobs:
+      concurrencyPolicy: Forbid
+      startingDeadlineSeconds: 30
+      successfulJobsHistoryLimit: 1
+      failedJobsHistoryLimit: 1
+      jobTemplate:
+        spec:
+          backoffLimit: 6
+
+    podDisruptionBudgets:
+      maxUnavailable: 10%
+
+    horizontalPodAutoscalers:
+      minReplicas: 2
+      maxReplicas: 10
+      metrics:
+        cpu:
+          type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: 70
+
+    persistentVolumeClaims:
+      accessModes:
+        ReadWriteOnce: ReadWriteOnce # TODO
+      resources:
+        requests:
+          storage: 1Gi
+
+    fluxOCIRepositories:
+      interval: 10m
+
+    fluxGitRepositories:
+      interval: 10m
+
+    fluxHelmRepositories:
+      interval: 10m
+
+    fluxHelmReleases:
+      interval: 10m        
+      timeout: 10m
+      # failed install/upgrade are retried forever, in place and without rollback/uninstall:
+      # - the rollback remediation stalls the release (MissingRollbackTarget) once no good revision is left
+      #   in the history, and never retries until a manual `flux reconcile hr --reset`
+      # - the uninstall remediation would delete stateful resources (databases, volumes)
+      install:
+        crds: CreateReplace
+        strategy:
+          name: RetryOnFailure
+          retryInterval: 5m
+      upgrade:
+        cleanupOnFail: true
+        strategy:
+          name: RetryOnFailure
+          retryInterval: 5m
+      driftDetection:
+        mode: enabled
+      # kstatus ignores the `Ready` condition of custom resources, a CNPG Cluster is `Current` as soon as it exists.
+      # Wait for the primary only: a replica being rebuilt must not block (or fail) the release.
+      healthCheckExprs:
+        cnpg-cluster:
+          apiVersion: postgresql.cnpg.io/v1
+          kind: Cluster
+          current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary) && status.currentPrimary != ''
+
+    fluxKustomizations:
+      interval: 10m
+      retryInterval: 1m # fail reconcile do not retry until interval without it
+      prune: true
+      wait: true

@@ -1,0 +1,11 @@
+---
+# Source: base-test/templates/loader.yaml
+apiVersion: longhorn.io/v1beta2
+kind: BackupTarget
+metadata:
+  name: test-release
+  namespace: default
+spec:
+  backupTargetURL: s3://backups@garage/
+  credentialSecret: backupstore
+  pollInterval: 3m0s

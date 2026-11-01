@@ -1,0 +1,1032 @@
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-csi-plugin
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: longhorn-csi-plugin
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-csi-sidecars
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  endpointSelector:
+    matchExpressions:
+    - key: app
+      operator: In
+      values:
+      - csi-attacher
+      - csi-provisioner
+      - csi-resizer
+      - csi-snapshotter
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-driver-deployer
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: longhorn-driver-deployer
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-global-manager
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        longhorn.io/component: instance-manager
+    toPorts:
+    - ports:
+      - endPort: 8510
+        port: "8500"
+        protocol: TCP
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        longhorn.io/component: share-manager
+    toPorts:
+    - ports:
+      - port: "9600"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: longhorn-global-manager
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-hooks
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  endpointSelector:
+    matchExpressions:
+    - key: job-name
+      operator: In
+      values:
+      - longhorn-post-upgrade
+      - longhorn-pre-upgrade
+      - longhorn-uninstall
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-instance-manager
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/component: garage
+        k8s:app.kubernetes.io/instance: garage
+        k8s:io.kubernetes.pod.namespace: garage
+    toPorts:
+    - ports:
+      - port: "3900"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        longhorn.io/component: instance-manager
+    toPorts:
+    - ports:
+      - endPort: 30000
+        port: "10000"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      longhorn.io/component: instance-manager
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        longhorn.io/component: instance-manager
+    toPorts:
+    - ports:
+      - endPort: 30000
+        port: "10000"
+        protocol: TCP
+  - fromEndpoints:
+    - matchExpressions:
+      - key: app
+        operator: In
+        values:
+        - longhorn-global-manager
+        - longhorn-manager
+    toPorts:
+    - ports:
+      - endPort: 8510
+        port: "8500"
+        protocol: TCP
+  - fromEntities:
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "3260"
+        protocol: TCP
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-manager
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/component: garage
+        k8s:app.kubernetes.io/instance: garage
+        k8s:io.kubernetes.pod.namespace: garage
+    toPorts:
+    - ports:
+      - port: "3900"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        longhorn.io/component: instance-manager
+    toPorts:
+    - ports:
+      - endPort: 8510
+        port: "8500"
+        protocol: TCP
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        longhorn.io/component: share-manager
+    toPorts:
+    - ports:
+      - port: "9600"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: longhorn-manager
+  ingress:
+  - fromEndpoints:
+    - matchExpressions:
+      - key: app
+        operator: In
+        values:
+        - csi-attacher
+        - csi-provisioner
+        - csi-resizer
+        - csi-snapshotter
+        - longhorn-csi-plugin
+        - longhorn-driver-deployer
+        - longhorn-global-manager
+        - longhorn-manager
+        - longhorn-ui
+    - matchLabels:
+        longhorn.io/component: instance-manager
+    - matchExpressions:
+      - key: recurring-job.longhorn.io
+        operator: Exists
+    - matchLabels:
+        longhorn.io/component: share-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  - fromEntities:
+    - kube-apiserver
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "9502"
+        protocol: TCP
+      - port: "9503"
+        protocol: TCP
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-recurring-jobs
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  endpointSelector:
+    matchExpressions:
+    - key: recurring-job.longhorn.io
+      operator: Exists
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-share-manager
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      longhorn.io/component: share-manager
+  ingress:
+  - fromEndpoints:
+    - matchExpressions:
+      - key: app
+        operator: In
+        values:
+        - longhorn-global-manager
+        - longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9600"
+        protocol: TCP
+  - fromEntities:
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "2049"
+        protocol: TCP
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-ui
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app: longhorn-manager
+    toPorts:
+    - ports:
+      - port: "9500"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app: longhorn-ui
+  ingress:
+  - fromEntities:
+    - ingress
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "8000"
+        protocol: TCP
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: longhorn
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: longhorn
+      sourceRef:
+        kind: HelmRepository
+        name: longhorn
+      version: 1.13.0
+  dependsOn:
+  - name: longhorn-pre
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 15m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    annotations:
+      policy.bcl/skipPodSetHostUsers: "true"
+    csi:
+      kubeletRootDir: /var/lib/kubelet
+    defaultBackupStore:
+      pollInterval: 180
+    defaultSettings:
+      allowCollectingLonghornUsageMetrics: false
+      autoDeletePodWhenVolumeDetachedUnexpectedly: true
+      nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
+      nodeDrainPolicy: always-allow
+      storageReservedPercentageForDefaultDisk: 5
+      upgradeChecker: false
+    enablePSP: false
+    ingress:
+      enabled: false
+    persistence:
+      defaultClass: false
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: longhorn-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: longhorn-post
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      longhorn-integration:
+        certManagerCertificates:
+          longhorn-gateway:
+            name: longhorn-gateway
+            namespace: default
+            secretName: tls-longhorn-gateway
+        httpRoutes:
+          longhorn:
+            name: longhorn
+            namespace: default
+        listenerSets:
+          longhorn:
+            name: longhorn
+            namespace: default
+      longhorn-post:
+        longhornRecurringJobs:
+          daily-backups:
+            name: daily-backups
+            namespace: default
+        longhornSettings:
+          allow-collecting-longhorn-usage-metrics:
+            name: allow-collecting-longhorn-usage-metrics
+            namespace: default
+          concurrent-automatic-engine-upgrade-per-node-limit:
+            name: concurrent-automatic-engine-upgrade-per-node-limit
+            namespace: default
+          default-backup-block-size:
+            name: default-backup-block-size
+            namespace: default
+          upgrade-checker:
+            name: upgrade-checker
+            namespace: default
+        storageClasses:
+          longhorn-db:
+            name: longhorn-db
+            namespace: default
+          longhorn-files:
+            name: longhorn-files
+            namespace: default
+          longhorn-single-local-replica:
+            name: longhorn-single-local-replica
+            namespace: default
+        volumeSnapshotClasses:
+          longhorn-backing-image:
+            name: longhorn-backing-image
+            namespace: default
+          longhorn-backup-full:
+            name: longhorn-backup-full
+            namespace: default
+          longhorn-backup-incremental:
+            name: longhorn-backup-incremental
+            namespace: default
+          longhorn-snapshot:
+            name: longhorn-snapshot
+            namespace: default
+      longhorn-pre:
+        configMaps:
+          longhorn-nixos-path:
+            name: longhorn-nixos-path
+            namespace: default
+        kyvernoClusterPolicies:
+          longhorn-add-nixos-path:
+            name: longhorn-add-nixos-path
+            namespace: default
+          longhorn-host-users:
+            name: longhorn-host-users
+            namespace: default
+          longhorn-skip-security-audit:
+            name: longhorn-skip-security-audit
+            namespace: default
+    resources:
+      certManagerCertificates:
+        longhorn-gateway:
+          dnsNames:
+            longhorn: longhorn.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-longhorn-gateway
+      httpRoutes:
+        longhorn:
+          hostnames:
+            longhorn: longhorn.test.com
+          parentRefs:
+            longhorn:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: longhorn
+              sectionName: longhorn
+          rules:
+            root:
+              backendRefs:
+                backend:
+                  name: longhorn-frontend
+                  port: 80
+              filters:
+                authelia:
+                  externalAuth:
+                    backendRef:
+                      name: authelia
+                      namespace: authelia
+                      port: 80
+                    http:
+                      allowedHeaders:
+                        accept: accept
+                        cookie: cookie
+                        proxy-authorization: proxy-authorization
+                        x-forwarded-for: x-forwarded-for
+                        x-forwarded-proto: x-forwarded-proto
+                      allowedResponseHeaders:
+                        remote-email: remote-email
+                        remote-groups: remote-groups
+                        remote-name: remote-name
+                        remote-user: remote-user
+                      path: /api/authz/ext-authz/
+                    protocol: HTTP
+                  type: ExternalAuth
+      listenerSets:
+        longhorn:
+          listeners:
+            longhorn:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: longhorn.test.com
+              name: longhorn
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: ref:longhorn-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: longhorn-post
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: longhorn
+  - name: app-external-snapshotter
+    namespace: external-snapshotter
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      longhorn-integration:
+        certManagerCertificates:
+          longhorn-gateway:
+            name: longhorn-gateway
+            namespace: default
+            secretName: tls-longhorn-gateway
+        httpRoutes:
+          longhorn:
+            name: longhorn
+            namespace: default
+        listenerSets:
+          longhorn:
+            name: longhorn
+            namespace: default
+      longhorn-post:
+        longhornRecurringJobs:
+          daily-backups:
+            name: daily-backups
+            namespace: default
+        longhornSettings:
+          allow-collecting-longhorn-usage-metrics:
+            name: allow-collecting-longhorn-usage-metrics
+            namespace: default
+          concurrent-automatic-engine-upgrade-per-node-limit:
+            name: concurrent-automatic-engine-upgrade-per-node-limit
+            namespace: default
+          default-backup-block-size:
+            name: default-backup-block-size
+            namespace: default
+          upgrade-checker:
+            name: upgrade-checker
+            namespace: default
+        storageClasses:
+          longhorn-db:
+            name: longhorn-db
+            namespace: default
+          longhorn-files:
+            name: longhorn-files
+            namespace: default
+          longhorn-single-local-replica:
+            name: longhorn-single-local-replica
+            namespace: default
+        volumeSnapshotClasses:
+          longhorn-backing-image:
+            name: longhorn-backing-image
+            namespace: default
+          longhorn-backup-full:
+            name: longhorn-backup-full
+            namespace: default
+          longhorn-backup-incremental:
+            name: longhorn-backup-incremental
+            namespace: default
+          longhorn-snapshot:
+            name: longhorn-snapshot
+            namespace: default
+      longhorn-pre:
+        configMaps:
+          longhorn-nixos-path:
+            name: longhorn-nixos-path
+            namespace: default
+        kyvernoClusterPolicies:
+          longhorn-add-nixos-path:
+            name: longhorn-add-nixos-path
+            namespace: default
+          longhorn-host-users:
+            name: longhorn-host-users
+            namespace: default
+          longhorn-skip-security-audit:
+            name: longhorn-skip-security-audit
+            namespace: default
+    resources:
+      longhornRecurringJobs:
+        daily-backups:
+          concurrency: 1
+          cron: 0 4 * * *
+          groups:
+          - default
+          retain: 2
+          task: backup
+      longhornSettings:
+        allow-collecting-longhorn-usage-metrics:
+          annotations:
+            helm.sh/resource-policy: keep
+          value: "false"
+        concurrent-automatic-engine-upgrade-per-node-limit:
+          annotations:
+            helm.sh/resource-policy: keep
+          value: "1"
+        default-backup-block-size:
+          annotations:
+            helm.sh/resource-policy: keep
+          value: "16"
+        upgrade-checker:
+          annotations:
+            helm.sh/resource-policy: keep
+          value: "false"
+      storageClasses:
+        longhorn-db:
+          allowVolumeExpansion: true
+          annotations:
+            storageclass.kubernetes.io/is-default-class: "false"
+          parameters:
+            backupBlockSize: 2Mi
+            fsType: ext4
+            numberOfReplicas: "2"
+            staleReplicaTimeout: "60"
+          provisioner: driver.longhorn.io
+          reclaimPolicy: Delete
+          volumeBindingMode: Immediate
+        longhorn-files:
+          allowVolumeExpansion: true
+          annotations:
+            storageclass.kubernetes.io/is-default-class: "false"
+          parameters:
+            backupBlockSize: 16Mi
+            fsType: ext4
+            numberOfReplicas: "2"
+            staleReplicaTimeout: "60"
+          provisioner: driver.longhorn.io
+          reclaimPolicy: Delete
+          volumeBindingMode: Immediate
+        longhorn-single-local-replica:
+          allowVolumeExpansion: true
+          annotations:
+            storageclass.kubernetes.io/is-default-class: "false"
+          parameters:
+            dataLocality: strict-local
+            fsType: ext4
+            numberOfReplicas: "2"
+            recurringJobSelector: '[{"name":"single-local-replica","isGroup":true}]'
+            staleReplicaTimeout: "60"
+          provisioner: driver.longhorn.io
+          reclaimPolicy: Delete
+          volumeBindingMode: Immediate
+      volumeSnapshotClasses:
+        longhorn-backing-image:
+          deletionPolicy: Delete
+          driver: driver.longhorn.io
+          parameters:
+            export-type: qcow2
+            type: bi
+        longhorn-backup-full:
+          deletionPolicy: Delete
+          driver: driver.longhorn.io
+          parameters:
+            backupMode: full
+            type: bak
+        longhorn-backup-incremental:
+          deletionPolicy: Delete
+          driver: driver.longhorn.io
+          parameters:
+            type: bak
+        longhorn-snapshot:
+          deletionPolicy: Delete
+          driver: driver.longhorn.io
+          parameters:
+            type: snap
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: longhorn-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-kyverno
+    namespace: kyverno
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      longhorn-integration:
+        certManagerCertificates:
+          longhorn-gateway:
+            name: longhorn-gateway
+            namespace: default
+            secretName: tls-longhorn-gateway
+        httpRoutes:
+          longhorn:
+            name: longhorn
+            namespace: default
+        listenerSets:
+          longhorn:
+            name: longhorn
+            namespace: default
+      longhorn-post:
+        longhornRecurringJobs:
+          daily-backups:
+            name: daily-backups
+            namespace: default
+        longhornSettings:
+          allow-collecting-longhorn-usage-metrics:
+            name: allow-collecting-longhorn-usage-metrics
+            namespace: default
+          concurrent-automatic-engine-upgrade-per-node-limit:
+            name: concurrent-automatic-engine-upgrade-per-node-limit
+            namespace: default
+          default-backup-block-size:
+            name: default-backup-block-size
+            namespace: default
+          upgrade-checker:
+            name: upgrade-checker
+            namespace: default
+        storageClasses:
+          longhorn-db:
+            name: longhorn-db
+            namespace: default
+          longhorn-files:
+            name: longhorn-files
+            namespace: default
+          longhorn-single-local-replica:
+            name: longhorn-single-local-replica
+            namespace: default
+        volumeSnapshotClasses:
+          longhorn-backing-image:
+            name: longhorn-backing-image
+            namespace: default
+          longhorn-backup-full:
+            name: longhorn-backup-full
+            namespace: default
+          longhorn-backup-incremental:
+            name: longhorn-backup-incremental
+            namespace: default
+          longhorn-snapshot:
+            name: longhorn-snapshot
+            namespace: default
+      longhorn-pre:
+        configMaps:
+          longhorn-nixos-path:
+            name: longhorn-nixos-path
+            namespace: default
+        kyvernoClusterPolicies:
+          longhorn-add-nixos-path:
+            name: longhorn-add-nixos-path
+            namespace: default
+          longhorn-host-users:
+            name: longhorn-host-users
+            namespace: default
+          longhorn-skip-security-audit:
+            name: longhorn-skip-security-audit
+            namespace: default
+    resources:
+      configMaps:
+        longhorn-nixos-path:
+          data:
+            PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/run/wrappers/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin
+      kyvernoClusterPolicies:
+        longhorn-add-nixos-path:
+          annotations:
+            policies.kyverno.io/category: Other
+            policies.kyverno.io/description: Longhorn invokes executables on the host
+              system, and needs to be aware of the host systems PATH. This modifies
+              all deployments such that the PATH is explicitly set to support NixOS
+              based systems.
+            policies.kyverno.io/subject: Pod
+            policies.kyverno.io/title: Add Environment Variables from ConfigMap
+          failurePolicy: Fail
+          rules:
+          - match:
+              resources:
+                kinds:
+                - Pod
+                namespaces:
+                - longhorn-system
+            mutate:
+              patchStrategicMerge:
+                spec:
+                  containers:
+                  - (name): '*'
+                    envFrom:
+                    - configMapRef:
+                        name: longhorn-nixos-path
+                  initContainers:
+                  - (name): '*'
+                    envFrom:
+                    - configMapRef:
+                        name: longhorn-nixos-path
+            name: container-add-env-vars
+        longhorn-host-users:
+          failurePolicy: Ignore
+          rules:
+          - match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+                  namespaces:
+                  - longhorn-system
+                  operations:
+                  - CREATE
+                  selector:
+                    matchLabels:
+                      longhorn.io/component: instance-manager
+              - resources:
+                  kinds:
+                  - Pod
+                  namespaces:
+                  - longhorn-system
+                  operations:
+                  - CREATE
+                  selector:
+                    matchLabels:
+                      longhorn.io/component: engine-image
+              - resources:
+                  kinds:
+                  - Pod
+                  namespaces:
+                  - longhorn-system
+                  operations:
+                  - CREATE
+                  selector:
+                    matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                      - longhorn-csi-plugin
+                      - csi-attacher
+                      - csi-provisioner
+                      - csi-resizer
+                      - csi-snapshotter
+              - resources:
+                  kinds:
+                  - Pod
+                  namespaces:
+                  - longhorn-system
+                  operations:
+                  - CREATE
+                  selector:
+                    matchExpressions:
+                    - key: job-name
+                      operator: In
+                      values:
+                      - longhorn-pre-upgrade
+                      - longhorn-uninstall
+            mutate:
+              patchStrategicMerge:
+                spec:
+                  hostUsers: true
+            name: pod-set-host-users
+        longhorn-skip-security-audit:
+          failurePolicy: Ignore
+          rules:
+          - match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+                  namespaces:
+                  - longhorn-system
+                  operations:
+                  - CREATE
+            mutate:
+              patchStrategicMerge:
+                metadata:
+                  annotations:
+                    +(policy.bcl/skipContainerRequireReadOnlyRootFilesystem): "true"
+                    +(policy.bcl/skipContainerRequireRunAsNonRoot): "true"
+            name: pod-add-skip-annotations
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: longhorn
+  namespace: default
+spec:
+  interval: 10m
+  url: https://charts.longhorn.io

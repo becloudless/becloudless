@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+
+# Installs the operator and its CRDs (ExternalSecret, SecretStore, ClusterSecretStore...). The apps declare their own stores and secrets.
+
+resources:
+  fluxHelmRepositories:
+    external-secrets:
+      url: https://charts.external-secrets.io
+
+  ciliumNetworkPolicies:
+    external-secrets: # the controller
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: external-secrets}
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+
+    external-secrets-cert-controller: # the certificate of the webhook
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: external-secrets-cert-controller}
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+
+    external-secrets-webhook:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: external-secrets-webhook}
+      ingress:
+        kube-apiserver:
+          fromEntities: [kube-apiserver, host, remote-node]
+          toPorts: [10250]
+
+  fluxHelmReleases:
+    external-secrets:
+      chart:
+        spec:
+          chart: external-secrets
+          version: 2.12.0
+          sourceRef:
+            kind: HelmRepository
+            name: external-secrets

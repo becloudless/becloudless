@@ -1,0 +1,281 @@
+---
+# Source: app-element/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: element
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: element
+      app.kubernetes.io/instance: element
+  ingress:
+  - fromEntities:
+    - ingress
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+---
+# Source: app-element/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: element
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      element:
+        configMaps:
+          element-config:
+            name: element-config
+            namespace: default
+        deployments:
+          element:
+            labels:
+              app.kubernetes.io/component: element
+              app.kubernetes.io/instance: element
+            name: element
+            namespace: default
+        services:
+          element:
+            name: element
+            namespace: default
+      element-integration:
+        certManagerCertificates:
+          element-gateway:
+            name: element-gateway
+            namespace: default
+            secretName: tls-element-gateway
+        httpRoutes:
+          element:
+            name: element
+            namespace: default
+        listenerSets:
+          element:
+            name: element
+            namespace: default
+    resources:
+      configMaps:
+        element-config:
+          data:
+            config.json: |-
+              {
+                "default_server_config": {
+                  "m.homeserver": {
+                    "base_url": "https://matrix.test.com",
+                    "server_name": "matrix.test.com"
+                  }
+                },
+                "disable_custom_urls": true,
+                "disable_guests": true,
+                "disable_3pid_login": true,
+                "sso_redirect_options": {
+                  "on_welcome_page": true
+                },
+                "room_directory": {
+                  "servers": ["matrix.test.com"]
+                },
+                "brand": "Element",
+                "show_labs_settings": false
+              }
+      deployments:
+        element:
+          replicas: 2
+          template:
+            spec:
+              containers:
+                element:
+                  env:
+                    ELEMENT_WEB_PORT: "8080"
+                  image: vectorim/element-web:v1.12.32
+                  name: element
+                  ports:
+                    http:
+                      containerPort: 8080
+                  probe:
+                    httpGet:
+                      path: /
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                  volumeMounts:
+                    config:
+                      mountPath: /app/config.json
+                      name: config
+                      readOnly: true
+                      subPath: config.json
+                    nginx-conf:
+                      mountPath: /etc/nginx/conf.d
+                      name: nginx-conf
+              securityContext:
+                fsGroup: 101
+                runAsGroup: 101
+                runAsUser: 101
+              volumes:
+                config:
+                  configMap:
+                    name: ref:element-config
+                  name: config
+                nginx-conf:
+                  emptyDir: {}
+                  name: nginx-conf
+      services:
+        element:
+          ports:
+            http:
+              port: 80
+              targetPort: 8080
+---
+# Source: app-element/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: element-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: element
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      element:
+        configMaps:
+          element-config:
+            name: element-config
+            namespace: default
+        deployments:
+          element:
+            labels:
+              app.kubernetes.io/component: element
+              app.kubernetes.io/instance: element
+            name: element
+            namespace: default
+        services:
+          element:
+            name: element
+            namespace: default
+      element-integration:
+        certManagerCertificates:
+          element-gateway:
+            name: element-gateway
+            namespace: default
+            secretName: tls-element-gateway
+        httpRoutes:
+          element:
+            name: element
+            namespace: default
+        listenerSets:
+          element:
+            name: element
+            namespace: default
+    resources:
+      certManagerCertificates:
+        element-gateway:
+          dnsNames:
+            element: element.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-element-gateway
+      httpRoutes:
+        element:
+          hostnames:
+            element: element.test.com
+          parentRefs:
+            element:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: element
+              sectionName: element
+          rules:
+            root:
+              backendRefs:
+                backend:
+                  name: ref:element
+                  port: 80
+      listenerSets:
+        element:
+          listeners:
+            element:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: element.test.com
+              name: element
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: ref:element-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: kube-system
