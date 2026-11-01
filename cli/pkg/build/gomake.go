@@ -15,7 +15,7 @@ import (
 )
 
 func version() (string, error) {
-	return bclVersion.GenerateIncrementalVersion(0, ".")
+	return bclVersion.GenerateIncrementalVersion(1, ".")
 }
 
 func main() {
