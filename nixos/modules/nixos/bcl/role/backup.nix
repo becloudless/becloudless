@@ -10,8 +10,8 @@
     default = { };
     description = ''
       SFTP-only users (one per backup context). Each user is public-key only,
-      has no shell, and is chrooted in /srv/sftp/<name>. Writable data goes in
-      /srv/sftp/<name>/files (the chroot root must stay root-owned).
+      has no shell, and is chrooted in /data/Backups/<name>. Writable data goes in
+      /data/Backups/<name>/files (the chroot root must stay root-owned).
     '';
     type = lib.types.attrsOf (lib.types.submodule {
       options.authorizedKeys = lib.mkOption {
@@ -92,14 +92,14 @@
         isSystemUser = true;
         group = name;
         extraGroups = [ "sftp-only" ];
-        home = "/srv/sftp/${name}";
+        home = "/data/Backups/${name}";
         shell = "/run/current-system/sw/bin/nologin";
         openssh.authorizedKeys.keys = u.authorizedKeys;
       }) sftpUsers;
 
       services.openssh.extraConfig = lib.mkIf (sftpUsers != { }) ''
         Match Group sftp-only
-          ChrootDirectory /srv/sftp/%u
+          ChrootDirectory /data/Backups/%u
           ForceCommand internal-sftp
           AllowTcpForwarding no
           AllowAgentForwarding no
@@ -110,10 +110,10 @@
       # The chroot directory must be root-owned and not writable by others,
       # so each user writes in its own `files` subdirectory.
       systemd.tmpfiles.rules = lib.optionals (sftpUsers != { }) (
-        [ "d /srv/sftp 0755 root root -" ]
+        [ "d /data/Backups 0755 root root -" ]
         ++ lib.concatLists (lib.mapAttrsToList (name: _: [
-          "d /srv/sftp/${name} 0755 root root -"
-          "d /srv/sftp/${name}/files 0700 ${name} ${name} -"
+          "d /data/Backups/${name} 0755 root root -"
+          "d /data/Backups/${name}/files 0700 ${name} ${name} -"
         ]) sftpUsers)
       );
 
