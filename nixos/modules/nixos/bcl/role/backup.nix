@@ -100,15 +100,16 @@
       services.openssh.extraConfig = lib.mkIf (sftpUsers != { }) ''
         Match Group sftp-only
           ChrootDirectory /data/Backups/%u
-          ForceCommand internal-sftp
+          ForceCommand internal-sftp -d /files
           AllowTcpForwarding no
           AllowAgentForwarding no
           X11Forwarding no
           PermitTTY no
       '';
 
-      # The chroot directory must be root-owned and not writable by others,
-      # so each user writes in its own `files` subdirectory.
+      # sshd refuses a chroot directory that is not root-owned or is writable by
+      # others, so the user's writable area is the `files` subdirectory, which
+      # internal-sftp starts in (-d /files).
       systemd.tmpfiles.rules = lib.optionals (sftpUsers != { }) (
         [ "d /data/Backups 0755 root root -" ]
         ++ lib.concatLists (lib.mapAttrsToList (name: _: [
