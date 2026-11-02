@@ -236,7 +236,7 @@ func (c *Chart) runUnitTest(testFiles []string) error {
 		TestFiles:    testFiles,
 	}
 
-	if passed := runner.RunV3([]string{c.path}); !passed {
+	if passed := runner.RunV4([]string{c.path}); !passed {
 		return errs.WithF(data.WithField("path", c.path), "Helm unit tests failed")
 	}
 
