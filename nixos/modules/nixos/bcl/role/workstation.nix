@@ -33,6 +33,7 @@ in
       file
       # System
       wavemon powertop htop iftop lsof dfc psmisc ncdu tree nmon
+      dnsutils
       s-tui stress
       gnupg libsecret sops kubeseal ssh-to-age
 

@@ -1,9 +1,32 @@
 { config, lib, pkgs, ... }:
 {
+  options.bcl.role.backup.autoShutdown = lib.mkOption {
+    type = lib.types.bool;
+    default = true;
+    description = "Power off the server after a period without SSH sessions, logged-in users or running disk scrubs.";
+  };
+
+  options.bcl.role.backup.sftpUsers = lib.mkOption {
+    default = { };
+    description = ''
+      SFTP-only users (one per backup context). Each user is public-key only,
+      has no shell, and is chrooted in /srv/sftp/<name>. Writable data goes in
+      /srv/sftp/<name>/files (the chroot root must stay root-owned).
+    '';
+    type = lib.types.attrsOf (lib.types.submodule {
+      options.authorizedKeys = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        description = "SSH public keys allowed to log in as this user.";
+      };
+    });
+  };
+
   config = lib.mkMerge [
     { bcl.role.knownRoles = [ "backup" ]; }
     (lib.mkIf (config.bcl.role.name == "backup") (
       let
+        sftpUsers = config.bcl.role.backup.sftpUsers;
+
         # Data pools backed by more than one physical disk (mergerfs pools).
         # A file written into the pool (e.g. gocryptfs.conf) only lands on
         # whichever single branch disk mergerfs picked, so it must be copied
@@ -63,13 +86,44 @@
 
      security.sudo.wheelNeedsPassword = false;
 
+      users.groups = { sftp-only = { }; } // lib.mapAttrs (_: _: { }) sftpUsers;
+
+      users.users = lib.mapAttrs (name: u: {
+        isSystemUser = true;
+        group = name;
+        extraGroups = [ "sftp-only" ];
+        home = "/srv/sftp/${name}";
+        shell = "/run/current-system/sw/bin/nologin";
+        openssh.authorizedKeys.keys = u.authorizedKeys;
+      }) sftpUsers;
+
+      services.openssh.extraConfig = lib.mkIf (sftpUsers != { }) ''
+        Match Group sftp-only
+          ChrootDirectory /srv/sftp/%u
+          ForceCommand internal-sftp
+          AllowTcpForwarding no
+          AllowAgentForwarding no
+          X11Forwarding no
+          PermitTTY no
+      '';
+
+      # The chroot directory must be root-owned and not writable by others,
+      # so each user writes in its own `files` subdirectory.
+      systemd.tmpfiles.rules = lib.optionals (sftpUsers != { }) (
+        [ "d /srv/sftp 0755 root root -" ]
+        ++ lib.concatLists (lib.mapAttrsToList (name: _: [
+          "d /srv/sftp/${name} 0755 root root -"
+          "d /srv/sftp/${name}/files 0700 ${name} ${name} -"
+        ]) sftpUsers)
+      );
+
       environment.systemPackages = with pkgs; [
         mergerfs
       ];
 
       systemd.services."shutdown-when-inactive" = {
         path = with pkgs; [ iproute2 ];
-        enable = true;
+        enable = config.bcl.role.backup.autoShutdown;
         script = ''
             count=0
             intervalSecond=10
