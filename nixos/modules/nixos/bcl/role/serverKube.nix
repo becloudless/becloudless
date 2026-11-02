@@ -36,6 +36,8 @@ in
     { bcl.role.knownRoles = [ "serverKube" ]; }
     (lib.mkIf (config.bcl.role.name == "serverKube") {
 
+    bcl.role.autoUpgrade.useHostNumber = lib.mkDefault true; # the nodes upgrade on different days
+
     assertions = [
       {
         assertion = cfg.worker -> nodeNumber > cfg.masterNodeCount;

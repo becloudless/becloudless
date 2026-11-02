@@ -23,6 +23,8 @@ in
     { bcl.role.knownRoles = [ "server" ]; }
     (lib.mkIf (config.bcl.role.name == "server") {
 
+    bcl.role.autoUpgrade.useHostNumber = lib.mkDefault true; # the servers upgrade on different days
+
     bcl.diskSystem.encrypted = true;
     bcl.boot.ssh = true; # give password for disk encryption on boot
 
