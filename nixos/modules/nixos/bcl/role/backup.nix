@@ -108,10 +108,12 @@
       '';
 
       # sshd refuses a chroot directory that is not root-owned or is writable by
-      # others, so the user's writable area is the `files` subdirectory, which
-      # internal-sftp starts in (-d /files).
+      # others, and applies the same check to EVERY parent component, so /data
+      # itself must be root:root and not group/world-writable too. The user's
+      # writable area is the `files` subdirectory, which internal-sftp starts
+      # in (-d /files).
       systemd.tmpfiles.rules = lib.optionals (sftpUsers != { }) (
-        [ "d /data/Backups 0755 root root -" ]
+        [ "d /data 0755 root root -" "d /data/Backups 0755 root root -" ]
         ++ lib.concatLists (lib.mapAttrsToList (name: _: [
           "d /data/Backups/${name} 0755 root root -"
           "d /data/Backups/${name}/files 0700 ${name} ${name} -"
