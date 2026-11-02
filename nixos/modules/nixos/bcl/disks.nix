@@ -98,7 +98,7 @@ in {
             (so "/dev/mapper/<name>" exists, via crypttab) without mounting
             it here - useful to hand the decrypted block device through to
             a VM instead (e.g. as one of
-            bcl.role.serverVirt.vms.<name>.blockDevices, pointing at
+            bcl.vm.vms.<name>.blockDevices, pointing at
             "/dev/mapper/<name>"). Requires `encrypted = true`.
           '';
         };
