@@ -21,7 +21,10 @@ let
                 then "/dev/mapper/${name}"
                 else underlyingDevice name diskCfg;
       fsType  = "auto";
-      options = [ diskCfg.mode "defaults" "nofail" ];
+      # Large btrfs volumes can take minutes to mount after an unclean
+      # shutdown; the default 90s timeout kills the mount and fails every
+      # unit depending on it (e.g. mergerfs /data).
+      options = [ diskCfg.mode "defaults" "nofail" "x-systemd.mount-timeout=15min" ];
     };
   }) (lib.filterAttrs (_: diskCfg: diskCfg.mount) cfg);
 
