@@ -212,7 +212,7 @@ func upgradeLocalFromUpstream(action string, systemName string) error {
 	}
 
 	if err := execNixosRebuild(run, nixosRebuildAction(action), "--flake", buildFlakeTarget(bcl.BCL.System.Repository, systemName),
-		"--no-write-lock-file", "--refresh", "--upgrade"); err != nil {
+		"--no-write-lock-file", "--refresh"); err != nil {
 		return err
 	}
 	return rebootIfRequested(run, action)
