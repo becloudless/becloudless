@@ -68,6 +68,7 @@ func nixosUpgradeCmd() *cobra.Command {
 		Aliases: []string{"update", "up"},
 		Short:   "upgrade NixOS system",
 		Long:    "Small wrapper around nixos-rebuild to upgrade NixOS system from current infra git repo",
+		Args:    cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			remote := sshConfig.Host != ""
 
