@@ -18,6 +18,17 @@
         type = lib.types.listOf lib.types.str;
         description = "SSH public keys allowed to log in as this user.";
       };
+      options.quota = lib.mkOption {
+        type = lib.types.nullOr (lib.types.strMatching "[0-9]+[KMGTPE]?");
+        default = null;
+        example = "500G";
+        description = ''
+          Hard size limit for this user's writable `backup` directory (btrfs
+          qgroup syntax: a number with an optional K/M/G/T/P/E suffix). Writes
+          beyond it fail with EDQUOT. Requires /data to be btrfs. null means no
+          limit (an already applied limit is NOT removed when set back to null).
+        '';
+      };
     });
   };
 
@@ -26,6 +37,7 @@
     (lib.mkIf (config.bcl.role.name == "backup") (
       let
         sftpUsers = config.bcl.role.backup.sftpUsers;
+        quotaUsers = lib.filterAttrs (_: u: u.quota != null) sftpUsers;
 
         # Data pools backed by more than one physical disk (mergerfs pools).
         # A file written into the pool (e.g. gocryptfs.conf) only lands on
@@ -123,6 +135,47 @@
       environment.systemPackages = with pkgs; [
         mergerfs
       ];
+
+      # A btrfs qgroup limit only applies to a subvolume, so each quota'd user's
+      # `backup` directory must be one. An empty plain directory (as created by
+      # tmpfiles above) is converted; a non-empty one is reported and skipped.
+      systemd.services.backup-sftp-quota = lib.mkIf (quotaUsers != { }) {
+        description = "Apply per-user btrfs quotas on SFTP backup directories";
+        after = [ "local-fs.target" "systemd-tmpfiles-setup.service" ];
+        wantedBy = [ "multi-user.target" ];
+        unitConfig.RequiresMountsFor = "/data";
+        path = [ pkgs.btrfs-progs pkgs.coreutils ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+        script = ''
+          if [ "$(stat -f -c %T /data)" != "btrfs" ]; then
+            echo "/data is not btrfs, cannot apply quotas" >&2
+            exit 1
+          fi
+          btrfs qgroup show /data >/dev/null 2>&1 || btrfs quota enable /data
+          failed=0
+        '' + lib.concatStringsSep "\n" (lib.mapAttrsToList (name: u: ''
+          dir=/data/Backups/${name}/backup
+          if ! btrfs subvolume show "$dir" >/dev/null 2>&1; then
+            if [ -d "$dir" ] && [ -z "$(ls -A "$dir")" ]; then rmdir "$dir"; fi
+            if [ -e "$dir" ]; then
+              echo "$dir is a non-empty plain directory, cannot convert it to a subvolume to apply the quota" >&2
+              failed=1
+            else
+              btrfs subvolume create "$dir"
+              chown ${name}:${name} "$dir"
+              chmod 0700 "$dir"
+            fi
+          fi
+          if btrfs subvolume show "$dir" >/dev/null 2>&1; then
+            btrfs qgroup limit ${u.quota} "$dir"
+          fi
+        '') quotaUsers) + ''
+          exit $failed
+        '';
+      };
 
       systemd.services."shutdown-when-inactive" = {
         path = with pkgs; [ iproute2 ];
