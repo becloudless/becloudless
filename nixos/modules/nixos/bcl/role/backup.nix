@@ -11,7 +11,7 @@
     description = ''
       SFTP-only users (one per backup context). Each user is public-key only,
       has no shell, and is chrooted in /data/Backups/<name>. Writable data goes in
-      /data/Backups/<name>/files (the chroot root must stay root-owned).
+      /data/Backups/<name>/backup (the chroot root must stay root-owned).
     '';
     type = lib.types.attrsOf (lib.types.submodule {
       options.authorizedKeys = lib.mkOption {
@@ -100,7 +100,7 @@
       services.openssh.extraConfig = lib.mkIf (sftpUsers != { }) ''
         Match Group sftp-only
           ChrootDirectory /data/Backups/%u
-          ForceCommand internal-sftp -d /files
+          ForceCommand internal-sftp -d /backup
           AllowTcpForwarding no
           AllowAgentForwarding no
           X11Forwarding no
@@ -110,13 +110,13 @@
       # sshd refuses a chroot directory that is not root-owned or is writable by
       # others, and applies the same check to EVERY parent component, so /data
       # itself must be root:root and not group/world-writable too. The user's
-      # writable area is the `files` subdirectory, which internal-sftp starts
-      # in (-d /files).
+      # writable area is the `backup` subdirectory, which internal-sftp starts
+      # in (-d /backup).
       systemd.tmpfiles.rules = lib.optionals (sftpUsers != { }) (
         [ "d /data 0755 root root -" "d /data/Backups 0755 root root -" ]
         ++ lib.concatLists (lib.mapAttrsToList (name: _: [
           "d /data/Backups/${name} 0755 root root -"
-          "d /data/Backups/${name}/files 0700 ${name} ${name} -"
+          "d /data/Backups/${name}/backup 0700 ${name} ${name} -"
         ]) sftpUsers)
       );
 
