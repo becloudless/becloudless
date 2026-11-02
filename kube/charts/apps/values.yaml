@@ -35,7 +35,7 @@ apps:
   apps:
     clusterAdmin: true
 
-  backup-restore: # the jobs restoring the volumes and the secrets of the apps with `restore: true`, needs `longhorn` and `garage`
+  backup-restore: # the S3 gateway of the backups, and the jobs restoring the volumes and the secrets of the apps with `restore: true`, needs `longhorn`
     groups:
       minimal: true
     clusterAdmin: true # the ClusterRole of the restore jobs
@@ -260,11 +260,4 @@ apps:
     appChart:
       name: app-immich
     restore: true
-
-  garage:
-    groups:
-      extra: true
-    clusterAdmin: true # the CRD and the ClusterRole of the discovery of the nodes
-    appChart:
-      name: app-garage
 

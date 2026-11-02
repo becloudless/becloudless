@@ -63,11 +63,11 @@ resources:
             share-managers:
               matchLabels: {longhorn.io/component: share-manager}
           toPorts: [9600]
-        backup-target: # the backup target is a bucket of garage (`longhorn-backup` of app-garage), its S3 API
+        backup-target: # the backup target is the S3 gateway of app-backup-restore (`longhorn-backup`, `sftp-gateway`)
           toEndpoints:
-            garage:
-              matchLabels: {"k8s:io.kubernetes.pod.namespace": garage, "k8s:app.kubernetes.io/instance": garage, "k8s:app.kubernetes.io/component": garage}
-          toPorts: [3900]
+            sftp-gateway:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": backup-restore, "k8s:app.kubernetes.io/instance": sftp-gateway, "k8s:app.kubernetes.io/component": sftp-gateway}
+          toPorts: [9000]
 
     longhorn-global-manager:
       endpointSelector:
@@ -129,9 +129,9 @@ resources:
           toPorts: [9500]
         backup-target:
           toEndpoints:
-            garage:
-              matchLabels: {"k8s:io.kubernetes.pod.namespace": garage, "k8s:app.kubernetes.io/instance": garage, "k8s:app.kubernetes.io/component": garage}
-          toPorts: [3900]
+            sftp-gateway:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": backup-restore, "k8s:app.kubernetes.io/instance": sftp-gateway, "k8s:app.kubernetes.io/component": sftp-gateway}
+          toPorts: [9000]
 
     longhorn-share-manager: # the NFS server of the ReadWriteMany volumes
       endpointSelector:
@@ -438,7 +438,7 @@ resources:
 
             # The state of Longhorn (https://longhorn.io/docs/1.13.0/advanced-resources/system-backup-restore/backup-longhorn-system/):
             # the volumes, PVs, PVCs, settings, recurring jobs, storage classes, engine images... in a bundle uploaded to the backup
-            # target `default` (the bucket of garage, see app-garage), so that Longhorn can be restored on a new cluster
+            # target `default` (the S3 gateway of app-backup-restore), so that Longhorn can be restored on a new cluster
             # (`SystemRestore`, after the backup target is set there). The Kubernetes workloads are not in it, Flux recreates them.
             # `if-not-present`: the volumes without a backup, or with an outdated one, are backed up first (the `daily-backups` job
             # runs an hour before: the volumes are up to date, the system backup does not back them up twice).

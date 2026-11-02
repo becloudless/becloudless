@@ -8,9 +8,9 @@ The HelmRelease `restore-<name>`, in the namespace of the `backup-restore` app (
 a PV bound to the PVC of the app: it does nothing for an app that already has its volumes, or when there is no backup. It runs as the
 `flux-backup-restore` account in the namespace of `backup-restore`, the jobs run as the account `backup-restore` of app-backup-restore, which has the rights.
 
-It waits for Longhorn (`app-longhorn`), for `app-backup-restore` and its `backup-restore-pre` (the key of the bucket of the secrets), and for the backup
-target of Garage (the HelmRelease `longhorn-backup` of app-garage) when the apps are enabled: do not set `restore` on `garage`,
-`backup-restore` or `longhorn`, their volumes can not be restored before they run. Nothing is created when Longhorn or `backup-restore` is not enabled.
+It waits for Longhorn (`app-longhorn`), for `app-backup-restore`, its `backup-restore-pre` (the key of the bucket of the secrets) and its backup
+target (the HelmRelease `longhorn-backup`, the S3 gateway): do not set `restore` on `backup-restore` or `longhorn`, their volumes can not be
+restored before they run. Nothing is created when Longhorn or `backup-restore` is not enabled.
 
 Only for the apps keeping all their state in their PVCs and CloudNativePG databases (both are restored, see the chart
 `restore-app`), and the secrets that secret-generator generated for them: the chart saves them (hourly, in the bucket of the
@@ -42,7 +42,6 @@ patches (the ownership of a restored secret) its secrets, and reads its `StringS
 {{- $longhorn := get $apps "longhorn" | default dict }}
 {{- $longhornNamespace := $longhorn.namespace | default "longhorn" }}
 {{- $backupNamespace := include "app-apps.restore.namespace" $apps | trim }}
-{{- $garage := get $apps "garage" | default dict }}
 
 {{- $helmReleases := dict }}
 {{- $roles := dict }}
@@ -54,10 +53,8 @@ patches (the ownership of a restored secret) its secrets, and reads its `StringS
     {{- $dependsOn := dict
           "longhorn" (dict "name" "app-longhorn" "namespace" $longhornNamespace)
           "backup-restore" (dict "name" "app-backup-restore" "namespace" $backupNamespace)
-          "backup-restore-pre" (dict "name" "backup-restore-pre" "namespace" $backupNamespace) }}
-    {{- if include "base.lib.isEnabled" $garage | trim }}
-      {{- $_ := set $dependsOn "backup-target" (dict "name" "longhorn-backup" "namespace" ($garage.namespace | default "garage")) }}
-    {{- end }}
+          "backup-restore-pre" (dict "name" "backup-restore-pre" "namespace" $backupNamespace)
+          "backup-target" (dict "name" "longhorn-backup" "namespace" $backupNamespace) }}
     {{- $dependsOnList := list }}
     {{- range $_, $dependency := $dependsOn }}
       {{- $dependsOnList = append $dependsOnList $dependency }}
