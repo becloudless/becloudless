@@ -2,27 +2,24 @@
 
 let
   # renovate: datasource=github-releases depName=becloudless/becloudless
-  version = "0.261030.0";
+  version = "0.261031.0";
 
   # Map Nix system to Go platform (GOOS-GOARCH format)
   platform = {
     "x86_64-linux"   = "linux-amd64";
     "aarch64-linux"  = "linux-arm64";
-    "x86_64-darwin"  = "darwin-amd64";
     "aarch64-darwin" = "darwin-arm64";
   }.${stdenv.hostPlatform.system} or (throw "bcl: unsupported system ${stdenv.hostPlatform.system}");
 
-  # To recompute hashes after a version bump, run for each platform (linux-amd64, linux-arm64, darwin-amd64, darwin-arm64):
+  # To recompute hashes after a version bump, run for each platform of `hashes` below (linux-amd64, linux-arm64, darwin-arm64):
   # VERSION=0.260410.550-H89e635b
   # nix store prefetch-file --hash-type sha256 --json "https://github.com/becloudless/becloudless/releases/download/v$VERSION/bcl-linux-amd64.tar.gz" | jq -r .hash
   # nix store prefetch-file --hash-type sha256 --json "https://github.com/becloudless/becloudless/releases/download/v$VERSION/bcl-linux-arm64.tar.gz" | jq -r .hash
-  # nix store prefetch-file --hash-type sha256 --json "https://github.com/becloudless/becloudless/releases/download/v$VERSION/bcl-darwin-amd64.tar.gz" | jq -r .hash
   # nix store prefetch-file --hash-type sha256 --json "https://github.com/becloudless/becloudless/releases/download/v$VERSION/bcl-darwin-arm64.tar.gz" | jq -r .hash
   hashes = {
-    "linux-amd64" = "sha256-f0wCF7F4SCe8d+/RCttbOV463M9CNl/WeGQ7djqnTiQ=";
-    "linux-arm64" = "sha256-q0UryqRQg+JpiyTJIUg2QLNxPsqW50uIJspv/E6vVzg=";
-    "darwin-amd64" = "sha256-ou0wA1JxNOZwkQ0bkeTDG8JDaRBNHIaNHfMjw32tmjM=";
-    "darwin-arm64" = "sha256-dwfefHPVylJxDNup799HsPLfEYQ903QidtSuB0GfnOM=";
+    "linux-amd64" = "sha256-WyuRja9bnkgNle7uInvVS3ktMTzVOOe+lhepwQNmmRI=";
+    "linux-arm64" = "sha256-IXCw5PatvmNiDy9LYXKtPrZyL7a0TscnVYpqQvvm53I=";
+    "darwin-arm64" = "sha256-9u5BGTXegomGT0e2o1DfOHfREaZ0RzJQhntVnoKVepY=";
   };
 in
 
@@ -57,7 +54,7 @@ stdenv.mkDerivation {
     homepage = "https://github.com/becloudless/becloudless";
     license = licenses.asl20;
     mainProgram = "bcl";
-    platforms = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+    platforms = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
     maintainers = with maintainers; [ n0rad ];
   };
 }
