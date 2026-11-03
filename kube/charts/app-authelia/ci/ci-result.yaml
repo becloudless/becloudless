@@ -544,7 +544,7 @@ spec:
             hash=$(authelia crypto hash generate pbkdf2 --variant sha512 --password "$(cat $dir/secret)" | sed 's/^Digest: //')
             printf '%s' "$hash" > /config/oidc-$client.hash
           done
-        image: ghcr.io/authelia/authelia:4.39.27
+        image: ghcr.io/authelia/authelia:4.39.28
         name: oidc-hashes
         securityContext:
           allowPrivilegeEscalation: false
