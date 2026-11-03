@@ -52,7 +52,7 @@ spec:
     image:
       registry: ghcr.io
       repository: becloudless/secret-generator
-      tag: 1.261018.1316
+      tag: 1.261020.1235
     podSecurityContext:
       runAsGroup: 65534
       runAsNonRoot: true
