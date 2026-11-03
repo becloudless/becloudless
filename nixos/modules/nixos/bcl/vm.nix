@@ -61,6 +61,16 @@ in
       default = null;
       description = "Default ISO image to attach as an install CDROM for VMs that don't set their own installIso.";
     };
+    hostMemoryReservePercent = lib.mkOption {
+      type = lib.types.ints.between 1 50;
+      default = 6;
+      description = ''
+        Share of the host's physical RAM kept for the host itself, in percent. The VMs' cgroup (machine.slice)
+        is throttled and reclaimed above the remaining share (MemoryHigh), and the host's own services
+        (system.slice) are protected from reclaim up to this share (MemoryLow), so that sshd, libvirtd and the
+        journal stay responsive when the VMs use all the memory.
+      '';
+    };
     vms = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
         options = {
@@ -193,6 +203,12 @@ in
     # (merged into the systemd.services set built further below, since Nix
     # module config attrsets can't define the same top-level attribute twice).
 
+    # Guest RAM is plain anonymous memory of the qemu processes, all running in machine.slice. Without limits, the
+    # VMs and the host's own services compete on equal terms, so an over-committed host starves sshd/libvirtd/journald
+    # and swaps everything randomly. Throttle the VMs above their share and protect the host's share instead.
+    systemd.slices.machine.sliceConfig.MemoryHigh = "${toString (100 - cfg.hostMemoryReservePercent)}%";
+    systemd.slices.system.sliceConfig.MemoryLow = "${toString cfg.hostMemoryReservePercent}%";
+
     # Let libvirtd's qemu process (group "kvm") open the LVM thin volumes used as VM root disks.
     services.udev.extraRules = ''
       SUBSYSTEM=="block", ENV{DM_VG_NAME}=="data", GROUP="kvm", MODE="0660"
@@ -259,6 +275,15 @@ in
               };
             };
             devices = base.devices // {
+              # Balloon device so the host can take back memory the guest doesn't use. freePageReporting makes the
+              # guest report freed pages to the host automatically, autodeflate gives memory back to the guest
+              # instead of letting it OOM when the host balloon is inflated. Needs the guest kernel to have
+              # VIRTIO_BALLOON and PAGE_REPORTING (both are built in on the NixOS kernels).
+              memballoon = {
+                model = "virtio";
+                autodeflate = true;
+                freePageReporting = true;
+              };
               disk = [{
                 type = "block";
                 device = "disk";
