@@ -47,7 +47,7 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: coredns
-      version: 1.48.2
+      version: 1.49.0
   driftDetection:
     mode: enabled
   healthCheckExprs:
