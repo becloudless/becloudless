@@ -190,7 +190,7 @@ spec:
                     PAPERLESS_SOCIALACCOUNT_PROVIDERS: '{"openid_connect":{"SCOPE":["openid","profile","email","groups"],"OAUTH_PKCE_ENABLED":true,"APPS":[{"provider_id":"authelia","name":"Authelia","client_id":"$(OIDC_CLIENT_ID)","secret":"$(OIDC_CLIENT_SECRET)","settings":{"server_url":"https://authelia.test.com","token_auth_method":"client_secret_basic"}}]}}'
                     PAPERLESS_TIME_ZONE: Europe/Paris
                     PAPERLESS_URL: https://paperless.test.com
-                  image: ghcr.io/paperless-ngx/paperless-ngx:3.3.4
+                  image: ghcr.io/paperless-ngx/paperless-ngx:3.4.1
                   name: paperless
                   ports:
                     http:
