@@ -6,6 +6,6 @@ metadata:
   name: test-release
   namespace: default
 spec:
-  backupTargetURL: s3://backups@garage/
+  backupTargetURL: s3://backups@us-east-1/
   credentialSecret: backupstore
   pollInterval: 3m0s

@@ -19,7 +19,7 @@ for the entire flake, including the Python helper scripts
 used by its NixOS module. This means every host using
 `nixvirt.nixosModules.default` — regardless of its own architecture — pulls
 in x86_64-linux derivations for these pieces. On a non-x86_64-linux host
-(e.g. aarch64 orangepi boards used for `bcl.role.serverVirt`), this requires
+(e.g. aarch64 orangepi boards used for `bcl.role.server`), this requires
 `boot.binfmt.emulatedSystems = ["x86_64-linux"]` (QEMU user-mode emulation)
 just to build/rebuild the system, and still needs an x86_64 machine to
 bootstrap the very first deploy (the target can't cross-build its own binfmt
@@ -43,4 +43,4 @@ corresponding ones from the new tag/commit (same list as above), and update
 the version/commit noted here. Check the upstream `CHANGELOG.md` for any
 interface changes to `lib.nix`/`modules.nix` that might require corresponding
 changes to `../../modules/nixos/bcl/nixvirt.nix` or
-`../../modules/nixos/bcl/role/serverVirtVms.nix`.
+`../../modules/nixos/bcl/vm.nix`.

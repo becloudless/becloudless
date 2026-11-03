@@ -7,7 +7,7 @@
 # This makes libvirtd, its module-helper Python script, and virtdeclare all
 # native builds on any architecture (e.g. aarch64), eliminating the need for
 # `boot.binfmt.emulatedSystems = ["x86_64-linux"]` and any cross-arch
-# bootstrap dance to get a serverVirt host to be able to rebuild itself.
+# bootstrap dance to get a server host to be able to rebuild itself.
 { config, lib, pkgs, ... }:
 let
   vendorDir = ../../../packages/nixvirt;

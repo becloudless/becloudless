@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "app": {
+      "$ref": "../../app/schema/values.schema.json#/properties/app"
+    },
+    "target": {
+      "additionalProperties": false,
+      "description": "The SFTP server where the S3 gateway (`sftp-gateway`) stores the encrypted backups of Longhorn and the secrets of the apps.",
+      "properties": {
+        "url": {
+          "description": "`sftp://<user>@<host>[:<port>]/<path>`, or `sftp+tls://<user>@<host>[:<port>]/<path>` for a server behind a TLS SSH gateway (SSH inside TLS, SNI `<host>`, the certificate is not checked: the SSH host key is the authentication). The host is a DNS name (the network policy of the gateway allows it with `toFQDNs`), the port is 22 for `sftp` and 422 (the TLS SSH gateway) for `sftp+tls`, the path is the writable directory of the user, in its chroot. The user is the one of `bcl.role.backup.sftpUsers` of the NixOS config, its private key is the key `id_ed25519` of the secret `sftp-gateway`.",
+          "pattern": "^sftp(\\+tls)?://[^/@:]+@[^/@:]+(:[0-9]+)?(/.*)?$",
+          "type": "string"
+        },
+        "hostKeys": {
+          "description": "The host keys of the server, one line of `known_hosts` each, all the types of the server (only the type and the key are used).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "checkRequiredValues": {
+      "$ref": "../../base/schema/values.schema.json#/properties/checkRequiredValues"
+    },
+    "prefixNamesWithRelease": {
+      "$ref": "../../base/schema/values.schema.json#/properties/prefixNamesWithRelease"
+    },
+    "defaults": {
+      "$ref": "../../base/schema/values.schema.json#/properties/defaults"
+    },
+    "resources": {
+      "$ref": "../../base/schema/values.schema.json#/properties/resources"
+    },
+    "expose": {
+      "$ref": "../../app/schema/values.schema.json#/properties/expose"
+    }
+  },
+  "type": "object"
+}

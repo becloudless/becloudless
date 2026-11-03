@@ -2,3 +2,8 @@ app:
   domain: test.com
   name: test
   lldapdn: dc=test,dc=com
+target:
+  url: sftp+tls://test@backup.test.com:2222/backup/test
+  hostKeys:
+    - backup.test.com ssh-ed25519 AAAAtest
+    - backup.test.com ssh-rsa AAAAtest2

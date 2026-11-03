@@ -432,6 +432,16 @@ in
             iface=$(${detectWifiInterface} 2>/dev/null) || { sleep 5; continue; }
             ctrl="/run/miracle/wifi/$iface"
 
+            # Wi-Fi power save off: NetworkManager does not manage the
+            # interface here (miracle-wifid's own wpa_supplicant owns it), so
+            # `networking.networkmanager.wifi.powersave` has no effect and the
+            # driver default (on) makes the STA link add latency and jitter
+            # (stutter on 4K streams). Re-asserted every pass, a supplicant
+            # restart or a reassociation can turn it back on.
+            if iw dev "$iface" get power_save 2>/dev/null | grep -q ': on'; then
+              iw dev "$iface" set power_save off 2>/dev/null || true
+            fi
+
             wpa_cli_() { wpa_cli -p /run/miracle/wifi -i "$iface" "$@"; }
 
             # Guard every wpa_cli_ call here with `|| true` (alongside the

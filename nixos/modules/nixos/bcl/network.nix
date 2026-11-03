@@ -126,7 +126,7 @@ in
     ];
 
     # NOTE: keyed as "net" so this merges with any other module (e.g.
-    # hardware-specific overrides, bcl.role.serverVirt's VLAN trunk config)
+    # hardware-specific overrides, bcl.role.server's VLAN trunk config)
     # targeting the same physical interface into a single systemd-networkd
     # .network file, instead of two separate files both matching
     # cfg.interface (systemd-networkd only applies the first matching file

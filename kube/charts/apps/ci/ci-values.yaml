@@ -5,8 +5,6 @@ config:
 apps:
   longhorn:
     enabled: true
-  garage:
-    enabled: true
   backup-restore:
     enabled: true
   something:

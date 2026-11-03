@@ -133,12 +133,12 @@ spec:
   egress:
   - toEndpoints:
     - matchLabels:
-        k8s:app.kubernetes.io/component: garage
-        k8s:app.kubernetes.io/instance: garage
-        k8s:io.kubernetes.pod.namespace: garage
+        k8s:app.kubernetes.io/component: sftp-gateway
+        k8s:app.kubernetes.io/instance: sftp-gateway
+        k8s:io.kubernetes.pod.namespace: backup-restore
     toPorts:
     - ports:
-      - port: "3900"
+      - port: "9000"
         protocol: TCP
   - toEndpoints:
     - matchLabels:
@@ -197,12 +197,12 @@ spec:
   egress:
   - toEndpoints:
     - matchLabels:
-        k8s:app.kubernetes.io/component: garage
-        k8s:app.kubernetes.io/instance: garage
-        k8s:io.kubernetes.pod.namespace: garage
+        k8s:app.kubernetes.io/component: sftp-gateway
+        k8s:app.kubernetes.io/instance: sftp-gateway
+        k8s:io.kubernetes.pod.namespace: backup-restore
     toPorts:
     - ports:
-      - port: "3900"
+      - port: "9000"
         protocol: TCP
   - toEndpoints:
     - matchLabels:

@@ -222,7 +222,7 @@ metadata:
     app.kubernetes.io/component: restore-app
     app.kubernetes.io/instance: test-release
     app.kubernetes.io/name: restore-app
-  name: restore-test-ccf9f39e49
+  name: restore-test-dd3240db1b
   namespace: default
 spec:
   activeDeadlineSeconds: 3000
@@ -240,7 +240,7 @@ spec:
         - /scripts/restore.sh
         env:
         - name: AWS_DEFAULT_REGION
-          value: garage
+          value: us-east-1
         - name: BUCKET
           value: longhorn-backups
         - name: HOME
@@ -313,7 +313,7 @@ spec:
             - /scripts/restore.sh
             env:
             - name: AWS_DEFAULT_REGION
-              value: garage
+              value: us-east-1
             - name: BUCKET
               value: longhorn-backups
             - name: HOME

@@ -23,7 +23,7 @@
           "type": "string"
         },
         "secretsRegion": {
-          "description": "The region of the bucket (`garage` for Garage).",
+          "description": "The region of the bucket (`us-east-1` for the gateway of app-backup-restore).",
           "type": "string"
         },
         "scriptConfigMap": {

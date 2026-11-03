@@ -38,6 +38,8 @@
 
     hardware.graphics = {
       enable = true;
+      # VA-API driver for hardware video decoding (Intel Gen 8+, the NUCs). Without it mpv decodes 4K HEVC 10-bit in software and lags.
+      extraPackages = [ pkgs.intel-media-driver ];
     };
 
 
@@ -207,6 +209,7 @@
       # without it, IT tests in kvm fail.
       home.file.".config/jellyfin-desktop/mpv/mpv.conf".text = ''
         gpu-context=wayland
+        hwdec=auto-safe
       '';
     };
 

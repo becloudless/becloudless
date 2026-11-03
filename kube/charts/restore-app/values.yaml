@@ -31,7 +31,7 @@
 #
 # The secrets generated for the app (the ones owned by a `StringSecret` of secret-generator: a database encryption key, the password of
 # an administrator stored in the database... a new one would not match the restored data) are saved by the CronJob `secrets-backup`
-# in the bucket of the backup target (`longhorn-backups` of Garage, S3, see app-backup-restore), `secrets/<namespace>/<secret>/<date>.json`
+# in the bucket of the backup target (`longhorn-backups` of the S3 gateway, see app-backup-restore), `secrets/<namespace>/<secret>/<date>.json`
 # (Longhorn only uses `backupstore/`), one
 # object by change of a secret (the previous values are kept). The job restores the last version of each one that does not exist, before
 # the volumes, when the namespace has no `StringSecret` yet (the app never ran): secret-generator does not touch a secret that it does
@@ -45,7 +45,7 @@ restore:
   secretsBackupSchedule: "7 * * * *"
   s3Secret: s3-secrets # the key of the bucket (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINTS`), copied by app-backup-restore
   secretsBucket: longhorn-backups
-  secretsRegion: garage
+  secretsRegion: us-east-1
   # `scriptConfigMap` (the ConfigMap with the script, one by namespace: all the releases are installed in the same one) and `scriptHash`
   # (of the script: a new script is a new Job, the spec of a Job is immutable) are set by the loader from `files/restore.sh`
 
@@ -57,7 +57,7 @@ resources:
       activeDeadlineSeconds: 3000
       template: &template # the pod of the CronJob of the secrets is the same, it runs the same script in another `MODE`
         # the pods have the label `app.kubernetes.io/name: restore-app` (the name of the chart), selected by the network policy of
-        # app-backup-restore and the one of app-garage
+        # app-backup-restore (the jobs, and the ingress of the S3 gateway)
         spec: &spec
           restartPolicy: Never
           serviceAccountName: backup-restore # see app-backup-restore

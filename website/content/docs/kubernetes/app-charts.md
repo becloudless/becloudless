@@ -45,7 +45,23 @@ on `base.loader.all`.
 
 ## Restoring the volumes of an app
 
-The volumes of the apps are backed up daily by Longhorn into the bucket of Garage (the `default` group of recurring jobs). An
+The volumes of the apps are backed up daily by Longhorn into the bucket of the S3 gateway of `app-backup-restore` (the `default` group of recurring jobs). The gateway is rclone: it encrypts the names and the content of the objects (`crypt`) and stores them on an SFTP server outside of the cluster, see the header of `kube/charts/app-backup-restore/values.yaml` for what the administrator gives (the secret `sftp-gateway`: the SSH key and the passwords of `crypt`, keep a copy of them outside of the cluster) and sets for the cluster with the values `target` of `app-backup-restore` (`url`, `sftp://<user>@<host>[:<port>]/<path>` where the host is a DNS name that the network policy of the gateway allows, and `hostKeys`), in the entry `backup-restore` of the `apps` chart:
+
+```yaml
+apps:
+  backup-restore:
+    values:
+      target:
+        url: sftp://awired@backup-hot1.example.com/backup
+        hostKeys: # all the types of the server
+          - backup-hot1.example.com ssh-ed25519 AAAA...
+          - backup-hot1.example.com ssh-rsa AAAA...
+```
+
+A server behind a TLS SSH gateway (SSH inside TLS, the SNI is the name of the server, like `ProxyCommand ncat --ssl --ssl-servername %h %h 422`)
+is reached with the scheme `sftp+tls://`, the default port is then the one of the gateway (422). The TLS certificate is not checked, the SSH host key is the authentication.
+
+An
 app can get its volumes back from the last backup when it is enabled, with `restore: true` in its entry of the `apps` chart. The
 PVCs are not listed: nothing about them is declared in the chart of the app, the job finds the PVCs of the namespace in the
 backups (Longhorn saves the namespace and the name of the PVC in each one, and the storage class and access mode are those of the
@@ -58,7 +74,7 @@ apps:
 ```
 
 For such an app the `apps` chart also creates the HelmRelease `restore-<name>` in the namespace `backup-restore` (the app `backup-restore`, `app-backup-restore`,
-must be enabled next to `longhorn` and `garage`; it waits for them, and for the backup target of Garage), and `app-<name>` waits for it.
+must be enabled next to `longhorn`; it waits for it, and for the backup target (the gateway)), and `app-<name>` waits for it.
 Its job (`kube/charts/restore-app`), for each PVC that does not
 exist yet: syncs the backup target, finds the last completed backup of the PVC (Longhorn saves its namespace and name in the backup),
 creates a Longhorn volume restored from it and the PV of this volume with a `claimRef` to the PVC, so the PVC of the app is bound to it
@@ -75,18 +91,17 @@ app waits, the job is retried) when the target is not reachable.
   is no WAL archive: the transactions after the backup are lost.
 - The secrets generated for the app (the ones owned by a `StringSecret` of secret-generator: a database encryption key, the password of an
   administrator stored in the database) are saved too, hourly, by a CronJob of the namespace `backup-restore`, in the bucket of the backup target (`longhorn-backups` of
-  Garage, under `secrets/<namespace>/<secret>/<date>.json`, one object by change, the previous values are kept). The key is the one of
+  the S3 gateway, under `secrets/<namespace>/<secret>/<date>.json`, one object by change, the previous values are kept). The key is the one of
   Longhorn, which uses `backupstore/` only. The job restores the
   last version of each secret before the volumes, when the app never ran (it has no `StringSecret` yet): secret-generator does not touch a
   secret it does not own, so the app finds them as they were, and owns them from the next run of the CronJob. The secrets are stored as
   they are in the cluster, the bucket is as sensitive as them. Only what was saved by a CronJob can be restored: a secret generated before
   the first run is lost.
-- Only for the apps that keep all their state in their PVCs, databases and generated secrets. Not for `garage` (it holds the backups) nor
-  `longhorn`.
+- Only for the apps that keep all their state in their PVCs, databases and generated secrets. Not for `longhorn` nor `backup-restore`.
 - Everything that restores is in the namespace `backup-restore`: its account `backup-restore` is the only one with the rights (create PVs and PVCs,
   the volumes of Longhorn, the secrets of the apps), and `flux-backup-restore` is cluster-admin to create them.
-- The backups are in the cluster itself (the bucket of Garage is on Longhorn volumes), so this restores an app that was removed or whose
-  volume was lost, not a lost cluster.
+- The backups are on the SFTP server, encrypted: with the secret `sftp-gateway` (given by the administrator) a new cluster can read them. The
+  secrets of the apps and the volumes are restored when the app is enabled again, a lost cluster needs the gateway first.
 
 ## Sub-HRs
 

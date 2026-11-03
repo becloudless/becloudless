@@ -42,7 +42,7 @@ The gains overlap (1 with 13, 3 with 8, 5 and 6 with 13): the total of 1 to 9 an
 | the `<id>-pre` release of the app | `ref:<id>-pre` | 17 lines in 15 charts |
 
 - In `app/templates/_mergeRelease.tpl`, which already completes `dependsOn`.
-- Garage uses `volumeClaimTemplates`: match the class name anywhere in the release.
+- Longhorn storage classes in `volumeClaimTemplates`: match the class name anywhere in the release.
 - The golden may change the order of the `dependsOn` lists, not their content.
 
 ## 2. Names from the keys (83 lines in 19 charts, plus shorthands)
@@ -134,14 +134,14 @@ images of the app values, less noise on every image line.
 
 ## 11. Per app headers to the website (about 250 comment lines)
 
-The headers of tuwunel, seerr, paperless, garage, seafile, jellyfin, prometheus, firefox-sync, immich and mailu are user documentation
+The headers of tuwunel, seerr, paperless, seafile, jellyfin, prometheus, firefox-sync, immich and mailu are user documentation
 (how to log in, what is not configured, how to use the CLI...). Move them to one page per app in
 `../../website/content/docs/kubernetes/` and keep two lines in the values (what it is, where the doc is). It moves the text, it does not
 remove it.
 
 ## 12. Scripts and CSS to `files/` (readability)
 
-Embedded in the values today: jellyfin `configure.js`, the seerr configure and admin scripts, the lldap `bootstrap.sh`, the garage-layout
+Embedded in the values today: jellyfin `configure.js`, the seerr configure and admin scripts, the lldap `bootstrap.sh`, the S3 gateway script
 script, the homer CSS, the landing HTML, the seafile login override. Same total size, but the values stay readable, the files get their
 syntax highlighting and can be tested. The `app` chart reads them with `.Files.Get`.
 

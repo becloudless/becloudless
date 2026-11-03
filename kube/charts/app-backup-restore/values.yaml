@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../app/schema/values.schema.json
+# yaml-language-server: $schema=./schema/values.schema.json
 
 # The jobs that restore the volumes and the generated secrets of the apps (chart `restore-app`, started by the `restore: true` of an app
 # in the `apps` chart), and the account they run as. Longhorn keeps what is its own in `longhorn-system`.
@@ -7,9 +7,40 @@
 #  - the cluster: create the PVs and the PVCs of the restored volumes, read the storage classes;
 #  - the namespace of each app with `restore: true`: its secrets and `StringSecret`s.
 # `flux-backup-restore` is cluster-admin to create these cluster-wide rights, only the jobs run as `backup-restore`.
-# The secrets of the apps are saved as they are in the bucket of the backup target (`longhorn-backups` of Garage), under `secrets/`,
-# with the key of Longhorn (copied as `s3-secrets`): the bucket is as sensitive as the secrets of the apps.
-# TODO: a bucket and a key of their own, created here, so Longhorn and the jobs can not read each other's data.
+# The backup target of Longhorn (`default`, the bucket `longhorn-backups`) is an S3 gateway of this app, `sftp-gateway`: rclone serves the
+# S3 API in the cluster (`http://sftp-gateway.backup-restore:9000`, path-style, region `us-east-1`), encrypts the names and the content of
+# the objects (rclone `crypt`: NaCl secretbox, the names with EME and base32) and stores them on an SFTP server outside of the cluster (the
+# role `backup` of the NixOS config: keys only, chrooted, `/backup` is writable). The server only sees encrypted files, and the cluster
+# does not depend on its own volumes to restore its volumes.
+# The secrets of the apps are saved as they are in the same bucket, under `secrets/`, with the same key (copied as `s3-secrets`):
+# the bucket is as sensitive as the secrets of the apps (encrypted at rest on the SFTP server).
+# The key of the S3 gateway is generated here (it only protects the gateway from the other pods). What the cluster can not regenerate
+# is given by the administrator, in the secret `sftp-gateway` of the namespace `backup-restore`: the keys
+#  - `id_ed25519`: the private key of the SFTP user (its public key is in the `authorizedKeys` of the user in the `backup` role),
+#  - `crypt-password` and `crypt-salt`: the passwords of rclone `crypt`. THE BACKUPS CAN NOT BE READ WITHOUT THEM: keep a copy outside of
+#    the cluster (a secret generated here would be lost with the cluster, and with it the backups).
+# The server, the user, the directory and its host keys are the values `target` below, set them for the cluster
+# (`apps.backup-restore.values.target` in the `apps` chart). The host of `target.url` has to be a DNS name: the network policy
+# `sftp-gateway` allows the egress to it with `toFQDNs` (it does not work with an address).
+# The gateway reaches the server through the container `sftp-tunnel` (socat, on the loopback of the pod): a plain TCP connection
+# (`sftp://`), or SSH inside TLS (`sftp+tls://`) for a server behind a TLS SSH gateway (nginx `stream` with `ssl_preread`/`ssl`, the SNI is
+# the name of the server: the `ProxyCommand ncat --ssl --ssl-servername %h %h 422` of the SSH configs).
+# The TLS certificate is not checked (it is self-signed, TLS is only the transport): the SSH host key is the authentication.
+# `rclone serve s3` has no multipart upload: the objects over 5MiB (a Longhorn system backup) can not be uploaded, the blocks of the
+# volumes are 2MiB.
+
+# The SFTP server where the gateway stores the (encrypted) backups: the user is the one of the role `backup` (`bcl.role.backup.sftpUsers`)
+target:
+  # sftp://<user>@<host>[:<port>]/<path>, or sftp+tls://<user>@<host>[:<port>]/<path> behind a TLS SSH gateway
+  #  - the host: the DNS name of the server (not an address)
+  #  - the port: 22 for `sftp`, 422 (the TLS SSH gateway) for `sftp+tls`
+  #  - the path: the writable directory of the user, in its chroot
+  url: sftp://backup@sftp.example.com/backup
+  # the host keys of the server, one line of `known_hosts` each, ALL the types of the server (`/etc/ssh/ssh_host_*_key.pub` with the host in
+  # front of each, or `ssh-keyscan <host>` without `-t`; the connection is refused when the key does not match, and with only one type it
+  # does not match when the server offers another one first). Only the type and the key are used, the name of the host is not.
+  hostKeys:
+    - sftp.example.com ssh-ed25519 AAAA-set-the-host-key-for-the-cluster
 
 resources:
 
@@ -20,11 +51,30 @@ resources:
       egress:
         kube-apiserver: # the backups, volumes, PVs, PVCs and secrets
           toEntities: [kube-apiserver]
-        garage: # the S3 API, for the secrets (the matching ingress is in app-garage)
+        sftp-gateway: # the S3 API, for the secrets
           toEndpoints:
-            garage:
-              matchLabels: {"k8s:io.kubernetes.pod.namespace": garage, "k8s:app.kubernetes.io/instance": garage, "k8s:app.kubernetes.io/component": garage}
-          toPorts: [3900]
+            sftp-gateway: ref:sftp-gateway
+          toPorts: [9000]
+    sftp-gateway:
+      endpointSelector: ref:sftp-gateway
+      ingress:
+        restore-app: # the jobs saving and restoring the secrets of the apps
+          fromEndpoints:
+            restore:
+              matchLabels: {app.kubernetes.io/name: restore-app}
+          toPorts: [9000]
+        longhorn: # the backups of the volumes (the managers list and restore, the instance managers write)
+          fromEndpoints:
+            manager:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": longhorn-system, "k8s:app": longhorn-manager}
+            instance-manager:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": longhorn-system, "k8s:longhorn.io/component": instance-manager}
+          toPorts: [9000]
+      egress:
+        sftp: # the SFTP server, the host and the port of `target.url` (a DNS name: the DNS rules of the cluster let Cilium learn its addresses)
+          toFQDNs:
+            sftp: {matchName: "{{ (urlParse .Values.target.url).hostname }}"}
+          toPorts: ["{{ $u := urlParse .Values.target.url }}{{ trimPrefix \":\" (trimPrefix $u.hostname $u.host) | default (ternary \"422\" \"22\" (eq $u.scheme \"sftp+tls\")) }}"]
 
   serviceAccounts:
     backup-restore:
@@ -72,21 +122,222 @@ resources:
   fluxHelmReleases:
     backup-restore-pre:
       dependsOn:
+        - name: app-secret-generator
+          namespace: secret-generator
+      values:
+        resources:
+          stringSecrets:
+            # the key of the S3 gateway, read by the jobs (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_ENDPOINTS`), by the gateway
+            # and by the backup target of Longhorn (copied in `longhorn-system`)
+            s3-secrets:
+              data:
+                AWS_ENDPOINTS: http://sftp-gateway.backup-restore.svc.cluster.local:9000
+              fields:
+                access-key-id:
+                  fieldName: AWS_ACCESS_KEY_ID
+                  encoding: hex
+                  length: "32"
+                secret-access-key:
+                  fieldName: AWS_SECRET_ACCESS_KEY
+                  encoding: hex
+                  length: "64"
+
+          # the `s3-reader` service account of Longhorn reads the `s3-secrets` secret only
+          roles:
+            s3-secrets-reader:
+              rules:
+                secrets:
+                  apiGroups: [ "" ]
+                  resources: [ secrets ]
+                  resourceNames: [ s3-secrets ]
+                  verbs: [ get ]
+          roleBindings:
+            s3-secrets-reader:
+              roleRef: ref:s3-secrets-reader
+              subjects:
+                s3-reader:
+                  kind: ServiceAccount
+                  name: s3-reader
+                  namespace: longhorn-system
+
+    # The S3 gateway of the backups: S3 -> rclone `crypt` -> SFTP, see the header. The administrator gives the secret `sftp-gateway`.
+    sftp-gateway:
+      dependsOn:
+        - ref:backup-restore-pre
+      values:
+        resources:
+          configMaps:
+            sftp-gateway-config:
+              data:
+                SFTP_HOST: "{{ (urlParse .Values.target.url).hostname }}"
+                SFTP_PORT: "{{ $u := urlParse .Values.target.url }}{{ trimPrefix \":\" (trimPrefix $u.hostname $u.host) | default (ternary \"422\" \"22\" (eq $u.scheme \"sftp+tls\")) }}"
+                SFTP_TLS: "{{ eq (urlParse .Values.target.url).scheme \"sftp+tls\" }}"
+                SFTP_USER: "{{ (urlParse .Values.target.url).userinfo }}"
+                SFTP_PATH: "{{ (urlParse .Values.target.url).path | default \"/\" }}"
+                BUCKET: longhorn-backups
+            sftp-gateway-files:
+              data:
+                known_hosts: |
+                  {{- range $key := .Values.target.hostKeys }}
+                  {{ $key }}
+                  {{- end }}
+                gateway.sh: |
+                  set -eu
+
+                  # the tunnel (the container `sftp-tunnel`) listens on the loopback, the transport to the server is its business: the host
+                  # keys are the ones of the server, given for the loopback address
+                  sed -n 's/^[^# ][^ ]* /[127.0.0.1]:2222 /p' /etc/gateway/known_hosts > /tmp/known_hosts
+
+                  export RCLONE_CONFIG_UPSTREAM_TYPE=sftp
+                  export RCLONE_CONFIG_UPSTREAM_HOST=127.0.0.1
+                  export RCLONE_CONFIG_UPSTREAM_PORT=2222
+                  export RCLONE_CONFIG_UPSTREAM_USER="$SFTP_USER"
+                  export RCLONE_CONFIG_UPSTREAM_KEY_FILE=/secrets/id_ed25519
+                  export RCLONE_CONFIG_UPSTREAM_KNOWN_HOSTS_FILE=/tmp/known_hosts
+                  export RCLONE_CONFIG_UPSTREAM_SHELL_TYPE=none # internal-sftp: no shell
+                  export RCLONE_CONFIG_UPSTREAM_CONCURRENCY=8
+
+                  export RCLONE_CONFIG_CRYPT_TYPE=crypt
+                  export RCLONE_CONFIG_CRYPT_REMOTE="UPSTREAM:$SFTP_PATH"
+                  export RCLONE_CONFIG_CRYPT_FILENAME_ENCRYPTION=standard
+                  export RCLONE_CONFIG_CRYPT_DIRECTORY_NAME_ENCRYPTION=true
+                  # rclone wants the passwords obscured in its config
+                  RCLONE_CONFIG_CRYPT_PASSWORD="$(rclone obscure "$(cat /secrets/crypt-password)")"
+                  RCLONE_CONFIG_CRYPT_PASSWORD2="$(rclone obscure "$(cat /secrets/crypt-salt)")"
+                  export RCLONE_CONFIG_CRYPT_PASSWORD RCLONE_CONFIG_CRYPT_PASSWORD2
+
+                  # the pair has to be quoted, rclone splits the variable on the commas
+                  export RCLONE_AUTH_KEY="\"$AWS_ACCESS_KEY_ID,$AWS_SECRET_ACCESS_KEY\""
+
+                  rclone mkdir "CRYPT:$BUCKET"
+                  exec rclone serve s3 CRYPT: --addr :9000
+                tunnel.sh: |
+                  set -eu
+
+                  # With TLS the SNI is the name of the server (the TLS SSH gateway routes on it). The certificate is not checked: the SSH host
+                  # key, checked by the gateway of S3 inside the tunnel, is the authentication.
+                  if [ "$SFTP_TLS" = true ]; then
+                    upstream="OPENSSL:$SFTP_HOST:$SFTP_PORT,snihost=$SFTP_HOST,verify=0"
+                  else
+                    upstream="TCP:$SFTP_HOST:$SFTP_PORT"
+                  fi
+                  exec socat TCP-LISTEN:2222,bind=127.0.0.1,fork,reuseaddr "$upstream"
+
+          deployments:
+            sftp-gateway:
+              replicas: 1 # one writer on the SFTP side
+              template:
+                spec:
+                  securityContext:
+                    runAsUser: 65534
+                    runAsGroup: 65534
+                    fsGroup: 65534 # the secret is readable by the user of the container
+                  containers:
+                    sftp-gateway:
+                      name: sftp-gateway
+                      image: docker.io/rclone/rclone:1.75.2 # renovate: versioning=loose
+                      command: [ sh, /etc/gateway/gateway.sh ]
+                      ports:
+                        s3:
+                          containerPort: 9000
+                      env:
+                        HOME: /tmp
+                        AWS_ACCESS_KEY_ID:
+                          secretKeyRef:
+                            name: s3-secrets
+                            key: AWS_ACCESS_KEY_ID
+                        AWS_SECRET_ACCESS_KEY:
+                          secretKeyRef:
+                            name: s3-secrets
+                            key: AWS_SECRET_ACCESS_KEY
+                      envFrom:
+                        config:
+                          configMapRef:
+                            name: sftp-gateway-config # not a `ref:`, it is not resolved in `envFrom`
+                      probe:
+                        tcpSocket:
+                          port: s3
+                      securityContext:
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        config:
+                          name: config
+                          mountPath: /etc/gateway
+                          readOnly: true
+                        secrets:
+                          name: secrets
+                          mountPath: /secrets
+                          readOnly: true
+                        tmp:
+                          name: tmp
+                          mountPath: /tmp
+                    # the connection to the SFTP server, see the header (no probe: it listens on the loopback only, the gateway does not
+                    # get ready without it)
+                    sftp-tunnel:
+                      name: sftp-tunnel
+                      image: docker.io/alpine/socat:1.8.0.3 # renovate: versioning=loose
+                      command: [ sh, /etc/gateway/tunnel.sh ]
+                      envFrom:
+                        config:
+                          configMapRef:
+                            name: sftp-gateway-config
+                      securityContext:
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        config:
+                          name: config
+                          mountPath: /etc/gateway
+                          readOnly: true
+                  volumes:
+                    config:
+                      name: config
+                      configMap:
+                        name: ref:sftp-gateway-files
+                    secrets: # given by the administrator, see the header
+                      name: secrets
+                      secret:
+                        secretName: sftp-gateway
+                    tmp:
+                      name: tmp
+                      emptyDir: {}
+
+          services:
+            sftp-gateway:
+              ports:
+                s3:
+                  port: 9000
+
+    # The backup target of Longhorn: the bucket `longhorn-backups` of the gateway. It is here and not in app-longhorn because the gateway
+    # needs the secrets of this namespace. The release object is in this namespace, and installs in `longhorn-system`.
+    # The target `default` is created by longhorn: the first time, it has to be adopted by the release,
+    #    kubectl -n longhorn-system label backuptarget default app.kubernetes.io/managed-by=Helm
+    #    kubectl -n longhorn-system annotate backuptarget default meta.helm.sh/release-name=longhorn-backup meta.helm.sh/release-namespace=longhorn-system
+    # The backups are not in the cluster, but the volumes are backed up through the gateway: Longhorn waits for it (the SFTP server
+    # has to be up, see `bcl.role.backup.autoShutdown`).
+    longhorn-backup:
+      targetNamespace: longhorn-system
+      releaseName: longhorn-backup
+      dependsOn:
+        - ref:sftp-gateway
+        - name: app-longhorn
+          namespace: longhorn-system
         - name: app-external-secrets
           namespace: external-secrets
-        - name: garage-pre # the key, and the right to read it
-          namespace: garage
       values:
         resources:
           serviceAccounts:
-            garage-reader:
+            s3-reader:
               automountServiceAccountToken: false
 
           secretStores:
-            garage:
+            backup-restore:
               provider:
                 kubernetes:
-                  remoteNamespace: garage
+                  remoteNamespace: backup-restore
                   server:
                     caProvider:
                       type: ConfigMap
@@ -94,14 +345,23 @@ resources:
                       key: ca.crt
                   auth:
                     serviceAccount:
-                      name: ref:garage-reader
+                      name: ref:s3-reader
 
-          # `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_ENDPOINTS`, read by the jobs
           externalSecrets:
-            s3-secrets:
+            s3-backup:
               refreshInterval: 1h
-              secretStoreRef: ref:garage
+              secretStoreRef: ref:backup-restore
               dataFrom:
                 all:
                   extract:
-                    key: garage-longhorn
+                    key: s3-secrets
+
+          # Longhorn creates the target `default` and refuses to delete it, so helm must never delete it
+          longhornBackupTargets:
+            default:
+              fullNameOverride: default
+              annotations:
+                helm.sh/resource-policy: keep
+              backupTargetURL: s3://longhorn-backups@us-east-1/
+              credentialSecret: s3-backup
+              pollInterval: 3m0s
