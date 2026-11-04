@@ -192,7 +192,6 @@ apps:
     groups:
       extra: true
     clusterAdmin: true # ClusterRole to drain the nodes
-    namespace: kube-system
     appChart:
       name: app-kured
 

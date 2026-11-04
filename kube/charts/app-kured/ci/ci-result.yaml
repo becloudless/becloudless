@@ -60,14 +60,14 @@ spec:
       alertFilterRegexp: ^(KubeNodeNotReady|KubeNodeUnreachable|KubeletDown|KubeAPIDown|KubeControllerManagerDown|KubeSchedulerDown|etcdMembersDown|etcdInsufficientMembers|etcdNoLeader)$
       alertFiringOnly: true
       drainTimeout: 10m
-      endTime: "07:00"
+      endTime: "04:00"
       lockReleaseDelay: 10m
       lockTtl: 2h
       period: 10m
       prometheusUrl: http://prometheus-kube-prometheus-prometheus.prometheus.svc:9090
       rebootCommand: /run/current-system/sw/bin/systemctl reboot
       rebootSentinel: /run/kured/reboot-required
-      startTime: "01:00"
+      startTime: "03:00"
       timeZone: Europe/Paris
 ---
 # Source: app-kured/templates/loader.yaml

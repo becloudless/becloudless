@@ -252,7 +252,7 @@ spec:
   - fromEndpoints:
     - matchLabels:
         k8s:app.kubernetes.io/name: kured
-        k8s:io.kubernetes.pod.namespace: kube-system
+        k8s:io.kubernetes.pod.namespace: kured
     toPorts:
     - ports:
       - port: "9090"

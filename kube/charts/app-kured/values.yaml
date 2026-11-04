@@ -11,7 +11,6 @@ resources:
     kured:
       url: https://kubereboot.github.io/charts
 
-  # kube-system is shared with the other components, hence the selector.
   ciliumNetworkPolicies:
     kured:
       endpointSelector:
@@ -41,8 +40,8 @@ resources:
           rebootSentinel: /run/kured/reboot-required # a directory of its own, mounted in the pod
 
           period: 10m
-          startTime: "01:00"
-          endTime: "07:00"
+          startTime: "03:00"
+          endTime: "04:00"
           timeZone: Europe/Paris
 
           drainTimeout: 10m
