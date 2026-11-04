@@ -496,7 +496,7 @@ in
           };
         };
       });
-      default = [ { key = "bcl.io/no-persistent-storage"; value = "true"; effect = "NoSchedule"; } ];
+      default = [ { key = "becloudless.net/no-persistent-storage"; value = "true"; effect = "NoSchedule"; } ];
       description = ''
         Taints applied to every worker/control-plane node created by this
         preset, via kubelet's `registerWithTaints` (workers) and kubeadm's
