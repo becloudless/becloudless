@@ -19,8 +19,13 @@ spec:
       - port: "53"
         protocol: UDP
   endpointSelector:
+    matchExpressions:
+    - key: k8s:io.kubernetes.pod.namespace
+      operator: In
+      values:
+      - coredns
+      - kube-system
     matchLabels:
-      k8s:io.kubernetes.pod.namespace: coredns
       k8s:k8s-app: kube-dns
   ingress:
   - fromEndpoints:

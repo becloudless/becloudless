@@ -179,7 +179,12 @@ resources:
                 kube-dns:
                   toEndpoints:
                     kube-dns:
-                      matchLabels: {"k8s:io.kubernetes.pod.namespace": coredns, "k8s:k8s-app": kube-dns}
+                      matchLabels: {"k8s:k8s-app": kube-dns}
+                      matchExpressions: # coredns: the new namespace, kube-system: the release before the move (TODO remove)
+                        namespace:
+                          key: "k8s:io.kubernetes.pod.namespace"
+                          operator: In
+                          values: {coredns: coredns, kube-system: kube-system}
                   toPorts:
                     dns:
                       ports:

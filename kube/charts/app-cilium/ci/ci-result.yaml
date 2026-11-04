@@ -146,8 +146,14 @@ spec:
             kube-dns:
               toEndpoints:
                 kube-dns:
+                  matchExpressions:
+                    namespace:
+                      key: k8s:io.kubernetes.pod.namespace
+                      operator: In
+                      values:
+                        coredns: coredns
+                        kube-system: kube-system
                   matchLabels:
-                    k8s:io.kubernetes.pod.namespace: coredns
                     k8s:k8s-app: kube-dns
               toPorts:
                 dns:

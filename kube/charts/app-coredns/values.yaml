@@ -7,10 +7,17 @@ resources:
 
   # app-cilium waits for this release: without these rules nothing could resolve a name.
   # Cluster wide because the clients are in every namespace.
+  # CoreDNS is in `coredns`; `kube-system` is accepted too while the old release (before the move) is still running: with only the new
+  # namespace the default deny cuts the DNS of the cluster, and Flux can not download the charts to finish the move. TODO remove kube-system.
   ciliumClusterwideNetworkPolicies:
     kube-dns:
       endpointSelector:
-        matchLabels: {"k8s:io.kubernetes.pod.namespace": coredns, "k8s:k8s-app": kube-dns}
+        matchLabels: {"k8s:k8s-app": kube-dns}
+        matchExpressions:
+          namespace:
+            key: "k8s:io.kubernetes.pod.namespace"
+            operator: In
+            values: {coredns: coredns, kube-system: kube-system}
       ingress:
         from-pods:
           fromEndpoints:
