@@ -194,6 +194,9 @@ spec:
           pod-disable-service-links:
             name: pod-disable-service-links
             namespace: default
+          pod-restrict-host-access:
+            name: pod-restrict-host-access
+            namespace: default
           pod-set-host-users:
             name: pod-set-host-users
             namespace: default
@@ -335,6 +338,7 @@ spec:
                 or on every container
           validationFailureAction: Enforce
         container-set-image-pull-policy:
+          failurePolicy: Ignore
           rules:
           - match:
               any:
@@ -429,6 +433,52 @@ spec:
                 spec:
                   +(enableServiceLinks): false
             name: pod-disable-service-links
+        pod-restrict-host-access:
+          background: true
+          failurePolicy: Ignore
+          rules:
+          - exclude:
+              any:
+              - resources:
+                  annotations:
+                    kubernetes.io/config.mirror: ?*
+              - resources:
+                  namespaces:
+                  - kube-system
+                  - longhorn-system
+                  - kured
+            match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+                  operations:
+                  - CREATE
+            name: pod-restrict-host-access
+            validate:
+              deny:
+                conditions:
+                  any:
+                  - key: '{{"{{"}} request.object.spec.hostPID || `false` {{"}}"}}'
+                    operator: Equals
+                    value: true
+                  - key: '{{"{{"}} request.object.spec.hostIPC || `false` {{"}}"}}'
+                    operator: Equals
+                    value: true
+                  - key: '{{"{{"}} request.object.spec.hostNetwork || `false` {{"}}"}}'
+                    operator: Equals
+                    value: true
+                  - key: '{{"{{"}} request.object.spec.[containers, initContainers][]
+                      | [?securityContext.privileged == `true`] | length(@) {{"}}"}}'
+                    operator: GreaterThan
+                    value: 0
+                  - key: '{{"{{"}} length(request.object.spec.volumes[?hostPath] ||
+                      `[]`) {{"}}"}}'
+                    operator: GreaterThan
+                    value: 0
+              message: only the namespaces allowed by the policy `pod-restrict-host-access`
+                can use the host namespaces, privileged containers and hostPath volumes
+          validationFailureAction: Audit
         pod-set-host-users:
           failurePolicy: Ignore
           rules:
