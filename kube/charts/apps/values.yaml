@@ -198,6 +198,13 @@ apps:
       name: app-forgejo
     restore: true
 
+  csi-rclone:
+    groups:
+      extra: true
+    clusterAdmin: true # CSIDriver, StorageClass, ClusterRoles
+    appChart:
+      name: app-csi-rclone
+
   jellyfin:
     groups:
       extra: true

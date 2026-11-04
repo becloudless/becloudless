@@ -8,7 +8,8 @@
 #    the web UI. The users of the groups `app_jellyfin` are created at their first login, those of `role_admin` are administrators.
 #    SSO works in the web UI (and Quick Connect for the other clients), the TV and mobile apps use the local users (a user created by
 #    SSO has a random password, set one in its profile). An SSO user with the name of an existing user (`admin`) takes its permissions.
-# The media library is the `/data/Media` directory of the node running the pod (read only), add it as a library in the UI (`/media`).
+# The media library is the `/data` directory of an SFTP user of the NAS (`bcl.role.nas`), mounted read only by app-csi-rclone: the
+# administrator gives the secret `jellyfin-media` (see the header of app-csi-rclone). Add it as a library in the UI (`/media`).
 # The ffmpeg-over-ip server (https://github.com/steelbrain/ffmpeg-over-ip) runs on the nodes that are not control planes (the ones
 # carrying the `bcl.tf/no-persistent-storage` taint: they run the host GPU, `/dev/dri`) and does the hardware transcoding.
 # Not configured: jellyfin does not use it yet, its FFmpeg path has to be the ffmpeg-over-ip client, pointed to
@@ -115,6 +116,8 @@ resources:
     jellyfin:
       dependsOn:
         - ref:jellyfin-pre
+        - name: app-csi-rclone # the StorageClass of the media
+          namespace: csi-rclone
       values:
         resources:
           configMaps:
@@ -244,6 +247,14 @@ resources:
               resources:
                 requests:
                   storage: 10Gi
+
+            # the media, on the NAS: the size is not used
+            jellyfin-media:
+              storageClassName: rclone-sftp
+              accessModes: [ReadOnlyMany]
+              resources:
+                requests:
+                  storage: 1Gi
 
           deployments:
             jellyfin:
@@ -375,7 +386,9 @@ resources:
                         name: ref:jellyfin-scripts
                     media:
                       name: media
-                      emptyDir: {} # TODO
+                      persistentVolumeClaim:
+                        claimName: ref:jellyfin-media
+                        readOnly: true
 
           # The server runs on the nodes of the containerized kubelets (see the header), one per node. Everything runs as root: the packages of
           # the GPU drivers are installed at the start, and the privileged container reaches the render node `/dev/dri`.

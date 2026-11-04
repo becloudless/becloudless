@@ -1,0 +1,117 @@
+# yaml-language-server: $schema=schema/values.schema.json
+
+# Mounts the directories of SFTP servers as volumes, with rclone (https://github.com/veloxpack/csi-driver-rclone). The kubelet asks the
+# driver to mount the volume, the mount is a FUSE mount of the pod of the driver running on the node, so the volume is mounted on the
+# nodes running a pod using it: the nodes have to reach the server (not through a TLS SSH gateway, rclone does not support it).
+# The nodes of the containerized kubelets (the ones carrying the `bcl.tf/no-persistent-storage` taint) do not run it.
+#
+# A volume is a claim of the StorageClass `rclone-sftp`, the administrator gives a secret of the same name, in the namespace of the claim,
+# with the key `configData`, the configuration of rclone with the remote `nas` (the name of the remote is not important). Example:
+#   kubectl -n jellyfin create secret generic jellyfin-media --from-literal=configData="[nas]
+#   type = sftp
+#   host = nas1.example.com
+#   user = jellyfin
+#   key_pem = $(awk '{printf "%s\\n", $0}' id_ed25519)
+#   known_hosts_file = /etc/rclone/ssh/known_hosts
+#   shell_type = none
+#   "
+# The user is one of `bcl.role.nas.sftpUsers` of the NixOS config, `knownHosts` is the host keys of its server, and the remote path of the
+# volume is the directory of the user in its chroot: `/data`.
+# `shell_type = none`: internal-sftp, no shell. The volumes of a claim with `ReadOnlyMany` (or a read only pod volume) are mounted read only.
+
+# The host keys of the SFTP servers, one line of `known_hosts` each, ALL the types of the servers
+knownHosts: []
+#  - nas.example.com ssh-ed25519 AAAA-set-the-host-key-for-the-cluster
+
+resources:
+
+  fluxHelmRepositories:
+    csi-rclone:
+      type: oci
+      url: oci://ghcr.io/veloxpack/charts
+
+  fluxHelmReleases:
+    # created before the pods of the driver: their known hosts, and the policy of the host access
+    csi-rclone-pre:
+      dependsOn:
+        - name: app-kyverno
+          namespace: kyverno
+      values:
+        resources:
+          configMaps:
+            rclone-known-hosts:
+              data:
+                known_hosts: |
+                  {{- range $key := .Values.knownHosts }}
+                  {{ $key }}
+                  {{- end }}
+
+          storageClasses:
+            rclone-sftp:
+              annotations:
+                storageclass.kubernetes.io/is-default-class: "false"
+              provisioner: rclone.csi.veloxpack.io
+              volumeBindingMode: Immediate
+              reclaimPolicy: Delete # the driver deletes nothing on the server
+              parameters:
+                remote: nas
+                remotePath: /data
+                csi.storage.k8s.io/node-publish-secret-name: ${pvc.name}
+                csi.storage.k8s.io/node-publish-secret-namespace: ${pvc.namespace}
+              mountOptions:
+                dir-cache-time: dir-cache-time=10m # the listings of the directories, a new file shows up after at most that
+
+          kyvernoClusterPolicies:
+            csi-rclone-restrict-host-access:
+              annotations:
+                policies.kyverno.io/title: Annotate the pods of the driver using the host
+                policies.kyverno.io/subject: Pod
+                policies.kyverno.io/category: Other
+                policies.kyverno.io/description: >-
+                  The pods of the driver use the host network, host paths, and a privileged container (FUSE mounts shared with the
+                  kubelet), and the chart has no value to annotate them.
+              failurePolicy: Ignore
+              rules:
+                - name: pod-annotate-restrict-host-access
+                  match:
+                    any:
+                      - resources:
+                          kinds:
+                            - Pod
+                          operations:
+                            - CREATE
+                          namespaces:
+                            - csi-rclone
+                  mutate:
+                    patchStrategicMerge:
+                      metadata:
+                        annotations:
+                          +(policy.bcl.tf/skipPodRestrictHostAccess): "true"
+
+    csi-rclone:
+      dependsOn:
+        - ref:csi-rclone-pre
+      chart:
+        spec:
+          chart: csi-driver-rclone
+          version: 0.5.0
+          sourceRef:
+            kind: HelmRepository
+            name: csi-rclone
+      values:
+        # https://github.com/veloxpack/csi-driver-rclone/blob/v0.5.0/charts/csi-driver-rclone/values.yaml
+        feature:
+          enableFSGroupPolicy: true # the volume belongs to the `fsGroup` of the pod, jellyfin runs as 1000
+        node:
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
+          extraVolumes:
+            - name: known-hosts
+              configMap:
+                name: rclone-known-hosts
+          extraVolumeMounts:
+            - name: known-hosts
+              mountPath: /etc/rclone/ssh
+              readOnly: true

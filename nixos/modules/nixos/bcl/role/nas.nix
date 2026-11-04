@@ -4,7 +4,7 @@
     default = { };
     description = ''
       SFTP-only users. Each user is public-key only, has no shell, and is
-      chrooted in /data/NAS/<name>. Writable data goes in /data/NAS/<name>/data
+      chrooted in /nix/data/<name>. Writable data goes in /nix/data/<name>/data
       (the chroot root must stay root-owned).
     '';
     type = lib.types.attrsOf (lib.types.submodule {
@@ -30,14 +30,14 @@
         isSystemUser = true;
         group = name;
         extraGroups = [ "sftp-only" ];
-        home = "/data/NAS/${name}";
+        home = "/nix/data/${name}";
         shell = "/run/current-system/sw/bin/nologin";
         openssh.authorizedKeys.keys = u.authorizedKeys;
       }) sftpUsers;
 
       services.openssh.extraConfig = lib.mkIf (sftpUsers != { }) ''
         Match Group sftp-only
-          ChrootDirectory /data/NAS/%u
+          ChrootDirectory /nix/data/%u
           ForceCommand internal-sftp -d /data
           AllowTcpForwarding no
           AllowAgentForwarding no
@@ -46,15 +46,15 @@
       '';
 
       # sshd refuses a chroot directory that is not root-owned or is writable by
-      # others, and applies the same check to EVERY parent component, so /data
+      # others, and applies the same check to EVERY parent component, so /nix/data
       # itself must be root:root and not group/world-writable too. The user's
       # writable area is the `data` subdirectory, which internal-sftp starts
       # in (-d /data).
       systemd.tmpfiles.rules = lib.optionals (sftpUsers != { }) (
-        [ "d /data 0755 root root -" "d /data/NAS 0755 root root -" ]
+        [ "d /nix/data 0755 root root -" "d /nix/data 0755 root root -" ]
         ++ lib.concatLists (lib.mapAttrsToList (name: _: [
-          "d /data/NAS/${name} 0755 root root -"
-          "d /data/NAS/${name}/data 0700 ${name} ${name} -"
+          "d /nix/data/${name} 0755 root root -"
+          "d /nix/data/${name}/data 0700 ${name} ${name} -"
         ]) sftpUsers)
       );
 

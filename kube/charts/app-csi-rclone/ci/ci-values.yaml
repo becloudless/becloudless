@@ -1,0 +1,7 @@
+app:
+  domain: test.com
+  name: test
+  lldapdn: dc=test,dc=com
+knownHosts:
+  - nas.test.com ssh-ed25519 AAAAtest
+  - nas.test.com ssh-rsa AAAAtest2
