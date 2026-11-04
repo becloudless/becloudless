@@ -374,9 +374,9 @@ resources:
                     patchStrategicMerge:
                       metadata:
                         annotations:
-                          +(policy.bcl/skipContainerRequireRunAsNonRoot): "true"
-                          +(policy.bcl/skipContainerRequireReadOnlyRootFilesystem): "true"
-                          +(policy.bcl/skipPodRestrictHostAccess): "true"
+                          +(policy.becloudless.net/skipContainerRequireRunAsNonRoot): "true"
+                          +(policy.becloudless.net/skipContainerRequireReadOnlyRootFilesystem): "true"
+                          +(policy.becloudless.net/skipPodRestrictHostAccess): "true"
 
     longhorn:
       chart:
@@ -396,7 +396,7 @@ resources:
 
         # the pods of the managers are privileged and mount host paths, they need the host users (see app-kyverno)
         annotations:
-          policy.bcl/skipPodSetHostUsers: "true"
+          policy.becloudless.net/skipPodSetHostUsers: "true"
 
         csi:
           kubeletRootDir: /var/lib/kubelet

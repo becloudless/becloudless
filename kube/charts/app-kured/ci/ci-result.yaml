@@ -70,7 +70,7 @@ spec:
       startTime: "03:00"
       timeZone: Europe/Paris
     podAnnotations:
-      policy.bcl/skipPodRestrictHostAccess: "true"
+      policy.becloudless.net/skipPodRestrictHostAccess: "true"
 ---
 # Source: app-kured/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

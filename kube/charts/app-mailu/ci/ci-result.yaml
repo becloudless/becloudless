@@ -537,7 +537,7 @@ spec:
             template:
               metadata:
                 annotations:
-                  policy.bcl/skipPodRestrictHostAccess: "true" # the privileged vpn sidecar
+                  policy.becloudless.net/skipPodRestrictHostAccess: "true" # the privileged vpn sidecar
               spec:
                 containers:
                 - name: vpn
@@ -578,7 +578,7 @@ spec:
             template:
               metadata:
                 annotations:
-                  policy.bcl/skipPodRestrictHostAccess: "true" # the privileged vpn sidecar
+                  policy.becloudless.net/skipPodRestrictHostAccess: "true" # the privileged vpn sidecar
               spec:
                 containers:
                 - name: vpn
