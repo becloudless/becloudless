@@ -34,13 +34,22 @@ resources:
             kind: HelmRepository
             name: kured
       values:
-        # hostPID, privileged: it runs the reboot in the namespaces of the host
+        # The reboot is a signal to systemd (PID 1 of the host, seen through `hostPID`): no privileged container, no command run in the
+        # namespaces of the host, no capability at all: the container runs as root, the owner of PID 1, which is enough to signal it.
+        # The container is root (a non root user could not signal PID 1), opted out of the run as non root policy.
+        # The pod still uses `hostPID` and a `hostPath` (the sentinel), so it keeps the annotation of the host access policy.
         podAnnotations:
           policy.bcl.tf/skipPodRestrictHostAccess: "true"
+          policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+        containerSecurityContext:
+          privileged: false
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
         configuration:
-          # NixOS has no /bin/systemctl, the command is run in the mount namespace of the host
-          rebootCommand: /run/current-system/sw/bin/systemctl reboot
-          rebootSentinel: /run/kured/reboot-required # a directory of its own, mounted in the pod
+          rebootMethod: signal # SIGRTMIN+5 (39, the default): systemd reboots
+          rebootSentinel: /run/reboot/required # written by the nodes (serverKubeRebootRequired.nix), a directory of its own, mounted in the pod
 
           period: 10m
           startTime: "03:00"

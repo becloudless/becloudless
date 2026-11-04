@@ -65,11 +65,19 @@ spec:
       lockTtl: 2h
       period: 10m
       prometheusUrl: http://prometheus-kube-prometheus-prometheus.prometheus.svc:9090
-      rebootCommand: /run/current-system/sw/bin/systemctl reboot
-      rebootSentinel: /run/kured/reboot-required
+      rebootMethod: signal
+      rebootSentinel: /run/reboot/required
       startTime: "03:00"
       timeZone: Europe/Paris
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      privileged: false
+      readOnlyRootFilesystem: true
     podAnnotations:
+      policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
       policy.bcl.tf/skipPodRestrictHostAccess: "true"
 ---
 # Source: app-kured/templates/loader.yaml

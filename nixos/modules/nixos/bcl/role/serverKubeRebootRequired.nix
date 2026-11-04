@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 let
-  sentinelDirectory = "/run/kured";
-  sentinelFile = "${sentinelDirectory}/reboot-required";
+  sentinelDirectory = "/run/reboot";
+  sentinelFile = "${sentinelDirectory}/required";
 
   # `system.autoUpgrade` stages the new generation with `boot`: it is not the running one until the node reboots.
   # A `switch` activates everything but a new kernel, initrd or kernel modules.
@@ -26,8 +26,8 @@ let
   };
 in
 {
-  # The sentinel of kured (see kube/charts/app-kured): its presence asks the node to be drained and rebooted. Lives in a directory of its
-  # own, as kured mounts the directory of the sentinel in its pod.
+  # The reboot sentinel of the node: its presence asks the node to be drained and rebooted. Not tied to the reader, which today is kured (see
+  # kube/charts/app-kured). It lives in a directory of its own, as kured mounts the directory of the sentinel from the host in its pod.
   config = lib.mkIf (config.bcl.role.name == "serverKube") {
     systemd.tmpfiles.rules = [ "d ${sentinelDirectory} 0755 root root -" ];
 
