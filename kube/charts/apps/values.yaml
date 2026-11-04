@@ -81,10 +81,9 @@ apps:
       name: app-coredns
 
   # server
-
   kured:
     groups:
-      server: true
+      cluster: true
     clusterAdmin: true # ClusterRole to drain the nodes
     appChart:
       name: app-kured
