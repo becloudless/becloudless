@@ -135,6 +135,7 @@ in
               ".config/menus"
               ".local/share/icons"
               ".config/gcloud"
+              ".config/gh"
               ".config/sops" # TODO replace by static
               ".config/VSCodium"
               ".config/keepassxc"
