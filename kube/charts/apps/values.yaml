@@ -54,7 +54,6 @@ apps:
     groups:
       minimal: true
     clusterAdmin: true
-    namespace: kube-system
     appChart:
       name: app-cilium
 

@@ -27,7 +27,7 @@ storageSize: 10Gi
 # the Gateway the web UI is exposed by, and the ClusterIssuer of its certificate
 gateway:
   name: shared
-  namespace: kube-system
+  namespace: cilium
 issuer: letsencrypt-prod
 
 # the relay of the cluster (app-syncthing): the pods of the relay the instance is allowed to reach (the default deny of Cilium blocks

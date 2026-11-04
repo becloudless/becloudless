@@ -208,7 +208,7 @@ spec:
                   - group: gateway.networking.k8s.io
                     kind: Gateway
                     name: shared
-                    namespace: kube-system
+                    namespace: cilium
                     sectionName: http
         letsencrypt-staging:
           acme:
@@ -223,7 +223,7 @@ spec:
                   - group: gateway.networking.k8s.io
                     kind: Gateway
                     name: shared
-                    namespace: kube-system
+                    namespace: cilium
                     sectionName: http
         self-signed:
           selfSigned: {}

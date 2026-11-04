@@ -603,7 +603,7 @@ resources:
           namespace: gateway-api
       values:
         resources:
-          # Web UI exposed by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway.
+          # Web UI exposed by the Cilium Gateway `shared` (cilium), TLS terminated by the Gateway.
           # It is not protected by forward auth: mailu has its own login.
           # The mail protocols are not exposed by the Gateway, they come through the vpn sidecars of the front and postfix pods.
           listenerSets:
@@ -612,7 +612,7 @@ resources:
                 group: gateway.networking.k8s.io
                 kind: Gateway
                 name: shared
-                namespace: kube-system
+                namespace: cilium
               listeners:
                 https:
                   name: https

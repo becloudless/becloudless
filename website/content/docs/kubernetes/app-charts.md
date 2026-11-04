@@ -222,7 +222,7 @@ expose:
 
 ## Public exposure (`expose`)
 
-`expose` is the shorthand of the public exposure of an app by the Gateway `shared` (kube-system), TLS terminated by the Gateway. The key
+`expose` is the shorthand of the public exposure of an app by the Gateway `shared` (cilium), TLS terminated by the Gateway. The key
 is the id of an exposed hostname, the value its options:
 
 | Option | Description |
