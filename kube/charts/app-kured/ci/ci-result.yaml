@@ -79,6 +79,14 @@ metadata:
   name: kured-monitoring
   namespace: default
 spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
   dependsOn:
   - name: app-longhorn
     namespace: longhorn-system
