@@ -3,6 +3,49 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
+  name: ffmpeg-over-ip
+  namespace: default
+spec:
+  egress:
+  - toFQDNs:
+    - matchName: github.com
+    - matchName: objects.githubusercontent.com
+    - matchName: release-assets.githubusercontent.com
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toFQDNs:
+    - matchName: repositories.intel.com
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toFQDNs:
+    - matchName: archive.ubuntu.com
+    - matchName: security.ubuntu.com
+    toPorts:
+    - ports:
+      - port: "80"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: ffmpeg-over-ip
+      app.kubernetes.io/instance: jellyfin
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: jellyfin
+        app.kubernetes.io/instance: jellyfin
+    toPorts:
+    - ports:
+      - port: "5050"
+        protocol: TCP
+---
+# Source: app-jellyfin/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
   name: jellyfin
   namespace: default
 spec:
@@ -12,6 +55,14 @@ spec:
     toPorts:
     - ports:
       - port: "443"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: ffmpeg-over-ip
+        app.kubernetes.io/instance: jellyfin
+    toPorts:
+    - ports:
+      - port: "5050"
         protocol: TCP
   - toEntities:
     - ingress
@@ -96,6 +147,13 @@ spec:
           jellyfin-scripts:
             name: jellyfin-scripts
             namespace: default
+        daemonSets:
+          ffmpeg-over-ip:
+            labels:
+              app.kubernetes.io/component: ffmpeg-over-ip
+              app.kubernetes.io/instance: jellyfin
+            name: ffmpeg-over-ip
+            namespace: default
         deployments:
           jellyfin:
             labels:
@@ -108,6 +166,9 @@ spec:
             name: jellyfin-config
             namespace: default
         services:
+          ffmpeg-over-ip:
+            name: ffmpeg-over-ip
+            namespace: default
           jellyfin:
             name: jellyfin
             namespace: default
@@ -147,6 +208,9 @@ spec:
             name: authelia-reader
             namespace: default
         stringSecrets:
+          ffmpeg-over-ip-server:
+            name: ffmpeg-over-ip-server
+            namespace: default
           jellyfin-admin:
             name: jellyfin-admin
             namespace: default
@@ -267,6 +331,101 @@ spec:
                 console.log('jellyfin is not configured: ' + e.message);
                 process.exit(1);
               });
+      daemonSets:
+        ffmpeg-over-ip:
+          template:
+            metadata:
+              annotations:
+                policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
+                policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+                policy.bcl.tf/skipPodRestrictHostAccess: "true"
+                policy.bcl.tf/skipPodSetHostUsers: "true"
+            spec:
+              affinity:
+                nodeAffinity:
+                  requiredDuringSchedulingIgnoredDuringExecution:
+                    nodeSelectorTerms:
+                    - matchExpressions:
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: DoesNotExist
+              containers:
+                ffmpeg-over-ip-server:
+                  command:
+                  - bash
+                  - -ec
+                  - |-
+                    apt-get update
+                    apt-get install -y --no-install-recommends gpg ca-certificates wget
+                    # The drivers of Debian and Ubuntu (2023) do not know the recent GPUs (Intel Arrow Lake-H, 8086:7dd1:
+                    # the VAAPI initialization fails), the repository of Intel follows the new hardware.
+                    wget -qO- https://repositories.intel.com/gpu/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg
+                    echo "deb [signed-by=/usr/share/keyrings/intel-graphics.gpg arch=amd64] https://repositories.intel.com/gpu/ubuntu noble client" > /etc/apt/sources.list.d/intel-gpu-noble.list
+                    apt-get update
+                    # intel-media-va-driver-non-free: VAAPI (iHD), hwaccel=vaapi
+                    # libmfxgen1, libvpl2: oneVPL runtime and dispatcher, hwaccel=qsv ("Error creating a MFX session: -9" without)
+                    # intel-opencl-icd, ocl-icd-libopencl1: OpenCL, hwaccel=opencl (HDR tone mapping, CL_PLATFORM_NOT_FOUND_KHR without)
+                    apt-get install -y --no-install-recommends intel-media-va-driver-non-free libmfxgen1 libvpl2 intel-opencl-icd ocl-icd-libopencl1 vainfo clinfo
+                    exec /opt/ffmpeg-over-ip/ffmpeg-over-ip-server
+                  env:
+                    FFMPEG_OVER_IP_SERVER_ADDRESS: 0.0.0.0:5050
+                    FFMPEG_OVER_IP_SERVER_AUTH_SECRET:
+                      secretKeyRef:
+                        key: FFMPEG_OVER_IP_SERVER_AUTH_SECRET
+                        name: ref:ffmpeg-over-ip-server
+                  image: docker.io/library/ubuntu:24.04
+                  name: ffmpeg-over-ip-server
+                  ports:
+                    ffoip:
+                      containerPort: 5050
+                  resources:
+                    limits:
+                      memory: 8Gi
+                    requests:
+                      cpu: 100m
+                      memory: 256Mi
+                  securityContext:
+                    allowPrivilegeEscalation: true
+                    privileged: true
+                    readOnlyRootFilesystem: false
+                  volumeMounts:
+                    binaries:
+                      mountPath: /opt/ffmpeg-over-ip
+                      name: binaries
+                    dev-dri:
+                      mountPath: /dev/dri
+                      name: dev-dri
+              initContainers:
+                fetch-ffmpeg-over-ip:
+                  command:
+                  - sh
+                  - -ec
+                  - |-
+                    wget -q -O /tmp/server.zip https://github.com/steelbrain/ffmpeg-over-ip/releases/download/v5.2.1/linux-amd64-ffmpeg-over-ip-server.zip
+                    unzip -o /tmp/server.zip -d /opt/ffmpeg-over-ip
+                    chmod +x /opt/ffmpeg-over-ip/*
+                  image: docker.io/library/alpine:3.24.3
+                  name: fetch-ffmpeg-over-ip
+                  volumeMounts:
+                    binaries:
+                      mountPath: /opt/ffmpeg-over-ip
+                      name: binaries
+              securityContext:
+                runAsNonRoot: false
+                runAsUser: 0
+              tolerations:
+              - effect: NoSchedule
+                key: bcl.tf/no-persistent-storage
+                operator: Equal
+                value: "true"
+              volumes:
+                binaries:
+                  emptyDir: {}
+                  name: binaries
+                dev-dri:
+                  hostPath:
+                    path: /dev/dri
+                    type: Directory
+                  name: dev-dri
       deployments:
         jellyfin:
           replicas: 1
@@ -402,6 +561,11 @@ spec:
               storage: 10Gi
           storageClassName: longhorn-files
       services:
+        ffmpeg-over-ip:
+          clusterIP: None
+          ports:
+            ffoip:
+              port: 5050
         jellyfin:
           ports:
             http:
@@ -459,6 +623,13 @@ spec:
           jellyfin-scripts:
             name: jellyfin-scripts
             namespace: default
+        daemonSets:
+          ffmpeg-over-ip:
+            labels:
+              app.kubernetes.io/component: ffmpeg-over-ip
+              app.kubernetes.io/instance: jellyfin
+            name: ffmpeg-over-ip
+            namespace: default
         deployments:
           jellyfin:
             labels:
@@ -471,6 +642,9 @@ spec:
             name: jellyfin-config
             namespace: default
         services:
+          ffmpeg-over-ip:
+            name: ffmpeg-over-ip
+            namespace: default
           jellyfin:
             name: jellyfin
             namespace: default
@@ -510,6 +684,9 @@ spec:
             name: authelia-reader
             namespace: default
         stringSecrets:
+          ffmpeg-over-ip-server:
+            name: ffmpeg-over-ip-server
+            namespace: default
           jellyfin-admin:
             name: jellyfin-admin
             namespace: default
@@ -613,6 +790,13 @@ spec:
           jellyfin-scripts:
             name: jellyfin-scripts
             namespace: default
+        daemonSets:
+          ffmpeg-over-ip:
+            labels:
+              app.kubernetes.io/component: ffmpeg-over-ip
+              app.kubernetes.io/instance: jellyfin
+            name: ffmpeg-over-ip
+            namespace: default
         deployments:
           jellyfin:
             labels:
@@ -625,6 +809,9 @@ spec:
             name: jellyfin-config
             namespace: default
         services:
+          ffmpeg-over-ip:
+            name: ffmpeg-over-ip
+            namespace: default
           jellyfin:
             name: jellyfin
             namespace: default
@@ -664,6 +851,9 @@ spec:
             name: authelia-reader
             namespace: default
         stringSecrets:
+          ffmpeg-over-ip-server:
+            name: ffmpeg-over-ip-server
+            namespace: default
           jellyfin-admin:
             name: jellyfin-admin
             namespace: default
@@ -720,6 +910,9 @@ spec:
         authelia-reader:
           automountServiceAccountToken: false
       stringSecrets:
+        ffmpeg-over-ip-server:
+          fields:
+            FFMPEG_OVER_IP_SERVER_AUTH_SECRET: {}
         jellyfin-admin:
           fields:
             password: {}
