@@ -216,8 +216,8 @@ resources:
                 metadata:
                   annotations:
                     # the image runs as root and writes in its filesystem (init system, nginx, cron, generated configuration)
-                    policy.becloudless.net/skipContainerRequireRunAsNonRoot: "true"
-                    policy.becloudless.net/skipContainerRequireReadOnlyRootFilesystem: "true"
+                    policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+                    policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
                 spec:
                   containers:
                     seafile:

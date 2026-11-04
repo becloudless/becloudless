@@ -395,7 +395,7 @@ spec:
       retryInterval: 5m
   values:
     annotations:
-      policy.becloudless.net/skipPodSetHostUsers: "true"
+      policy.bcl.tf/skipPodSetHostUsers: "true"
     csi:
       kubeletRootDir: /var/lib/kubelet
     defaultBackupStore:
@@ -1017,9 +1017,9 @@ spec:
               patchStrategicMerge:
                 metadata:
                   annotations:
-                    +(policy.becloudless.net/skipContainerRequireReadOnlyRootFilesystem): "true"
-                    +(policy.becloudless.net/skipContainerRequireRunAsNonRoot): "true"
-                    +(policy.becloudless.net/skipPodRestrictHostAccess): "true"
+                    +(policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem): "true"
+                    +(policy.bcl.tf/skipContainerRequireRunAsNonRoot): "true"
+                    +(policy.bcl.tf/skipPodRestrictHostAccess): "true"
             name: pod-add-skip-annotations
 ---
 # Source: app-longhorn/templates/loader.yaml

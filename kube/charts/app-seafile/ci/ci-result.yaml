@@ -227,8 +227,8 @@ spec:
           template:
             metadata:
               annotations:
-                policy.becloudless.net/skipContainerRequireReadOnlyRootFilesystem: "true"
-                policy.becloudless.net/skipContainerRequireRunAsNonRoot: "true"
+                policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
+                policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
             spec:
               containers:
                 seafile:

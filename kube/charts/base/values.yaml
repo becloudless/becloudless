@@ -11,7 +11,7 @@ defaults:
   # The pods are compliant by default with the kyverno policies of app-kyverno (container-require-run-as-non-root,
   # container-require-read-only-root-filesystem, pod-disable-service-links, pod-set-seccomp-profile). An app that needs more
   # overrides the field in its own `securityContext` (e.g. `runAsNonRoot: false`, `readOnlyRootFilesystem: false`) or opts out
-  # with the annotation `policy.becloudless.net/skip...` of the policy.
+  # with the annotation `policy.bcl.tf/skip...` of the policy.
 
   # applied to the pod spec of the deployments, statefulSets, daemonSets, jobs and cronJobs
   pod:

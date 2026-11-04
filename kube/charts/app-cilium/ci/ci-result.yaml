@@ -45,9 +45,9 @@ spec:
     devices: br0
     envoy:
       podAnnotations:
-        policy.becloudless.net/skipContainerRequireReadOnlyRootFilesystem: "true"
-        policy.becloudless.net/skipContainerRequireRunAsNonRoot: "true"
-        policy.becloudless.net/skipPodRestrictHostAccess: "true"
+        policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
+        policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+        policy.bcl.tf/skipPodRestrictHostAccess: "true"
       streamIdleTimeoutDurationSeconds: 600
     extraEnv:
     - name: PATH
@@ -65,12 +65,12 @@ spec:
       directRoutingDevice: br0
     operator:
       podAnnotations:
-        policy.becloudless.net/skipContainerRequireReadOnlyRootFilesystem: "true"
-        policy.becloudless.net/skipContainerRequireRunAsNonRoot: "true"
-        policy.becloudless.net/skipPodRestrictHostAccess: "true"
+        policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
+        policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+        policy.bcl.tf/skipPodRestrictHostAccess: "true"
       replicas: 2
     podAnnotations:
-      policy.becloudless.net/skipPodRestrictHostAccess: "true"
+      policy.bcl.tf/skipPodRestrictHostAccess: "true"
 ---
 # Source: app-cilium/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

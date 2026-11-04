@@ -252,7 +252,7 @@ spec:
                     kubernetes.io/config.mirror: ?*
               - resources:
                   annotations:
-                    policy.becloudless.net/skipContainerRequireReadOnlyRootFilesystem: "true"
+                    policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
             match:
               any:
               - resources:
@@ -291,7 +291,7 @@ spec:
                     kubernetes.io/config.mirror: ?*
               - resources:
                   annotations:
-                    policy.becloudless.net/skipContainerRequireRunAsNonRoot: "true"
+                    policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
             match:
               any:
               - resources:
@@ -362,7 +362,7 @@ spec:
                     kubernetes.io/config.mirror: ?*
               - resources:
                   annotations:
-                    policy.becloudless.net/skipContainerSetNoPrivilegeEscalation: "true"
+                    policy.bcl.tf/skipContainerSetNoPrivilegeEscalation: "true"
             match:
               any:
               - resources:
@@ -420,7 +420,7 @@ spec:
                     kubernetes.io/config.mirror: ?*
               - resources:
                   annotations:
-                    policy.becloudless.net/skipPodDisableServiceLinks: "true"
+                    policy.bcl.tf/skipPodDisableServiceLinks: "true"
             match:
               any:
               - resources:
@@ -444,7 +444,7 @@ spec:
                     kubernetes.io/config.mirror: ?*
               - resources:
                   annotations:
-                    policy.becloudless.net/skipPodRestrictHostAccess: "true"
+                    policy.bcl.tf/skipPodRestrictHostAccess: "true"
             match:
               any:
               - resources:
@@ -475,7 +475,7 @@ spec:
                     operator: GreaterThan
                     value: 0
               message: the pods using the host namespaces, privileged containers or
-                hostPath volumes need the annotation `policy.becloudless.net/skipPodRestrictHostAccess`
+                hostPath volumes need the annotation `policy.bcl.tf/skipPodRestrictHostAccess`
           validationFailureAction: Audit
         pod-set-host-users:
           failurePolicy: Ignore
@@ -484,7 +484,7 @@ spec:
               any:
               - resources:
                   annotations:
-                    policy.becloudless.net/skipPodSetHostUsers: "true"
+                    policy.bcl.tf/skipPodSetHostUsers: "true"
             match:
               any:
               - resources:
@@ -522,7 +522,7 @@ spec:
                     kubernetes.io/config.mirror: ?*
               - resources:
                   annotations:
-                    policy.becloudless.net/skipPodSetSeccompProfile: "true"
+                    policy.bcl.tf/skipPodSetSeccompProfile: "true"
             match:
               any:
               - resources:

@@ -8,7 +8,7 @@
 #  - the pods with a privileged container or the capability `SYS_ADMIN`, the API server rejects them with
 #    `allowPrivilegeEscalation: false`;
 #  - the static pods (mirror pods), only the kubelet manages them;
-#  - the pods with the annotation `policy.becloudless.net/skipContainerSetNoPrivilegeEscalation: "true"`, to opt out an app that does not work with it.
+#  - the pods with the annotation `policy.bcl.tf/skipContainerSetNoPrivilegeEscalation: "true"`, to opt out an app that does not work with it.
 # `Ignore`: a Kyverno outage must not block the creation of pods.
 failurePolicy: Ignore
 rules:
@@ -27,7 +27,7 @@ rules:
               kubernetes.io/config.mirror: "?*"
         - resources:
             annotations:
-              policy.becloudless.net/skipContainerSetNoPrivilegeEscalation: "true"
+              policy.bcl.tf/skipContainerSetNoPrivilegeEscalation: "true"
     preconditions:
       all:
         - key: "{{ request.object.spec.[containers, initContainers][] | [?securityContext.privileged == `true`] | length(@) }}"

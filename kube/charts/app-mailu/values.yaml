@@ -370,7 +370,7 @@ resources:
                     template:
                       metadata:
                         annotations:
-                          policy.becloudless.net/skipPodRestrictHostAccess: "true" # the privileged vpn sidecar
+                          policy.bcl.tf/skipPodRestrictHostAccess: "true" # the privileged vpn sidecar
                       spec:
                         containers:
                         - name: vpn
@@ -413,7 +413,7 @@ resources:
                     template:
                       metadata:
                         annotations:
-                          policy.becloudless.net/skipPodRestrictHostAccess: "true" # the privileged vpn sidecar
+                          policy.bcl.tf/skipPodRestrictHostAccess: "true" # the privileged vpn sidecar
                       spec:
                         containers:
                         - name: vpn
