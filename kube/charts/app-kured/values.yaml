@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+
+# Reboots the nodes one at a time once an upgrade is pending, in the window below. The nodes write the sentinel file
+# (see nixos/modules/nixos/bcl/role/serverKubeRebootRequired.nix). The shutdown drain of the nodes (serverKubeDrain.nix) stays as the
+# safety net for the reboots not started by kured.
+#
+# Runs on the nodes tolerating the control plane taint only: the container nodes carry another taint (`no-persistent-storage`), and
+# rebooting them would only restart a container.
+resources:
+  fluxHelmRepositories:
+    kured:
+      url: https://kubereboot.github.io/charts
+
+  # kube-system is shared with the other components, hence the selector.
+  ciliumNetworkPolicies:
+    kured:
+      endpointSelector:
+        matchLabels: {"app.kubernetes.io/name": kured}
+      egress:
+        kube-apiserver: # the lock, the drain
+          toEntities: [kube-apiserver]
+        prometheus: # the alerts blocking the reboots
+          toEndpoints:
+            prometheus:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": prometheus, "k8s:app.kubernetes.io/name": prometheus}
+          toPorts: [9090]
+
+  fluxHelmReleases:
+    kured:
+      chart:
+        spec:
+          chart: kured
+          version: 6.1.0
+          sourceRef:
+            kind: HelmRepository
+            name: kured
+      values:
+        configuration:
+          # NixOS has no /bin/systemctl, the command is run in the mount namespace of the host
+          rebootCommand: /run/current-system/sw/bin/systemctl reboot
+          rebootSentinel: /run/kured/reboot-required # a directory of its own, mounted in the pod
+
+          period: 10m
+          startTime: "01:00"
+          endTime: "07:00"
+          timeZone: Europe/Paris
+
+          drainTimeout: 10m
+          lockTtl: 2h # a node that never comes back does not block the others for ever
+          lockReleaseDelay: 10m # time for the volumes to start rebuilding before the next node goes
+
+          # Only these alerts block the reboots: a node or the control plane is already in trouble.
+          prometheusUrl: http://prometheus-kube-prometheus-prometheus.prometheus.svc:9090
+          alertFilterMatchOnly: true
+          alertFiringOnly: true
+          alertFilterRegexp: ^(KubeNodeNotReady|KubeNodeUnreachable|KubeletDown|KubeAPIDown|KubeControllerManagerDown|KubeSchedulerDown|etcdMembersDown|etcdInsufficientMembers|etcdNoLeader)$

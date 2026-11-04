@@ -249,6 +249,14 @@ spec:
     - ports:
       - port: "9090"
         protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/name: kured
+        k8s:io.kubernetes.pod.namespace: kube-system
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
 ---
 # Source: app-prometheus/templates/loader.yaml
 apiVersion: cilium.io/v2

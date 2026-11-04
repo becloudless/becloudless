@@ -27,6 +27,7 @@ All applications are defined under `kube/apps/`, one directory per app.
 | `homer` | Dashboard | Static application dashboard / home page |
 | `immich` | Media | Self-hosted photo and video backup (Google Photos alternative) |
 | `jellyfin` | Media | Self-hosted media server (Netflix alternative) |
+| `kured` | Platform | Reboots the nodes one at a time once an upgrade is pending, blocked while a node or the control plane is in trouble |
 | `kyverno` | Security | Kubernetes policy engine (admission controller) |
 | `kyverno-config` | Security | Kyverno ClusterPolicies |
 | `lldap` | Security | Lightweight LDAP server (user directory for SSO) |

@@ -188,6 +188,14 @@ apps:
     appChart:
       name: app-prometheus
 
+  kured: # reboots the nodes one at a time once an upgrade is pending, blocked by the alerts of prometheus
+    groups:
+      extra: true
+    clusterAdmin: true # ClusterRole to drain the nodes
+    namespace: kube-system
+    appChart:
+      name: app-kured
+
   forgejo:
     groups:
       extra: true
