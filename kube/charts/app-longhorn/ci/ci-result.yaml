@@ -471,6 +471,15 @@ spec:
           longhorn:
             name: longhorn
             namespace: default
+      longhorn-monitoring:
+        prometheusRules:
+          longhorn:
+            name: longhorn
+            namespace: default
+        serviceMonitors:
+          longhorn-manager:
+            name: longhorn-manager
+            namespace: default
       longhorn-post:
         longhornRecurringJobs:
           daily-backups:
@@ -600,6 +609,148 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
+  name: longhorn-monitoring
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: longhorn
+  - name: app-prometheus
+    namespace: prometheus
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      longhorn-integration:
+        certManagerCertificates:
+          longhorn-gateway:
+            name: longhorn-gateway
+            namespace: default
+            secretName: tls-longhorn-gateway
+        httpRoutes:
+          longhorn:
+            name: longhorn
+            namespace: default
+        listenerSets:
+          longhorn:
+            name: longhorn
+            namespace: default
+      longhorn-monitoring:
+        prometheusRules:
+          longhorn:
+            name: longhorn
+            namespace: default
+        serviceMonitors:
+          longhorn-manager:
+            name: longhorn-manager
+            namespace: default
+      longhorn-post:
+        longhornRecurringJobs:
+          daily-backups:
+            name: daily-backups
+            namespace: default
+        longhornSettings:
+          allow-collecting-longhorn-usage-metrics:
+            name: allow-collecting-longhorn-usage-metrics
+            namespace: default
+          concurrent-automatic-engine-upgrade-per-node-limit:
+            name: concurrent-automatic-engine-upgrade-per-node-limit
+            namespace: default
+          default-backup-block-size:
+            name: default-backup-block-size
+            namespace: default
+          upgrade-checker:
+            name: upgrade-checker
+            namespace: default
+        storageClasses:
+          longhorn-db:
+            name: longhorn-db
+            namespace: default
+          longhorn-files:
+            name: longhorn-files
+            namespace: default
+          longhorn-single-local-replica:
+            name: longhorn-single-local-replica
+            namespace: default
+        volumeSnapshotClasses:
+          longhorn-backing-image:
+            name: longhorn-backing-image
+            namespace: default
+          longhorn-backup-full:
+            name: longhorn-backup-full
+            namespace: default
+          longhorn-backup-incremental:
+            name: longhorn-backup-incremental
+            namespace: default
+          longhorn-snapshot:
+            name: longhorn-snapshot
+            namespace: default
+      longhorn-pre:
+        configMaps:
+          longhorn-nixos-path:
+            name: longhorn-nixos-path
+            namespace: default
+        kyvernoClusterPolicies:
+          longhorn-add-nixos-path:
+            name: longhorn-add-nixos-path
+            namespace: default
+          longhorn-host-users:
+            name: longhorn-host-users
+            namespace: default
+          longhorn-skip-security-audit:
+            name: longhorn-skip-security-audit
+            namespace: default
+    resources:
+      prometheusRules:
+        longhorn:
+          groups:
+          - name: longhorn
+            rules:
+            - alert: LonghornVolumeDegraded
+              annotations:
+                summary: A volume of Longhorn has a replica missing or rebuilding
+              expr: max by (volume) (longhorn_volume_robustness == 2)
+              for: 1m
+              labels:
+                severity: warning
+      serviceMonitors:
+        longhorn-manager:
+          endpoints:
+          - port: manager
+          selector:
+            matchLabels:
+              app: longhorn-manager
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
   name: longhorn-post
   namespace: default
 spec:
@@ -649,6 +800,15 @@ spec:
         listenerSets:
           longhorn:
             name: longhorn
+            namespace: default
+      longhorn-monitoring:
+        prometheusRules:
+          longhorn:
+            name: longhorn
+            namespace: default
+        serviceMonitors:
+          longhorn-manager:
+            name: longhorn-manager
             namespace: default
       longhorn-post:
         longhornRecurringJobs:
@@ -846,6 +1006,15 @@ spec:
         listenerSets:
           longhorn:
             name: longhorn
+            namespace: default
+      longhorn-monitoring:
+        prometheusRules:
+          longhorn:
+            name: longhorn
+            namespace: default
+        serviceMonitors:
+          longhorn-manager:
+            name: longhorn-manager
             namespace: default
       longhorn-post:
         longhornRecurringJobs:

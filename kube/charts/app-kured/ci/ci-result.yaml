@@ -57,7 +57,7 @@ spec:
   values:
     configuration:
       alertFilterMatchOnly: true
-      alertFilterRegexp: ^(KubeNodeNotReady|KubeNodeUnreachable|KubeletDown|KubeAPIDown|KubeControllerManagerDown|KubeSchedulerDown|etcdMembersDown|etcdInsufficientMembers|etcdNoLeader)$
+      alertFilterRegexp: ^(KubeNodeNotReady|KubeNodeUnreachable|KubeletDown|KubeAPIDown|KubeControllerManagerDown|KubeSchedulerDown|etcdMembersDown|etcdInsufficientMembers|etcdNoLeader|LonghornVolumeDegraded)$
       alertFiringOnly: true
       drainTimeout: 10m
       endTime: "04:00"

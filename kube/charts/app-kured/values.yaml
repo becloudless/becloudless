@@ -51,8 +51,8 @@ resources:
           lockTtl: 2h # a node that never comes back does not block the others for ever
           lockReleaseDelay: 10m # time for the volumes to start rebuilding before the next node goes
 
-          # Only these alerts block the reboots: a node or the control plane is already in trouble.
+          # Only these alerts block the reboots: a node or the control plane is already in trouble, a volume of Longhorn is rebuilding.
           prometheusUrl: http://prometheus-kube-prometheus-prometheus.prometheus.svc:9090
           alertFilterMatchOnly: true
           alertFiringOnly: true
-          alertFilterRegexp: ^(KubeNodeNotReady|KubeNodeUnreachable|KubeletDown|KubeAPIDown|KubeControllerManagerDown|KubeSchedulerDown|etcdMembersDown|etcdInsufficientMembers|etcdNoLeader)$
+          alertFilterRegexp: ^(KubeNodeNotReady|KubeNodeUnreachable|KubeletDown|KubeAPIDown|KubeControllerManagerDown|KubeSchedulerDown|etcdMembersDown|etcdInsufficientMembers|etcdNoLeader|LonghornVolumeDegraded)$

@@ -539,6 +539,39 @@ resources:
                 type: bak
                 backupMode: full
 
+    # The monitoring needs the CRDs of app-prometheus, which waits for Longhorn (its volumes): nothing waits for this release
+    # (see app-kured, it waits for the `LonghornVolumeDegraded` alert before rebooting the next node).
+    longhorn-monitoring:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        - ref:longhorn
+        - name: app-prometheus
+          namespace: prometheus
+      values:
+        resources:
+          serviceMonitors:
+            longhorn-manager:
+              selector:
+                matchLabels: {app: longhorn-manager}
+              endpoints:
+                - port: manager
+
+          prometheusRules:
+            longhorn:
+              groups:
+                - name: longhorn
+                  rules:
+                    - alert: LonghornVolumeDegraded # a replica is missing or rebuilding
+                      expr: max by (volume) (longhorn_volume_robustness == 2)
+                      for: 1m
+                      labels:
+                        severity: warning
+                      annotations:
+                        summary: A volume of Longhorn has a replica missing or rebuilding
+
 expose:
   longhorn:
     service: longhorn-frontend
