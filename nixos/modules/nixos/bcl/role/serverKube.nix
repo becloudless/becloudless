@@ -41,7 +41,7 @@ let
     '';
   };
 
-  # At boot, uncordon the node if it was cordoned by `kube-drain`, then stay alive so the unit's ExecStop runs at shutdown.
+  # At boot, uncordon the node if it was cordoned by `kube-drain`.
   kubeUncordonOnBoot = pkgs.writeShellApplication {
     name = "kube-uncordon-on-boot";
     runtimeInputs = [ pkgs.kubernetes pkgs.coreutils ];
@@ -57,15 +57,21 @@ let
         fi
         sleep 5
       done
-      exec sleep infinity
     '';
   };
 
-  # Only drains when the system is going down: not on a manual stop.
-  kubeDrainOnShutdown = pkgs.writeShellScript "kube-drain-on-shutdown" ''
-    [ "$(${config.systemd.package}/bin/systemctl is-system-running)" = stopping ] || exit 0
-    ${kubeDrain}/bin/kube-drain || echo "kube-drain failed or timed out, shutting down anyway"
-  '';
+  # Runs under a logind delay inhibitor lock (see the `kube-drain` service): waits for the system to be asked to shut down, then drains
+  # the node. logind only goes on with the shutdown once this exits (or after `InhibitDelayMaxSec`), so everything is still up.
+  kubeDrainOnShutdown = pkgs.writeShellApplication {
+    name = "kube-drain-on-shutdown";
+    runtimeInputs = [ pkgs.systemd pkgs.coreutils ];
+    text = ''
+      until [ "$(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager PreparingForShutdown)" = "b true" ]; do
+        sleep 1
+      done
+      ${kubeDrain}/bin/kube-drain || echo "kube-drain failed or timed out, shutting down anyway"
+    '';
+  };
 in
 {
   options.bcl.role.serverKube = {
@@ -144,12 +150,16 @@ in
     services.resolved.settings.Resolve.DNSSEC = "true";
     networking.firewall.enable = false;
 
-    # Drain the node, respecting the PodDisruptionBudgets, whatever triggers the reboot/poweroff. The unit starts after the kubelet, so it
-    # stops before it: the kubelet and the apiserver are still up while the pods are evicted.
+    # Drain the node, respecting the PodDisruptionBudgets, whatever triggers the reboot/poweroff through logind (`systemctl reboot`, power
+    # button, ...). It cannot be done in the ExecStop of a service: the containers run in systemd scopes that are stopped as soon as the
+    # shutdown starts, so the apiserver proxy is already gone by then. Instead the service holds a logind delay inhibitor lock: logind only
+    # starts the shutdown once the drain is over, with the whole system still running.
     # Do not use the kubelet graceful node shutdown (`shutdownGracePeriod`) next to it: the kubelet would kill the pods as soon as logind
-    # announces the shutdown, before this unit gets to drain.
+    # announces the shutdown, before the drain.
+    services.logind.settings.Login.InhibitDelayMaxSec = cfg.shutdownDrainTimeout + 60;
+
     systemd.services."kube-drain" = {
-      description = "Drain the kubernetes node at shutdown, uncordon it at boot";
+      description = "Drain the kubernetes node before a shutdown";
       after = [ "network-online.target" "crio.service" "kubelet.service" ] ++ lib.optional cfg.worker "haproxy-apiserver.service";
       wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
@@ -157,9 +167,20 @@ in
       stopIfChanged = false;
       serviceConfig = {
         Type = "simple";
+        ExecStart = "${pkgs.systemd}/bin/systemd-inhibit --what=shutdown --mode=delay --who=kube-drain --why=\"Draining the kubernetes node\" ${kubeDrainOnShutdown}/bin/kube-drain-on-shutdown";
+      };
+    };
+
+    systemd.services."kube-uncordon-on-boot" = {
+      description = "Uncordon the kubernetes node if it was cordoned by kube-drain";
+      after = [ "network-online.target" "crio.service" "kubelet.service" ] ++ lib.optional cfg.worker "haproxy-apiserver.service";
+      wants = [ "network-online.target" ];
+      wantedBy = [ "multi-user.target" ];
+      restartIfChanged = false;
+      stopIfChanged = false;
+      serviceConfig = {
+        Type = "simple";
         ExecStart = "${kubeUncordonOnBoot}/bin/kube-uncordon-on-boot";
-        ExecStop = kubeDrainOnShutdown;
-        TimeoutStopSec = cfg.shutdownDrainTimeout + 90;
       };
     };
 
