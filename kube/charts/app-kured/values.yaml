@@ -56,3 +56,40 @@ resources:
           alertFilterMatchOnly: true
           alertFiringOnly: true
           alertFilterRegexp: ^(KubeNodeNotReady|KubeNodeUnreachable|KubeletDown|KubeAPIDown|KubeControllerManagerDown|KubeSchedulerDown|etcdMembersDown|etcdInsufficientMembers|etcdNoLeader|LonghornVolumeDegraded)$
+
+    # The metrics and the `LonghornVolumeDegraded` alert of Longhorn, the one that makes kured wait for the volumes to be rebuilt. They are here
+    # and not in app-longhorn: they need the CRDs of app-prometheus, which waits for Longhorn (its volumes), and app-longhorn waits for its
+    # own releases. Nothing waits for app-kured. The release object is in this namespace, and installs in `longhorn-system`.
+    kured-monitoring:
+      targetNamespace: longhorn-system
+      releaseName: kured-monitoring
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        - name: app-longhorn
+          namespace: longhorn-system
+        - name: app-prometheus
+          namespace: prometheus
+      values:
+        resources:
+          serviceMonitors:
+            longhorn-manager:
+              selector:
+                matchLabels: {app: longhorn-manager}
+              endpoints:
+                - port: manager
+
+          prometheusRules:
+            longhorn:
+              groups:
+                - name: longhorn
+                  rules:
+                    - alert: LonghornVolumeDegraded # a replica is missing or rebuilding
+                      expr: max by (volume) (longhorn_volume_robustness == 2)
+                      for: 1m
+                      labels:
+                        severity: warning
+                      annotations:
+                        summary: A volume of Longhorn has a replica missing or rebuilding

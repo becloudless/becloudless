@@ -73,6 +73,73 @@ spec:
       policy.bcl.tf/skipPodRestrictHostAccess: "true"
 ---
 # Source: app-kured/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kured-monitoring
+  namespace: default
+spec:
+  dependsOn:
+  - name: app-longhorn
+    namespace: longhorn-system
+  - name: app-prometheus
+    namespace: prometheus
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  releaseName: kured-monitoring
+  targetNamespace: longhorn-system
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      kured-monitoring:
+        prometheusRules:
+          longhorn:
+            name: longhorn
+            namespace: longhorn-system
+        serviceMonitors:
+          longhorn-manager:
+            name: longhorn-manager
+            namespace: longhorn-system
+    resources:
+      prometheusRules:
+        longhorn:
+          groups:
+          - name: longhorn
+            rules:
+            - alert: LonghornVolumeDegraded
+              annotations:
+                summary: A volume of Longhorn has a replica missing or rebuilding
+              expr: max by (volume) (longhorn_volume_robustness == 2)
+              for: 1m
+              labels:
+                severity: warning
+      serviceMonitors:
+        longhorn-manager:
+          endpoints:
+          - port: manager
+          selector:
+            matchLabels:
+              app: longhorn-manager
+---
+# Source: app-kured/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
