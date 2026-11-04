@@ -83,6 +83,14 @@ apps:
       name: app-coredns
 
   # server
+
+  kured:
+    groups:
+      server: true
+    clusterAdmin: true # ClusterRole to drain the nodes
+    appChart:
+      name: app-kured
+
   cert-manager:
     groups:
       cluster: true
@@ -187,13 +195,6 @@ apps:
     clusterAdmin: true # CRDs
     appChart:
       name: app-prometheus
-
-  kured: # reboots the nodes one at a time once an upgrade is pending, blocked by the alerts of prometheus
-    groups:
-      extra: true
-    clusterAdmin: true # ClusterRole to drain the nodes
-    appChart:
-      name: app-kured
 
   forgejo:
     groups:
