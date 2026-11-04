@@ -45,14 +45,15 @@ let
       ${kubeLib}
       node=${config.networking.hostName}
       for _ in $(seq 120); do
+        # the apiserver may still be starting: retry every step until all of them went through
         if setup_kubeconfig && value=$(kubectl get node "$node" -o jsonpath='{.metadata.annotations.becloudless\.net/uncordon-on-boot}' 2>/dev/null); then
-          if [ "$value" = true ]; then
-            kubectl uncordon "$node" && kubectl annotate node "$node" ${uncordonAnnotation}-
+          if [ "$value" != true ] || { kubectl uncordon "$node" && kubectl annotate node "$node" ${uncordonAnnotation}-; }; then
+            exit 0
           fi
-          break
         fi
         sleep 5
       done
+      exit 1
     '';
   };
 
