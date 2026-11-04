@@ -151,6 +151,7 @@ in
     systemd.services."kube-drain" = {
       description = "Drain the kubernetes node at shutdown, uncordon it at boot";
       after = [ "network-online.target" "crio.service" "kubelet.service" ] ++ lib.optional cfg.worker "haproxy-apiserver.service";
+      wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
       restartIfChanged = false; # a deployment must not drain the node
       stopIfChanged = false;
