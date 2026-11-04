@@ -1019,6 +1019,7 @@ spec:
                   annotations:
                     +(policy.bcl/skipContainerRequireReadOnlyRootFilesystem): "true"
                     +(policy.bcl/skipContainerRequireRunAsNonRoot): "true"
+                    +(policy.bcl/skipPodRestrictHostAccess): "true"
             name: pod-add-skip-annotations
 ---
 # Source: app-longhorn/templates/loader.yaml

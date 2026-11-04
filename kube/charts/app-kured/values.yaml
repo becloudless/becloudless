@@ -34,6 +34,9 @@ resources:
             kind: HelmRepository
             name: kured
       values:
+        # hostPID, privileged: it runs the reboot in the namespaces of the host
+        podAnnotations:
+          policy.bcl/skipPodRestrictHostAccess: "true"
         configuration:
           # NixOS has no /bin/systemctl, the command is run in the mount namespace of the host
           rebootCommand: /run/current-system/sw/bin/systemctl reboot

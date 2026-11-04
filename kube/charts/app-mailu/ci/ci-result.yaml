@@ -535,6 +535,9 @@ spec:
             name: mailu-front
           spec:
             template:
+              metadata:
+                annotations:
+                  policy.bcl/skipPodRestrictHostAccess: "true" # the privileged vpn sidecar
               spec:
                 containers:
                 - name: vpn
@@ -573,6 +576,9 @@ spec:
             name: mailu-postfix
           spec:
             template:
+              metadata:
+                annotations:
+                  policy.bcl/skipPodRestrictHostAccess: "true" # the privileged vpn sidecar
               spec:
                 containers:
                 - name: vpn

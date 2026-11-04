@@ -39,9 +39,14 @@ resources:
           replicas: "{{ .Values.app.scaling.replicas }}"
           # The operator and the envoy are the network of the cluster, they run as root with a writable root filesystem (the envoy
           # has the capabilities NET_ADMIN and SYS_ADMIN): opted out of the audit policies of app-kyverno.
+          # They use the network of the host, like the agent.
           podAnnotations:
             policy.bcl/skipContainerRequireRunAsNonRoot: "true"
             policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
+            policy.bcl/skipPodRestrictHostAccess: "true"
+        # the agent: privileged, host network, hostPath volumes
+        podAnnotations:
+          policy.bcl/skipPodRestrictHostAccess: "true"
         ipam:
           mode: kubernetes
 
@@ -61,6 +66,7 @@ resources:
           podAnnotations: # see operator
             policy.bcl/skipContainerRequireRunAsNonRoot: "true"
             policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
+            policy.bcl/skipPodRestrictHostAccess: "true"
 
     # LoadBalancer pool and BGP need the Cilium CRDs, so they are installed once cilium is ready.
     # The cluster sets its pool and BGP cluster config through `resources.fluxHelmReleases.cilium-post.values.resources`.

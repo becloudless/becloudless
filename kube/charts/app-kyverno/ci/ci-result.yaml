@@ -443,10 +443,8 @@ spec:
                   annotations:
                     kubernetes.io/config.mirror: ?*
               - resources:
-                  namespaces:
-                  - kube-system
-                  - longhorn-system
-                  - kured
+                  annotations:
+                    policy.bcl/skipPodRestrictHostAccess: "true"
             match:
               any:
               - resources:
@@ -476,8 +474,8 @@ spec:
                       `[]`) {{"}}"}}'
                     operator: GreaterThan
                     value: 0
-              message: only the namespaces allowed by the policy `pod-restrict-host-access`
-                can use the host namespaces, privileged containers and hostPath volumes
+              message: the pods using the host namespaces, privileged containers or
+                hostPath volumes need the annotation `policy.bcl/skipPodRestrictHostAccess`
           validationFailureAction: Audit
         pod-set-host-users:
           failurePolicy: Ignore

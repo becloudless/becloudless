@@ -1,11 +1,11 @@
 # yaml-language-server: $schema=../../../base/schema/resources/kyvernoClusterPolicies.json
 
-# Only the namespaces below may run pods that reach the host: host namespaces (`hostPID`, `hostIPC`, `hostNetwork`), privileged
-# containers and `hostPath` volumes. Takes the place of the Pod Security Admission labels of the namespaces, which nothing enforces here
-# (the API server runs with the defaults, every namespace is `privileged`), and which any namespace owner could change.
-# The other policies skip the pods with a privileged container, this one is what decides who may have one.
-# `Audit` for now: the violations are in the PolicyReports (`kubectl get polr -A`), `Enforce` once they are all accounted for.
-# Add a namespace to `exclude` (from the values of the cluster) instead of opting a pod out: the policy is cluster-admin only.
+# The pods reaching the host (host namespaces `hostPID`, `hostIPC`, `hostNetwork`, privileged containers, `hostPath` volumes) have to say
+# so with the annotation `policy.bcl/skipPodRestrictHostAccess: "true"`, set where the pod is declared (the values of its chart, a patch...).
+# The other policies skip the pods with a privileged container, this one is what makes them visible.
+# Nothing enforces the Pod Security Admission labels of the namespaces here (the API server runs with the defaults, every namespace is
+# `privileged`): this is not a replacement, whoever can create a pod can set the annotation.
+# `Audit` for now: the violations are in the PolicyReports (`kubectl get polr -A`), `Enforce` once they are all annotated.
 # Not applied to the static pods (mirror pods), only the kubelet manages them.
 failurePolicy: Ignore
 validationFailureAction: Audit
@@ -25,12 +25,10 @@ rules:
             annotations:
               kubernetes.io/config.mirror: "?*"
         - resources:
-            namespaces:
-              - kube-system # cilium, multus, kube-proxy, the static pods
-              - longhorn-system
-              - kured
+            annotations:
+              policy.bcl/skipPodRestrictHostAccess: "true"
     validate:
-      message: only the namespaces allowed by the policy `pod-restrict-host-access` can use the host namespaces, privileged containers and hostPath volumes
+      message: the pods using the host namespaces, privileged containers or hostPath volumes need the annotation `policy.bcl/skipPodRestrictHostAccess`
       deny:
         conditions:
           any:
