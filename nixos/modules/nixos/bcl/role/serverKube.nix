@@ -5,6 +5,67 @@ let
   nodeName = n: "${config.bcl.role.serverKube.clusterName}${toString n}";
   nodeNumber = lib.strings.toInt(builtins.substring ((builtins.stringLength config.networking.hostName) -1)  (-1) config.networking.hostName);
   myIp = nodeIp nodeNumber;
+
+  # Set on the node by `kube-drain` when it cordons it, so the node is uncordoned at the next boot (and only then: a node cordoned by hand stays so).
+  uncordonAnnotation = "becloudless.net/uncordon-on-boot";
+
+  # Masters have the cluster admin kubeconfig. Workers hold the cluster CA (see serverKubeWorker.nix), so they sign a short-lived admin client
+  # certificate: their own node identity is not allowed to evict pods nor to cordon.
+  kubeLib = ''
+    setup_kubeconfig() {
+      ${if cfg.worker then ''
+      umask 077
+      mkdir -p /run/kube-drain
+      kubeadm kubeconfig user --client-name kube-drain --org system:masters --validity-period 1h \
+        --config /etc/kubernetes/kubeadm-worker.yaml > /run/kube-drain/kubeconfig.new
+      mv /run/kube-drain/kubeconfig.new /run/kube-drain/kubeconfig
+      export KUBECONFIG=/run/kube-drain/kubeconfig
+      '' else ''
+      export KUBECONFIG=/etc/kubernetes/admin.conf
+      ''}
+    }
+  '';
+
+  # Drains the node, respecting the PodDisruptionBudgets: the eviction is retried until the budgets allow it, or the timeout is reached.
+  kubeDrain = pkgs.writeShellApplication {
+    name = "kube-drain";
+    runtimeInputs = [ pkgs.kubernetes pkgs.coreutils ];
+    text = ''
+      ${kubeLib}
+      setup_kubeconfig
+      node=${config.networking.hostName}
+      if [ "$(kubectl get node "$node" -o jsonpath='{.spec.unschedulable}')" != true ]; then
+        kubectl annotate node "$node" ${uncordonAnnotation}=true --overwrite
+      fi
+      timeout ${toString (cfg.shutdownDrainTimeout + 30)} kubectl drain "$node" --timeout ${toString cfg.shutdownDrainTimeout}s --ignore-daemonsets --delete-emptydir-data
+    '';
+  };
+
+  # At boot, uncordon the node if it was cordoned by `kube-drain`, then stay alive so the unit's ExecStop runs at shutdown.
+  kubeUncordonOnBoot = pkgs.writeShellApplication {
+    name = "kube-uncordon-on-boot";
+    runtimeInputs = [ pkgs.kubernetes pkgs.coreutils ];
+    text = ''
+      ${kubeLib}
+      node=${config.networking.hostName}
+      for _ in $(seq 120); do
+        if setup_kubeconfig && value=$(kubectl get node "$node" -o jsonpath='{.metadata.annotations.becloudless\.net/uncordon-on-boot}' 2>/dev/null); then
+          if [ "$value" = true ]; then
+            kubectl uncordon "$node" && kubectl annotate node "$node" ${uncordonAnnotation}-
+          fi
+          break
+        fi
+        sleep 5
+      done
+      exec sleep infinity
+    '';
+  };
+
+  # Only drains when the system is going down: not on a manual stop.
+  kubeDrainOnShutdown = pkgs.writeShellScript "kube-drain-on-shutdown" ''
+    [ "$(${config.systemd.package}/bin/systemctl is-system-running)" = stopping ] || exit 0
+    ${kubeDrain}/bin/kube-drain || echo "kube-drain failed or timed out, shutting down anyway"
+  '';
 in
 {
   options.bcl.role.serverKube = {
@@ -26,6 +87,14 @@ in
       description = ''
         Run this node as a worker only (kubelet + cri-o + a local haproxy to the apiservers), without etcd nor control-plane
         components. The node number (last digits of the hostname) must be greater than `masterNodeCount`.
+      '';
+    };
+    shutdownDrainTimeout = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 300;
+      description = ''
+        Maximum time in seconds the node waits, when the system is rebooted or powered off (`systemctl reboot`, power button, ...), for
+        its pods to be evicted while respecting the PodDisruptionBudgets. Once over, the shutdown goes on without waiting any longer.
       '';
     };
   };
@@ -64,14 +133,7 @@ in
     ];
 
     users.users.root.packages = with pkgs; [
-      (writeShellScriptBin "kube-reboot" ''
-        kubectl --kubeconfig=/etc/kubernetes/admin.conf drain ${config.networking.hostName} --timeout 200s --ignore-daemonsets --delete-emptydir-data || true
-        systemctl reboot
-      '')
-      (writeShellScriptBin "kube-poweroff" ''
-        kubectl --kubeconfig=/etc/kubernetes/admin.conf drain ${config.networking.hostName} --timeout 200s --ignore-daemonsets --delete-emptydir-data || true
-        systemctl poweroff
-      '')
+      kubeDrain
     ];
 
     programs.bash.interactiveShellInit = lib.mkIf (config.users.users.root.shell == pkgs.bash) ''
@@ -81,6 +143,24 @@ in
 
     services.resolved.settings.Resolve.DNSSEC = "true";
     networking.firewall.enable = false;
+
+    # Drain the node, respecting the PodDisruptionBudgets, whatever triggers the reboot/poweroff. The unit starts after the kubelet, so it
+    # stops before it: the kubelet and the apiserver are still up while the pods are evicted.
+    # Do not use the kubelet graceful node shutdown (`shutdownGracePeriod`) next to it: the kubelet would kill the pods as soon as logind
+    # announces the shutdown, before this unit gets to drain.
+    systemd.services."kube-drain" = {
+      description = "Drain the kubernetes node at shutdown, uncordon it at boot";
+      after = [ "network-online.target" "crio.service" "kubelet.service" ] ++ lib.optional cfg.worker "haproxy-apiserver.service";
+      wantedBy = [ "multi-user.target" ];
+      restartIfChanged = false; # a deployment must not drain the node
+      stopIfChanged = false;
+      serviceConfig = {
+        Type = "simple";
+        ExecStart = "${kubeUncordonOnBoot}/bin/kube-uncordon-on-boot";
+        ExecStop = kubeDrainOnShutdown;
+        TimeoutStopSec = cfg.shutdownDrainTimeout + 90;
+      };
+    };
 
     systemd.network.networks.kube = {
       matchConfig = {
