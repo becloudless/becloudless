@@ -78,7 +78,6 @@ apps:
     groups:
       minimal: true
     clusterAdmin: true # creates a ClusterRole and a ClusterRoleBinding
-    namespace: kube-system
     appChart:
       name: app-coredns
 
@@ -139,7 +138,6 @@ apps:
     groups:
       cluster: true
     clusterAdmin: true
-    namespace: kube-system
     appChart:
       name: app-descheduler
 
@@ -147,7 +145,6 @@ apps:
     groups:
       cluster: true
     clusterAdmin: true # creates ClusterRoles and an APIService
-    namespace: kube-system
     appChart:
       name: app-metrics-server
 

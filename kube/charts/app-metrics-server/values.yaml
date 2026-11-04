@@ -5,7 +5,6 @@ resources:
     metrics-server:
       url: https://kubernetes-sigs.github.io/metrics-server
 
-  # kube-system is shared with the other components, hence the selector.
   ciliumNetworkPolicies:
     metrics-server:
       endpointSelector:

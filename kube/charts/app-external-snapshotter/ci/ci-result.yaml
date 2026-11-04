@@ -4,7 +4,7 @@ apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
   name: snapshot-controller
-  namespace: kube-system
+  namespace: default
 spec:
   egress:
   - toEntities:
@@ -66,6 +66,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: external-snapshotter
+  targetNamespace: external-snapshotter
   timeout: 1m
   wait: true
 ---

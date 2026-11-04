@@ -10,7 +10,7 @@ resources:
   ciliumClusterwideNetworkPolicies:
     kube-dns:
       endpointSelector:
-        matchLabels: {"k8s:io.kubernetes.pod.namespace": kube-system, "k8s:k8s-app": kube-dns}
+        matchLabels: {"k8s:io.kubernetes.pod.namespace": coredns, "k8s:k8s-app": kube-dns}
       ingress:
         from-pods:
           fromEndpoints:

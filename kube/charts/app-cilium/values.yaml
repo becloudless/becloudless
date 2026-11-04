@@ -155,7 +155,7 @@ resources:
         - name: app-flux # the deny must not land before the rules of Flux: it could not reconcile anything anymore
           namespace: flux-system
         - name: app-coredns # nor before the rules of CoreDNS: nothing could resolve a name anymore
-          namespace: kube-system
+          namespace: coredns
       values:
         resources:
           ciliumClusterwideNetworkPolicies:
@@ -179,7 +179,7 @@ resources:
                 kube-dns:
                   toEndpoints:
                     kube-dns:
-                      matchLabels: {"k8s:io.kubernetes.pod.namespace": kube-system, "k8s:k8s-app": kube-dns}
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": coredns, "k8s:k8s-app": kube-dns}
                   toPorts:
                     dns:
                       ports:
