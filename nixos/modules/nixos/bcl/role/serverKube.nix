@@ -141,7 +141,6 @@ in
       '';
 
       script = ''
-        # bootstrap at very first node, first boot, with: kubeadm init --skip-phases=preflight --config=/etc/kubernetes/kubeadm.yaml
         ${pkgs.kubernetes}/bin/kubeadm init --skip-phases=preflight,bootstrap-token,addon/coredns,show-join-command --config=/etc/kubernetes/kubeadm.yaml
       '';
       after = [ "network-online.target" "time-sync.target" ];
