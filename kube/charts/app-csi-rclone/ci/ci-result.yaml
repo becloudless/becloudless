@@ -95,6 +95,13 @@ spec:
           rclone-known-hosts:
             name: rclone-known-hosts
             namespace: default
+        daemonSets:
+          sftp-tunnel:
+            labels:
+              app.kubernetes.io/component: sftp-tunnel
+              app.kubernetes.io/instance: csi-rclone-pre
+            name: sftp-tunnel
+            namespace: default
         kyvernoClusterPolicies:
           csi-rclone-restrict-host-access:
             name: csi-rclone-restrict-host-access
@@ -108,8 +115,35 @@ spec:
         rclone-known-hosts:
           data:
             known_hosts: |-
-              nas.test.com ssh-ed25519 AAAAtest
-              nas.test.com ssh-rsa AAAAtest2
+              [127.0.0.1]:2222 ssh-ed25519 AAAAtest
+              [127.0.0.1]:2222 ssh-rsa AAAAtest2
+      daemonSets:
+        sftp-tunnel:
+          template:
+            metadata:
+              annotations:
+                policy.bcl.tf/skipPodRestrictHostAccess: "true"
+            spec:
+              containers:
+                sftp-tunnel:
+                  command:
+                  - socat
+                  - TCP-LISTEN:2222,bind=127.0.0.1,fork,reuseaddr
+                  - OPENSSL:nas.test.com:422,snihost=nas.test.com,verify=0
+                  image: docker.io/alpine/socat:1.8.0.3
+                  name: sftp-tunnel
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+              hostNetwork: true
+              securityContext:
+                runAsGroup: 65534
+                runAsUser: 65534
+              tolerations:
+              - effect: NoSchedule
+                key: node-role.kubernetes.io/control-plane
+                operator: Exists
       kyvernoClusterPolicies:
         csi-rclone-restrict-host-access:
           annotations:

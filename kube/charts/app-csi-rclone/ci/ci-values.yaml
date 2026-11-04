@@ -2,6 +2,9 @@ app:
   domain: test.com
   name: test
   lldapdn: dc=test,dc=com
+sftpTlsGateway:
+  host: nas.test.com
+  port: 422
 knownHosts:
   - nas.test.com ssh-ed25519 AAAAtest
   - nas.test.com ssh-rsa AAAAtest2
