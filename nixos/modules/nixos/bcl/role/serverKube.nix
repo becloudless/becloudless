@@ -141,7 +141,7 @@ in
       '';
 
       script = ''
-        ${pkgs.kubernetes}/bin/kubeadm init --skip-phases=preflight,bootstrap-token,addon/coredns,show-join-command --config=/etc/kubernetes/kubeadm.yaml
+        ${pkgs.kubernetes}/bin/kubeadm init --skip-phases=preflight,bootstrap-token,addon/coredns,addon/kube-proxy,show-join-command --config=/etc/kubernetes/kubeadm.yaml
       '';
       after = [ "network-online.target" "time-sync.target" ];
       wants = [ "network-online.target" "time-sync.target" ];
