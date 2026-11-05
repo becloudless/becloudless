@@ -206,10 +206,12 @@ resources:
                             host: {name: Host, value: localhost}
                       startupProbe:
                         failureThreshold: 120 # 10min, the first start migrates the database
-                      # the image supports to run without root
+                      # the image supports to run without root, but the s6-overlay init removes and recreates `/run/s6` of the image
+                      # (a read-only root is refused, and s6 rejects an emptyDir mounted on `/run`: its mode is too open)
                       securityContext:
                         runAsUser: 1000
                         runAsGroup: 1000
+                        readOnlyRootFilesystem: false
                         capabilities:
                           drop:
                             all: ALL
