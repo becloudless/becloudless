@@ -5,6 +5,21 @@ let
   nodeName = n: "${config.bcl.role.serverKube.clusterName}${toString n}";
   nodeNumber = lib.strings.toInt(builtins.substring ((builtins.stringLength config.networking.hostName) -1)  (-1) config.networking.hostName);
   myIp = nodeIp nodeNumber;
+  kubeadmStaticConfigPath = "/etc/kubernetes/kubeadm.yaml";
+  # Copy of the static config with the etcd state decided at boot (the static one is read-only).
+  kubeadmInitConfigPath = "/run/kubeadm/kubeadm.yaml";
+  etcdJoinExistingCluster = pkgs.writeShellApplication {
+    name = "etcd-join-existing-cluster";
+    runtimeInputs = [ pkgs.etcd pkgs.kubernetes pkgs.gawk pkgs.gnused pkgs.coreutils ];
+    text = lib.bcl.kube.etcdJoinExistingClusterScript {
+      memberName = nodeName nodeNumber;
+      peerUrl = "https://${myIp}:2380";
+      otherMasterEndpoints = map (n: "https://${nodeIp n}:2379")
+        (lib.filter (n: n != nodeNumber) (lib.range 1 cfg.masterNodeCount));
+      staticConfigPath = kubeadmStaticConfigPath;
+      initConfigPath = kubeadmInitConfigPath;
+    };
+  };
 in
 {
   options.bcl.role.serverKube = {
@@ -82,61 +97,16 @@ in
     systemd.services."kubeadm" = lib.mkIf (!cfg.worker) {
       serviceConfig = {
         Type = "oneshot";
+        RuntimeDirectory = "kubeadm";
+        # A failed join must be retried, never silently replaced by a new cluster.
+        Restart = "on-failure";
+        RestartSec = 30;
       };
 
-      preStart = ''
-        # Check if this node needs to be added to an existing etcd cluster
-        ETCD_DIR="/var/lib/etcd"
-        MY_IP="${myIp}"
-        MY_NAME="${nodeName nodeNumber}"
-        FIRST_NODE_IP="${nodeIp 1}"
-
-        # If etcd data doesn't exist and this is not the first node, check if we need to join an existing cluster
-        if [ ! -d "$ETCD_DIR/member" ] && [ "${toString nodeNumber}" != "1" ]; then
-          echo "No local etcd data found, checking first node for existing cluster..."
-
-          # Check if first node has a running etcd cluster
-          if ${pkgs.etcd}/bin/etcdctl --endpoints=https://$FIRST_NODE_IP:2379 \
-            --cacert=/etc/kubernetes/pki/etcd/ca.crt \
-            --cert=/etc/kubernetes/pki/etcd/peer.crt \
-            --key=/etc/kubernetes/pki/etcd/peer.key \
-            endpoint health >/dev/null 2>&1; then
-
-            echo "Found existing etcd cluster on first node"
-
-            # Check if this member is already in the cluster
-            MEMBER_EXISTS=$(${pkgs.etcd}/bin/etcdctl --endpoints=https://$FIRST_NODE_IP:2379 \
-              --cacert=/etc/kubernetes/pki/etcd/ca.crt \
-              --cert=/etc/kubernetes/pki/etcd/peer.crt \
-              --key=/etc/kubernetes/pki/etcd/peer.key \
-              member list | grep "$MY_NAME" || echo "")
-
-            if [ -z "$MEMBER_EXISTS" ]; then
-              # Add as new member
-              echo "Adding $MY_NAME to existing etcd cluster..."
-              ${pkgs.etcd}/bin/etcdctl --endpoints=https://$FIRST_NODE_IP:2379 \
-                --cacert=/etc/kubernetes/pki/etcd/ca.crt \
-                --cert=/etc/kubernetes/pki/etcd/peer.crt \
-                --key=/etc/kubernetes/pki/etcd/peer.key \
-                member add $MY_NAME --peer-urls=https://$MY_IP:2380 || true
-
-              # Update kubeadm config to use 'existing' state
-              sed -i 's/initial-cluster-state: new/initial-cluster-state: existing/' /etc/kubernetes/kubeadm.yaml
-              echo "Node added to existing cluster, will join with state=existing"
-            else
-              echo "Member already exists in cluster (likely recovering from data loss)"
-              sed -i 's/initial-cluster-state: new/initial-cluster-state: existing/' /etc/kubernetes/kubeadm.yaml
-            fi
-          else
-            echo "First node not available or no existing cluster found"
-          fi
-        else
-          echo "Etcd data exists or this is the first node, proceeding with standard initialization"
-        fi
-      '';
+      preStart = "${etcdJoinExistingCluster}/bin/etcd-join-existing-cluster";
 
       script = ''
-        ${pkgs.kubernetes}/bin/kubeadm init --skip-phases=preflight,bootstrap-token,addon/coredns,addon/kube-proxy,show-join-command --config=/etc/kubernetes/kubeadm.yaml
+        ${pkgs.kubernetes}/bin/kubeadm init --skip-phases=preflight,bootstrap-token,addon/coredns,addon/kube-proxy,show-join-command --config=${kubeadmInitConfigPath}
       '';
       after = [ "network-online.target" "time-sync.target" ];
       wants = [ "network-online.target" "time-sync.target" ];
