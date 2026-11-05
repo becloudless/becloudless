@@ -94,7 +94,7 @@ spec:
               documentTitle: "test.com - Home"
               logo: "assets/logo.png"
               # Alternatively a fa icon can be provided:
-              icon: https://gitea.test.com/test/test.com/src/branch/master/docs/logo/v2/favicon.ico
+              icon: https://forgejo.test.com/test/test.com/src/branch/master/docs/logo/v2/favicon.ico
               header: false
               footer: false
               columns: "4" # "auto" or number (must be a factor of 12: 1, 2, 3, 4, 6, 12)
