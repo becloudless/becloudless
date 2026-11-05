@@ -18,13 +18,13 @@
     };
 
     programs.ssh.extraConfig = ''
-      Host gitea.${config.bcl.global.domain}
+      Host forgejo.${config.bcl.global.domain}
         ProxyCommand ${pkgs.nmap}/bin/ncat --ssl --ssl-servername ssh-%h %h 443
     '';
 
     programs.ssh.knownHosts = {
-      "gitea.${config.bcl.global.domain}" = {
-        hostNames = [ "gitea.${config.bcl.global.domain}" ];
+      "forgejo.${config.bcl.global.domain}" = {
+        hostNames = [ "forgejo.${config.bcl.global.domain}" ];
         publicKey = config.bcl.global.git.publicKey;
       };
 

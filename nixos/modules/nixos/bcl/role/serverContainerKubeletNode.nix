@@ -276,52 +276,15 @@ let
 
       "etc/kubernetes/kubeadm-init.sh" = ''
         #!/bin/sh
-        set -e
+        set -eu
 
-        cp /etc/kubernetes/kubeadm.yaml.template /etc/kubernetes/kubeadm.yaml
-
-        kubeadm init phase certs etcd-peer --config=/etc/kubernetes/kubeadm.yaml
-
-        ETCD_DIR="/var/lib/etcd"
-        MY_IP="${cp.address}"
-        MY_NAME="${name}"
-        FIRST_NODE_IP="${(lib.head (lib.attrValues etcdMasters)).address}"
-
-        if [ ! -d "$ETCD_DIR/member" ]; then
-          echo "No local etcd data found, checking first node for existing cluster..."
-
-          if etcdctl --endpoints=https://$FIRST_NODE_IP:2379 \
-            --cacert=/etc/kubernetes/pki/etcd/ca.crt \
-            --cert=/etc/kubernetes/pki/etcd/peer.crt \
-            --key=/etc/kubernetes/pki/etcd/peer.key \
-            endpoint health >/dev/null 2>&1; then
-
-            echo "Found existing etcd cluster on first node"
-
-            MEMBER_EXISTS=$(etcdctl --endpoints=https://$FIRST_NODE_IP:2379 \
-              --cacert=/etc/kubernetes/pki/etcd/ca.crt \
-              --cert=/etc/kubernetes/pki/etcd/peer.crt \
-              --key=/etc/kubernetes/pki/etcd/peer.key \
-              member list | grep "$MY_NAME" || echo "")
-
-            if [ -z "$MEMBER_EXISTS" ]; then
-              echo "Adding $MY_NAME to existing etcd cluster..."
-              etcdctl --endpoints=https://$FIRST_NODE_IP:2379 \
-                --cacert=/etc/kubernetes/pki/etcd/ca.crt \
-                --cert=/etc/kubernetes/pki/etcd/peer.crt \
-                --key=/etc/kubernetes/pki/etcd/peer.key \
-                member add $MY_NAME --peer-urls=https://$MY_IP:2380 || true
-              sed -i 's/initial-cluster-state: new/initial-cluster-state: existing/' /etc/kubernetes/kubeadm.yaml
-            else
-              echo "Member already exists in cluster (likely recovering from data loss)"
-              sed -i 's/initial-cluster-state: new/initial-cluster-state: existing/' /etc/kubernetes/kubeadm.yaml
-            fi
-          else
-            echo "First node not available or no existing cluster found"
-          fi
-        else
-          echo "Etcd data exists, proceeding with standard initialization"
-        fi
+        ${lib.bcl.kube.etcdJoinExistingClusterScript {
+          memberName = name;
+          peerUrl = "https://${cp.address}:2380";
+          otherMasterEndpoints = lib.mapAttrsToList (n: m: "https://${m.address}:2379") (lib.filterAttrs (n: m: n != name) etcdMasters);
+          staticConfigPath = "/etc/kubernetes/kubeadm.yaml.template";
+          initConfigPath = "/etc/kubernetes/kubeadm.yaml";
+        }}
 
         exec /etc/s6-overlay/scripts/kubeadm-bootstrap
       '';

@@ -50,7 +50,7 @@ in
         mkdir -p /root/.cache
         cd /root/.cache
         if [ ! -d infra ]; then
-          git clone git@gitea.${config.bcl.global.domain}:${config.bcl.global.name}/infra.git
+          git clone git@forgejo.${config.bcl.global.domain}:${config.bcl.global.name}/infra.git
         else
           git -C infra pull
         fi

@@ -41,7 +41,7 @@ in
 
     home-manager.users.root = { lib, pkgs, ... }: {
       home.file.".ssh/config".text = ''
-        Host gitea.${config.bcl.global.domain}
+        Host forgejo.${config.bcl.global.domain}
           IdentityFile /nix/etc/ssh/ssh_host_ed25519_key
       '';
 
@@ -51,7 +51,7 @@ in
     system.autoUpgrade = {
       enable = true;
       operation = "boot";
-      flake = "'git+ssh://git@gitea.${config.bcl.global.domain}/${config.bcl.global.name}/infra?ref=main&dir=nixos#${config.networking.hostName}'";
+      flake = "'git+ssh://git@forgejo.${config.bcl.global.domain}/${config.bcl.global.name}/infra?ref=main&dir=nixos#${config.networking.hostName}'";
       flags = [ "--refresh" "--no-write-lock-file" ];
       # No `randomizedDelaySec`: with a random delay (even a fixed one) systemd computes the next run from the current time instead of
       # the last trigger, so a machine that is only up for a few hours at a time never reaches it and the `Persistent` catch-up never fires.
