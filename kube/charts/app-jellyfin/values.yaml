@@ -262,6 +262,9 @@ resources:
               strategy:
                 type: Recreate
               template:
+                metadata:
+                  annotations:
+                    policy.bcl.tf/skipPodSetHostUsers: "true" # the FUSE mount of the media can not be id-mapped into a user namespace
                 spec:
                   # the images of alpine and jellyfin run as root: every container runs as 1000, which owns the volume (`fsGroup`)
                   securityContext:
