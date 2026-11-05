@@ -10,9 +10,9 @@
 # paperless of the same name, at each login: the permissions of a user come from them, and a user without any group can do nothing.
 # Create a group named `app_paperless` in the administration of paperless, with the permissions the users should have. The provider
 # settings are given by the environment (see `PAPERLESS_SOCIALACCOUNT_PROVIDERS`).
-# Not configured: mails, tika and gotenberg (the office documents), the consumption folder (the documents are uploaded in the web
-# interface, the consumer is disabled), the AI features. The documents and the data of paperless (the search index and the classifier)
-# are in the volume `paperless-data`.
+# Tika and gotenberg read the office documents (docx, xlsx, odt, ...) and the mails.
+# Not configured: mails, the consumption folder (the documents are uploaded in the web interface, the consumer is disabled), the AI
+# features. The documents and the data of paperless (the search index and the classifier) are in the volume `paperless-data`.
 
 resources:
 
@@ -41,6 +41,32 @@ resources:
         gateway: # the public addresses of the cluster are the gateway for the pods
           toEntities: [ingress]
           toPorts: [443]
+        tika:
+          toEndpoints:
+            tika:
+              matchLabels: {app.kubernetes.io/instance: paperless, app.kubernetes.io/component: tika}
+          toPorts: [9998]
+        gotenberg:
+          toEndpoints:
+            gotenberg:
+              matchLabels: {app.kubernetes.io/instance: paperless, app.kubernetes.io/component: gotenberg}
+          toPorts: [3000]
+    tika:
+      endpointSelector: ref:tika
+      ingress:
+        paperless:
+          fromEndpoints:
+            paperless:
+              matchLabels: {app.kubernetes.io/instance: paperless, app.kubernetes.io/component: paperless}
+          toPorts: [9998]
+    gotenberg:
+      endpointSelector: ref:gotenberg
+      ingress:
+        paperless:
+          fromEndpoints:
+            paperless:
+              matchLabels: {app.kubernetes.io/instance: paperless, app.kubernetes.io/component: paperless}
+          toPorts: [3000]
 
   fluxHelmReleases:
     paperless-postgresql:
@@ -139,6 +165,9 @@ resources:
                         PAPERLESS_TIME_ZONE: Europe/Paris
                         PAPERLESS_OCR_LANGUAGE: fra+eng
                         PAPERLESS_CONSUMER_DISABLE: "true"
+                        PAPERLESS_TIKA_ENABLED: "true"
+                        PAPERLESS_TIKA_ENDPOINT: http://tika:9998
+                        PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://gotenberg:3000
                         PAPERLESS_SECRET_KEY:
                           secretKeyRef:
                             name: ref:paperless-generated
@@ -199,11 +228,65 @@ resources:
                       persistentVolumeClaim:
                         claimName: ref:paperless-data
 
+            tika:
+              replicas: 1
+              template:
+                spec:
+                  containers:
+                    tika:
+                      name: tika
+                      image: apache/tika:3.2.3.0-full # renovate: versioning=loose
+                      ports:
+                        http:
+                          containerPort: 9998
+                      probe:
+                        httpGet:
+                          path: /tika
+                      securityContext:
+                        runAsUser: 35002 # `USER tika` of the image is not numeric
+                        runAsGroup: 35002
+                        capabilities:
+                          drop:
+                            all: ALL
+
+            gotenberg:
+              replicas: 1
+              template:
+                spec:
+                  containers:
+                    gotenberg:
+                      name: gotenberg
+                      image: gotenberg/gotenberg:8.20.1 # renovate: versioning=loose
+                      args:
+                        - gotenberg
+                        - --chromium-disable-javascript=true
+                        - --chromium-allow-list=file:///tmp/.*
+                      ports:
+                        http:
+                          containerPort: 3000
+                      probe:
+                        httpGet:
+                          path: /health
+                      securityContext:
+                        runAsUser: 1001 # `USER gotenberg` of the image is not numeric
+                        runAsGroup: 1001
+                        capabilities:
+                          drop:
+                            all: ALL
+
           services:
             paperless:
               ports:
                 http:
                   port: 8000
+            tika:
+              ports:
+                http:
+                  port: 9998
+            gotenberg:
+              ports:
+                http:
+                  port: 3000
 
 expose:
   paperless: # no forward auth: the API clients (mobile apps, scanners) can not follow the login redirect, paperless has its own SSO
