@@ -42,6 +42,18 @@ spec:
     - ports:
       - port: "3000"
         protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        k8s:app: source-controller
+        k8s:io.kubernetes.pod.namespace: flux-system
+    - matchLabels:
+        k8s:app.kubernetes.io/component: ssh-tls
+        k8s:app.kubernetes.io/instance: forgejo-integration
+        k8s:io.kubernetes.pod.namespace: forgejo
+    toPorts:
+    - ports:
+      - port: "2222"
+        protocol: TCP
 ---
 # Source: app-forgejo/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -56,7 +68,7 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: forgejo
-      version: 17.3.2
+      version: 17.3.1
   dependsOn:
   - name: forgejo-postgresql
   - name: forgejo-pre
@@ -113,9 +125,9 @@ spec:
         server:
           DOMAIN: forgejo.test.com
           ROOT_URL: https://forgejo.test.com
-          SSH_DOMAIN: forgejo.test.com
+          SSH_DOMAIN: ssh-forgejo.test.com
           SSH_LISTEN_PORT: 2222
-          SSH_PORT: 22
+          SSH_PORT: 443
         service:
           ALLOW_ONLY_EXTERNAL_REGISTRATION: true
           DEFAULT_KEEP_EMAIL_PRIVATE: true
@@ -199,6 +211,25 @@ spec:
             name: forgejo-gateway
             namespace: default
             secretName: tls-forgejo-gateway
+          ssh-gateway:
+            name: ssh-gateway
+            namespace: default
+            secretName: tls-ssh-gateway
+        ciliumNetworkPolicies:
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
+        configMaps:
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
+        deployments:
+          ssh-tls:
+            labels:
+              app.kubernetes.io/component: ssh-tls
+              app.kubernetes.io/instance: forgejo-integration
+            name: ssh-tls
+            namespace: default
         httpRoutes:
           forgejo:
             name: forgejo
@@ -206,6 +237,14 @@ spec:
         listenerSets:
           forgejo:
             name: forgejo
+            namespace: default
+        services:
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
+        tlsRoutes:
+          ssh:
+            name: ssh
             namespace: default
       forgejo-pre:
         externalSecrets:
@@ -229,6 +268,101 @@ spec:
             kind: ClusterIssuer
             name: letsencrypt-prod
           secretName: tls-forgejo-gateway
+        ssh-gateway:
+          dnsNames:
+            ssh: ssh-forgejo.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-ssh-gateway
+      ciliumNetworkPolicies:
+        ssh-tls:
+          egress:
+            forgejo:
+              toEndpoints:
+                forgejo:
+                  matchLabels:
+                    k8s:app.kubernetes.io/name: forgejo
+                    k8s:io.kubernetes.pod.namespace: forgejo
+              toPorts:
+              - 2222
+          endpointSelector: ref:ssh-tls
+          ingress:
+            gateway:
+              fromEntities:
+              - ingress
+              - host
+              - remote-node
+              toPorts:
+              - 8443
+      configMaps:
+        ssh-tls:
+          data:
+            nginx.conf: |-
+              worker_processes 1;
+              pid /tmp/nginx.pid;
+              error_log /dev/stderr warn;
+              events {
+                worker_connections 1024;
+              }
+              stream {
+                server {
+                  listen 8443 ssl;
+                  ssl_certificate /tls/tls.crt;
+                  ssl_certificate_key /tls/tls.key;
+                  ssl_protocols TLSv1.2 TLSv1.3;
+                  proxy_connect_timeout 10s;
+                  proxy_timeout 1h; # idle
+                  proxy_pass forgejo-ssh:22;
+                }
+              }
+      deployments:
+        ssh-tls:
+          replicas: 1
+          template:
+            spec:
+              containers:
+                nginx:
+                  args:
+                  - |-
+                    (while true; do sleep 12h; nginx -s reload; done) &
+                    exec nginx -g 'daemon off;'
+                  command:
+                  - /bin/sh
+                  - -c
+                  image: nginxinc/nginx-unprivileged:1.29.3-alpine
+                  name: nginx
+                  ports:
+                    ssh:
+                      containerPort: 8443
+                  probe:
+                    tcpSocket: {}
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                  volumeMounts:
+                    config:
+                      mountPath: /etc/nginx/nginx.conf
+                      name: config
+                      readOnly: true
+                      subPath: nginx.conf
+                    tls:
+                      mountPath: /tls
+                      name: tls
+                      readOnly: true
+              securityContext:
+                runAsGroup: 101
+                runAsUser: 101
+              volumes:
+                config:
+                  configMap:
+                    name: ref:ssh-tls
+                  name: config
+                tls:
+                  name: tls
+                  secret:
+                    secretName: tls-ssh-gateway
       httpRoutes:
         forgejo:
           hostnames:
@@ -263,11 +397,43 @@ spec:
                   tls:
                     name: ref:forgejo-gateway
                 mode: Terminate
+            ssh:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: ssh-forgejo.test.com
+              name: ssh
+              port: 443
+              protocol: TLS
+              tls:
+                mode: Passthrough
           parentRef:
             group: gateway.networking.k8s.io
             kind: Gateway
             name: shared
             namespace: cilium
+      services:
+        ssh-tls:
+          ports:
+            ssh:
+              port: 443
+              targetPort: 8443
+      tlsRoutes:
+        ssh:
+          hostnames:
+            ssh: ssh-forgejo.test.com
+          parentRefs:
+            forgejo:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: forgejo
+              sectionName: ssh
+          rules:
+            ssh:
+              backendRefs:
+                ssh-tls:
+                  name: ssh-tls
+                  port: 443
 ---
 # Source: app-forgejo/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -364,6 +530,25 @@ spec:
             name: forgejo-gateway
             namespace: default
             secretName: tls-forgejo-gateway
+          ssh-gateway:
+            name: ssh-gateway
+            namespace: default
+            secretName: tls-ssh-gateway
+        ciliumNetworkPolicies:
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
+        configMaps:
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
+        deployments:
+          ssh-tls:
+            labels:
+              app.kubernetes.io/component: ssh-tls
+              app.kubernetes.io/instance: forgejo-integration
+            name: ssh-tls
+            namespace: default
         httpRoutes:
           forgejo:
             name: forgejo
@@ -371,6 +556,14 @@ spec:
         listenerSets:
           forgejo:
             name: forgejo
+            namespace: default
+        services:
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
+        tlsRoutes:
+          ssh:
+            name: ssh
             namespace: default
       forgejo-pre:
         externalSecrets:
