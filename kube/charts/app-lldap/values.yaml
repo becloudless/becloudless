@@ -19,11 +19,6 @@ lldapBootstrap:
     - app_seerr
     - app_syncthing
     - app_tuwunel
-  # the groups of the `authelia` user: it reads the users and resets their password. The groups it has outside of this list are removed,
-  # a cluster adds the ones its services need (ex: the group of a mail server that the authelia notifier logs in to)
-  autheliaGroups:
-    - lldap_password_manager
-    - lldap_strict_readonly
   # the custom attributes of the users, used by the OIDC claims of authelia
   userSchema:
     - name: immichquota
@@ -284,7 +279,7 @@ resources:
                   {{ toJson (dict "name" $name) }}
                   {{- end }}
                 users.json: | # one JSON object per user
-                  {{ toJson (dict "id" "authelia" "displayName" "Authelia" "email" (printf "authelia@%s" .Values.app.domain) "password_file" "/secrets/authelia/password" "groups" .Values.lldapBootstrap.autheliaGroups) }}
+                  {{ toJson (dict "id" "authelia" "displayName" "Authelia" "email" (printf "authelia@%s" .Values.app.domain) "password_file" "/secrets/authelia/password" "groups" (list "lldap_password_manager" "lldap_strict_readonly")) }}
                   {{- range $id, $user := (.Values.app.lldapUsers | default dict) }}
                   {{ toJson (merge (dict "id" $id) ($user | default dict)) }}
                   {{- end }}

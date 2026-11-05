@@ -583,7 +583,7 @@ spec:
         lldap-bootstrap:
           activeDeadlineSeconds: 600
           backoffLimit: 0
-          fullNameOverride: lldap-bootstrap-a1bb47b96b
+          fullNameOverride: lldap-bootstrap-31917e4614
           template:
             spec:
               containers:

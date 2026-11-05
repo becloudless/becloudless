@@ -17,13 +17,6 @@
           "description": "The image of lldap, which holds the bootstrap script.",
           "type": "string"
         },
-        "autheliaGroups": {
-          "description": "The groups of the `authelia` user, the ones it has outside of this list are removed.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
         "groups": {
           "description": "The groups the apps authorize (see the access control of authelia and the roles of the apps).",
           "items": {
