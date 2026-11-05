@@ -2,9 +2,10 @@
 
 # The first user to register in the web UI becomes the admin of immich: not used, `immich-post` creates the account `immich-admin`
 # and the admins are the users of lldap whose `immichrole` is `admin`.
-# SSO: the OAuth login with authelia, the users are created at their first login. The configuration file of immich holds only the
-# OAuth settings, so these settings are read only in the web UI.
-# Not configured: mails, the other settings of the immich configuration file (everything else can be set in the UI).
+# SSO: the OAuth login with authelia, the users are created at their first login.
+# The configuration file of immich (`immich-config`, see `immich-pre`) disables the settings of the web UI (they are read only), and the
+# settings it does not hold are the defaults of immich: it holds the OAuth login and the settings changed from the defaults.
+# Not configured: mails, the other settings of the immich configuration file.
 
 resources:
 
@@ -163,8 +164,19 @@ resources:
                         roleClaim: immich_role
                         autoRegister: true
                         autoLaunch: true # `/auth/login?autoLaunch=0` shows the login page
+                        defaultStorageQuota: 25 # GiB, for the users without `immich_quota`
                       passwordLogin:
                         enabled: false # the users and admins come from lldap, see `immich-post`
+                      server:
+                        externalDomain: https://immich.{{ .Values.app.domain }}
+                      newVersionCheck:
+                        enabled: false # the version is the one of the chart
+                      backup:
+                        database:
+                          enabled: false # the database is backed up by cnpg (the dumps would fill the library)
+                      storageTemplate:
+                        enabled: true
+                        template: '{{ "{{ \"{{ \\\"{{album}}/{{y}}/{{MM}}/{{filename}}\\\" }}\" }}" }}'
               data:
                 clientId:
                   secretKey: clientId

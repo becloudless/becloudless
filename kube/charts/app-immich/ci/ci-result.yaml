@@ -448,7 +448,7 @@ spec:
                       secretKeyRef:
                         key: password
                         name: ref:immich-admin
-                  image: curlimages/curl:8.22.0
+                  image: curlimages/curl:8.19.0
                   name: bootstrap
               restartPolicy: Never
               securityContext:
@@ -687,8 +687,19 @@ spec:
                     roleClaim: immich_role
                     autoRegister: true
                     autoLaunch: true # `/auth/login?autoLaunch=0` shows the login page
+                    defaultStorageQuota: 25 # GiB, for the users without `immich_quota`
                   passwordLogin:
                     enabled: false # the users and admins come from lldap, see `immich-post`
+                  server:
+                    externalDomain: https://immich.test.com
+                  newVersionCheck:
+                    enabled: false # the version is the one of the chart
+                  backup:
+                    database:
+                      enabled: false # the database is backed up by cnpg (the dumps would fill the library)
+                  storageTemplate:
+                    enabled: true
+                    template: '{{ "{{ \"{{album}}/{{y}}/{{MM}}/{{filename}}\" }}" }}'
       secretStores:
         authelia:
           provider:
