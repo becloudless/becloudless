@@ -419,6 +419,10 @@ resources:
     sourceCRD:
       url: https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml
       crdVersion: v1
+  - name: prometheusRules
+    sourceCRD:
+      url: https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_prometheusrules.yaml
+      crdVersion: v1
   - name: kyvernoValidatingPolicies
     clusterScoped: true
     sourceCRD:

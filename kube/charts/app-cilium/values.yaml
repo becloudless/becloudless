@@ -39,9 +39,14 @@ resources:
           replicas: "{{ .Values.app.scaling.replicas }}"
           # The operator and the envoy are the network of the cluster, they run as root with a writable root filesystem (the envoy
           # has the capabilities NET_ADMIN and SYS_ADMIN): opted out of the audit policies of app-kyverno.
+          # They use the network of the host, like the agent.
           podAnnotations:
-            policy.bcl/skipContainerRequireRunAsNonRoot: "true"
-            policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
+            policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+            policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
+            policy.bcl.tf/skipPodRestrictHostAccess: "true"
+        # the agent: privileged, host network, hostPath volumes
+        podAnnotations:
+          policy.bcl.tf/skipPodRestrictHostAccess: "true"
         ipam:
           mode: kubernetes
 
@@ -59,8 +64,9 @@ resources:
         envoy:
           streamIdleTimeoutDurationSeconds: 600 # required by immich for big files upload
           podAnnotations: # see operator
-            policy.bcl/skipContainerRequireRunAsNonRoot: "true"
-            policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
+            policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+            policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
+            policy.bcl.tf/skipPodRestrictHostAccess: "true"
 
     # LoadBalancer pool and BGP need the Cilium CRDs, so they are installed once cilium is ready.
     # The cluster sets its pool and BGP cluster config through `resources.fluxHelmReleases.cilium-post.values.resources`.
@@ -149,7 +155,7 @@ resources:
         - name: app-flux # the deny must not land before the rules of Flux: it could not reconcile anything anymore
           namespace: flux-system
         - name: app-coredns # nor before the rules of CoreDNS: nothing could resolve a name anymore
-          namespace: kube-system
+          namespace: coredns
       values:
         resources:
           ciliumClusterwideNetworkPolicies:
@@ -173,7 +179,7 @@ resources:
                 kube-dns:
                   toEndpoints:
                     kube-dns:
-                      matchLabels: {"k8s:io.kubernetes.pod.namespace": kube-system, "k8s:k8s-app": kube-dns}
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": coredns, "k8s:k8s-app": kube-dns}
                   toPorts:
                     dns:
                       ports:

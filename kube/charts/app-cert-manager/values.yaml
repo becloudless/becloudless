@@ -98,7 +98,7 @@ resources:
                           - group: gateway.networking.k8s.io
                             kind: Gateway
                             name: shared
-                            namespace: kube-system
+                            namespace: cilium
                             sectionName: http
 
             letsencrypt-staging:
@@ -114,7 +114,7 @@ resources:
                           - group: gateway.networking.k8s.io
                             kind: Gateway
                             name: shared
-                            namespace: kube-system
+                            namespace: cilium
                             sectionName: http
 
             self-signed:

@@ -1,5 +1,5 @@
 {{- /*
-The `expose` values: the public exposure of an app by the Cilium Gateway `shared` (kube-system), TLS terminated by the Gateway. The key
+The `expose` values: the public exposure of an app by the Cilium Gateway `shared` (cilium), TLS terminated by the Gateway. The key
 is the id of an exposed hostname, the value its options:
   - `hostname`: the subdomain of `app.domain` (the id by default). A value with a dot is used as it is (ex: `"{{ .Values.app.domain }}"`
     for the apex).
@@ -107,7 +107,7 @@ does not do (a TLS passthrough listener, a ReferenceGrant...).
             "values" (dict "resources" (dict
               "certManagerCertificates" $certificates
               "listenerSets" (dict $release (dict
-                "parentRef" (dict "group" "gateway.networking.k8s.io" "kind" "Gateway" "name" "shared" "namespace" "kube-system")
+                "parentRef" (dict "group" "gateway.networking.k8s.io" "kind" "Gateway" "name" "shared" "namespace" "cilium")
                 "listeners" $listeners))
               "httpRoutes" $routes)) }}
       {{- if not $enabled }}

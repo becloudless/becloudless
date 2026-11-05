@@ -56,6 +56,11 @@ resources:
             grafana:
               matchLabels: {app.kubernetes.io/name: grafana}
           toPorts: [9090]
+        kured: # the alerts blocking the reboots
+          fromEndpoints:
+            kured:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": kured, "k8s:app.kubernetes.io/name": kured}
+          toPorts: [9090]
       egress:
         targets:
           toEntities: [cluster, kube-apiserver]

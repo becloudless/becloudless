@@ -8,7 +8,7 @@
 # Not applied to:
 #  - the pods with a privileged container, they are the components that need the host (longhorn, ...);
 #  - the static pods (mirror pods), only the kubelet manages them;
-#  - the pods with the annotation `policy.bcl/skipContainerRequireRunAsNonRoot: "true"`, to opt out an app that does not work with it.
+#  - the pods with the annotation `policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"`, to opt out an app that does not work with it.
 failurePolicy: Ignore
 validationFailureAction: Enforce
 background: true
@@ -29,7 +29,7 @@ rules:
               kubernetes.io/config.mirror: "?*"
         - resources:
             annotations:
-              policy.bcl/skipContainerRequireRunAsNonRoot: "true"
+              policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
     preconditions:
       all:
         - key: "{{ request.object.spec.[containers, initContainers][] | [?securityContext.privileged == `true`] | length(@) }}"

@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=../../../base/schema/resources/kyvernoClusterPolicies.json
+
+# The pods reaching the host (host namespaces `hostPID`, `hostIPC`, `hostNetwork`, privileged containers, `hostPath` volumes) have to say
+# so with the annotation `policy.bcl.tf/skipPodRestrictHostAccess: "true"`, set where the pod is declared (the values of its chart, a patch...).
+# The other policies skip the pods with a privileged container, this one is what makes them visible.
+# Nothing enforces the Pod Security Admission labels of the namespaces here (the API server runs with the defaults, every namespace is
+# `privileged`): this is not a replacement, whoever can create a pod can set the annotation.
+# `Audit` for now: the violations are in the PolicyReports (`kubectl get polr -A`), `Enforce` once they are all annotated.
+# Not applied to the static pods (mirror pods), only the kubelet manages them.
+failurePolicy: Ignore
+validationFailureAction: Audit
+background: true
+rules:
+  - name: pod-restrict-host-access
+    match:
+      any:
+        - resources:
+            kinds:
+              - Pod
+            operations:
+              - CREATE
+    exclude:
+      any:
+        - resources:
+            annotations:
+              kubernetes.io/config.mirror: "?*"
+        - resources:
+            annotations:
+              policy.bcl.tf/skipPodRestrictHostAccess: "true"
+    validate:
+      message: the pods using the host namespaces, privileged containers or hostPath volumes need the annotation `policy.bcl.tf/skipPodRestrictHostAccess`
+      deny:
+        conditions:
+          any:
+            - key: "{{ request.object.spec.hostPID || `false` }}"
+              operator: Equals
+              value: true
+            - key: "{{ request.object.spec.hostIPC || `false` }}"
+              operator: Equals
+              value: true
+            - key: "{{ request.object.spec.hostNetwork || `false` }}"
+              operator: Equals
+              value: true
+            - key: "{{ request.object.spec.[containers, initContainers][] | [?securityContext.privileged == `true`] | length(@) }}"
+              operator: GreaterThan
+              value: 0
+            - key: "{{ length(request.object.spec.volumes[?hostPath] || `[]`) }}"
+              operator: GreaterThan
+              value: 0

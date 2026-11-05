@@ -3,7 +3,7 @@ let
   cfg = config.bcl.role.serverKube;
 
   # Set on the node by `kube-drain` when it cordons it, so the node is uncordoned at the next boot (and only then: a node cordoned by hand stays so).
-  uncordonAnnotation = "becloudless.net/uncordon-on-boot";
+  uncordonAnnotation = "bcl.tf/uncordon-on-boot";
 
   # Masters have the cluster admin kubeconfig. Workers hold the cluster CA (see serverKubeWorker.nix), so they sign a short-lived admin client
   # certificate: their own node identity is not allowed to evict pods nor to cordon.
@@ -46,7 +46,7 @@ let
       node=${config.networking.hostName}
       for _ in $(seq 120); do
         # the apiserver may still be starting: retry every step until all of them went through
-        if setup_kubeconfig && value=$(kubectl get node "$node" -o jsonpath='{.metadata.annotations.becloudless\.net/uncordon-on-boot}' 2>/dev/null); then
+        if setup_kubeconfig && value=$(kubectl get node "$node" -o jsonpath='{.metadata.annotations.bcl\.tf/uncordon-on-boot}' 2>/dev/null); then
           if [ "$value" != true ] || { kubectl uncordon "$node" && kubectl annotate node "$node" ${uncordonAnnotation}-; }; then
             exit 0
           fi

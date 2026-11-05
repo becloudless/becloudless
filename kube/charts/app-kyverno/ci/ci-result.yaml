@@ -194,6 +194,9 @@ spec:
           pod-disable-service-links:
             name: pod-disable-service-links
             namespace: default
+          pod-restrict-host-access:
+            name: pod-restrict-host-access
+            namespace: default
           pod-set-host-users:
             name: pod-set-host-users
             namespace: default
@@ -249,7 +252,7 @@ spec:
                     kubernetes.io/config.mirror: ?*
               - resources:
                   annotations:
-                    policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
+                    policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
             match:
               any:
               - resources:
@@ -288,7 +291,7 @@ spec:
                     kubernetes.io/config.mirror: ?*
               - resources:
                   annotations:
-                    policy.bcl/skipContainerRequireRunAsNonRoot: "true"
+                    policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
             match:
               any:
               - resources:
@@ -335,6 +338,7 @@ spec:
                 or on every container
           validationFailureAction: Enforce
         container-set-image-pull-policy:
+          failurePolicy: Ignore
           rules:
           - match:
               any:
@@ -358,7 +362,7 @@ spec:
                     kubernetes.io/config.mirror: ?*
               - resources:
                   annotations:
-                    policy.bcl/skipContainerSetNoPrivilegeEscalation: "true"
+                    policy.bcl.tf/skipContainerSetNoPrivilegeEscalation: "true"
             match:
               any:
               - resources:
@@ -416,7 +420,7 @@ spec:
                     kubernetes.io/config.mirror: ?*
               - resources:
                   annotations:
-                    policy.bcl/skipPodDisableServiceLinks: "true"
+                    policy.bcl.tf/skipPodDisableServiceLinks: "true"
             match:
               any:
               - resources:
@@ -429,6 +433,50 @@ spec:
                 spec:
                   +(enableServiceLinks): false
             name: pod-disable-service-links
+        pod-restrict-host-access:
+          background: true
+          failurePolicy: Ignore
+          rules:
+          - exclude:
+              any:
+              - resources:
+                  annotations:
+                    kubernetes.io/config.mirror: ?*
+              - resources:
+                  annotations:
+                    policy.bcl.tf/skipPodRestrictHostAccess: "true"
+            match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+                  operations:
+                  - CREATE
+            name: pod-restrict-host-access
+            validate:
+              deny:
+                conditions:
+                  any:
+                  - key: '{{"{{"}} request.object.spec.hostPID || `false` {{"}}"}}'
+                    operator: Equals
+                    value: true
+                  - key: '{{"{{"}} request.object.spec.hostIPC || `false` {{"}}"}}'
+                    operator: Equals
+                    value: true
+                  - key: '{{"{{"}} request.object.spec.hostNetwork || `false` {{"}}"}}'
+                    operator: Equals
+                    value: true
+                  - key: '{{"{{"}} request.object.spec.[containers, initContainers][]
+                      | [?securityContext.privileged == `true`] | length(@) {{"}}"}}'
+                    operator: GreaterThan
+                    value: 0
+                  - key: '{{"{{"}} length(request.object.spec.volumes[?hostPath] ||
+                      `[]`) {{"}}"}}'
+                    operator: GreaterThan
+                    value: 0
+              message: the pods using the host namespaces, privileged containers or
+                hostPath volumes need the annotation `policy.bcl.tf/skipPodRestrictHostAccess`
+          validationFailureAction: Audit
         pod-set-host-users:
           failurePolicy: Ignore
           rules:
@@ -436,7 +484,7 @@ spec:
               any:
               - resources:
                   annotations:
-                    policy.bcl/skipPodSetHostUsers: "true"
+                    policy.bcl.tf/skipPodSetHostUsers: "true"
             match:
               any:
               - resources:
@@ -474,7 +522,7 @@ spec:
                     kubernetes.io/config.mirror: ?*
               - resources:
                   annotations:
-                    policy.bcl/skipPodSetSeccompProfile: "true"
+                    policy.bcl.tf/skipPodSetSeccompProfile: "true"
             match:
               any:
               - resources:

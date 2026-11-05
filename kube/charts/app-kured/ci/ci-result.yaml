@@ -1,0 +1,166 @@
+---
+# Source: app-kured/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: kured
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  - toEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/name: prometheus
+        k8s:io.kubernetes.pod.namespace: prometheus
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: kured
+---
+# Source: app-kured/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kured
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: kured
+      sourceRef:
+        kind: HelmRepository
+        name: kured
+      version: 6.1.0
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    configuration:
+      alertFilterMatchOnly: true
+      alertFilterRegexp: ^(KubeNodeNotReady|KubeNodeUnreachable|KubeletDown|KubeAPIDown|KubeControllerManagerDown|KubeSchedulerDown|etcdMembersDown|etcdInsufficientMembers|etcdNoLeader|LonghornVolumeDegraded)$
+      alertFiringOnly: true
+      drainTimeout: 10m
+      endTime: "04:00"
+      lockReleaseDelay: 10m
+      lockTtl: 2h
+      period: 10m
+      prometheusUrl: http://prometheus-kube-prometheus-prometheus.prometheus.svc:9090
+      rebootMethod: signal
+      rebootSentinel: /run/reboot/required
+      startTime: "03:00"
+      timeZone: Europe/Paris
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      privileged: false
+      readOnlyRootFilesystem: true
+    podAnnotations:
+      policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+      policy.bcl.tf/skipPodRestrictHostAccess: "true"
+---
+# Source: app-kured/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kured-monitoring
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-longhorn
+    namespace: longhorn-system
+  - name: app-prometheus
+    namespace: prometheus
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  releaseName: kured-monitoring
+  targetNamespace: longhorn-system
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      kured-monitoring:
+        prometheusRules:
+          longhorn:
+            name: longhorn
+            namespace: longhorn-system
+        serviceMonitors:
+          longhorn-manager:
+            name: longhorn-manager
+            namespace: longhorn-system
+    resources:
+      prometheusRules:
+        longhorn:
+          groups:
+          - name: longhorn
+            rules:
+            - alert: LonghornVolumeDegraded
+              annotations:
+                summary: A volume of Longhorn has a replica missing or rebuilding
+              expr: max by (volume) (longhorn_volume_robustness == 2)
+              for: 1m
+              labels:
+                severity: warning
+      serviceMonitors:
+        longhorn-manager:
+          endpoints:
+          - port: manager
+          selector:
+            matchLabels:
+              app: longhorn-manager
+---
+# Source: app-kured/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: kured
+  namespace: default
+spec:
+  interval: 10m
+  url: https://kubereboot.github.io/charts

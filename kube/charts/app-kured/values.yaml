@@ -1,0 +1,104 @@
+# yaml-language-server: $schema=../base/schema/values.schema.json
+
+# Reboots the nodes one at a time once an upgrade is pending, in the window below. The nodes write the sentinel file
+# (see nixos/modules/nixos/bcl/role/serverKubeRebootRequired.nix). The shutdown drain of the nodes (serverKubeDrain.nix) stays as the
+# safety net for the reboots not started by kured.
+#
+# Runs on the nodes tolerating the control plane taint only: the container nodes carry another taint (`no-persistent-storage`), and
+# rebooting them would only restart a container.
+resources:
+  fluxHelmRepositories:
+    kured:
+      url: https://kubereboot.github.io/charts
+
+  ciliumNetworkPolicies:
+    kured:
+      endpointSelector:
+        matchLabels: {"app.kubernetes.io/name": kured}
+      egress:
+        kube-apiserver: # the lock, the drain
+          toEntities: [kube-apiserver]
+        prometheus: # the alerts blocking the reboots
+          toEndpoints:
+            prometheus:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": prometheus, "k8s:app.kubernetes.io/name": prometheus}
+          toPorts: [9090]
+
+  fluxHelmReleases:
+    kured:
+      chart:
+        spec:
+          chart: kured
+          version: 6.1.0
+          sourceRef:
+            kind: HelmRepository
+            name: kured
+      values:
+        # The reboot is a signal to systemd (PID 1 of the host, seen through `hostPID`): no privileged container, no command run in the
+        # namespaces of the host, no capability at all: the container runs as root, the owner of PID 1, which is enough to signal it.
+        # The container is root (a non root user could not signal PID 1), opted out of the run as non root policy.
+        # The pod still uses `hostPID` and a `hostPath` (the sentinel), so it keeps the annotation of the host access policy.
+        podAnnotations:
+          policy.bcl.tf/skipPodRestrictHostAccess: "true"
+          policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+        containerSecurityContext:
+          privileged: false
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
+        configuration:
+          rebootMethod: signal # SIGRTMIN+5 (39, the default): systemd reboots
+          rebootSentinel: /run/reboot/required # written by the nodes (serverKubeRebootRequired.nix), a directory of its own, mounted in the pod
+
+          period: 10m
+          startTime: "03:00"
+          endTime: "04:00"
+          timeZone: Europe/Paris
+
+          drainTimeout: 10m
+          lockTtl: 2h # a node that never comes back does not block the others for ever
+          lockReleaseDelay: 10m # time for the volumes to start rebuilding before the next node goes
+
+          # Only these alerts block the reboots: a node or the control plane is already in trouble, a volume of Longhorn is rebuilding.
+          prometheusUrl: http://prometheus-kube-prometheus-prometheus.prometheus.svc:9090
+          alertFilterMatchOnly: true
+          alertFiringOnly: true
+          alertFilterRegexp: ^(KubeNodeNotReady|KubeNodeUnreachable|KubeletDown|KubeAPIDown|KubeControllerManagerDown|KubeSchedulerDown|etcdMembersDown|etcdInsufficientMembers|etcdNoLeader|LonghornVolumeDegraded)$
+
+    # The metrics and the `LonghornVolumeDegraded` alert of Longhorn, the one that makes kured wait for the volumes to be rebuilt. They are here
+    # and not in app-longhorn: they need the CRDs of app-prometheus, which waits for Longhorn (its volumes), and app-longhorn waits for its
+    # own releases. Nothing waits for app-kured. The release object is in this namespace, and installs in `longhorn-system`.
+    kured-monitoring:
+      targetNamespace: longhorn-system
+      releaseName: kured-monitoring
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        - name: app-longhorn
+          namespace: longhorn-system
+        - name: app-prometheus
+          namespace: prometheus
+      values:
+        resources:
+          serviceMonitors:
+            longhorn-manager:
+              selector:
+                matchLabels: {app: longhorn-manager}
+              endpoints:
+                - port: manager
+
+          prometheusRules:
+            longhorn:
+              groups:
+                - name: longhorn
+                  rules:
+                    - alert: LonghornVolumeDegraded # a replica is missing or rebuilding
+                      expr: max by (volume) (longhorn_volume_robustness == 2)
+                      for: 1m
+                      labels:
+                        severity: warning
+                      annotations:
+                        summary: A volume of Longhorn has a replica missing or rebuilding

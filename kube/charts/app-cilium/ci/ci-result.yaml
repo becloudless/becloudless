@@ -45,8 +45,9 @@ spec:
     devices: br0
     envoy:
       podAnnotations:
-        policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
-        policy.bcl/skipContainerRequireRunAsNonRoot: "true"
+        policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
+        policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+        policy.bcl.tf/skipPodRestrictHostAccess: "true"
       streamIdleTimeoutDurationSeconds: 600
     extraEnv:
     - name: PATH
@@ -64,9 +65,12 @@ spec:
       directRoutingDevice: br0
     operator:
       podAnnotations:
-        policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
-        policy.bcl/skipContainerRequireRunAsNonRoot: "true"
+        policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
+        policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+        policy.bcl.tf/skipPodRestrictHostAccess: "true"
       replicas: 2
+    podAnnotations:
+      policy.bcl.tf/skipPodRestrictHostAccess: "true"
 ---
 # Source: app-cilium/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -88,7 +92,7 @@ spec:
   - name: app-flux
     namespace: flux-system
   - name: app-coredns
-    namespace: kube-system
+    namespace: coredns
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -143,7 +147,7 @@ spec:
               toEndpoints:
                 kube-dns:
                   matchLabels:
-                    k8s:io.kubernetes.pod.namespace: kube-system
+                    k8s:io.kubernetes.pod.namespace: coredns
                     k8s:k8s-app: kube-dns
               toPorts:
                 dns:

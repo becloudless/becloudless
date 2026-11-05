@@ -41,7 +41,7 @@ resources:
           name: kube-apiserver-kubelet-client
 
   fluxHelmReleases:
-    # Public access to the API server on kube.<domain>:443, through the Cilium Gateway `shared` (kube-system).
+    # Public access to the API server on kube.<domain>:443, through the Cilium Gateway `shared` (cilium).
     # The TLS stream is forwarded as is (passthrough): the API server terminates TLS itself and authenticates the client,
     # kube.<domain> is one of its certificate SANs. The route lives in the namespace of the `kubernetes` service it targets,
     # so no ReferenceGrant is needed. Port 443 is shared with the https listeners of the apps, routed by SNI.
@@ -66,7 +66,7 @@ resources:
                 group: gateway.networking.k8s.io
                 kind: Gateway
                 name: shared
-                namespace: kube-system
+                namespace: cilium
               listeners:
                 apiserver:
                   name: apiserver

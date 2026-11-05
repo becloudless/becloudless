@@ -227,8 +227,8 @@ spec:
           template:
             metadata:
               annotations:
-                policy.bcl/skipContainerRequireReadOnlyRootFilesystem: "true"
-                policy.bcl/skipContainerRequireRunAsNonRoot: "true"
+                policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
+                policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
             spec:
               containers:
                 seafile:
@@ -498,7 +498,7 @@ spec:
             group: gateway.networking.k8s.io
             kind: Gateway
             name: shared
-            namespace: kube-system
+            namespace: cilium
 ---
 # Source: app-seafile/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

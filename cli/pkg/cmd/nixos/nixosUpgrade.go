@@ -220,7 +220,7 @@ func upgradeLocalFromUpstream(action string, systemName string) error {
 }
 
 // upgradeRemoteTargetHostFromGit builds locally from the local infra git repository state and deploys to a
-// remote host via nixos-rebuild's --target-host/--use-remote-sudo.
+// remote host via nixos-rebuild's --target-host/--sudo.
 func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, action string, systemName string, overrideInputs []string) error {
 	logs.WithField("repo", bcl.BCL.System.Repository).Warn("Update remote system using local git repository state")
 
@@ -244,7 +244,7 @@ func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, actio
 	}
 
 	args := append([]string{nixosRebuildAction(action), "--flake", buildFlakeTarget(flakeDir, systemName),
-		"--target-host", sshTargetHost(sshConfig), "--use-remote-sudo", "--no-write-lock-file"}, overrideInputArgs...)
+		"--target-host", sshTargetHost(sshConfig), "--sudo", "--no-write-lock-file"}, overrideInputArgs...)
 	if err := run.ExecCmd("nixos-rebuild", args...); err != nil {
 		return err
 	}

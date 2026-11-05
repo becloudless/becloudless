@@ -252,7 +252,7 @@ spec:
             group: gateway.networking.k8s.io
             kind: Gateway
             name: shared
-            namespace: kube-system
+            namespace: cilium
 ---
 # Source: app-test/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -619,7 +619,7 @@ spec:
             group: gateway.networking.k8s.io
             kind: Gateway
             name: shared
-            namespace: kube-system
+            namespace: cilium
 ---
 # Source: app-test/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -929,7 +929,7 @@ spec:
             group: gateway.networking.k8s.io
             kind: Gateway
             name: shared
-            namespace: kube-system
+            namespace: cilium
       referenceGrants:
         extra:
           spec:
@@ -1562,7 +1562,7 @@ spec:
             group: gateway.networking.k8s.io
             kind: Gateway
             name: shared
-            namespace: kube-system
+            namespace: cilium
 ---
 # Source: app-test/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -1803,7 +1803,7 @@ spec:
             group: gateway.networking.k8s.io
             kind: Gateway
             name: shared
-            namespace: kube-system
+            namespace: cilium
 ---
 # Source: app-test/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

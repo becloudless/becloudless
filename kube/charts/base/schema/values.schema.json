@@ -194,6 +194,9 @@
             "podDisruptionBudgets": {
               "$ref": "./resources/podDisruptionBudgets.json"
             },
+            "prometheusRules": {
+              "$ref": "./resources/prometheusRules.json"
+            },
             "referenceGrants": {
               "$ref": "./resources/referenceGrants.json"
             },
@@ -619,6 +622,13 @@
             "$ref": "./resources/podDisruptionBudgets.json"
           },
           "description": "PodDisruptionBudget instances, keyed by id.",
+          "type": "object"
+        },
+        "prometheusRules": {
+          "additionalProperties": {
+            "$ref": "./resources/prometheusRules.json"
+          },
+          "description": "PrometheusRule instances, keyed by id.",
           "type": "object"
         },
         "referenceGrants": {

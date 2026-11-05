@@ -22,10 +22,12 @@ in
     };
     worker = lib.mkOption {
       type = lib.types.bool;
-      default = false;
+      readOnly = true;
+      default = nodeNumber > cfg.masterNodeCount;
+      defaultText = lib.literalExpression "node number of the host name > masterNodeCount";
       description = ''
-        Run this node as a worker only (kubelet + cri-o + a local haproxy to the apiservers), without etcd nor control-plane
-        components. The node number (last digits of the hostname) must be greater than `masterNodeCount`.
+        Whether this node is a worker only (kubelet + cri-o + a local haproxy to the apiservers, no etcd nor control-plane components):
+        the nodes after the `masterNodeCount` first ones (the node number is the last digits of the hostname).
       '';
     };
   };
@@ -37,13 +39,6 @@ in
     (lib.mkIf (config.bcl.role.name == "serverKube") {
 
     bcl.role.autoUpgrade.useHostNumber = lib.mkDefault true; # the nodes upgrade on different days
-
-    assertions = [
-      {
-        assertion = cfg.worker -> nodeNumber > cfg.masterNodeCount;
-        message = "bcl.role.serverKube.worker: node number ${toString nodeNumber} of ${config.networking.hostName} must be greater than masterNodeCount (${toString cfg.masterNodeCount}).";
-      }
-    ];
 
     bcl.role.setAdminPassword = true; # being able to log in to console
     security.sudo.wheelNeedsPassword = false;

@@ -249,6 +249,14 @@ spec:
     - ports:
       - port: "9090"
         protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/name: kured
+        k8s:io.kubernetes.pod.namespace: kured
+    toPorts:
+    - ports:
+      - port: "9090"
+        protocol: TCP
 ---
 # Source: app-prometheus/templates/loader.yaml
 apiVersion: cilium.io/v2
@@ -874,7 +882,7 @@ spec:
             group: gateway.networking.k8s.io
             kind: Gateway
             name: shared
-            namespace: kube-system
+            namespace: cilium
 ---
 # Source: app-prometheus/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

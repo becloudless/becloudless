@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "app": {
+      "$ref": "../../app/schema/values.schema.json#/properties/app"
+    },
+    "knownHosts": {
+      "description": "The host keys of the SFTP server, one line of `known_hosts` each, ALL the types of the server (`/etc/ssh/ssh_host_*_key.pub` with the host in front of each, or `ssh-keyscan <host>` without `-t`). Only the type and the key are used: they are given for the tunnel on the loopback of the nodes. The connection is refused when the key does not match.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "sftpTlsGateway": {
+      "additionalProperties": false,
+      "description": "The TLS SSH gateway of the SFTP server, reached by the tunnel of the nodes (SSH inside TLS, SNI `host`, the certificate is not checked).",
+      "properties": {
+        "host": {
+          "description": "The name of the server, it is the SNI.",
+          "type": "string"
+        },
+        "port": {
+          "description": "The port of the gateway.",
+          "type": "integer"
+        }
+      },
+      "required": ["host", "port"],
+      "type": "object"
+    },
+    "checkRequiredValues": {
+      "$ref": "../../base/schema/values.schema.json#/properties/checkRequiredValues"
+    },
+    "prefixNamesWithRelease": {
+      "$ref": "../../base/schema/values.schema.json#/properties/prefixNamesWithRelease"
+    },
+    "defaults": {
+      "$ref": "../../base/schema/values.schema.json#/properties/defaults"
+    },
+    "resources": {
+      "$ref": "../../base/schema/values.schema.json#/properties/resources"
+    },
+    "expose": {
+      "$ref": "../../app/schema/values.schema.json#/properties/expose"
+    }
+  },
+  "type": "object"
+}

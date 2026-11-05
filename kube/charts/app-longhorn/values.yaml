@@ -356,6 +356,7 @@ resources:
             # The pods of Longhorn run as root with a writable root filesystem (the driver, the CSI sidecars created by the
             # driver-deployer, the UI, the managers...): opted out of the audit policies of app-kyverno. The annotations are
             # added by a policy, as most of these pods are not made from the values of the chart.
+            # They also reach the host (privileged containers, hostPath volumes).
             longhorn-skip-security-audit:
               failurePolicy: Ignore
               rules:
@@ -373,8 +374,9 @@ resources:
                     patchStrategicMerge:
                       metadata:
                         annotations:
-                          +(policy.bcl/skipContainerRequireRunAsNonRoot): "true"
-                          +(policy.bcl/skipContainerRequireReadOnlyRootFilesystem): "true"
+                          +(policy.bcl.tf/skipContainerRequireRunAsNonRoot): "true"
+                          +(policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem): "true"
+                          +(policy.bcl.tf/skipPodRestrictHostAccess): "true"
 
     longhorn:
       chart:
@@ -394,7 +396,7 @@ resources:
 
         # the pods of the managers are privileged and mount host paths, they need the host users (see app-kyverno)
         annotations:
-          policy.bcl/skipPodSetHostUsers: "true"
+          policy.bcl.tf/skipPodSetHostUsers: "true"
 
         csi:
           kubeletRootDir: /var/lib/kubelet

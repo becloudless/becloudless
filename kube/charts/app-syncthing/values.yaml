@@ -126,7 +126,7 @@ resources:
                 relay:
                   port: 22067
 
-          # Public on the Cilium Gateway `shared` (kube-system): a plain TCP listener, served by Cilium on the LoadBalancer service of the
+          # Public on the Cilium Gateway `shared` (cilium): a plain TCP listener, served by Cilium on the LoadBalancer service of the
           # Gateway without Envoy, so the relay sees the address of the client.
           listenerSets:
             syncthing-relay:
@@ -134,7 +134,7 @@ resources:
                 group: gateway.networking.k8s.io
                 kind: Gateway
                 name: shared
-                namespace: kube-system
+                namespace: cilium
               listeners:
                 relay:
                   name: relay

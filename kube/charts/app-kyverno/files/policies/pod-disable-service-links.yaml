@@ -4,7 +4,7 @@
 # some apps, valkey for one), the DNS names are enough. A value already set on the pod is kept.
 # Not applied to:
 #  - the static pods (mirror pods), only the kubelet manages them;
-#  - the pods with the annotation `policy.bcl/skipPodDisableServiceLinks: "true"`, to opt out an app that needs the variables.
+#  - the pods with the annotation `policy.bcl.tf/skipPodDisableServiceLinks: "true"`, to opt out an app that needs the variables.
 # `Ignore`: a Kyverno outage must not block the creation of pods.
 failurePolicy: Ignore
 rules:
@@ -23,7 +23,7 @@ rules:
               kubernetes.io/config.mirror: "?*"
         - resources:
             annotations:
-              policy.bcl/skipPodDisableServiceLinks: "true"
+              policy.bcl.tf/skipPodDisableServiceLinks: "true"
     mutate:
       patchStrategicMerge:
         spec:

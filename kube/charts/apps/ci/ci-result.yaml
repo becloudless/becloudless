@@ -23,6 +23,24 @@ kind: Namespace
 metadata:
   annotations:
     helm.sh/resource-policy: keep
+  name: cilium
+spec: {}
+---
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: coredns
+spec: {}
+---
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
   name: flux-system
 spec: {}
 ---
@@ -78,7 +96,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
   name: flux-cilium
-  namespace: kube-system
+  namespace: cilium
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: v1
@@ -87,7 +105,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
   name: flux-coredns
-  namespace: kube-system
+  namespace: coredns
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: v1
@@ -174,6 +192,34 @@ data:
 kind: ConfigMap
 metadata:
   name: global-values
+  namespace: cilium
+---
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    app:
+      domain: test.com
+      lldapUsers: {}
+      lldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: coredns
+---
+# Source: apps/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    app:
+      domain: test.com
+      lldapUsers: {}
+      lldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
   namespace: flux-system
 ---
 # Source: apps/templates/loader.yaml
@@ -278,7 +324,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: flux-cilium
-  namespace: kube-system
+  namespace: cilium
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -294,7 +340,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: flux-coredns
-  namespace: kube-system
+  namespace: coredns
 ---
 # Source: apps/templates/loader.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -482,7 +528,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: app-cilium
-  namespace: kube-system
+  namespace: cilium
 spec:
   chart:
     spec:
@@ -531,7 +577,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: app-coredns
-  namespace: kube-system
+  namespace: coredns
 spec:
   chart:
     spec:

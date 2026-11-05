@@ -295,7 +295,7 @@ spec:
             group: gateway.networking.k8s.io
             kind: Gateway
             name: shared
-            namespace: kube-system
+            namespace: cilium
       services:
         syncthing-relay:
           ports:

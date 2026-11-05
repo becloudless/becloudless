@@ -8,8 +8,12 @@
 #    the web UI. The users of the groups `app_jellyfin` are created at their first login, those of `role_admin` are administrators.
 #    SSO works in the web UI (and Quick Connect for the other clients), the TV and mobile apps use the local users (a user created by
 #    SSO has a random password, set one in its profile). An SSO user with the name of an existing user (`admin`) takes its permissions.
-# The media library is the `/data/Media` directory of the node running the pod (read only), add it as a library in the UI (`/media`).
-# Not configured: the remote transcoding with ffmpeg-over-ip.
+# The media library is the `/data` directory of an SFTP user of the NAS (`bcl.role.nas`), mounted read only by app-csi-rclone: the
+# administrator gives the secret `jellyfin-media` (see the header of app-csi-rclone). Add it as a library in the UI (`/media`).
+# The ffmpeg-over-ip server (https://github.com/steelbrain/ffmpeg-over-ip) runs on the nodes that are not control planes (the ones
+# carrying the `bcl.tf/no-persistent-storage` taint: they run the host GPU, `/dev/dri`) and does the hardware transcoding.
+# Not configured: jellyfin does not use it yet, its FFmpeg path has to be the ffmpeg-over-ip client, pointed to
+# `ffmpeg-over-ip:5050` with the secret `ffmpeg-over-ip-server`.
 
 resources:
 
@@ -39,6 +43,36 @@ resources:
             release-assets: {matchName: release-assets.githubusercontent.com}
             objects: {matchName: objects.githubusercontent.com}
           toPorts: [443]
+        ffmpeg-over-ip:
+          toEndpoints:
+            ffmpeg-over-ip:
+              matchLabels: {app.kubernetes.io/instance: jellyfin, app.kubernetes.io/component: ffmpeg-over-ip}
+          toPorts: [5050]
+
+    ffmpeg-over-ip:
+      endpointSelector: ref:ffmpeg-over-ip
+      ingress:
+        jellyfin:
+          fromEndpoints:
+            jellyfin:
+              matchLabels: {app.kubernetes.io/instance: jellyfin, app.kubernetes.io/component: jellyfin}
+          toPorts: [5050]
+      egress:
+        github: # the download of the server (release asset), by the init container
+          toFQDNs:
+            github: {matchName: github.com}
+            release-assets: {matchName: release-assets.githubusercontent.com}
+            objects: {matchName: objects.githubusercontent.com}
+          toPorts: [443]
+        ubuntu: # the packages of the GPU drivers
+          toFQDNs:
+            archive: {matchName: archive.ubuntu.com}
+            security: {matchName: security.ubuntu.com}
+          toPorts: [80]
+        intel:
+          toFQDNs:
+            intel: {matchName: repositories.intel.com}
+          toPorts: [443]
 
   fluxHelmReleases:
     jellyfin-pre:
@@ -54,6 +88,11 @@ resources:
             jellyfin-admin:
               fields:
                 password: {}
+
+            # shared by the server of ffmpeg-over-ip and its client (jellyfin)
+            ffmpeg-over-ip-server:
+              fields:
+                FFMPEG_OVER_IP_SERVER_AUTH_SECRET: {}
 
           # lets seerr (its SecretStore) read the password of the administrator, and only this secret
           roles:
@@ -77,6 +116,8 @@ resources:
     jellyfin:
       dependsOn:
         - ref:jellyfin-pre
+        - name: app-csi-rclone # the StorageClass of the media
+          namespace: csi-rclone
       values:
         resources:
           configMaps:
@@ -207,12 +248,23 @@ resources:
                 requests:
                   storage: 10Gi
 
+            # the media, on the NAS: the size is not used
+            jellyfin-media:
+              storageClassName: rclone-sftp
+              accessModes: [ReadOnlyMany]
+              resources:
+                requests:
+                  storage: 1Gi
+
           deployments:
             jellyfin:
               replicas: 1 # jellyfin is not HA ready
               strategy:
                 type: Recreate
               template:
+                metadata:
+                  annotations:
+                    policy.bcl.tf/skipPodSetHostUsers: "true" # the FUSE mount of the media can not be id-mapped into a user namespace
                 spec:
                   # the images of alpine and jellyfin run as root: every container runs as 1000, which owns the volume (`fsGroup`)
                   securityContext:
@@ -337,13 +389,118 @@ resources:
                         name: ref:jellyfin-scripts
                     media:
                       name: media
-                      emptyDir: {} # TODO
+                      persistentVolumeClaim:
+                        claimName: ref:jellyfin-media
+                        readOnly: true
+
+          # The server runs on the nodes of the containerized kubelets (see the header), one per node. Everything runs as root: the packages of
+          # the GPU drivers are installed at the start, and the privileged container reaches the render node `/dev/dri`.
+          daemonSets:
+            ffmpeg-over-ip:
+              template:
+                metadata:
+                  annotations:
+                    policy.bcl.tf/skipPodRestrictHostAccess: "true" # privileged, hostPath
+                    policy.bcl.tf/skipPodSetHostUsers: "true"
+                    policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+                    policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
+                spec:
+                  securityContext:
+                    runAsNonRoot: false
+                    runAsUser: 0
+                  affinity:
+                    nodeAffinity:
+                      requiredDuringSchedulingIgnoredDuringExecution:
+                        nodeSelectorTerms:
+                          - matchExpressions:
+                              - key: node-role.kubernetes.io/control-plane
+                                operator: DoesNotExist
+                  tolerations:
+                    - key: bcl.tf/no-persistent-storage
+                      operator: Equal
+                      value: "true"
+                      effect: NoSchedule
+                  initContainers:
+                    fetch-ffmpeg-over-ip:
+                      name: fetch-ffmpeg-over-ip
+                      image: docker.io/library/alpine:3.24.3 # renovate: versioning=loose
+                      command:
+                        - sh
+                        - -ec
+                        - |
+                          wget -q -O /tmp/server.zip https://github.com/steelbrain/ffmpeg-over-ip/releases/download/v5.2.1/linux-amd64-ffmpeg-over-ip-server.zip
+                          unzip -o /tmp/server.zip -d /opt/ffmpeg-over-ip
+                          chmod +x /opt/ffmpeg-over-ip/*
+                      volumeMounts:
+                        binaries:
+                          name: binaries
+                          mountPath: /opt/ffmpeg-over-ip
+                  containers:
+                    ffmpeg-over-ip-server:
+                      name: ffmpeg-over-ip-server
+                      image: docker.io/library/ubuntu:24.04 # renovate: versioning=loose
+                      command:
+                        - bash
+                        - -ec
+                        - |
+                          apt-get update
+                          apt-get install -y --no-install-recommends gpg ca-certificates wget
+                          # The drivers of Debian and Ubuntu (2023) do not know the recent GPUs (Intel Arrow Lake-H, 8086:7dd1:
+                          # the VAAPI initialization fails), the repository of Intel follows the new hardware.
+                          wget -qO- https://repositories.intel.com/gpu/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg
+                          echo "deb [signed-by=/usr/share/keyrings/intel-graphics.gpg arch=amd64] https://repositories.intel.com/gpu/ubuntu noble client" > /etc/apt/sources.list.d/intel-gpu-noble.list
+                          apt-get update
+                          # intel-media-va-driver-non-free: VAAPI (iHD), hwaccel=vaapi
+                          # libmfxgen1, libvpl2: oneVPL runtime and dispatcher, hwaccel=qsv ("Error creating a MFX session: -9" without)
+                          # intel-opencl-icd, ocl-icd-libopencl1: OpenCL, hwaccel=opencl (HDR tone mapping, CL_PLATFORM_NOT_FOUND_KHR without)
+                          apt-get install -y --no-install-recommends intel-media-va-driver-non-free libmfxgen1 libvpl2 intel-opencl-icd ocl-icd-libopencl1 vainfo clinfo
+                          exec /opt/ffmpeg-over-ip/ffmpeg-over-ip-server
+                      ports:
+                        ffoip:
+                          containerPort: 5050
+                      env:
+                        FFMPEG_OVER_IP_SERVER_ADDRESS: 0.0.0.0:5050
+                        FFMPEG_OVER_IP_SERVER_AUTH_SECRET:
+                          secretKeyRef:
+                            name: ref:ffmpeg-over-ip-server
+                            key: FFMPEG_OVER_IP_SERVER_AUTH_SECRET
+                      securityContext:
+                        privileged: true # the render node
+                        allowPrivilegeEscalation: true
+                        readOnlyRootFilesystem: false # the packages are installed at the start
+                      resources:
+                        requests:
+                          cpu: 100m
+                          memory: 256Mi
+                        limits:
+                          memory: 8Gi # the transcodes of 4K HDR remuxes with the tone mapping were OOM killed at 2Gi
+                      volumeMounts:
+                        binaries:
+                          name: binaries
+                          mountPath: /opt/ffmpeg-over-ip
+                        dev-dri:
+                          name: dev-dri
+                          mountPath: /dev/dri
+                  volumes:
+                    binaries:
+                      name: binaries
+                      emptyDir: {}
+                    dev-dri:
+                      name: dev-dri
+                      hostPath:
+                        path: /dev/dri
+                        type: Directory
 
           services:
             jellyfin:
               ports:
                 http:
                   port: 8096
+            ffmpeg-over-ip:
+              clusterIP: None # headless: one address per node
+              ports:
+                ffoip:
+                  port: 5050
 
 expose:
   jellyfin: # no forward auth: the TV and mobile apps can not follow the login redirect, jellyfin has its own login
