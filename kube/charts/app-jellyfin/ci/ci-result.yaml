@@ -305,7 +305,12 @@ spec:
                 }
 
                 // https://github.com/9p4/jellyfin-plugin-sso/blob/main/providers.md#authelia (the plugin answers 404 until it is loaded)
-                await jellyfin('POST', '/sso/OID/Add/authelia', {
+                // `Add` replaces the provider: the links of the SSO users to the users of jellyfin are kept (else a user whose
+                // name differs from the one of the SSO is created again)
+                const known = await jellyfin('GET', '/sso/OID/Get', undefined, token).catch(() => ({}));
+                const previous = (known.authelia || known.Authelia || {});
+                const canonicalLinks = previous.canonicalLinks || previous.CanonicalLinks;
+                await jellyfin('POST', '/sso/OID/Add/authelia', Object.assign({
                   oidEndpoint: env.ISSUER_URL,
                   oidClientId: env.CLIENT_ID,
                   oidSecret: env.CLIENT_SECRET,
@@ -319,7 +324,7 @@ spec:
                   oidScopes: ['groups'],
                   disablePushedAuthorization: true, // authelia does not require it
                   schemeOverride: 'https', // the redirect uri, jellyfin sees the http of the gateway to the pod
-                }, token);
+                }, canonicalLinks ? { canonicalLinks: canonicalLinks } : {}), token);
 
                 // the button of the login page
                 const branding = await jellyfin('GET', '/System/Configuration/branding', undefined, token);
@@ -481,6 +486,11 @@ spec:
                       readOnly: true
                 jellyfin:
                   env:
+                    FFMPEG_OVER_IP_CLIENT_ADDRESS: ffmpeg-over-ip:5050
+                    FFMPEG_OVER_IP_CLIENT_AUTH_SECRET:
+                      secretKeyRef:
+                        key: FFMPEG_OVER_IP_SERVER_AUTH_SECRET
+                        name: ref:ffmpeg-over-ip-server
                     JELLYFIN_CACHE_DIR: /tmp/jellyfin
                     JELLYFIN_PublishedServerUrl: https://jellyfin.test.com
                     TZ: Europe/Paris
@@ -503,6 +513,14 @@ spec:
                     config:
                       mountPath: /config
                       name: config
+                    ffmpeg:
+                      mountPath: /usr/lib/jellyfin-ffmpeg/ffmpeg
+                      name: ffmpeg-client
+                      subPath: ffmpeg
+                    ffprobe:
+                      mountPath: /usr/lib/jellyfin-ffmpeg/ffprobe
+                      name: ffmpeg-client
+                      subPath: ffprobe
                     media:
                       mountPath: /media
                       name: media
@@ -513,6 +531,26 @@ spec:
                       readOnly: true
                       subPath: network.xml
               initContainers:
+                ffmpeg-over-ip-client:
+                  command:
+                  - sh
+                  - -ec
+                  - |-
+                    wget -q -O /tmp/client.zip https://github.com/steelbrain/ffmpeg-over-ip/releases/download/v5.2.1/linux-amd64-ffmpeg-over-ip-client.zip
+                    unzip -o /tmp/client.zip -d /tmp/client
+                    cp /tmp/client/ffmpeg-over-ip-client /ffmpeg-client/ffmpeg
+                    cp /tmp/client/ffmpeg-over-ip-client /ffmpeg-client/ffprobe
+                    chmod +x /ffmpeg-client/ffmpeg /ffmpeg-client/ffprobe
+                  image: docker.io/library/alpine:3.24.3
+                  name: ffmpeg-over-ip-client
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                  volumeMounts:
+                    ffmpeg-client:
+                      mountPath: /ffmpeg-client
+                      name: ffmpeg-client
                 sso-plugin:
                   command:
                   - sh
@@ -527,7 +565,7 @@ spec:
                     if [ ! -f $dir/.installed ]; then
                       wget -q -O /tmp/plugin.zip https://github.com/9p4/jellyfin-plugin-sso/releases/download/v$version/sso-authentication_$version.zip
                       echo "$md5  /tmp/plugin.zip" | md5sum -c -
-                      rm -rf /config/plugins/sso-authentication_*
+                      rm -rf /config/plugins/sso-authentication_* "/config/plugins/SSO Authentication_"* # the name of the directories of the UI
                       mkdir -p $dir
                       unzip -q /tmp/plugin.zip -d $dir
                       touch $dir/.installed
@@ -544,6 +582,7 @@ spec:
                       name: config
               securityContext:
                 fsGroup: 1000
+                fsGroupChangePolicy: OnRootMismatch
                 runAsGroup: 1000
                 runAsUser: 1000
               volumes:
@@ -551,6 +590,9 @@ spec:
                   name: config
                   persistentVolumeClaim:
                     claimName: ref:jellyfin-config
+                ffmpeg-client:
+                  emptyDir: {}
+                  name: ffmpeg-client
                 media:
                   name: media
                   persistentVolumeClaim:
