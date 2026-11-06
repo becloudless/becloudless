@@ -330,7 +330,7 @@ spec:
                   command:
                   - /bin/sh
                   - -c
-                  image: nginxinc/nginx-unprivileged:1.29.3-alpine
+                  image: nginxinc/nginx-unprivileged:1.31.7-alpine
                   name: nginx
                   ports:
                     ssh:
