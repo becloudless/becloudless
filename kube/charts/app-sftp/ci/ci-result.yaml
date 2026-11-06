@@ -200,7 +200,8 @@ spec:
                     ChrootDirectory /data/%u
                     EOF
 
-                    while read -r name uid key; do
+                    # `|| [ -n "$name" ]`: the last line has no trailing newline in the ConfigMap, `read` fails on it but still fills the variables
+                    while read -r name uid key || [ -n "$name" ]; do
                       [ -n "$name" ] || continue
                       adduser -D -H -h /files -s /sbin/nologin -u "$uid" "$name"
                       echo "$key" > "/etc/ssh/authorized_keys/$name"
