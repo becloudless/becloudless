@@ -45,7 +45,7 @@ resources:
           toEndpoints:
             postfix:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: postfix}
-          toPorts: [25]
+          toPorts: [25, 10025] # 10025: the authenticated submission (465 and 587), proxied by the dovecot of the front
         webmail:
           toEndpoints:
             webmail:
@@ -103,6 +103,11 @@ resources:
             dovecot:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
           toPorts: [25]
+        submission: # the authenticated submission (465 and 587), proxied by the dovecot of the front
+          fromEndpoints:
+            front:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
+          toPorts: [10025]
       egress:
         admin:
           toEndpoints:

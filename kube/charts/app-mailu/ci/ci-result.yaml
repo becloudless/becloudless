@@ -167,6 +167,8 @@ spec:
         app.kubernetes.io/name: mailu
     toPorts:
     - ports:
+      - port: "10025"
+        protocol: TCP
       - port: "25"
         protocol: TCP
   - toEndpoints:
@@ -328,6 +330,14 @@ spec:
     toPorts:
     - ports:
       - port: "25"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: front
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "10025"
         protocol: TCP
 ---
 # Source: app-mailu/templates/loader.yaml
