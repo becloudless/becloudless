@@ -29,6 +29,12 @@ spec:
     - ports:
       - port: "5432"
         protocol: TCP
+  - toFQDNs:
+    - matchName: mail.test.com
+    toPorts:
+    - ports:
+      - port: "465"
+        protocol: TCP
   - toEndpoints:
     - matchLabels:
         app.kubernetes.io/name: valkey

@@ -35,6 +35,10 @@ resources:
             cloudflare: {matchName: time.cloudflare.com} # TODO check why
           toPorts:
             ntp: {ports: {p123: {port: "123", protocol: UDP}}}
+        smtp: # the notifier: authelia checks the connection to the server at its start and stops if it fails
+          toFQDNs:
+            mail: {matchName: "mail.{{ .Values.app.domain }}"}
+          toPorts: [465]
 
   fluxHelmReleases:
     authelia-postgresql:
