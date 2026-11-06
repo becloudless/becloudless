@@ -178,9 +178,13 @@ resources:
                           drop:
                             all: ALL
                           add:
+                            bind: NET_BIND_SERVICE # sshd listens on the port 22
                             chroot: SYS_CHROOT
                             setuid: SETUID
                             setgid: SETGID
+                            chown: CHOWN # the start script creates /data/<user>
+                            dacOverride: DAC_OVERRIDE
+                            fowner: FOWNER
                       volumeMounts:
                         data:
                           name: data
