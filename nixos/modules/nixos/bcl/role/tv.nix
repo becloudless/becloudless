@@ -18,6 +18,11 @@
       default = false;
       description = "required on old GPU not supported anymore by chromium";
     };
+    mpvExtraConfig = lib.mkOption {
+      type = lib.types.lines;
+      default = "";
+      description = "Extra lines appended to the mpv.conf of jellyfin-desktop, ex: cheaper HDR tone mapping on a weak GPU.";
+    };
     forceSoftwareGL = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -210,6 +215,7 @@
       home.file.".config/jellyfin-desktop/mpv/mpv.conf".text = ''
         gpu-context=wayland
         hwdec=auto-safe
+        ${config.bcl.role.tv.mpvExtraConfig}
       '';
     };
 

@@ -61,6 +61,7 @@ func nixosUpgradeCmd() *cobra.Command {
 	var sshConfig runner.SshConnectionConfig
 	var systemName string
 	var useLocalGitRepository bool
+	var askSudoPassword bool
 	var overrideInputs []string
 
 	cmd := &cobra.Command{
@@ -82,7 +83,7 @@ func nixosUpgradeCmd() *cobra.Command {
 			case !remote && !useLocalGitRepository:
 				return upgradeLocalFromUpstream(action, systemName)
 			case remote && useLocalGitRepository:
-				return upgradeRemoteTargetHostFromGit(&sshConfig, action, systemName, overrideInputs)
+				return upgradeRemoteTargetHostFromGit(&sshConfig, action, systemName, overrideInputs, askSudoPassword)
 			case remote && !useLocalGitRepository:
 				return upgradeRemoteFromUpstream(&sshConfig, action, systemName)
 			default:
@@ -94,6 +95,7 @@ func nixosUpgradeCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&action, "action", "a", "switch", "nixos-rebuild action to perform (switch, boot, test, build, reboot). reboot switches the boot configuration then reboots the host")
 	cmd.Flags().StringVarP(&systemName, "system-name", "n", "", "nixos system name to apply. If not provided, will use the current system name. Useful when renaming system")
 	cmd.Flags().BoolVar(&useLocalGitRepository, "git", false, "use current local git repository state instead of upstream repository")
+	cmd.Flags().BoolVar(&askSudoPassword, "ask-sudo-password", false, "ask the sudo password of the remote host (for hosts where sudo needs a password). Only valid with --git and --host")
 	cmd.Flags().StringArrayVar(&overrideInputs, "input", nil, "override a flake input, format name=value (e.g. bcl-override1=path:/home/n0rad/Perso/bcl/becloudless/nixos). Can be repeated. Only valid with --git")
 	flags.WithSSHRemoteFlags(cmd, &sshConfig)
 
@@ -221,7 +223,7 @@ func upgradeLocalFromUpstream(action string, systemName string) error {
 
 // upgradeRemoteTargetHostFromGit builds locally from the local infra git repository state and deploys to a
 // remote host via nixos-rebuild's --target-host/--sudo.
-func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, action string, systemName string, overrideInputs []string) error {
+func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, action string, systemName string, overrideInputs []string, askSudoPassword bool) error {
 	logs.WithField("repo", bcl.BCL.System.Repository).Warn("Update remote system using local git repository state")
 
 	repository, err := openLocalInfraRepository()
@@ -243,8 +245,24 @@ func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, actio
 		return err
 	}
 
+	// nixos-rebuild defaults the configuration name to the hostname of the machine it runs on (the local one),
+	// not the target host: without a name, ask the remote host for its own
+	if systemName == "" {
+		sshRun, err := runner.NewSshRunner(sshConfig)
+		if err != nil {
+			return errs.WithE(err, "Failed to create SSH runner to get the remote hostname")
+		}
+		systemName, err = sshRun.ExecCmdGetStdout("hostname")
+		if err != nil || systemName == "" {
+			return errs.WithE(err, "Failed to get the hostname of the remote host, use --system-name")
+		}
+	}
+
 	args := append([]string{nixosRebuildAction(action), "--flake", buildFlakeTarget(flakeDir, systemName),
 		"--target-host", sshTargetHost(sshConfig), "--sudo", "--no-write-lock-file"}, overrideInputArgs...)
+	if askSudoPassword {
+		args = append(args, "--ask-sudo-password")
+	}
 	if err := run.ExecCmd("nixos-rebuild", args...); err != nil {
 		return err
 	}
