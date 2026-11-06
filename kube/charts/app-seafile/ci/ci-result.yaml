@@ -621,7 +621,7 @@ spec:
                       secretKeyRef:
                         key: db-root-password
                         name: ref:seafile-generated
-                  image: docker.io/library/mariadb:12.3.2
+                  image: docker.io/library/mariadb:12.3.3
                   name: mariadb
                   ports:
                     mysql:
