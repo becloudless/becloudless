@@ -9,12 +9,14 @@
 #    OAuth 2.0 device authorization grant on authelia. The client displays an address and a code, the user approves the login on it
 #    with its authelia account (password and second factor), and the login goes on. The token has to be issued to the same user
 #    (introspection). No password is typed in the terminal;
-#  - exposed on the Cilium Gateway `shared` like forgejo: ssh over TLS on `sftp.<domain>:443`. The Gateway forwards the TLS stream as
-#    is (SNI passthrough) to a nginx that terminates the TLS and forwards the ssh stream to sshd. The client wraps the ssh
-#    connection in a TLS one, ex in `~/.ssh/config`:
-#      Host sftp.<domain>
-#        ProxyCommand ncat --ssl --ssl-servername %h %h 443 # or `openssl s_client -quiet -connect %h:443 -servername %h`
-#    The DNS record `sftp.<domain>` has to point to the Gateway;
+#  - exposed on the Cilium Gateway `shared` like forgejo: ssh over TLS on `ssh-sftp.<domain>:443`. The Gateway forwards the TLS stream
+#    as is (SNI passthrough) to a nginx that terminates the TLS and forwards the ssh stream to sshd. The client wraps the ssh
+#    connection in a TLS one, ex in `~/.ssh/config` (the SNI is the host prefixed by `ssh-`, so `sftp.<domain>` reaches the
+#    listener `ssh-sftp.<domain>` and the same rule serves every `ssh-*` app):
+#      Host *.<domain>
+#        ProxyCommand ncat --ssl --ssl-servername ssh-%h %h 443
+#    The DNS record of the connected name (`sftp.<domain>`, or a wildcard) has to point to the Gateway, `ssh-sftp.<domain>` is
+#    only the SNI and needs a certificate, not necessarily a record;
 #  - the host key is made by cert-manager (ECDSA, valid 100 years and never rotated: clients would see the key change).
 #
 # The image is `alpine-sftp` (docker/alpine/alpine-sftp).
@@ -244,7 +246,7 @@ resources:
             ssh-gateway:
               secretName: tls-sftp-gateway
               dnsNames:
-                ssh: sftp.{{ .Values.app.domain }}
+                ssh: ssh-sftp.{{ .Values.app.domain }}
               issuerRef:
                 name: letsencrypt-prod
                 kind: ClusterIssuer
@@ -335,7 +337,7 @@ resources:
               listeners:
                 ssh:
                   name: ssh
-                  hostname: sftp.{{ .Values.app.domain }}
+                  hostname: ssh-sftp.{{ .Values.app.domain }}
                   port: 443
                   protocol: TLS
                   tls:
@@ -353,7 +355,7 @@ resources:
                   name: sftp
                   sectionName: ssh
               hostnames:
-                ssh: sftp.{{ .Values.app.domain }}
+                ssh: ssh-sftp.{{ .Values.app.domain }}
               rules:
                 ssh:
                   backendRefs:

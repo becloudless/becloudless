@@ -399,7 +399,7 @@ spec:
       certManagerCertificates:
         ssh-gateway:
           dnsNames:
-            ssh: sftp.test.com
+            ssh: ssh-sftp.test.com
           issuerRef:
             kind: ClusterIssuer
             name: letsencrypt-prod
@@ -500,7 +500,7 @@ spec:
               allowedRoutes:
                 namespaces:
                   from: Same
-              hostname: sftp.test.com
+              hostname: ssh-sftp.test.com
               name: ssh
               port: 443
               protocol: TLS
@@ -520,7 +520,7 @@ spec:
       tlsRoutes:
         ssh:
           hostnames:
-            ssh: sftp.test.com
+            ssh: ssh-sftp.test.com
           parentRefs:
             sftp:
               group: gateway.networking.k8s.io
