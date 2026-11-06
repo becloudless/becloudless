@@ -17,9 +17,10 @@ lldapBootstrap:
     - app_pushprox
     - app_seafile
     - app_seerr
+    - app_sftp
     - app_syncthing
     - app_tuwunel
-  # the custom attributes of the users, used by the OIDC claims of authelia
+  # the custom attributes of the users, used by the OIDC claims of authelia and by the apps
   userSchema:
     - name: immichquota
       attributeType: INTEGER
@@ -27,6 +28,11 @@ lldapBootstrap:
       isList: false
       isVisible: true
     - name: immichrole
+      attributeType: STRING
+      isEditable: false
+      isList: false
+      isVisible: true
+    - name: sshpublickey # the OpenSSH public key of the user, read by app-sftp
       attributeType: STRING
       isEditable: false
       isList: false

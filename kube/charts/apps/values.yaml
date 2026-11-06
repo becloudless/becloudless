@@ -258,6 +258,12 @@ apps:
     appChart:
       name: app-firefox-sync
 
+  sftp:
+    groups:
+      extra: true
+    appChart:
+      name: app-sftp
+
   mailu:
     groups:
       extra: true
