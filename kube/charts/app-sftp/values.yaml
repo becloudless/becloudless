@@ -142,6 +142,9 @@ resources:
                           Subsystem sftp internal-sftp
                           ForceCommand internal-sftp
                           ChrootDirectory /data/%u
+                          # every client comes from the nginx pod (and the probe from the node): the penalties per source address
+                          # (connections closed before the authentication) would block everybody
+                          PerSourcePenalties no
                           EOF
 
                           # `|| [ -n "$name" ]`: the last line has no trailing newline in the ConfigMap, `read` fails on it but still fills the variables
