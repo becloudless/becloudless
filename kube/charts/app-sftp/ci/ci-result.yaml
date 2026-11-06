@@ -1,0 +1,693 @@
+---
+# Source: app-sftp/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: sftp
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - ingress
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: sftp
+      app.kubernetes.io/instance: sftp
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/component: ssh-tls
+        k8s:app.kubernetes.io/instance: sftp-integration
+        k8s:io.kubernetes.pod.namespace: sftp
+    toPorts:
+    - ports:
+      - port: "22"
+        protocol: TCP
+---
+# Source: app-sftp/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: sftp
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: sftp-pre
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      sftp:
+        configMaps:
+          sftp-users:
+            name: sftp-users
+            namespace: default
+        deployments:
+          sftp:
+            labels:
+              app.kubernetes.io/component: sftp
+              app.kubernetes.io/instance: sftp
+            name: sftp
+            namespace: default
+        persistentVolumeClaims:
+          data:
+            name: data
+            namespace: default
+        services:
+          sftp:
+            name: sftp
+            namespace: default
+      sftp-integration:
+        certManagerCertificates:
+          ssh-gateway:
+            name: ssh-gateway
+            namespace: default
+            secretName: tls-sftp-gateway
+        ciliumNetworkPolicies:
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
+        configMaps:
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
+        deployments:
+          ssh-tls:
+            labels:
+              app.kubernetes.io/component: ssh-tls
+              app.kubernetes.io/instance: sftp-integration
+            name: ssh-tls
+            namespace: default
+        listenerSets:
+          sftp:
+            name: sftp
+            namespace: default
+        services:
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
+        tlsRoutes:
+          ssh:
+            name: ssh
+            namespace: default
+      sftp-pre:
+        certManagerCertificates:
+          sftp-host-key:
+            name: sftp-host-key
+            namespace: default
+        externalSecrets:
+          sftp-oidc:
+            name: sftp-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+    resources:
+      configMaps:
+        sftp-users:
+          data:
+            users: n0rad 56758 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILvM8t4hXJxjBzrUS5FhAQ/TD9TJscT7CyLKFSOjZjj4
+              id_ed25519
+      deployments:
+        sftp:
+          replicas: 1
+          strategy:
+            type: Recreate
+          template:
+            metadata:
+              annotations:
+                policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
+                policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+                policy.bcl.tf/skipPodSetHostUsers: "true"
+            spec:
+              containers:
+                sftp:
+                  args:
+                  - -c
+                  - |-
+                    set -eu
+
+                    mkdir -p /etc/pam_oauth2_device /etc/ssh/authorized_keys
+
+                    cat > /etc/pam_oauth2_device/config.json <<EOF
+                    {
+                      "client_id": "$CLIENT_ID",
+                      "client_secret": "$CLIENT_SECRET",
+                      "oauth_auth_url": "$AUTHELIA_URL/api/oidc/authorization",
+                      "oauth_device_url": "$AUTHELIA_URL/api/oidc/device-authorization",
+                      "oauth_token_url": "$AUTHELIA_URL/api/oidc/token",
+                      "oauth_token_introspect_url": "$AUTHELIA_URL/api/oidc/introspection",
+                      "scope": "openid profile",
+                      "qr_enabled": false
+                    }
+                    EOF
+                    chmod 600 /etc/pam_oauth2_device/config.json
+
+                    cat > /etc/pam.d/sshd <<EOF
+                    auth     required pam_oauth2_device.so config=/etc/pam_oauth2_device/config.json log_level=info
+                    account  required pam_permit.so
+                    session  required pam_permit.so
+                    EOF
+
+                    cat > /etc/ssh/sshd_config <<EOF
+                    HostKey /hostkey/tls.key
+                    UsePAM yes
+                    PubkeyAuthentication yes
+                    PasswordAuthentication no
+                    KbdInteractiveAuthentication yes
+                    AuthenticationMethods publickey,keyboard-interactive:pam
+                    AuthorizedKeysFile /etc/ssh/authorized_keys/%u
+                    PermitRootLogin no
+                    UseDNS no
+                    X11Forwarding no
+                    AllowTcpForwarding no
+                    Subsystem sftp internal-sftp
+                    ForceCommand internal-sftp
+                    ChrootDirectory /data/%u
+                    EOF
+
+                    while read -r name uid key; do
+                      [ -n "$name" ] || continue
+                      adduser -D -H -h /files -s /sbin/nologin -u "$uid" "$name"
+                      echo "$key" > "/etc/ssh/authorized_keys/$name"
+                      mkdir -p "/data/$name/files"
+                      chown root:root "/data/$name" # sshd wants the root of the chroot owned by root
+                      chmod 755 "/data/$name"
+                      chown "$uid" "/data/$name/files"
+                    done < /config/users
+
+                    touch /tmp/pam_oauth2_device
+                    tail -F /tmp/pam_oauth2_device &
+                    exec /usr/sbin/sshd.pam -D -e
+                  command:
+                  - sh
+                  env:
+                    AUTHELIA_URL: https://authelia.test.com
+                    CLIENT_ID:
+                      secretKeyRef:
+                        key: client-id
+                        name: sftp-oidc
+                    CLIENT_SECRET:
+                      secretKeyRef:
+                        key: secret
+                        name: sftp-oidc
+                  image: ghcr.io/becloudless/alpine-sftp:0.0.0
+                  name: sftp
+                  ports:
+                    ssh:
+                      containerPort: 22
+                  probe:
+                    tcpSocket: {}
+                  securityContext:
+                    capabilities:
+                      add:
+                        chroot: SYS_CHROOT
+                        setgid: SETGID
+                        setuid: SETUID
+                      drop:
+                        all: ALL
+                    readOnlyRootFilesystem: false
+                  volumeMounts:
+                    config:
+                      mountPath: /config
+                      name: config
+                      readOnly: true
+                    data:
+                      mountPath: /data
+                      name: data
+                    hostkey:
+                      mountPath: /hostkey
+                      name: hostkey
+                      readOnly: true
+              securityContext:
+                runAsNonRoot: false
+              volumes:
+                config:
+                  configMap:
+                    name: ref:sftp-users
+                  name: config
+                data:
+                  name: data
+                  persistentVolumeClaim:
+                    claimName: ref:data
+                hostkey:
+                  name: hostkey
+                  secret:
+                    defaultMode: 256
+                    secretName: ref:sftp-host-key
+      persistentVolumeClaims:
+        data:
+          resources:
+            requests:
+              storage: 10Gi
+          storageClassName: longhorn-files
+      services:
+        sftp:
+          ports:
+            ssh:
+              port: 22
+---
+# Source: app-sftp/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: sftp-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: sftp
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      sftp:
+        configMaps:
+          sftp-users:
+            name: sftp-users
+            namespace: default
+        deployments:
+          sftp:
+            labels:
+              app.kubernetes.io/component: sftp
+              app.kubernetes.io/instance: sftp
+            name: sftp
+            namespace: default
+        persistentVolumeClaims:
+          data:
+            name: data
+            namespace: default
+        services:
+          sftp:
+            name: sftp
+            namespace: default
+      sftp-integration:
+        certManagerCertificates:
+          ssh-gateway:
+            name: ssh-gateway
+            namespace: default
+            secretName: tls-sftp-gateway
+        ciliumNetworkPolicies:
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
+        configMaps:
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
+        deployments:
+          ssh-tls:
+            labels:
+              app.kubernetes.io/component: ssh-tls
+              app.kubernetes.io/instance: sftp-integration
+            name: ssh-tls
+            namespace: default
+        listenerSets:
+          sftp:
+            name: sftp
+            namespace: default
+        services:
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
+        tlsRoutes:
+          ssh:
+            name: ssh
+            namespace: default
+      sftp-pre:
+        certManagerCertificates:
+          sftp-host-key:
+            name: sftp-host-key
+            namespace: default
+        externalSecrets:
+          sftp-oidc:
+            name: sftp-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+    resources:
+      certManagerCertificates:
+        ssh-gateway:
+          dnsNames:
+            ssh: sftp.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-sftp-gateway
+      ciliumNetworkPolicies:
+        ssh-tls:
+          egress:
+            sftp:
+              toEndpoints:
+                sftp:
+                  matchLabels:
+                    k8s:app.kubernetes.io/component: sftp
+                    k8s:app.kubernetes.io/instance: sftp
+                    k8s:io.kubernetes.pod.namespace: sftp
+              toPorts:
+              - 22
+          endpointSelector: ref:ssh-tls
+          ingress:
+            gateway:
+              fromEntities:
+              - ingress
+              - host
+              - remote-node
+              toPorts:
+              - 8443
+      configMaps:
+        ssh-tls:
+          data:
+            nginx.conf: |-
+              worker_processes 1;
+              pid /tmp/nginx.pid;
+              error_log /dev/stderr warn;
+              events {
+                worker_connections 1024;
+              }
+              stream {
+                server {
+                  listen 8443 ssl;
+                  ssl_certificate /tls/tls.crt;
+                  ssl_certificate_key /tls/tls.key;
+                  ssl_protocols TLSv1.2 TLSv1.3;
+                  proxy_connect_timeout 10s;
+                  proxy_timeout 1h; # idle
+                  proxy_pass sftp:22;
+                }
+              }
+      deployments:
+        ssh-tls:
+          replicas: 1
+          template:
+            spec:
+              containers:
+                nginx:
+                  args:
+                  - |-
+                    (while true; do sleep 12h; nginx -s reload; done) &
+                    exec nginx -g 'daemon off;'
+                  command:
+                  - /bin/sh
+                  - -c
+                  image: nginxinc/nginx-unprivileged:1.29.3-alpine
+                  name: nginx
+                  ports:
+                    ssh:
+                      containerPort: 8443
+                  probe:
+                    tcpSocket: {}
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                  volumeMounts:
+                    config:
+                      mountPath: /etc/nginx/nginx.conf
+                      name: config
+                      readOnly: true
+                      subPath: nginx.conf
+                    tls:
+                      mountPath: /tls
+                      name: tls
+                      readOnly: true
+              securityContext:
+                runAsGroup: 101
+                runAsUser: 101
+              volumes:
+                config:
+                  configMap:
+                    name: ref:ssh-tls
+                  name: config
+                tls:
+                  name: tls
+                  secret:
+                    secretName: tls-sftp-gateway
+      listenerSets:
+        sftp:
+          listeners:
+            ssh:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: sftp.test.com
+              name: ssh
+              port: 443
+              protocol: TLS
+              tls:
+                mode: Passthrough
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: cilium
+      services:
+        ssh-tls:
+          ports:
+            ssh:
+              port: 443
+              targetPort: 8443
+      tlsRoutes:
+        ssh:
+          hostnames:
+            ssh: sftp.test.com
+          parentRefs:
+            sftp:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: sftp
+              sectionName: ssh
+          rules:
+            ssh:
+              backendRefs:
+                ssh-tls:
+                  name: ssh-tls
+                  port: 443
+---
+# Source: app-sftp/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: sftp-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: apps
+  dependsOn:
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-external-secrets
+    namespace: external-secrets
+  - name: authelia-pre
+    namespace: authelia
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      sftp:
+        configMaps:
+          sftp-users:
+            name: sftp-users
+            namespace: default
+        deployments:
+          sftp:
+            labels:
+              app.kubernetes.io/component: sftp
+              app.kubernetes.io/instance: sftp
+            name: sftp
+            namespace: default
+        persistentVolumeClaims:
+          data:
+            name: data
+            namespace: default
+        services:
+          sftp:
+            name: sftp
+            namespace: default
+      sftp-integration:
+        certManagerCertificates:
+          ssh-gateway:
+            name: ssh-gateway
+            namespace: default
+            secretName: tls-sftp-gateway
+        ciliumNetworkPolicies:
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
+        configMaps:
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
+        deployments:
+          ssh-tls:
+            labels:
+              app.kubernetes.io/component: ssh-tls
+              app.kubernetes.io/instance: sftp-integration
+            name: ssh-tls
+            namespace: default
+        listenerSets:
+          sftp:
+            name: sftp
+            namespace: default
+        services:
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
+        tlsRoutes:
+          ssh:
+            name: ssh
+            namespace: default
+      sftp-pre:
+        certManagerCertificates:
+          sftp-host-key:
+            name: sftp-host-key
+            namespace: default
+        externalSecrets:
+          sftp-oidc:
+            name: sftp-oidc
+            namespace: default
+        secretStores:
+          authelia:
+            name: authelia
+            namespace: default
+        serviceAccounts:
+          authelia-reader:
+            name: authelia-reader
+            namespace: default
+    resources:
+      certManagerCertificates:
+        sftp-host-key:
+          commonName: sftp
+          duration: 876000h
+          issuerRef:
+            kind: ClusterIssuer
+            name: self-signed
+          privateKey:
+            algorithm: ECDSA
+            rotationPolicy: Never
+            size: 256
+          secretName: sftp-host-key
+      externalSecrets:
+        sftp-oidc:
+          data:
+            client-id:
+              remoteRef:
+                key: authelia-oidc-sftp
+                property: client-id
+              secretKey: client-id
+            secret:
+              remoteRef:
+                key: authelia-oidc-sftp
+                property: secret
+              secretKey: secret
+          refreshInterval: 1h
+          secretStoreRef: ref:authelia
+      secretStores:
+        authelia:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: ref:authelia-reader
+              remoteNamespace: authelia
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
+      serviceAccounts:
+        authelia-reader:
+          automountServiceAccountToken: false

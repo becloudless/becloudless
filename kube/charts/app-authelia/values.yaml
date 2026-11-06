@@ -516,3 +516,13 @@ oidcClients:
     responseModes: [form_post, query]
     redirectUris:
       - https://matrix.{{ .Values.app.domain }}/_matrix/client/unstable/login/sso/callback/{clientId}
+
+  # sftp (app-sftp): the PAM module of sshd uses the device authorization grant (the user approves on `/activate` of authelia, with the
+  # second factor) and checks the token with the introspection endpoint, which needs a confidential client. The redirect URI is not
+  # used by the grant, but authelia requires one (and refuses `urn:ietf:wg:oauth:2.0:oob` for a confidential client).
+  sftp:
+    name: SFTP
+    scopes: [openid, profile]
+    grantTypes: ["urn:ietf:params:oauth:grant-type:device_code"]
+    redirectUris:
+      - https://sftp.{{ .Values.app.domain }}/

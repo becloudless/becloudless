@@ -1,0 +1,20 @@
+app:
+  domain: test.com
+  name: test
+  lldapdn: dc=test,dc=com
+  lldapUsers:
+    n0rad:
+      displayName: n0rad
+      groups:
+        - role_admin
+        - app_sftp
+      sshpublickey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILvM8t4hXJxjBzrUS5FhAQ/TD9TJscT7CyLKFSOjZjj4 id_ed25519
+    kwiskas:
+      displayName: kwiskas # in the group, but no key: no account
+      groups:
+        - app_sftp
+    seerr:
+      displayName: seerr # not in the group: no account
+      groups:
+        - role_user
+      sshpublickey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIqzMzwoNe1lulCw2vkcahrnkJ4uvSDWi0pINdZ7zrcI id_ed25519

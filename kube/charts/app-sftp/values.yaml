@@ -1,0 +1,365 @@
+# yaml-language-server: $schema=../app/schema/values.schema.json
+
+# SFTP server (sshd, only the sftp subsystem, each user chrooted in its own directory of a volume backed up daily by longhorn).
+#
+#  - the users are the ones of `app.lldapUsers` that are members of the lldap group `app_sftp` and have the custom attribute
+#    `sshpublickey` (one OpenSSH public key). The account and its directory are made when the pod starts: change them, and the pod
+#    restarts (the uid is derived from the id of the user, it stays the same as long as the id does);
+#  - the login needs the key AND the approval of authelia (two_factor): sshd checks the key, then PAM (pam_oauth2_device) starts the
+#    OAuth 2.0 device authorization grant on authelia. The client displays an address and a code, the user approves the login on it
+#    with its authelia account (password and second factor), and the login goes on. The token has to be issued to the same user
+#    (introspection). No password is typed in the terminal;
+#  - exposed on the Cilium Gateway `shared` like forgejo: ssh over TLS on `sftp.<domain>:443`. The Gateway forwards the TLS stream as
+#    is (SNI passthrough) to a nginx that terminates the TLS and forwards the ssh stream to sshd. The client wraps the ssh
+#    connection in a TLS one, ex in `~/.ssh/config`:
+#      Host sftp.<domain>
+#        ProxyCommand ncat --ssl --ssl-servername %h %h 443 # or `openssl s_client -quiet -connect %h:443 -servername %h`
+#    The DNS record `sftp.<domain>` has to point to the Gateway;
+#  - the host key is made by cert-manager (ECDSA, valid 100 years and never rotated: clients would see the key change).
+#
+# The image is `alpine-sftp` (docker/alpine/alpine-sftp).
+
+resources:
+
+  ciliumNetworkPolicies:
+    sftp:
+      endpointSelector: ref:sftp
+      ingress:
+        ssh-tls:
+          fromEndpoints:
+            ssh-tls:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": sftp, "k8s:app.kubernetes.io/instance": sftp-integration, "k8s:app.kubernetes.io/component": ssh-tls}
+          toPorts: [22]
+      egress:
+        authelia: # the device authorization and the introspection of the token go through the public address of the gateway
+          toEntities: [ingress]
+          toPorts: [443]
+
+  fluxHelmReleases:
+    # the host key (and the secret of the OIDC client, merged from `oidc` below)
+    sftp-pre:
+      dependsOn:
+        - name: app-cert-manager
+          namespace: cert-manager
+      values:
+        resources:
+          certManagerCertificates:
+            sftp-host-key:
+              secretName: sftp-host-key
+              commonName: sftp
+              duration: 876000h
+              privateKey:
+                algorithm: ECDSA
+                size: 256
+                rotationPolicy: Never
+              issuerRef:
+                name: self-signed
+                kind: ClusterIssuer
+
+    sftp:
+      dependsOn:
+        - ref:sftp-pre
+      values:
+        resources:
+          persistentVolumeClaims:
+            data:
+              storageClassName: longhorn-files
+              resources:
+                requests:
+                  storage: 10Gi
+
+          # one line for each user: `<id> <uid> <public key>`
+          configMaps:
+            sftp-users:
+              data:
+                users: |
+                  {{- range $id, $user := (.Values.app.lldapUsers | default dict) }}
+                  {{- if and (has "app_sftp" (($user | default dict).groups | default list)) (($user | default dict).sshpublickey) }}
+                  {{ $id }} {{ add 20000 (mod (adler32sum $id | int) 40000) }} {{ $user.sshpublickey }}
+                  {{- end }}
+                  {{- end }}
+
+          deployments:
+            sftp:
+              replicas: 1
+              strategy:
+                type: Recreate # the volume is ReadWriteOnce
+              template:
+                metadata:
+                  annotations:
+                    policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true" # sshd
+                    policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true" # the accounts and the configuration are made at the start
+                    policy.bcl.tf/skipPodSetHostUsers: "true" # the chroot of sshd on the volume
+                spec:
+                  securityContext:
+                    runAsNonRoot: false
+                  containers:
+                    sftp:
+                      name: sftp
+                      image: ghcr.io/becloudless/alpine-sftp:0.0.0 # TODO the tag published by the CI of docker/alpine/alpine-sftp
+                      command: [ sh ]
+                      args:
+                        - -c
+                        - |
+                          set -eu
+
+                          mkdir -p /etc/pam_oauth2_device /etc/ssh/authorized_keys
+
+                          cat > /etc/pam_oauth2_device/config.json <<EOF
+                          {
+                            "client_id": "$CLIENT_ID",
+                            "client_secret": "$CLIENT_SECRET",
+                            "oauth_auth_url": "$AUTHELIA_URL/api/oidc/authorization",
+                            "oauth_device_url": "$AUTHELIA_URL/api/oidc/device-authorization",
+                            "oauth_token_url": "$AUTHELIA_URL/api/oidc/token",
+                            "oauth_token_introspect_url": "$AUTHELIA_URL/api/oidc/introspection",
+                            "scope": "openid profile",
+                            "qr_enabled": false
+                          }
+                          EOF
+                          chmod 600 /etc/pam_oauth2_device/config.json
+
+                          cat > /etc/pam.d/sshd <<EOF
+                          auth     required pam_oauth2_device.so config=/etc/pam_oauth2_device/config.json log_level=info
+                          account  required pam_permit.so
+                          session  required pam_permit.so
+                          EOF
+
+                          cat > /etc/ssh/sshd_config <<EOF
+                          HostKey /hostkey/tls.key
+                          UsePAM yes
+                          PubkeyAuthentication yes
+                          PasswordAuthentication no
+                          KbdInteractiveAuthentication yes
+                          AuthenticationMethods publickey,keyboard-interactive:pam
+                          AuthorizedKeysFile /etc/ssh/authorized_keys/%u
+                          PermitRootLogin no
+                          UseDNS no
+                          X11Forwarding no
+                          AllowTcpForwarding no
+                          Subsystem sftp internal-sftp
+                          ForceCommand internal-sftp
+                          ChrootDirectory /data/%u
+                          EOF
+
+                          while read -r name uid key; do
+                            [ -n "$name" ] || continue
+                            adduser -D -H -h /files -s /sbin/nologin -u "$uid" "$name"
+                            echo "$key" > "/etc/ssh/authorized_keys/$name"
+                            mkdir -p "/data/$name/files"
+                            chown root:root "/data/$name" # sshd wants the root of the chroot owned by root
+                            chmod 755 "/data/$name"
+                            chown "$uid" "/data/$name/files"
+                          done < /config/users
+
+                          touch /tmp/pam_oauth2_device
+                          tail -F /tmp/pam_oauth2_device &
+                          exec /usr/sbin/sshd.pam -D -e
+                      env:
+                        AUTHELIA_URL: https://authelia.{{ .Values.app.domain }}
+                        CLIENT_ID:
+                          secretKeyRef:
+                            name: sftp-oidc
+                            key: client-id
+                        CLIENT_SECRET:
+                          secretKeyRef:
+                            name: sftp-oidc
+                            key: secret
+                      ports:
+                        ssh:
+                          containerPort: 22
+                      probe:
+                        tcpSocket: {}
+                      securityContext:
+                        readOnlyRootFilesystem: false
+                        capabilities:
+                          drop:
+                            all: ALL
+                          add:
+                            chroot: SYS_CHROOT
+                            setuid: SETUID
+                            setgid: SETGID
+                      volumeMounts:
+                        data:
+                          name: data
+                          mountPath: /data
+                        config:
+                          name: config
+                          mountPath: /config
+                          readOnly: true
+                        hostkey:
+                          name: hostkey
+                          mountPath: /hostkey
+                          readOnly: true
+                  volumes:
+                    data:
+                      name: data
+                      persistentVolumeClaim:
+                        claimName: ref:data
+                    config:
+                      name: config
+                      configMap:
+                        name: ref:sftp-users
+                    hostkey:
+                      name: hostkey
+                      secret:
+                        secretName: ref:sftp-host-key
+                        defaultMode: 0400
+
+          services:
+            sftp:
+              ports:
+                ssh:
+                  port: 22
+
+    # the public exposure: ssh over TLS, see above
+    sftp-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        - ref:sftp
+        - name: app-cert-manager
+          namespace: cert-manager
+        - name: app-gateway-api
+          namespace: gateway-api
+      values:
+        resources:
+          ciliumNetworkPolicies:
+            ssh-tls:
+              endpointSelector: ref:ssh-tls
+              ingress:
+                gateway:
+                  fromEntities: [ingress, host, remote-node]
+                  toPorts: [8443]
+              egress:
+                sftp:
+                  toEndpoints:
+                    sftp:
+                      matchLabels: {"k8s:io.kubernetes.pod.namespace": sftp, "k8s:app.kubernetes.io/instance": sftp, "k8s:app.kubernetes.io/component": sftp}
+                  toPorts: [22]
+
+          certManagerCertificates:
+            ssh-gateway:
+              secretName: tls-sftp-gateway
+              dnsNames:
+                ssh: sftp.{{ .Values.app.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
+
+          configMaps:
+            ssh-tls:
+              data:
+                nginx.conf: |
+                  worker_processes 1;
+                  pid /tmp/nginx.pid;
+                  error_log /dev/stderr warn;
+                  events {
+                    worker_connections 1024;
+                  }
+                  stream {
+                    server {
+                      listen 8443 ssl;
+                      ssl_certificate /tls/tls.crt;
+                      ssl_certificate_key /tls/tls.key;
+                      ssl_protocols TLSv1.2 TLSv1.3;
+                      proxy_connect_timeout 10s;
+                      proxy_timeout 1h; # idle
+                      proxy_pass sftp:22;
+                    }
+                  }
+
+          deployments:
+            ssh-tls:
+              replicas: 1
+              template:
+                spec:
+                  securityContext:
+                    runAsUser: 101
+                    runAsGroup: 101
+                  containers:
+                    nginx:
+                      name: nginx
+                      image: nginxinc/nginx-unprivileged:1.29.3-alpine # renovate: versioning=loose
+                      # nginx reads the certificate at start: reload it regularly, the certificate is renewed by cert-manager
+                      command: [ /bin/sh, -c ]
+                      args:
+                        - |
+                          (while true; do sleep 12h; nginx -s reload; done) &
+                          exec nginx -g 'daemon off;'
+                      ports:
+                        ssh:
+                          containerPort: 8443
+                      probe:
+                        tcpSocket: {}
+                      securityContext:
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        config:
+                          name: config
+                          mountPath: /etc/nginx/nginx.conf
+                          subPath: nginx.conf
+                          readOnly: true
+                        tls:
+                          name: tls
+                          mountPath: /tls
+                          readOnly: true
+                  volumes:
+                    config:
+                      name: config
+                      configMap:
+                        name: ref:ssh-tls
+                    tls:
+                      name: tls
+                      secret:
+                        secretName: tls-sftp-gateway
+
+          services:
+            ssh-tls:
+              ports:
+                ssh:
+                  port: 443
+                  targetPort: 8443
+
+          listenerSets:
+            sftp:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: cilium
+              listeners:
+                ssh:
+                  name: ssh
+                  hostname: sftp.{{ .Values.app.domain }}
+                  port: 443
+                  protocol: TLS
+                  tls:
+                    mode: Passthrough
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          tlsRoutes:
+            ssh:
+              parentRefs:
+                sftp:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: sftp
+                  sectionName: ssh
+              hostnames:
+                ssh: sftp.{{ .Values.app.domain }}
+              rules:
+                ssh:
+                  backendRefs:
+                    ssh-tls:
+                      name: ssh-tls
+                      port: 443
+
+oidc:
+  sftp: {} # the secret `sftp-oidc` (`client-id`, `secret`) of the client `sftp` of app-authelia

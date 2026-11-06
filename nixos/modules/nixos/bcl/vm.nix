@@ -12,11 +12,16 @@ let
       m = builtins.match "([0-9]+)([KMGT])" str;
     in
     if m == null then
-      throw "bcl.vm.vms.<name>.memory: \"${str}\" must match <number><K|M|G|T>, e.g. \"4096M\" or \"4G\""
+      throw "bcl.vm.vms.<name>.memoryMax/memoryMin: \"${str}\" must match <number><K|M|G|T>, e.g. \"4096M\" or \"4G\""
     else {
       count = lib.toInt (builtins.elemAt m 0);
       unit = unitSuffixes.${builtins.elemAt m 1};
     };
+  toKiB = str:
+    let
+      m = parseMemory str;
+      multiplier = { KiB = 1; MiB = 1024; GiB = 1024 * 1024; TiB = 1024 * 1024 * 1024; }.${m.unit};
+    in m.count * multiplier;
   mkStableMac = seed:
     let
       hash = builtins.hashString "sha256" seed;
@@ -63,12 +68,26 @@ in
     };
     hostMemoryReservePercent = lib.mkOption {
       type = lib.types.ints.between 1 50;
-      default = 6;
+      default = 2;
       description = ''
         Share of the host's physical RAM kept for the host itself, in percent. The VMs' cgroup (machine.slice)
         is throttled and reclaimed above the remaining share (MemoryHigh), and the host's own services
         (system.slice) are protected from reclaim up to this share (MemoryLow), so that sshd, libvirtd and the
         journal stay responsive when the VMs use all the memory.
+      '';
+    };
+    hostMemoryMinAvailableMiB = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 512;
+      description = ''
+        Memory (MiB, `MemAvailable`) the host keeps for itself. A service watches it every 2s and, when it falls below,
+        takes memory back from the running VMs through their balloon (down to their `memoryMin`), shared between them in
+        proportion to what each can still give, then gives it back once the host has plenty again. This lets the VMs use
+        nearly all the RAM while the host (ex: a nixos upgrade) can still get what it needs. The cgroup limits of
+        `hostMemoryReservePercent` are only the last resort behind it: keep that percentage below this amount.
+
+        Whatever the number of VMs, this must hold or the host can run out of memory with the balloons at their
+        minimum: sum of the `memoryMin` of the VMs + this amount + ~300MiB of qemu overhead per VM <= host RAM.
       '';
     };
     vms = lib.mkOption {
@@ -85,10 +104,18 @@ in
             default = "linux";
             description = "Which NixVirt domain template to use.";
           };
-          memory = lib.mkOption {
+          memoryMax = lib.mkOption {
             type = lib.types.str;
             default = "4G";
-            description = "Amount of RAM for the VM, as <number><K|M|G|T>, e.g. \"4096M\" or \"4G\".";
+            description = "Amount of RAM the VM boots with and the most it can ever get, as <number><K|M|G|T>, e.g. \"4096M\" or \"4G\".";
+          };
+          memoryMin = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = ''
+              Smallest amount of RAM the host may leave to the VM when it needs memory back (see
+              `bcl.vm.hostMemoryMinAvailableMiB`), same format as `memoryMax`. Defaults to half of `memoryMax`.
+            '';
           };
           vcpu = lib.mkOption {
             type = lib.types.ints.positive;
@@ -223,7 +250,7 @@ in
             base = nixvirt.lib.domain.templates.${vm.template} {
               inherit name;
               uuid = vm.uuid;
-              memory = parseMemory vm.memory;
+              memory = parseMemory vm.memoryMax;
               vcpu = { count = vm.vcpu; };
               storage_vol = null; # root disk attached below as a raw LVM block device
               install_vol = if vm.installIso != null then vm.installIso else cfg.defaultIso;
@@ -233,6 +260,9 @@ in
             };
           in
           base // {
+            # One socket with all the vCPUs as cores, like the host. The template gives one socket per vCPU, which the guest
+            # scheduler then treats as separate packages (no shared cache, worse load balancing).
+            cpu = base.cpu // { topology = { sockets = 1; cores = vm.vcpu; threads = 1; }; };
             os = base.os // {
               boot = [ { dev = "hd"; } { dev = "cdrom"; } ];
             } // lib.optionalAttrs (!pkgs.stdenv.hostPlatform.isAarch64 && vm.template == "linux") {
@@ -275,6 +305,11 @@ in
               };
             };
             devices = base.devices // {
+              # vhost (packet handling in the host kernel instead of the qemu process) with one queue per vCPU, so the
+              # network load is spread on all the guest CPUs.
+              interface = base.devices.interface // {
+                driver = { name = "vhost"; queues = lib.min vm.vcpu 8; };
+              };
               # Balloon device so the host can take back memory the guest doesn't use. freePageReporting makes the
               # guest report freed pages to the host automatically, autodeflate gives memory back to the guest
               # instead of letting it OOM when the host balloon is inflated. Needs the guest kernel to have
@@ -287,7 +322,7 @@ in
               disk = [{
                 type = "block";
                 device = "disk";
-                driver = { name = "qemu"; type = "raw"; cache = "none"; discard = "unmap"; };
+                driver = { name = "qemu"; type = "raw"; cache = "none"; io = "native"; discard = "unmap"; };
                 source = { dev = "/dev/data/${name}"; };
                 target = { dev = "vda"; bus = "virtio"; };
               }] ++ (
@@ -295,7 +330,7 @@ in
                 lib.imap0 (i: bd: {
                   type = "block";
                   device = "disk";
-                  driver = { name = "qemu"; type = "raw"; cache = "none"; discard = "unmap"; };
+                  driver = { name = "qemu"; type = "raw"; cache = "none"; io = "native"; discard = "unmap"; };
                   source = { dev = bd.path; };
                   target = { dev = "vd${builtins.substring i 1 "bcdefghijklmnop"}"; bus = "virtio"; };
                   serial = bd.serial;
@@ -465,6 +500,130 @@ in
         '';
       }
     ) cfg.vms) // {
+      # Takes memory back from the guests when the host runs short, gives it back when the host has plenty. Guest RAM is
+      # plain anonymous memory of the qemu processes, and a guest fills all of its RAM with page cache sooner or later, so
+      # nothing is ever returned to the host by itself (free page reporting only reports FREE pages). Inflating the
+      # balloon makes the guest drop its cache and hand the pages back to the host immediately, no swapping involved.
+      bcl-vm-balloon = {
+        description = "Reclaim memory from the VMs through their balloon when the host runs short";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "libvirtd.service" ];
+        path = [ pkgs.libvirt pkgs.gawk pkgs.coreutils ];
+        serviceConfig = {
+          Restart = "always";
+          RestartSec = 5;
+          OOMScoreAdjust = -900; # the one that must survive a memory shortage
+        };
+        script = ''
+          set -u
+          export LIBVIRT_DEFAULT_URI=qemu:///system
+
+          # name, max and min size of the balloon (KiB)
+          vms=(${lib.concatMapStringsSep " " (e: ''"${e}"'') (lib.mapAttrsToList (name: vm:
+            let
+              max = toKiB vm.memoryMax;
+              min = if vm.memoryMin != null then toKiB vm.memoryMin else max / 2;
+            in "${name} ${toString max} ${toString (lib.min min max)}") cfg.vms)})
+
+          low=$((${toString cfg.hostMemoryMinAvailableMiB} * 1024)) # below: take memory back
+          margin=$((256 * 1024))                                     # take back a bit more than missing
+          high=$((low + 768 * 1024))                                 # above: give memory back (hysteresis)
+          step=$((256 * 1024))                                       # max given back per iteration
+          settle=30                                                  # s a resize is given to complete
+          calmNeeded=15                                              # checks (x2s) above `high` before giving back
+
+          declare -A want wantAt vcur vmax vmin eff
+          calm=0
+
+          # name, current size, new size (KiB). `want` remembers what was asked, as a balloon takes a while to inflate:
+          # the next checks count the part still to come as already reclaimed, or the VMs would be drained twice.
+          resize() {
+            echo "host available ''${avail}KiB, $1: $2 -> $3 KiB"
+            if virsh setmem "$1" "$3" --live </dev/null; then
+              want[$1]=$3
+              wantAt[$1]=$now
+            fi
+          }
+
+          while true; do
+            avail=$(awk '/^MemAvailable:/ { print $2 }' /proc/meminfo)
+            now=$(date +%s)
+
+            # one snapshot of all the running VMs, the decisions below are taken on it for all of them at once
+            running=()
+            inflight=0
+            for entry in "''${vms[@]}"; do
+              read -r name max min <<< "$entry"
+              # `actual` is the current size of the balloon: empty when the VM is not running
+              cur=$(virsh dommemstat "$name" 2>/dev/null </dev/null | awk '$1 == "actual" { print $2 }')
+              if [ -z "$cur" ]; then
+                unset "want[$name]" "wantAt[$name]"
+                continue
+              fi
+              running+=("$name")
+              vcur[$name]=$cur
+              vmax[$name]=$max
+              vmin[$name]=$min
+              e=$cur
+              w=''${want[$name]:-}
+              if [ -n "$w" ]; then
+                if [ "$cur" -le "$w" ] || [ $((now - ''${wantAt[$name]})) -gt "$settle" ]; then
+                  unset "want[$name]" "wantAt[$name]" # done, or not reachable (the guest has nothing more to drop)
+                else
+                  inflight=$((inflight + cur - w))
+                  e=$w
+                fi
+              fi
+              eff[$name]=$e
+            done
+
+            if [ "$avail" -lt "$low" ]; then
+              calm=0
+              deficit=$((low + margin - avail - inflight))
+              if [ "$deficit" -gt 0 ]; then
+                # share the deficit between the VMs, in proportion to what each can still give
+                total=0
+                for name in "''${running[@]}"; do
+                  s=$((''${eff[$name]} - ''${vmin[$name]}))
+                  [ "$s" -gt 0 ] && total=$((total + s))
+                done
+                if [ "$total" -gt 0 ]; then
+                  [ "$deficit" -gt "$total" ] && deficit=$total
+                  for name in "''${running[@]}"; do
+                    s=$((''${eff[$name]} - ''${vmin[$name]}))
+                    [ "$s" -gt 0 ] || continue
+                    take=$((deficit * s / total))
+                    [ "$take" -gt 0 ] && resize "$name" "''${vcur[$name]}" $((''${eff[$name]} - take))
+                  done
+                fi
+              fi
+            elif [ "$avail" -gt "$high" ]; then
+              calm=$((calm + 1))
+              if [ "$calm" -ge "$calmNeeded" ] && [ "$inflight" -eq 0 ]; then
+                give=$((avail - high))
+                [ "$give" -gt "$step" ] && give=$step
+                # share it between the VMs, in proportion to what each one is missing
+                total=0
+                for name in "''${running[@]}"; do
+                  n=$((''${vmax[$name]} - ''${vcur[$name]}))
+                  [ "$n" -gt 0 ] && total=$((total + n))
+                done
+                if [ "$total" -gt 0 ]; then
+                  for name in "''${running[@]}"; do
+                    n=$((''${vmax[$name]} - ''${vcur[$name]}))
+                    [ "$n" -gt 0 ] || continue
+                    g=$((give * n / total))
+                    [ "$g" -gt 0 ] && resize "$name" "''${vcur[$name]}" $((''${vcur[$name]} + g))
+                  done
+                fi
+              fi
+            else
+              calm=0
+            fi
+            sleep 2
+          done
+        '';
+      };
       # libvirt ships virt-secret-init-encryption.service, which on first
       # libvirtd start generates a random secret and encrypts it via
       # `systemd-creds encrypt` (default "auto" key selection) into

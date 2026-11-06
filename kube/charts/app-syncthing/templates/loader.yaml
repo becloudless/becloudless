@@ -2,6 +2,16 @@
 
 {{- /* The instances are prepared as resources by default, values set by the cluster take precedence. */}}
 {{- $featureValues := include "app-syncthing.features.instances" (dict "rootContext" $) | fromYaml }}
+{{- $instanceCharts := dict }}
+{{- range $id, $release := (($featureValues.resources | default dict).fluxHelmReleases | default dict) }}
+  {{- $_ := set $instanceCharts $id (deepCopy $release.chart) }}
+{{- end }}
 {{- $_ := set $ "Values" (mustMergeOverwrite $featureValues $.Values) }}
+
+{{- /* An instance the cluster configures (`resources.fluxHelmReleases.syncthing-<user>.values`) got the default chart of the releases
+(`app.loader.helmReleasesSource`, base-loader) from the init: the chart of the instances is the `syncthing` one. */}}
+{{- range $id, $chart := $instanceCharts }}
+  {{- $_ := set (index $.Values.resources.fluxHelmReleases $id) "chart" $chart }}
+{{- end }}
 
 {{- include "base.resources.renderResources" (dict "rootContext" $) }}
