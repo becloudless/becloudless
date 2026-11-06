@@ -98,7 +98,7 @@ resources:
                   containers:
                     sftp:
                       name: sftp
-                      image: ghcr.io/becloudless/alpine-sftp:0.0.0 # TODO the tag published by the CI of docker/alpine/alpine-sftp
+                      image: ghcr.io/becloudless/alpine-sftp:1.261106.2213
                       command: [ sh ]
                       args:
                         - -c
