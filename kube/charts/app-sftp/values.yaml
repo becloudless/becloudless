@@ -10,8 +10,8 @@
 #    with its authelia account (password and second factor), and the login goes on. The token has to be issued to the same user
 #    (introspection). No password is typed in the terminal;
 #  - exposed on the Cilium Gateway `shared` like forgejo: ssh over TLS on `ssh-sftp.<domain>:443`. The Gateway forwards the TLS stream
-#    as is (SNI passthrough) to a nginx that terminates the TLS and forwards the ssh stream to sshd. The client wraps the ssh
-#    connection in a TLS one, ex in `~/.ssh/config` (the SNI is the host prefixed by `ssh-`, so `sftp.<domain>` reaches the
+#    as is (SNI passthrough) to the pod, where a nginx sidecar terminates the TLS and forwards the ssh stream to sshd (Cilium can not
+#    terminate a TLS stream that is not HTTP). The client wraps the ssh connection in a TLS one, ex in `~/.ssh/config` (the SNI is the host prefixed by `ssh-`, so `sftp.<domain>` reaches the
 #    listener `ssh-sftp.<domain>` and the same rule serves every `ssh-*` app):
 #      Host *.<domain>
 #        ProxyCommand ncat --ssl --ssl-servername ssh-%h %h 443
@@ -27,11 +27,9 @@ resources:
     sftp:
       endpointSelector: ref:sftp
       ingress:
-        ssh-tls:
-          fromEndpoints:
-            ssh-tls:
-              matchLabels: {"k8s:io.kubernetes.pod.namespace": sftp, "k8s:app.kubernetes.io/instance": sftp-integration, "k8s:app.kubernetes.io/component": ssh-tls}
-          toPorts: [22]
+        gateway: # the TLS stream forwarded by the Gateway to the nginx sidecar
+          fromEntities: [ingress, host, remote-node]
+          toPorts: [8443]
       egress:
         authelia: # the device authorization and the introspection of the token are made on the public address of authelia
           toFQDNs:
@@ -42,7 +40,7 @@ resources:
           toPorts: [443]
 
   fluxHelmReleases:
-    # the host key (and the secret of the OIDC client, merged from `oidc` below)
+    # the host key and the certificate of the TLS listener (and the secret of the OIDC client, merged from `oidc` below)
     sftp-pre:
       dependsOn:
         - name: app-cert-manager
@@ -50,6 +48,13 @@ resources:
       values:
         resources:
           certManagerCertificates:
+            ssh-gateway:
+              secretName: tls-sftp-gateway
+              dnsNames:
+                ssh: ssh-sftp.{{ .Values.app.domain }}
+              issuerRef:
+                name: letsencrypt-prod
+                kind: ClusterIssuer
             sftp-host-key:
               secretName: sftp-host-key
               commonName: sftp
@@ -84,6 +89,28 @@ resources:
                   {{ $id }} {{ add 20000 (mod (adler32sum $id | int) 40000) }} {{ $user.sshpublickey }}
                   {{- end }}
                   {{- end }}
+
+            # the TLS termination in front of sshd, in the pod: every connection comes from 127.0.0.1
+            ssh-tls:
+              data:
+                nginx.conf: |
+                  worker_processes 1;
+                  pid /tmp/nginx.pid;
+                  error_log /dev/stderr warn;
+                  events {
+                    worker_connections 1024;
+                  }
+                  stream {
+                    server {
+                      listen 8443 ssl;
+                      ssl_certificate /tls/tls.crt;
+                      ssl_certificate_key /tls/tls.key;
+                      ssl_protocols TLSv1.2 TLSv1.3;
+                      proxy_connect_timeout 10s;
+                      proxy_timeout 1h; # idle
+                      proxy_pass 127.0.0.1:22;
+                    }
+                  }
 
           deployments:
             sftp:
@@ -146,7 +173,7 @@ resources:
                           Subsystem sftp internal-sftp
                           ForceCommand internal-sftp
                           ChrootDirectory /data/%u
-                          # every client comes from the nginx pod (and the probe from the node): the penalties per source address
+                          # every client comes from the nginx sidecar (127.0.0.1, and the probe): the penalties per source address
                           # (connections closed before the authentication) would block everybody
                           PerSourcePenalties no
                           EOF
@@ -205,95 +232,7 @@ resources:
                           name: hostkey
                           mountPath: /hostkey
                           readOnly: true
-                  volumes:
-                    data:
-                      name: data
-                      persistentVolumeClaim:
-                        claimName: ref:data
-                    config:
-                      name: config
-                      configMap:
-                        name: ref:sftp-users
-                    hostkey:
-                      name: hostkey
-                      secret:
-                        secretName: ref:sftp-host-key
-                        defaultMode: 0400
-
-          services:
-            sftp:
-              ports:
-                ssh:
-                  port: 22
-
-    # the public exposure: ssh over TLS, see above
-    sftp-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
-      dependsOn:
-        - ref:sftp
-        - name: app-cert-manager
-          namespace: cert-manager
-        - name: app-gateway-api
-          namespace: gateway-api
-      values:
-        resources:
-          ciliumNetworkPolicies:
-            ssh-tls:
-              endpointSelector: ref:ssh-tls
-              ingress:
-                gateway:
-                  fromEntities: [ingress, host, remote-node]
-                  toPorts: [8443]
-              egress:
-                sftp:
-                  toEndpoints:
-                    sftp:
-                      matchLabels: {"k8s:io.kubernetes.pod.namespace": sftp, "k8s:app.kubernetes.io/instance": sftp, "k8s:app.kubernetes.io/component": sftp}
-                  toPorts: [22]
-
-          certManagerCertificates:
-            ssh-gateway:
-              secretName: tls-sftp-gateway
-              dnsNames:
-                ssh: ssh-sftp.{{ .Values.app.domain }}
-              issuerRef:
-                name: letsencrypt-prod
-                kind: ClusterIssuer
-
-          configMaps:
-            ssh-tls:
-              data:
-                nginx.conf: |
-                  worker_processes 1;
-                  pid /tmp/nginx.pid;
-                  error_log /dev/stderr warn;
-                  events {
-                    worker_connections 1024;
-                  }
-                  stream {
-                    server {
-                      listen 8443 ssl;
-                      ssl_certificate /tls/tls.crt;
-                      ssl_certificate_key /tls/tls.key;
-                      ssl_protocols TLSv1.2 TLSv1.3;
-                      proxy_connect_timeout 10s;
-                      proxy_timeout 1h; # idle
-                      proxy_pass sftp:22;
-                    }
-                  }
-
-          deployments:
-            ssh-tls:
-              replicas: 1
-              template:
-                spec:
-                  securityContext:
-                    runAsUser: 101
-                    runAsGroup: 101
-                  containers:
+                    # terminates the TLS of the Gateway and forwards the ssh stream to sshd
                     nginx:
                       name: nginx
                       image: nginxinc/nginx-unprivileged:1.29.3-alpine # renovate: versioning=loose
@@ -304,17 +243,20 @@ resources:
                           (while true; do sleep 12h; nginx -s reload; done) &
                           exec nginx -g 'daemon off;'
                       ports:
-                        ssh:
+                        tls:
                           containerPort: 8443
                       probe:
                         tcpSocket: {}
                       securityContext:
+                        runAsNonRoot: true
+                        runAsUser: 101
+                        runAsGroup: 101
                         capabilities:
                           drop:
                             all: ALL
                       volumeMounts:
-                        config:
-                          name: config
+                        nginx-config:
+                          name: nginx-config
                           mountPath: /etc/nginx/nginx.conf
                           subPath: nginx.conf
                           readOnly: true
@@ -323,22 +265,47 @@ resources:
                           mountPath: /tls
                           readOnly: true
                   volumes:
+                    data:
+                      name: data
+                      persistentVolumeClaim:
+                        claimName: ref:data
                     config:
                       name: config
+                      configMap:
+                        name: ref:sftp-users
+                    nginx-config:
+                      name: nginx-config
                       configMap:
                         name: ref:ssh-tls
                     tls:
                       name: tls
                       secret:
                         secretName: tls-sftp-gateway
+                    hostkey:
+                      name: hostkey
+                      secret:
+                        secretName: ref:sftp-host-key
+                        defaultMode: 0400
 
           services:
-            ssh-tls:
+            sftp:
               ports:
-                ssh:
+                tls:
                   port: 443
                   targetPort: 8443
 
+    # the public exposure: ssh over TLS, see above
+    sftp-integration:
+      install:
+        disableWait: true
+      upgrade:
+        disableWait: true
+      dependsOn:
+        - ref:sftp
+        - name: app-gateway-api
+          namespace: gateway-api
+      values:
+        resources:
           listenerSets:
             sftp:
               parentRef:
@@ -371,8 +338,8 @@ resources:
               rules:
                 ssh:
                   backendRefs:
-                    ssh-tls:
-                      name: ssh-tls
+                    sftp:
+                      name: sftp
                       port: 443
 
 oidc:

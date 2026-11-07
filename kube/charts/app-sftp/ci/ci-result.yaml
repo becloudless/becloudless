@@ -24,14 +24,13 @@ spec:
       app.kubernetes.io/component: sftp
       app.kubernetes.io/instance: sftp
   ingress:
-  - fromEndpoints:
-    - matchLabels:
-        k8s:app.kubernetes.io/component: ssh-tls
-        k8s:app.kubernetes.io/instance: sftp-integration
-        k8s:io.kubernetes.pod.namespace: sftp
+  - fromEntities:
+    - ingress
+    - host
+    - remote-node
     toPorts:
     - ports:
-      - port: "22"
+      - port: "8443"
         protocol: TCP
 ---
 # Source: app-sftp/templates/loader.yaml
@@ -77,6 +76,9 @@ spec:
           sftp-users:
             name: sftp-users
             namespace: default
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
         deployments:
           sftp:
             labels:
@@ -93,33 +95,9 @@ spec:
             name: sftp
             namespace: default
       sftp-integration:
-        certManagerCertificates:
-          ssh-gateway:
-            name: ssh-gateway
-            namespace: default
-            secretName: tls-sftp-gateway
-        ciliumNetworkPolicies:
-          ssh-tls:
-            name: ssh-tls
-            namespace: default
-        configMaps:
-          ssh-tls:
-            name: ssh-tls
-            namespace: default
-        deployments:
-          ssh-tls:
-            labels:
-              app.kubernetes.io/component: ssh-tls
-              app.kubernetes.io/instance: sftp-integration
-            name: ssh-tls
-            namespace: default
         listenerSets:
           sftp:
             name: sftp
-            namespace: default
-        services:
-          ssh-tls:
-            name: ssh-tls
             namespace: default
         tlsRoutes:
           ssh:
@@ -130,6 +108,10 @@ spec:
           sftp-host-key:
             name: sftp-host-key
             namespace: default
+          ssh-gateway:
+            name: ssh-gateway
+            namespace: default
+            secretName: tls-sftp-gateway
         externalSecrets:
           sftp-oidc:
             name: sftp-oidc
@@ -148,6 +130,26 @@ spec:
           data:
             users: n0rad 56758 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILvM8t4hXJxjBzrUS5FhAQ/TD9TJscT7CyLKFSOjZjj4
               id_ed25519
+        ssh-tls:
+          data:
+            nginx.conf: |-
+              worker_processes 1;
+              pid /tmp/nginx.pid;
+              error_log /dev/stderr warn;
+              events {
+                worker_connections 1024;
+              }
+              stream {
+                server {
+                  listen 8443 ssl;
+                  ssl_certificate /tls/tls.crt;
+                  ssl_certificate_key /tls/tls.key;
+                  ssl_protocols TLSv1.2 TLSv1.3;
+                  proxy_connect_timeout 10s;
+                  proxy_timeout 1h; # idle
+                  proxy_pass 127.0.0.1:22;
+                }
+              }
       deployments:
         sftp:
           replicas: 1
@@ -161,6 +163,38 @@ spec:
                 policy.bcl.tf/skipPodSetHostUsers: "true"
             spec:
               containers:
+                nginx:
+                  args:
+                  - |-
+                    (while true; do sleep 12h; nginx -s reload; done) &
+                    exec nginx -g 'daemon off;'
+                  command:
+                  - /bin/sh
+                  - -c
+                  image: nginxinc/nginx-unprivileged:1.29.3-alpine
+                  name: nginx
+                  ports:
+                    tls:
+                      containerPort: 8443
+                  probe:
+                    tcpSocket: {}
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                    runAsGroup: 101
+                    runAsNonRoot: true
+                    runAsUser: 101
+                  volumeMounts:
+                    nginx-config:
+                      mountPath: /etc/nginx/nginx.conf
+                      name: nginx-config
+                      readOnly: true
+                      subPath: nginx.conf
+                    tls:
+                      mountPath: /tls
+                      name: tls
+                      readOnly: true
                 sftp:
                   args:
                   - -c
@@ -204,7 +238,7 @@ spec:
                     Subsystem sftp internal-sftp
                     ForceCommand internal-sftp
                     ChrootDirectory /data/%u
-                    # every client comes from the nginx pod (and the probe from the node): the penalties per source address
+                    # every client comes from the nginx sidecar (127.0.0.1, and the probe): the penalties per source address
                     # (connections closed before the authentication) would block everybody
                     PerSourcePenalties no
                     EOF
@@ -283,6 +317,14 @@ spec:
                   secret:
                     defaultMode: 256
                     secretName: ref:sftp-host-key
+                nginx-config:
+                  configMap:
+                    name: ref:ssh-tls
+                  name: nginx-config
+                tls:
+                  name: tls
+                  secret:
+                    secretName: tls-sftp-gateway
       persistentVolumeClaims:
         data:
           resources:
@@ -292,8 +334,9 @@ spec:
       services:
         sftp:
           ports:
-            ssh:
-              port: 22
+            tls:
+              port: 443
+              targetPort: 8443
 ---
 # Source: app-sftp/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -312,8 +355,6 @@ spec:
         namespace: apps
   dependsOn:
   - name: sftp
-  - name: app-cert-manager
-    namespace: cert-manager
   - name: app-gateway-api
     namespace: gateway-api
   driftDetection:
@@ -344,6 +385,9 @@ spec:
           sftp-users:
             name: sftp-users
             namespace: default
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
         deployments:
           sftp:
             labels:
@@ -360,33 +404,9 @@ spec:
             name: sftp
             namespace: default
       sftp-integration:
-        certManagerCertificates:
-          ssh-gateway:
-            name: ssh-gateway
-            namespace: default
-            secretName: tls-sftp-gateway
-        ciliumNetworkPolicies:
-          ssh-tls:
-            name: ssh-tls
-            namespace: default
-        configMaps:
-          ssh-tls:
-            name: ssh-tls
-            namespace: default
-        deployments:
-          ssh-tls:
-            labels:
-              app.kubernetes.io/component: ssh-tls
-              app.kubernetes.io/instance: sftp-integration
-            name: ssh-tls
-            namespace: default
         listenerSets:
           sftp:
             name: sftp
-            namespace: default
-        services:
-          ssh-tls:
-            name: ssh-tls
             namespace: default
         tlsRoutes:
           ssh:
@@ -397,6 +417,10 @@ spec:
           sftp-host-key:
             name: sftp-host-key
             namespace: default
+          ssh-gateway:
+            name: ssh-gateway
+            namespace: default
+            secretName: tls-sftp-gateway
         externalSecrets:
           sftp-oidc:
             name: sftp-oidc
@@ -410,103 +434,6 @@ spec:
             name: authelia-reader
             namespace: default
     resources:
-      certManagerCertificates:
-        ssh-gateway:
-          dnsNames:
-            ssh: ssh-sftp.test.com
-          issuerRef:
-            kind: ClusterIssuer
-            name: letsencrypt-prod
-          secretName: tls-sftp-gateway
-      ciliumNetworkPolicies:
-        ssh-tls:
-          egress:
-            sftp:
-              toEndpoints:
-                sftp:
-                  matchLabels:
-                    k8s:app.kubernetes.io/component: sftp
-                    k8s:app.kubernetes.io/instance: sftp
-                    k8s:io.kubernetes.pod.namespace: sftp
-              toPorts:
-              - 22
-          endpointSelector: ref:ssh-tls
-          ingress:
-            gateway:
-              fromEntities:
-              - ingress
-              - host
-              - remote-node
-              toPorts:
-              - 8443
-      configMaps:
-        ssh-tls:
-          data:
-            nginx.conf: |-
-              worker_processes 1;
-              pid /tmp/nginx.pid;
-              error_log /dev/stderr warn;
-              events {
-                worker_connections 1024;
-              }
-              stream {
-                server {
-                  listen 8443 ssl;
-                  ssl_certificate /tls/tls.crt;
-                  ssl_certificate_key /tls/tls.key;
-                  ssl_protocols TLSv1.2 TLSv1.3;
-                  proxy_connect_timeout 10s;
-                  proxy_timeout 1h; # idle
-                  proxy_pass sftp:22;
-                }
-              }
-      deployments:
-        ssh-tls:
-          replicas: 1
-          template:
-            spec:
-              containers:
-                nginx:
-                  args:
-                  - |-
-                    (while true; do sleep 12h; nginx -s reload; done) &
-                    exec nginx -g 'daemon off;'
-                  command:
-                  - /bin/sh
-                  - -c
-                  image: nginxinc/nginx-unprivileged:1.29.3-alpine
-                  name: nginx
-                  ports:
-                    ssh:
-                      containerPort: 8443
-                  probe:
-                    tcpSocket: {}
-                  securityContext:
-                    capabilities:
-                      drop:
-                        all: ALL
-                  volumeMounts:
-                    config:
-                      mountPath: /etc/nginx/nginx.conf
-                      name: config
-                      readOnly: true
-                      subPath: nginx.conf
-                    tls:
-                      mountPath: /tls
-                      name: tls
-                      readOnly: true
-              securityContext:
-                runAsGroup: 101
-                runAsUser: 101
-              volumes:
-                config:
-                  configMap:
-                    name: ref:ssh-tls
-                  name: config
-                tls:
-                  name: tls
-                  secret:
-                    secretName: tls-sftp-gateway
       listenerSets:
         sftp:
           listeners:
@@ -525,12 +452,6 @@ spec:
             kind: Gateway
             name: shared
             namespace: cilium
-      services:
-        ssh-tls:
-          ports:
-            ssh:
-              port: 443
-              targetPort: 8443
       tlsRoutes:
         ssh:
           hostnames:
@@ -544,8 +465,8 @@ spec:
           rules:
             ssh:
               backendRefs:
-                ssh-tls:
-                  name: ssh-tls
+                sftp:
+                  name: sftp
                   port: 443
 ---
 # Source: app-sftp/templates/loader.yaml
@@ -596,6 +517,9 @@ spec:
           sftp-users:
             name: sftp-users
             namespace: default
+          ssh-tls:
+            name: ssh-tls
+            namespace: default
         deployments:
           sftp:
             labels:
@@ -612,33 +536,9 @@ spec:
             name: sftp
             namespace: default
       sftp-integration:
-        certManagerCertificates:
-          ssh-gateway:
-            name: ssh-gateway
-            namespace: default
-            secretName: tls-sftp-gateway
-        ciliumNetworkPolicies:
-          ssh-tls:
-            name: ssh-tls
-            namespace: default
-        configMaps:
-          ssh-tls:
-            name: ssh-tls
-            namespace: default
-        deployments:
-          ssh-tls:
-            labels:
-              app.kubernetes.io/component: ssh-tls
-              app.kubernetes.io/instance: sftp-integration
-            name: ssh-tls
-            namespace: default
         listenerSets:
           sftp:
             name: sftp
-            namespace: default
-        services:
-          ssh-tls:
-            name: ssh-tls
             namespace: default
         tlsRoutes:
           ssh:
@@ -649,6 +549,10 @@ spec:
           sftp-host-key:
             name: sftp-host-key
             namespace: default
+          ssh-gateway:
+            name: ssh-gateway
+            namespace: default
+            secretName: tls-sftp-gateway
         externalSecrets:
           sftp-oidc:
             name: sftp-oidc
@@ -674,6 +578,13 @@ spec:
             rotationPolicy: Never
             size: 256
           secretName: sftp-host-key
+        ssh-gateway:
+          dnsNames:
+            ssh: ssh-sftp.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-sftp-gateway
       externalSecrets:
         sftp-oidc:
           data:
