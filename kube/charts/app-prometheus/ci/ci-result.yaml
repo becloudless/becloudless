@@ -315,7 +315,7 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: prometheus-community
-      version: 92.14.0
+      version: 92.16.1
   dependsOn:
   - name: app-longhorn
     namespace: longhorn-system
