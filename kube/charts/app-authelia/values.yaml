@@ -534,11 +534,11 @@ oidcClients:
       - https://sftp.{{ .Values.app.domain }}/
 
   # kubernetes (the OIDC authentication of the apiserver, see `bcl.role.serverKube.oidc` of the nixos module): a public client used by
-  # `kubectl oidc-login` (int128/kubelogin), which listens on the loopback and opens the browser. The loopback address has to be an IP
-  # (the port is free for it, RFC 8252): `--oidc-redirect-url-hostname=127.0.0.1`. The client id is `kubernetes`.
+  # `kubectl oidc-login` (int128/kubelogin), which listens on the loopback (`127.0.0.1:8000`, then `:18000`), redirects to
+  # `http://localhost:<port>` and opens the browser. The client id is `kubernetes`.
   #   kubectl config set-credentials oidc --exec-api-version=client.authentication.k8s.io/v1 --exec-command=kubectl --exec-arg=oidc-login \
   #     --exec-arg=get-token --exec-arg=--oidc-issuer-url=https://authelia.<domain> --exec-arg=--oidc-client-id=kubernetes \
-  #     --exec-arg=--oidc-extra-scope=groups --exec-arg=--oidc-extra-scope=offline_access --exec-arg=--oidc-redirect-url-hostname=127.0.0.1
+  #     --exec-arg=--oidc-extra-scope=groups --exec-arg=--oidc-extra-scope=offline_access
   kubernetes:
     name: Kubernetes
     public: true
@@ -546,5 +546,7 @@ oidcClients:
     scopes: [openid, profile, email, groups, offline_access]
     grantTypes: [authorization_code, refresh_token]
     redirectUris:
+      - http://localhost:8000
+      - http://localhost:18000
       - http://127.0.0.1:8000
       - http://127.0.0.1:18000

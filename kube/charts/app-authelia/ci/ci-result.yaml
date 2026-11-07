@@ -388,6 +388,8 @@ spec:
             pre_configured_consent_duration: 1 year
             public: true
             redirect_uris:
+            - http://localhost:8000
+            - http://localhost:18000
             - http://127.0.0.1:8000
             - http://127.0.0.1:18000
             require_pkce: true
