@@ -282,7 +282,7 @@ spec:
                     SEAFILE_SERVER_HOSTNAME: seafile.test.com
                     SEAFILE_SERVER_PROTOCOL: https
                     TIME_ZONE: Europe/Paris
-                  image: docker.io/seafileltd/seafile-mc:13.0.28
+                  image: docker.io/seafileltd/seafile-mc:13.0.29
                   name: seafile
                   ports:
                     http:
