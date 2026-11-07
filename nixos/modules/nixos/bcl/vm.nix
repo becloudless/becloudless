@@ -1,6 +1,8 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.bcl.vm;
+  # VMs whose running definition is kept in sync with the declared one, see `restartOnChange`.
+  restartVms = lib.filterAttrs (_: vm: vm.restartOnChange && vm.active) cfg.vms;
   # Instantiated with the host's own native `pkgs`, not NixVirt's own
   # hardcoded x86_64-linux nixpkgs instance - see
   # ../../../packages/nixvirt/VENDORED.md for why this is vendored rather
@@ -189,6 +191,27 @@ in
               file-descriptor passing only). Set to false (default) to use
               QXL video with SPICE listening on 127.0.0.1, which is required
               for remote console access via qemu+ssh (e.g. virt-manager).
+            '';
+          };
+          restartOnChange = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = ''
+              Whether the VM is restarted when the definition of the running VM (memory, vcpu, devices, ... but not the
+              install ISO) is not the declared one anymore. A definition only applies when qemu is started again, a
+              reboot of the guest is not enough.
+
+              The host tells the guest through the qemu guest agent (flag `/run/vm-restart-required`), and the guest decides
+              when to reboot: a kube node (role `serverKube`) asks kured, which drains it, respects its window, takes its
+              lock (one node at a time) and its alert filter; the other guests reboot in the window of
+              `bcl.role.vmRestartRequired`. A reboot of the guest stops the VM (`on_reboot = destroy`), the host then starts
+              it again with the declared definition.
+
+              When false, the new definition applies when the VM is stopped and started by hand.
+
+              A VM stopped while this is enabled is started again (it was running before): stop `bcl-vm-restart` first to
+              keep it stopped. The very first restart after enabling it is manual (the running VM does not have
+              `on_reboot = destroy` yet).
             '';
           };
           # <driver name='qemu' type='raw' cache='none' io='native'/>
@@ -437,6 +460,10 @@ in
                 target = { type = "serial"; port = 0; };
               };
             };
+          } // lib.optionalAttrs vm.restartOnChange {
+            # A reboot of the guest (kured, ...) stops qemu instead of resetting it, bcl-vm-restart then starts it again with the
+            # declared definition. Without it the reboot keeps the same qemu process, so the old definition.
+            on_reboot = "destroy";
           }
         );
         active = vm.active;
@@ -689,6 +716,74 @@ in
       lvm-activate-data = {
         after = [ "nix.mount" ];
         requires = [ "nix.mount" ];
+      };
+
+      # Applies the definition of the VMs (`restartOnChange`). NixVirt redefines a running domain without restarting it (`restart = false`
+      # above), so the running qemu keeps the previous definition until it is stopped and started again. The definition the running
+      # qemu was started with is not available from libvirt: its hash is recorded the first time a started qemu is seen, and compared
+      # with the persistent definition afterwards. The install CDROM is left out, changing the ISO must not restart anything.
+      bcl-vm-restart = lib.mkIf (restartVms != { }) {
+        description = "Restart the VMs whose definition changed, and start the ones that were stopped for it";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "libvirtd.service" ];
+        path = [ pkgs.libvirt pkgs.xmlstarlet pkgs.coreutils ];
+        serviceConfig = {
+          Restart = "always";
+          RestartSec = 5;
+          # the state is the VMs' one, it must outlive the service but not the host (the VMs are started again with it)
+          RuntimeDirectory = "bcl-vm-restart";
+          RuntimeDirectoryPreserve = "yes";
+        };
+        script = ''
+          set -uo pipefail
+          export LIBVIRT_DEFAULT_URI=qemu:///system
+          state=/run/bcl-vm-restart
+          flag='{"execute":"guest-exec","arguments":{"path":"/run/current-system/sw/bin/touch","arg":["/run/vm-restart-required"]}}'
+
+          vms=(${lib.concatStringsSep " " (map (name: ''"${name}"'') (builtins.attrNames restartVms))})
+
+          definitionHash() {
+            virsh dumpxml --inactive "$1" </dev/null | xmlstarlet ed -d "//disk[@device='cdrom']" | sha256sum | cut -d' ' -f1
+          }
+
+          check() {
+            name=$1
+            current=$(virsh domstate "$name" </dev/null 2>/dev/null) || return 0
+
+            if [ "$current" = "shut off" ]; then
+              # stopped by the reboot of its guest: start it with the declared definition
+              if [ -e "$state/$name.seen" ]; then
+                echo "$name: stopped, starting it"
+                virsh start "$name" </dev/null && rm -f "$state/$name.seen"
+              fi
+              return 0
+            fi
+            [ "$current" = "running" ] || return 0
+
+            # one qemu process = one start
+            ident=$(virsh domid "$name" </dev/null):$(cat "/run/libvirt/qemu/$name.pid" 2>/dev/null)
+            hash=$(definitionHash "$name") || return 0
+            touch "$state/$name.seen"
+            if [ "$(cat "$state/$name.ident" 2>/dev/null)" != "$ident" ]; then
+              echo "$name: started, definition $hash"
+              echo "$hash" > "$state/$name.hash"
+              echo "$ident" > "$state/$name.ident"
+              return 0
+            fi
+            [ "$(cat "$state/$name.hash")" != "$hash" ] || return 0
+
+            # idempotent, and repeated: a reboot of the guest not followed by a restart of the VM would lose the flag
+            virsh qemu-agent-command "$name" "$flag" --timeout 10 </dev/null >/dev/null \
+              || echo "$name: definition changed, cannot reach the guest agent to ask for a restart"
+          }
+
+          while true; do
+            for name in "''${vms[@]}"; do
+              check "$name"
+            done
+            sleep 15
+          done
+        '';
       };
     };
   };
