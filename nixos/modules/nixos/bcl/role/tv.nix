@@ -68,6 +68,10 @@
             resolution=$(echo "$randr_out" | grep -m1 'current' | awk '{print $1}')
             width=$(echo "$resolution" | cut -dx -f1)
             height=$(echo "$resolution" | cut -dx -f2)
+            scale=$(echo "$randr_out" | grep -m1 'Scale:' | awk '{print $2}')
+            scale=''${scale:-1}
+            logical_width=$(awk -v v="$width" -v s="$scale" 'BEGIN { printf "%d", v / s }')
+            logical_height=$(awk -v v="$height" -v s="$scale" 'BEGIN { printf "%d", v / s }')
 
 
             # Only switch to 23.976 if both the output and mode are actually available (TODO: https://github.com/jellyfin/jellyfin-desktop/issues/247)
@@ -122,7 +126,7 @@
             ) &
 
             cat > ~/.config/jellyfin-desktop/settings.json <<EOF
-            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"csd", "windowMaximized": true}
+            {"serverUrl":"${config.bcl.role.tv.jellyfinUrl}","windowDecorations":"csd","windowMaximized":false,"windowWidth":$width,"windowHeight":$height,"windowLogicalWidth":$logical_width,"windowLogicalHeight":$logical_height,"windowScale":$scale}
             EOF
             export JELLYFIN_DESKTOP_LOG_LEVEL=debug
             export JELLYFIN_DESKTOP_LOG_FILE=~/.config/jellyfin-desktop/jellyfin-desktop.log
