@@ -1,8 +1,0 @@
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: HelmRepository
-metadata:
-  name: mailu
-  namespace: mailu
-spec:
-  url: https://mailu.github.io/helm-charts
-  interval: 10m
