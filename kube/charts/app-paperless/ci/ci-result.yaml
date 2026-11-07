@@ -222,7 +222,7 @@ spec:
                   - gotenberg
                   - --chromium-disable-javascript=true
                   - --chromium-allow-list=file:///tmp/.*
-                  image: gotenberg/gotenberg:8.20.1
+                  image: gotenberg/gotenberg:8.39.0
                   name: gotenberg
                   ports:
                     http:
