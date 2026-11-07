@@ -271,6 +271,8 @@ An app that logs in with authelia has an OIDC client, in two parts that share th
   | `groups`, `oneFactorGroups` | the groups with the second factor (`role_admin` and `app_<id>`), with the first factor only (none) |
   | `policy` | a policy of authelia (`two_factor`) instead of `<id>_authz` |
   | `pkce`, `claimsPolicy` | requires PKCE (S256), a claims policy of the configuration |
+  | `public` | a public client (a CLI): no secret nor Role, the client id is the id, PKCE is required |
+  | `public` | a public client (a CLI): no secret nor Role, the client id is the id, PKCE is required |
   | `tokenEndpointAuthMethod`, `signingAlgorithm` | `client_secret_basic`, `none` |
   | `grantTypes`, `responseModes` | `authorization_code`, not set |
 

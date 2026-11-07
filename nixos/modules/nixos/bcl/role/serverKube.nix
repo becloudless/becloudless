@@ -8,6 +8,41 @@ let
   kubeadmStaticConfigPath = "/etc/kubernetes/kubeadm.yaml";
   # Copy of the static config with the etcd state decided at boot (the static one is read-only).
   kubeadmInitConfigPath = "/run/kubeadm/kubeadm.yaml";
+  # OIDC authentication of the apiserver (structured authentication configuration, read by the apiserver at its start).
+  authenticationConfigPath = "/etc/kubernetes/authentication-config.yaml";
+  # The Mozilla CA bundle is inlined: the apiserver pod mounts /etc/ssl/certs of the host, whose files are symlinks into /etc/static
+  # and the nix store, broken in the container, so it would not trust the certificate of the issuer (public CA). The bundle without
+  # trust rules has plain CERTIFICATE blocks (the one of the host has TRUSTED CERTIFICATE ones, ignored by go).
+  authenticationConfig = pkgs.runCommand "kube-authentication-config.yaml" { } ''
+    cat > $out <<EOF
+    apiVersion: apiserver.config.k8s.io/v1
+    kind: AuthenticationConfiguration
+    jwt:
+    - issuer:
+        url: ${cfg.oidc.issuerUrl}
+        audiences:
+        - ${cfg.oidc.clientId}
+        certificateAuthority: |
+    EOF
+    ${pkgs.gnused}/bin/sed 's/^/      /' ${pkgs.cacert}/etc/ssl/certs/ca-no-trust-rules-bundle.crt >> $out
+    cat >> $out <<EOF
+      claimMappings:
+        username:
+          claim: preferred_username
+          prefix: "oidc:"
+        groups:
+          claim: groups
+          prefix: "oidc:"
+    EOF
+  '';
+  oidcApiServerExtraVolumes = lib.concatStringsSep "\n  " [
+    "extraVolumes:"
+    "- name: authentication-config"
+    "  hostPath: ${authenticationConfigPath}"
+    "  mountPath: ${authenticationConfigPath}"
+    "  readOnly: true"
+    "  pathType: File"
+  ];
   etcdJoinExistingCluster = pkgs.writeShellApplication {
     name = "etcd-join-existing-cluster";
     runtimeInputs = [ pkgs.etcd pkgs.kubernetes pkgs.gawk pkgs.gnused pkgs.coreutils ];
@@ -44,6 +79,26 @@ in
         Whether this node is a worker only (kubelet + cri-o + a local haproxy to the apiservers, no etcd nor control-plane components):
         the nodes after the `masterNodeCount` first ones (the node number is the last digits of the hostname).
       '';
+    };
+    oidc = {
+      enable = lib.mkEnableOption ''
+        the OIDC authentication of the apiserver (the users log in with authelia, `kubectl oidc-login`). The username is the claim
+        `preferred_username` and the groups are the claim `groups`, both prefixed by `oidc:` (ex `oidc:role_admin`, bound to
+        `cluster-admin` by the chart `app-kube`). The certificates and the service account tokens do not depend on it: when the issuer is
+        down, only the new logins fail, the apiserver keeps starting. The apiserver reads the configuration at its start: restart it
+        (move its static pod manifest) to apply a change of the issuer or of the CA bundle
+      '';
+      issuerUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "https://authelia.${config.bcl.global.domain}";
+        defaultText = lib.literalExpression ''"https://authelia.''${config.bcl.global.domain}"'';
+        description = "The URL of the OIDC issuer (authelia), without trailing slash. It has to be the issuer of the tokens.";
+      };
+      clientId = lib.mkOption {
+        type = lib.types.str;
+        default = "kubernetes";
+        description = "The id of the OIDC client, the audience of the tokens (the public client `kubernetes` of `oidcClients` of app-authelia).";
+      };
     };
   };
 
@@ -249,6 +304,8 @@ in
             advertise-address: ${myIp}
             etcd-servers: ${lib.concatMapStringsSep "," (n: "https://${nodeIp n}:2379") (lib.genList (n: n + 1) cfg.masterNodeCount)}
             feature-gates: "SidecarContainers=true"
+            ${lib.optionalString cfg.oidc.enable "authentication-config: ${authenticationConfigPath}"}
+          ${lib.optionalString cfg.oidc.enable oidcApiServerExtraVolumes}
           certSANs:
           - kube.${config.bcl.global.domain} # service name
           - kube.${cfg.clusterName}.i.${config.bcl.global.domain} # service name
@@ -287,6 +344,10 @@ in
           taints: []
       '';
 
+
+    environment.etc."kubernetes/authentication-config.yaml" = lib.mkIf (!cfg.worker && cfg.oidc.enable) {
+      source = authenticationConfig;
+    };
 
     environment.persistence."/nix" = {
       hideMounts = true;

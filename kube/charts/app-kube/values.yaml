@@ -27,6 +27,19 @@ resources:
             all: "*"
 
   clusterRoleBindings:
+    # the users of authelia (OIDC authentication of the apiserver, `bcl.role.serverKube.oidc` of the nixos module) of the group
+    # `role_admin` of lldap: the groups of the id token are prefixed by `oidc:`
+    oidc-admin:
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: cluster-admin
+      subjects:
+        role-admin:
+          apiGroup: rbac.authorization.k8s.io
+          kind: Group
+          name: "oidc:role_admin"
+
     kube-apiserver-kubelet-client:
       labels:
         kubernetes.io/bootstrapping: rbac-defaults
