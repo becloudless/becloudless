@@ -33,7 +33,11 @@ resources:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": sftp, "k8s:app.kubernetes.io/instance": sftp-integration, "k8s:app.kubernetes.io/component": ssh-tls}
           toPorts: [22]
       egress:
-        authelia: # the device authorization and the introspection of the token go through the public address of the gateway
+        authelia: # the device authorization and the introspection of the token are made on the public address of authelia
+          toFQDNs:
+            authelia: {matchName: "authelia.{{ .Values.app.domain }}"}
+          toPorts: [443]
+        gateway: # the public addresses of the cluster are the gateway for the pods
           toEntities: [ingress]
           toPorts: [443]
 

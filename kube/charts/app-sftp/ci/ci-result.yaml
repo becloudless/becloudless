@@ -7,6 +7,12 @@ metadata:
   namespace: default
 spec:
   egress:
+  - toFQDNs:
+    - matchName: authelia.test.com
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
   - toEntities:
     - ingress
     toPorts:
