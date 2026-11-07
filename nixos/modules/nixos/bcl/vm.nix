@@ -3,12 +3,6 @@ let
   cfg = config.bcl.vm;
   # VMs whose running definition is kept in sync with the declared one, see `restartOnChange`.
   restartVms = lib.filterAttrs (_: vm: vm.restartOnChange && vm.active) cfg.vms;
-  # The hash of the persistent definition of a VM, the install CDROM is left out: changing the ISO must not restart anything.
-  definitionHashFunction = ''
-    definitionHash() {
-      virsh dumpxml --inactive "$1" </dev/null | xmlstarlet ed -d "//disk[@device='cdrom']" | sha256sum | cut -d' ' -f1
-    }
-  '';
   # Instantiated with the host's own native `pkgs`, not NixVirt's own
   # hardcoded x86_64-linux nixpkgs instance - see
   # ../../../packages/nixvirt/VENDORED.md for why this is vendored rather
@@ -219,9 +213,8 @@ in
               keep it stopped. The very first restart after enabling it is manual (the running VM does not have
               `on_reboot = destroy` yet).
 
-              A reboot of the host saves the running VMs and restores them, with the definition they had. A VM whose definition
-              changed (and not applied yet) is shut down cleanly instead (`bcl-vm-shutdown-changed`, 5 minutes at most), and
-              started with the declared definition at the boot.
+              The VMs are never saved when the host stops (`bcl.vm` sets libvirt-guests to shut them down): a restored VM keeps
+              the definition it had, and the qemu binary it was saved with, which a new nixpkgs removes from the store.
             '';
           };
           # <driver name='qemu' type='raw' cache='none' io='native'/>
@@ -241,6 +234,15 @@ in
     virtualisation.libvirt.enable = true; # also enables virtualisation.libvirtd
     virtualisation.libvirt.swtpm.enable = true; # emulated TPM, needed for windows template
 
+
+    # Never save the VMs when the host stops (libvirt-guests defaults to `suspend`, a managed save restored at the boot): a restored
+    # VM keeps the definition it was running with (a changed one would never apply on a host reboot), and the save records the qemu
+    # binary it ran with, which a new nixpkgs removes from the store, so the restore (and nixvirt.service with it) fails with
+    # "Cannot check QEMU binary /nix/store/...-qemu-.../bin/qemu-system-...". It is also what failed when the LVs were not active.
+    # The guests get an ACPI shutdown (a kube node drains itself, see serverKubeDrain.nix) and are started again at the boot
+    # (`onBoot = start`, and NixVirt). The timeout is per group of `parallelShutdown` guests.
+    virtualisation.libvirtd.onShutdown = "shutdown";
+    virtualisation.libvirtd.parallelShutdown = 10;
     # Without this, /etc/lvm/lvm.conf's thin_check_executable defaults to the
     # FHS path "/usr/sbin/thin_check", which doesn't exist on NixOS. This
     # makes `vgchange -aay` (run by the lvm2-activation-generator systemd
@@ -740,7 +742,8 @@ in
       bcl-vm-restart = lib.mkIf (restartVms != { }) {
         description = "Restart the VMs whose definition changed, and start the ones that were stopped for it";
         wantedBy = [ "multi-user.target" ];
-        after = [ "libvirtd.service" ];
+        # after libvirt-guests: at the host shutdown the watcher stops first, it must not start again the VMs that libvirt-guests shuts down
+        after = [ "libvirtd.service" "libvirt-guests.service" ];
         path = [ pkgs.libvirt pkgs.xmlstarlet pkgs.coreutils ];
         serviceConfig = {
           Restart = "always";
@@ -757,7 +760,9 @@ in
 
           vms=(${lib.concatStringsSep " " (map (name: ''"${name}"'') (builtins.attrNames restartVms))})
 
-          ${definitionHashFunction}
+          definitionHash() {
+            virsh dumpxml --inactive "$1" </dev/null | xmlstarlet ed -d "//disk[@device='cdrom']" | sha256sum | cut -d' ' -f1
+          }
 
           check() {
             name=$1
@@ -796,62 +801,6 @@ in
             done
             sleep 15
           done
-        '';
-      };
-
-      # The host shutdown saves the running VMs (libvirt-guests, `ON_SHUTDOWN=suspend`) and the boot restores them: the restored qemu
-      # keeps the definition it had, whatever NixVirt defined since, so a reboot of the host would not apply a changed definition
-      # (and a restore is the one thing that can fail, ex a disk that is not there yet). A VM whose definition changed is shut down
-      # cleanly instead, and NixVirt starts it with the declared definition at the next boot. It only runs when the host stops
-      # (never restarted nor stopped by a switch): the unit is started after libvirt-guests, so it stops before it, and before
-      # `bcl-vm-restart` is started, so this one is already stopped and does not start the VMs again.
-      bcl-vm-shutdown-changed = lib.mkIf (restartVms != { }) {
-        description = "Shut down cleanly, instead of saving them, the VMs whose definition changed when the host stops";
-        wantedBy = [ "multi-user.target" ];
-        after = [ "libvirtd.service" "libvirt-guests.service" ];
-        before = [ "bcl-vm-restart.service" ];
-        restartIfChanged = false;
-        stopIfChanged = false;
-        path = [ pkgs.libvirt pkgs.xmlstarlet pkgs.coreutils ];
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          ExecStart = "${pkgs.coreutils}/bin/true";
-          TimeoutStopSec = "6min";
-        };
-        preStop = ''
-          set -uo pipefail
-          export LIBVIRT_DEFAULT_URI=qemu:///system
-          state=/run/bcl-vm-restart
-
-          vms=(${lib.concatStringsSep " " (map (name: ''"${name}"'') (builtins.attrNames restartVms))})
-
-          ${definitionHashFunction}
-
-          changed=()
-          for name in "''${vms[@]}"; do
-            [ "$(virsh domstate "$name" </dev/null 2>/dev/null)" = "running" ] || continue
-            [ -e "$state/$name.hash" ] || continue # the definition it was started with is not known
-            hash=$(definitionHash "$name") || continue
-            [ "$(cat "$state/$name.hash")" != "$hash" ] || continue
-            echo "$name: definition changed, shutting it down instead of saving it"
-            virsh shutdown "$name" </dev/null && changed+=("$name")
-          done
-
-          # the guests shut down in parallel, the one that does not within 5 minutes is stopped (saving a guest in the middle of its
-          # shutdown would not restore it)
-          deadline=$((SECONDS + 300))
-          for name in "''${changed[@]}"; do
-            while [ "$(virsh domstate "$name" </dev/null 2>/dev/null)" = "running" ]; do
-              if [ "$SECONDS" -ge "$deadline" ]; then
-                echo "$name: did not shut down in time, stopping it"
-                virsh destroy "$name" </dev/null || true
-                break
-              fi
-              sleep 2
-            done
-          done
-          exit 0
         '';
       };
     };
