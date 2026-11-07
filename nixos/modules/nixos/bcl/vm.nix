@@ -524,6 +524,11 @@ in
               lvresize -L ${vm.diskSize} "data/${name}"
             fi
           fi
+
+          # The same interrupted autoactivation leaves the thin volumes inactive (no /dev/data/<name>), and nothing else activates
+          # them: libvirt can not start the VM, nor resume it from its managed save ("Cannot access storage file '/dev/data/<name>'"
+          # then "unexpected fatal signal 13" of libvirt_iohelper, which fails nixvirt.service). Idempotent when it is active.
+          lvchange -ay "data/${name}"
         '';
       }
     ) cfg.vms) // {
