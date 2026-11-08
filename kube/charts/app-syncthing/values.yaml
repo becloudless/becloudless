@@ -7,19 +7,18 @@
 #    access control, `domain_regex`). The data of the instance is a volume backed up daily by longhorn. The instances are not exposed
 #    for the synchronization: their devices are reached through the relay below, the instances configure themselves for it;
 #  - a relay (`syncthing-relay`, https://docs.syncthing.net/users/strelaysrv.html), public on the TCP port 22067 of the Gateway (a
-#    TCPRoute, the relay does its own TLS and its clients send no SNI). It is private: it does not join the public pools, and it only
-#    serves the clients that give its token. A device that cannot be reached directly is reached through it.
+#    TCPRoute, the relay does its own TLS and its clients send no SNI). It is private: it does not join the public pools. A device that
+#    cannot be reached directly is reached through it.
 #
 # The relay (the default deny of app-cilium blocks the instances from the rest, so the global discovery, the public relays and the NAT
 # detection only log errors):
 #  - its certificate is made by cert-manager (`syncthing-relay-keys`, valid 100 years and never rotated: the relay ID is the device ID of
-#    its certificate, a renewal would change it) and its token is generated (`syncthing-relay`, key `token`), by `syncthing-pre`;
-#  - the instances set their sync protocol listen address to `relay://syncthing-relay:22067/?id=<relay id>&token=<token>` themselves,
+#    its certificate, a renewal would change it);
+#  - the instances set their sync protocol listen address to `relay://syncthing-relay:22067/?id=<relay id>` themselves,
 #    the relay ID being computed from its certificate (see the `syncthing` chart);
-#  - the devices that connect to an instance add it with the address `relay://<public name of the Gateway>:22067/?id=<relay id>&token=<token>`
+#  - the devices that connect to an instance add it with the address `relay://<public name of the Gateway>:22067/?id=<relay id>`
 #    (DNS record of the name to the IP of the Gateway, e.g. `sync.syncthing.<domain>`: nothing in the cluster knows it). The relay ID is in
-#    the log of the relay (`kubectl -n syncthing logs deploy/syncthing-relay`, `URI: relay://...?id=<relay id>`) and the token is read with
-#    `kubectl -n syncthing get secret syncthing-relay -o jsonpath='{.data.token}' | base64 -d`.
+#    the log of the relay (`kubectl -n syncthing logs deploy/syncthing-relay`, `URI: relay://...?id=<relay id>`).
 
 resources:
 
@@ -37,15 +36,8 @@ resources:
       dependsOn:
         - name: app-cert-manager
           namespace: cert-manager
-        - name: app-secret-generator
-          namespace: secret-generator
       values:
         resources:
-          stringSecrets:
-            syncthing-relay:
-              fields:
-                token: {}
-
           # key pair of the relay, mounted as `cert.pem` and `key.pem`. The ID of the relay is the device ID of the certificate, so it must
           # never be renewed (a duration of 100 years) nor get a new key.
           certManagerCertificates:
@@ -84,12 +76,6 @@ resources:
                         - -keys=/var/strelaysrv
                         - -pools= # private relay, it does not join the public pools
                         - -status-srv= # the statistics are for the pools
-                        - -token=$(RELAY_TOKEN) # expanded by Kubernetes: the token is not in the spec
-                      env:
-                        RELAY_TOKEN:
-                          secretKeyRef:
-                            name: ref:syncthing-relay
-                            key: token
                       ports:
                         relay:
                           containerPort: 22067

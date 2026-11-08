@@ -4,7 +4,7 @@ installing the `syncthing` chart (one instance, see its values) with the id of t
 the namespace of the release and run as the same service account as the other ones of the app (`defaults.resources` of the app-bcl chart).
 
 The id of the user is the name of the resources, so it must be a valid DNS label (lowercase letters, digits and `-`).
-The instances wait for `syncthing-pre` (values.yaml), which makes the token and the certificate of the relay they are configured from.
+The instances wait for `syncthing-pre` (values.yaml), which makes the certificate of the relay they are configured from.
 Set `resources.fluxHelmReleases.syncthing-<user>.values` in the cluster to configure an instance (ex: `storageSize`).
 */}}
 {{- define "app-syncthing.features.instances" }}

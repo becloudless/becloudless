@@ -7,7 +7,7 @@ overlap.
 Everything is returned as a default: set `resources.<kind>.<id>...` to override or extend any generated field.
 
 When `relay.host` is set, a sidecar (`files/relay.sh`, the pod restarts when it changes: see the checksum annotations of the base chart) keeps the sync protocol listen address of the instance on that relay: the ID of
-the relay is computed from its certificate (`relay.certSecret`) and the token comes from `relay.tokenSecret`.
+the relay is computed from its certificate (`relay.certSecret`).
 */}}
 {{- define "syncthing.feature" }}
 {{- $rootContext := .rootContext }}
@@ -91,10 +91,6 @@ resources:
               env:
                 RELAY_HOST: {{ $relay.host | quote }}
                 RELAY_PORT: {{ $relay.port | toString | quote }}
-                RELAY_TOKEN:
-                  secretKeyRef:
-                    name: {{ $relay.tokenSecret.name | quote }}
-                    key: {{ $relay.tokenSecret.key | quote }}
               securityContext:
                 runAsUser: 1000
                 runAsGroup: 1000

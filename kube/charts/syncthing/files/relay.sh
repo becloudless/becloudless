@@ -7,7 +7,7 @@
 # The relay ID is the device ID of its certificate (sha256 of the DER, base32, a luhn32 check character every 13 characters, groups of 7),
 # computed here from the public certificate of the relay so that nothing has to be copied by hand.
 #
-# Environment: RELAY_HOST, RELAY_PORT, RELAY_TOKEN
+# Environment: RELAY_HOST, RELAY_PORT
 # Files: /relay/tls.crt (certificate of the relay), /var/syncthing/config/config.xml (read only: the API key of the instance is in it)
 set -eu
 
@@ -45,8 +45,8 @@ if [ "${#id}" != 63 ]; then
   echo "cannot compute the ID of the relay from /relay/tls.crt" >&2
   exit 1
 fi
-want="relay://${RELAY_HOST}:${RELAY_PORT}/?id=${id}&token=${RELAY_TOKEN}"
-echo "the instance listens on the relay relay://${RELAY_HOST}:${RELAY_PORT}/?id=${id}"
+want="relay://${RELAY_HOST}:${RELAY_PORT}/?id=${id}"
+echo "the instance listens on the relay ${want}"
 
 # The addresses are reset at each check: a change made in the UI is reverted. The first checks are quick, the instance is starting.
 wait=2

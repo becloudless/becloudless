@@ -12,7 +12,7 @@ data:
     # The relay ID is the device ID of its certificate (sha256 of the DER, base32, a luhn32 check character every 13 characters, groups of 7),
     # computed here from the public certificate of the relay so that nothing has to be copied by hand.
     #
-    # Environment: RELAY_HOST, RELAY_PORT, RELAY_TOKEN
+    # Environment: RELAY_HOST, RELAY_PORT
     # Files: /relay/tls.crt (certificate of the relay), /var/syncthing/config/config.xml (read only: the API key of the instance is in it)
     set -eu
 
@@ -50,8 +50,8 @@ data:
       echo "cannot compute the ID of the relay from /relay/tls.crt" >&2
       exit 1
     fi
-    want="relay://${RELAY_HOST}:${RELAY_PORT}/?id=${id}&token=${RELAY_TOKEN}"
-    echo "the instance listens on the relay relay://${RELAY_HOST}:${RELAY_PORT}/?id=${id}"
+    want="relay://${RELAY_HOST}:${RELAY_PORT}/?id=${id}"
+    echo "the instance listens on the relay ${want}"
 
     # The addresses are reset at each check: a change made in the UI is reverted. The first checks are quick, the instance is starting.
     wait=2
@@ -152,7 +152,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmaps: 10e57883b345d3449827a4dec4b579b1b319027c34e191bd86d280fbb503bce5
+        checksum/configmaps: ae921bcd010f41c20969700cf05c2a663a4a5bbb06bdbed36a46cefe0c80ef39
       labels:
         app.kubernetes.io/component: main
         app.kubernetes.io/instance: test-release
@@ -167,11 +167,6 @@ spec:
           value: syncthing-relay
         - name: RELAY_PORT
           value: "22067"
-        - name: RELAY_TOKEN
-          valueFrom:
-            secretKeyRef:
-              key: token
-              name: syncthing-relay
         image: docker.io/syncthing/syncthing:2.1.7
         name: relay-config
         securityContext:
