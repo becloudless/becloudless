@@ -1017,6 +1017,9 @@ spec:
                       - longhorn-uninstall
             mutate:
               patchStrategicMerge:
+                metadata:
+                  annotations:
+                    policy.bcl.tf/skipPodSetHostUsers: "true"
                 spec:
                   hostUsers: true
             name: pod-set-host-users
