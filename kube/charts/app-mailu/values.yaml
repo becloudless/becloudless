@@ -30,17 +30,22 @@ resources:
             webmail:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: webmail}
           toPorts: [10143, 10025]
+        postfix: # the delivery of the received mails to the mailboxes, `virtual_transport` of postfix (lmtp through the front)
+          fromEndpoints:
+            postfix:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: postfix}
+          toPorts: [2525]
       egress:
         admin:
           toEndpoints:
             admin:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
           toPorts: [8080]
-        dovecot:
+        dovecot: # 2525: the lmtp of the mails delivered by postfix
           toEndpoints:
             dovecot:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
-          toPorts: [110, 143, 4190]
+          toPorts: [110, 143, 4190, 2525]
         postfix:
           toEndpoints:
             postfix:
@@ -114,6 +119,11 @@ resources:
             admin:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
           toPorts: [8080]
+        front: # the delivery of the received mails to the mailboxes, `virtual_transport` of postfix (lmtp through the front)
+          toEndpoints:
+            front:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
+          toPorts: [2525]
         dovecot: # the delivery to the mailboxes (lmtp) and the authentication (sasl)
           toEndpoints:
             dovecot:
@@ -138,11 +148,11 @@ resources:
       endpointSelector:
         matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
       ingress:
-        front:
+        front: # 2525: the lmtp of the mails delivered by postfix through the front
           fromEndpoints:
             front:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
-          toPorts: [110, 143, 4190]
+          toPorts: [110, 143, 4190, 2525]
         postfix:
           fromEndpoints:
             postfix:

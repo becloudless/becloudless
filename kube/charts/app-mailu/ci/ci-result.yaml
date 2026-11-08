@@ -120,6 +120,8 @@ spec:
         protocol: TCP
       - port: "143"
         protocol: TCP
+      - port: "2525"
+        protocol: TCP
       - port: "4190"
         protocol: TCP
   - fromEndpoints:
@@ -158,6 +160,8 @@ spec:
       - port: "110"
         protocol: TCP
       - port: "143"
+        protocol: TCP
+      - port: "2525"
         protocol: TCP
       - port: "4190"
         protocol: TCP
@@ -213,6 +217,14 @@ spec:
     toPorts:
     - ports:
       - port: "80"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: postfix
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "2525"
         protocol: TCP
   - fromEndpoints:
     - matchLabels:
@@ -293,6 +305,14 @@ spec:
     - ports:
       - port: "2102"
         protocol: TCP
+      - port: "2525"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: front
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
       - port: "2525"
         protocol: TCP
   - toFQDNs:
