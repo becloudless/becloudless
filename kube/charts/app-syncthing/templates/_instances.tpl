@@ -45,7 +45,7 @@ resources:
           sourceRef:
             kind: GitRepository
             name: bcl
-            namespace: apps
+            namespace: bcl
       values:
         user: {{ $id }}
         storageClassName: longhorn-files
