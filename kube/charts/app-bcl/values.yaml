@@ -31,7 +31,7 @@ appsGroups:
 # (CRDs, ClusterRoles, webhooks, ClusterIssuers, StorageClasses...) set `clusterAdmin: true`.
 apps:
 
-  # self, in the namespace of the `app-bcl` HelmRelease (and of the `bcl` GitRepository): its service account is `flux-bcl`
+  # self
   bcl:
     namespace: bcl
     clusterAdmin: true
