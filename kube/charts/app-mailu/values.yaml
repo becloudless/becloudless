@@ -416,7 +416,7 @@ resources:
                             ip route add 172.16.42.0/24 via $KUBE_GATEWAY || true
                             ip route add 10.42.0.0/16 via $KUBE_GATEWAY || true
                             sleep infinity
-                          livenessProbe:x
+                          livenessProbe:
                             exec:
                               command: [ping, -c1, -W2, 10.0.0.1]
                             initialDelaySeconds: 10
