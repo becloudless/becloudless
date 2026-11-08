@@ -336,7 +336,7 @@ spec:
             spec:
               containers:
                 tika:
-                  image: apache/tika:3.2.3.0-full
+                  image: apache/tika:3.3.3.0-full
                   name: tika
                   ports:
                     http:
