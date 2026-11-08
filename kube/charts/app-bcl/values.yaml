@@ -105,7 +105,6 @@ apps:
     clusterAdmin: true
     appChart:
       name: app-cert-manager
-    restore: false # no dependency found in the chain of the restore, kept false by precaution (no state)
 
   longhorn:
     groups:
