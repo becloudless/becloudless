@@ -125,10 +125,10 @@ func applyBcl(ctx kube.Context, gitRepositories []map[string]any) error {
 	}
 
 	// flux does not run a resource without service account with its own permissions: the apps helm release runs as a service account
-	// declared by the app-bcl chart (flux-apps), which is cluster-admin since it creates the accounts of every app
+	// declared by the app-bcl chart (flux-bcl), which is cluster-admin since it creates the accounts of every app
 	if len(accounts) == 0 {
 		return errs.WithF(data.WithField("file", clusterAppsHrFile).WithField("serviceAccountName", appsHr.Spec.ServiceAccountName),
-			"The apps helm release must set spec.serviceAccountName to the service account declared by the app-bcl chart (flux-apps)")
+			"The apps helm release must set spec.serviceAccountName to the service account declared by the app-bcl chart (flux-bcl)")
 	}
 	if err := applyDocs(ctx, accounts, "service account of the apps helm release"); err != nil {
 		return errs.WithE(err, "Failed to apply the service account of the apps helm release")
