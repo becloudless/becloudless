@@ -311,8 +311,9 @@ func upgradeRemoteFromUpstream(sshConfig *runner.SshConnectionConfig, action str
 // execNixosRebuild runs nixos-rebuild through the nix daemon (NIX_REMOTE=daemon). Run as root, nix opens the
 // store directly and waits for a write lock on /nix/var/nix/db/big-lock, which can block forever when long-lived
 // daemon connections (ex: the editor's nixd language server) hold it. `env` is used so the variable survives sudo.
+// A corrupted nix store (a path that is empty or truncated after a crash) is repaired, then the command is run again (see nixosStoreRepair.go).
 func execNixosRebuild(run runner.Runner, args ...string) error {
-	return run.ExecCmd("env", append([]string{"NIX_REMOTE=daemon", "nixos-rebuild"}, args...)...)
+	return execWithStoreRepair(run, "env", append([]string{"NIX_REMOTE=daemon", "nixos-rebuild"}, args...)...)
 }
 
 // nixosRebuildAction translates the meta "reboot" action (switch boot config, then reboot) into the
