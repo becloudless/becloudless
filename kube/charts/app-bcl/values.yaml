@@ -105,6 +105,7 @@ apps:
     clusterAdmin: true
     appChart:
       name: app-cert-manager
+    restore: false # longhorn-integration (needed by app-longhorn) waits for it, and its restore waits for longhorn: a cycle (no state)
 
   longhorn:
     groups:
