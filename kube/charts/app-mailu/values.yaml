@@ -124,11 +124,11 @@ resources:
             front:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
           toPorts: [2525]
-        dovecot: # the delivery to the mailboxes (lmtp) and the authentication (sasl)
+        dovecot: # the delivery to the mailboxes (lmtp)
           toEndpoints:
             dovecot:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
-          toPorts: [2525, 2102]
+          toPorts: [2525]
         rspamd:
           toEndpoints:
             rspamd:
@@ -157,7 +157,7 @@ resources:
           fromEndpoints:
             postfix:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: postfix}
-          toPorts: [2525, 2102]
+          toPorts: [2525]
       egress:
         admin:
           toEndpoints:
@@ -174,6 +174,21 @@ resources:
             rspamd:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: rspamd}
           toPorts: [11332]
+        tika: # the extraction of the text of the attachments for the full text search (`fts_tika`)
+          toEndpoints:
+            tika:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: tika}
+          toPorts: [9998]
+
+    mailu-tika: # the extraction of the text of the attachments
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: tika}
+      ingress:
+        dovecot:
+          fromEndpoints:
+            dovecot:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
+          toPorts: [9998]
 
     mailu-rspamd: # the antispam
       endpointSelector:
@@ -401,7 +416,7 @@ resources:
                             ip route add 172.16.42.0/24 via $KUBE_GATEWAY || true
                             ip route add 10.42.0.0/16 via $KUBE_GATEWAY || true
                             sleep infinity
-                          livenessProbe:
+                          livenessProbe:x
                             exec:
                               command: [ping, -c1, -W2, 10.0.0.1]
                             initialDelaySeconds: 10
@@ -457,6 +472,82 @@ resources:
                           secret:
                             secretName: mailu-postfix-vpn
                             defaultMode: 0400
+        # The full text search index of a mailbox (fts_flatcurve, `/mail/<user>/[.<folder>/]fts-flatcurve/<shard>`) that gets corrupt (a write
+        # interrupted by a full volume or a crash) is never repaired by dovecot: its indexer crashes (`Xapian::DatabaseCorruptError`, signal 6)
+        # on every delivery to the mailbox, and the search of the mailbox is broken. This sidecar checks every shard and removes the whole
+        # index of a mailbox with a corrupt shard (a missing shard would hide its messages from the search), dovecot builds it again
+        # (`fts_autoindex`) the next time the mailbox is accessed. The check reads all the indexes, hence the low priority and the long
+        # interval. The log of what is removed is in the logs of the container.
+        fts-heal:
+          kustomize:
+            patches:
+              dovecot:
+                target:
+                  kind: Deployment
+                  name: mailu-dovecot
+                patch: |
+                  apiVersion: apps/v1
+                  kind: Deployment
+                  metadata:
+                    name: mailu-dovecot
+                  spec:
+                    template:
+                      spec:
+                        containers:
+                        - name: fts-heal
+                          image: ghcr.io/mailu/dovecot:2024.06.58 # the one of the dovecot of the chart (xapian-check), to keep in sync with it
+                          securityContext:
+                            runAsUser: 8 # mail, the owner of the indexes
+                            runAsGroup: 12
+                            allowPrivilegeEscalation: false
+                            readOnlyRootFilesystem: true
+                            capabilities:
+                              drop: [ALL]
+                          resources:
+                            requests:
+                              cpu: 10m
+                              memory: 64Mi
+                            limits:
+                              cpu: 500m
+                              memory: 512Mi
+                          command: [ sh, -c ]
+                          args:
+                          - |
+                            interval=3600
+                            log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
+                            # fails only for a corrupt index: xapian-check exits with 1 and does not report "No errors found"
+                            # (any other exit code, killed by the memory limit for instance, is not a verdict)
+                            check() {
+                              out=$(nice -n 19 xapian-check "$1" 2>&1); rc=$?
+                              [ "$rc" -ne 1 ] && return 0
+                              echo "$out" | grep -q "No errors found"
+                            }
+                            log "checking the indexes every $interval seconds"
+                            while true; do
+                              checked=0; removed=0
+                              for d in /mail/*/fts-flatcurve /mail/*/.[!.]*/fts-flatcurve; do
+                                [ -d "$d" ] || continue
+                                for s in "$d"/*; do
+                                  [ -d "$s" ] || continue
+                                  checked=$((checked + 1))
+                                  check "$s" && continue
+                                  # a shard that is written during the check can look corrupt: it has to fail twice
+                                  log "$s: check failed ($(echo "$out" | tail -1)), checking again in 60s"
+                                  sleep 60
+                                  check "$s" && continue
+                                  log "$s: corrupt, removing the index $d"
+                                  rm -rf "$d"
+                                  removed=$((removed + 1))
+                                  break
+                                done
+                              done
+                              log "$checked shards checked, $removed indexes removed"
+                              sleep $interval
+                            done
+                          volumeMounts:
+                          - mountPath: /mail
+                            name: data
+                            subPath: dovecotmail
       values:
         domain: "{{ .Values.app.domain }}"
         subnet: 10.42.0.0/16 # the pods of the cluster
