@@ -44,6 +44,11 @@ resources:
         webhooks:
           fromEntities: [kube-apiserver, host, remote-node]
           toPorts: [9502, 9503]
+        recovery-backend: # the NFS servers store their client records there, ganesha does not start without it
+          fromEndpoints:
+            share-manager:
+              matchLabels: {longhorn.io/component: share-manager}
+          toPorts: [9503]
       egress:
         kube-apiserver:
           toEntities: [kube-apiserver]
@@ -156,7 +161,7 @@ resources:
           toEndpoints:
             managers:
               matchLabels: {app: longhorn-manager}
-          toPorts: [9500]
+          toPorts: [9500, 9503] # 9503: the recovery backend of the NFS server
 
     longhorn-ui:
       endpointSelector:

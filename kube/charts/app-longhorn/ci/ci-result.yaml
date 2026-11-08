@@ -257,6 +257,13 @@ spec:
     - ports:
       - port: "9500"
         protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        longhorn.io/component: share-manager
+    toPorts:
+    - ports:
+      - port: "9503"
+        protocol: TCP
   - fromEntities:
     - kube-apiserver
     - host
@@ -306,6 +313,8 @@ spec:
     toPorts:
     - ports:
       - port: "9500"
+        protocol: TCP
+      - port: "9503"
         protocol: TCP
   endpointSelector:
     matchLabels:

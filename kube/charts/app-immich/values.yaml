@@ -231,6 +231,9 @@ resources:
 
         controllers:
           main:
+            pod:
+              annotations:
+                policy.bcl.tf/skipPodSetHostUsers: "true" # the volumes are NFS (ReadWriteMany), they can not be id-mapped into a user namespace
             containers:
               main:
                 image:
@@ -257,6 +260,11 @@ resources:
                         key: app
 
         machine-learning:
+          controllers:
+            main:
+              pod:
+                annotations:
+                  policy.bcl.tf/skipPodSetHostUsers: "true" # the cache volume is NFS (ReadWriteMany)
           persistence:
             cache:
               type: persistentVolumeClaim
