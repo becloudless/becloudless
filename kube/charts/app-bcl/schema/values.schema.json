@@ -178,7 +178,7 @@
             "$ref": "../../base/schema/resources/fluxHelmReleases.json#/properties/releaseName"
           },
           "restore": {
-            "description": "Restore the PVCs of the app that do not exist from the last Longhorn backups before the app starts (a HelmRelease `restore-<name>` creates the volumes and the PVs, `app-<name>` waits for it). Only for the apps keeping all their state in their PVCs and CloudNativePG databases (the secrets are generated again: not for an app whose data is encrypted with one).",
+            "description": "Restore the PVCs of the app that do not exist from the last Longhorn backups before the app starts (a HelmRelease `restore-<name>` creates the volumes and the PVs, `app-<name>` waits for it). True by default, false for the apps that Longhorn and the backups need to run, and for the apps whose data is encrypted with a generated secret (the secrets are generated again).",
             "type": "boolean"
           },
           "rollback": {

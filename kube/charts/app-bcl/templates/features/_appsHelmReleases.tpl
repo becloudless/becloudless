@@ -13,7 +13,7 @@ Per app:
   - `appChart.name`: chart of the app, `app-<name>` by default, from `./kube/charts/<appChart.name>`
   - `dependsOn`: `<app>: true` makes the app wait for the HelmRelease of the enabled app `<app>`; `<app>: false` removes a dependency.
     A dependency on an app that is not enabled is ignored.
-  - `restore: true`: the PVCs and the secrets of the app restored from the backups before the app starts (needs the apps `longhorn` and
+  - `restore`: `true` by default, `false` to opt out: the PVCs and the secrets of the app restored from the backups before the app starts (needs the apps `longhorn` and
     `backup-restore`), `app-<name>` waits for the
     HelmRelease `restore-<name>` (see the restore feature)
   - `values`: the values of the chart of the app (`spec.values` of the HelmRelease), deep merged over the values of the chart

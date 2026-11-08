@@ -973,6 +973,16 @@ spec:
                   operations:
                   - CREATE
                   selector:
+                    matchLabels:
+                      longhorn.io/component: share-manager
+              - resources:
+                  kinds:
+                  - Pod
+                  namespaces:
+                  - longhorn-system
+                  operations:
+                  - CREATE
+                  selector:
                     matchExpressions:
                     - key: app
                       operator: In

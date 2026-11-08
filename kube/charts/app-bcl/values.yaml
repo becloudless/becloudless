@@ -29,12 +29,16 @@ appsGroups:
 
 # The `flux-<app>` service account of an app is cluster-admin on the namespace of the app only. Apps installing cluster-scoped resources
 # (CRDs, ClusterRoles, webhooks, ClusterIssuers, StorageClasses...) set `clusterAdmin: true`.
+#
+# `restore` is true by default (the PVCs and secrets of the app are restored from the backups when they do not exist, see the restore
+# feature): the apps that Longhorn and the backups need to run (directly or not, the restore of an app waits for them) set `restore: false`.
 apps:
 
   # self
   bcl:
     namespace: bcl
     clusterAdmin: true
+    restore: false # it creates the HelmReleases of the apps and of their restores
 
   # minimal
   gateway-api:
@@ -43,6 +47,7 @@ apps:
     clusterAdmin: true # CRDs
     appChart:
       name: app-gateway-api
+    restore: false # the CRDs of the Gateway API, needed by the apps of the chain before the restore (no state)
 
   cilium:
     groups:
@@ -50,6 +55,7 @@ apps:
     clusterAdmin: true
     appChart:
       name: app-cilium
+    restore: false # the network: Longhorn and the restore jobs can not run without it (no state)
 
   flux:
     groups:
@@ -58,6 +64,7 @@ apps:
     namespace: flux-system
     appChart:
       name: app-flux
+    restore: false # the controllers reconciling the HelmReleases of the restore itself (no state)
 
   kube:
     groups:
@@ -66,6 +73,7 @@ apps:
     namespace: kube-system
     appChart:
       name: app-kube
+    restore: false # the base of the cluster (kube-system), needed before anything runs (no state)
 
   coredns:
     groups:
@@ -73,6 +81,7 @@ apps:
     clusterAdmin: true # creates a ClusterRole and a ClusterRoleBinding
     appChart:
       name: app-coredns
+    restore: false # the DNS: the restore jobs and Longhorn resolve names (no state)
 
   # server
   backup-restore: # the S3 gateway of the backups, and the jobs restoring the volumes and the secrets of the apps with `restore: true`, needs `longhorn`
@@ -81,6 +90,7 @@ apps:
     clusterAdmin: true # the ClusterRole of the restore jobs
     appChart:
       name: app-backup-restore
+    restore: false # the restore of every app waits for it (jobs and S3 gateway): it would wait for itself
 
   kured:
     groups:
@@ -95,6 +105,7 @@ apps:
     clusterAdmin: true
     appChart:
       name: app-cert-manager
+    restore: false # no dependency found in the chain of the restore, kept false by precaution (no state)
 
   longhorn:
     groups:
@@ -103,6 +114,7 @@ apps:
     namespace: longhorn-system
     appChart:
       name: app-longhorn
+    restore: false # the restore of every app waits for it (it creates the volumes from the backups): it would wait for itself
 
   kyverno:
     groups:
@@ -110,6 +122,7 @@ apps:
     clusterAdmin: true
     appChart:
       name: app-kyverno
+    restore: false # app-longhorn depends on it (the policies of its pods), so the restore which waits for Longhorn would wait for it twice
 
   cnpg:
     groups:
@@ -125,6 +138,7 @@ apps:
     clusterAdmin: true
     appChart:
       name: app-secret-generator
+    restore: false # backup-restore-pre depends on it (the generated key of the bucket), which the restore waits for
 
   external-secrets:
     groups:
@@ -132,6 +146,7 @@ apps:
     clusterAdmin: true # CRDs and cluster roles
     appChart:
       name: app-external-secrets
+    restore: false # app-backup-restore depends on it (its ExternalSecrets), which the restore waits for
 
   descheduler:
     groups:
@@ -153,6 +168,7 @@ apps:
     clusterAdmin: true # CRDs
     appChart:
       name: app-external-snapshotter
+    restore: false # app-longhorn depends on it (the snapshot CRDs for its VolumeSnapshotClasses), which the restore waits for
   
   lldap:
     groups:
@@ -197,7 +213,6 @@ apps:
       extra: true
     appChart:
       name: app-forgejo
-    restore: true
 
   csi-rclone:
     groups:
@@ -211,35 +226,30 @@ apps:
       extra: true
     appChart:
       name: app-jellyfin
-    restore: true # the PVCs are restored from the backups of longhorn when they do not exist (see the restore feature)
 
   seerr:
     groups:
       extra: true
     appChart:
       name: app-seerr
-    restore: true
 
   seafile:
     groups:
       extra: true
     appChart:
       name: app-seafile
-    restore: true
 
   paperless:
     groups:
       extra: true
     appChart:
       name: app-paperless
-    restore: true
 
   tuwunel:
     groups:
       extra: true
     appChart:
       name: app-tuwunel
-    restore: true
 
   element:
     groups:
@@ -276,5 +286,4 @@ apps:
       extra: true
     appChart:
       name: app-immich
-    restore: true
 

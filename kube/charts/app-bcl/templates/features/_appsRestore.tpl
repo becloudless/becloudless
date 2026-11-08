@@ -1,7 +1,7 @@
 {{- /*
 Restore the volumes of the enabled apps from the Longhorn backups, before they start (`restore` of an app).
 
-Per app, `restore: true` opts in. The PVCs are not listed: the job finds those of the namespace in the backups.
+Every enabled app is restored unless it sets `restore: false`. The PVCs are not listed: the job finds those of the namespace in the backups.
 
 The HelmRelease `restore-<name>`, in the namespace of the `backup-restore` app (app-backup-restore), installs the chart `restore-app`, and
 `app-<name>` waits for it. The job of the chart restores the last backup of each PVC that does not exist yet, as a Longhorn volume and
@@ -9,8 +9,9 @@ a PV bound to the PVC of the app: it does nothing for an app that already has it
 `flux-backup-restore` account in the namespace of `backup-restore`, the jobs run as the account `backup-restore` of app-backup-restore, which has the rights.
 
 It waits for Longhorn (`app-longhorn`), for `app-backup-restore`, its `backup-restore-pre` (the key of the bucket of the secrets) and its backup
-target (the HelmRelease `longhorn-backup`, the S3 gateway): do not set `restore` on `backup-restore` or `longhorn`, their volumes can not be
-restored before they run. Nothing is created when Longhorn or `backup-restore` is not enabled.
+target (the HelmRelease `longhorn-backup`, the S3 gateway): `restore` has to be `false` on `backup-restore`, `longhorn` and on everything they
+need to run (cilium, cert-manager, kyverno...), their volumes can not be restored before they run, and the apps would wait for each other.
+Nothing is created when Longhorn or `backup-restore` is not enabled.
 
 Only for the apps keeping all their state in their PVCs and CloudNativePG databases (both are restored, see the chart
 `restore-app`), and the secrets that secret-generator generated for them: the chart saves them (hourly, in the bucket of the
@@ -22,7 +23,9 @@ patches (the ownership of a restored secret) its secrets, and reads its `StringS
   {{- $app := get .apps .name | default dict }}
   {{- $longhorn := get .apps "longhorn" | default dict }}
   {{- $backup := get .apps "backup-restore" | default dict }}
-  {{- if and (include "base.lib.isEnabled" $app | trim) $app.restore (include "base.lib.isEnabled" $longhorn | trim) (include "base.lib.isEnabled" $backup | trim) }}true{{ end }}
+  {{- $restore := true }}
+  {{- if hasKey $app "restore" }}{{- $restore = $app.restore }}{{- end }}
+  {{- if and (include "base.lib.isEnabled" $app | trim) $restore (include "base.lib.isEnabled" $longhorn | trim) (include "base.lib.isEnabled" $backup | trim) }}true{{ end }}
 {{- end }}
 
 {{- /* the namespace of the app `backup-restore` */}}
