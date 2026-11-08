@@ -21,7 +21,7 @@ Per app:
 
 Any other key set next to these (ex: `interval`) is merged over the HelmRelease defaults.
 */}}
-{{- define "app-apps.features.appsHelmReleases" }}
+{{- define "app-bcl.features.appsHelmReleases" }}
 {{- $rootContext := .rootContext }}
 
 {{- $apps := $rootContext.Values.apps | default dict }}
@@ -50,10 +50,10 @@ Any other key set next to these (ex: `interval`) is merged over the HelmRelease 
               "namespace" ($depApp.namespace | default $dep)) }}
       {{- end }}
     {{- end }}
-    {{- if include "app-apps.restore.enabled" (dict "apps" $apps "name" $name) | trim }}
+    {{- if include "app-bcl.restore.enabled" (dict "apps" $apps "name" $name) | trim }}
       {{- $_ := set $dependsOn "restore" (dict
             "name" (printf "restore-%s" $name)
-            "namespace" (include "app-apps.restore.namespace" $apps | trim)) }}
+            "namespace" (include "app-bcl.restore.namespace" $apps | trim)) }}
     {{- end }}
 
     {{- $hr := dict

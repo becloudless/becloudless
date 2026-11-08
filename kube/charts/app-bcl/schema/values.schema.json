@@ -16,7 +16,7 @@
     },
     "config": {
       "additionalProperties": false,
-      "description": "Cluster configuration of app-apps. Used to compute the global values ConfigMap shared with every installed app.",
+      "description": "Cluster configuration of app-bcl. Used to compute the global values ConfigMap shared with every installed app.",
       "properties": {
         "domain": {
           "description": "Base domain of the cluster. Required.",

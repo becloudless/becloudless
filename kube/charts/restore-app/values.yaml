@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=./schema/values.schema.json
 
 # Restores the volumes of an app from the backups of Longhorn, so an app that is enabled again (or on a new cluster) finds its data.
-# It is installed by the `apps` chart (`restore: true` of an app), in the namespace `backup-restore` (app-backup-restore, which has the account and the
+# It is installed by the `app-bcl` chart (`restore: true` of an app), in the namespace `backup-restore` (app-backup-restore, which has the account and the
 # rights of the job), before the app.
 #
 # The script is `files/restore.sh`, in a ConfigMap (one by namespace of app, see `templates/_feature.tpl`) mounted in the pods of the Job and
@@ -36,8 +36,8 @@
 # object by change of a secret (the previous values are kept). The job restores the last version of each one that does not exist, before
 # the volumes, when the namespace has no `StringSecret` yet (the app never ran): secret-generator does not touch a secret that it does
 # not own, so the app finds them as they were. The restored secrets are labelled `restore.becloudless/from-backup`, and owned by their
-# `StringSecret` by the CronJob when it exists (a field added later to the `StringSecret` is generated). The `apps` chart gives the
-# account of the jobs the right to read and create the secrets of the namespace (see `restore` in the apps chart).
+# `StringSecret` by the CronJob when it exists (a field added later to the `StringSecret` is generated). The `app-bcl` chart gives the
+# account of the jobs the right to read and create the secrets of the namespace (see `restore` in the app-bcl chart).
 # Nothing is done for the secrets when the secret `s3Secret` (the key of the bucket) does not exist, the volumes do not need it.
 
 restore:

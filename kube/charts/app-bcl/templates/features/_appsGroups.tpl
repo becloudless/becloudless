@@ -5,7 +5,7 @@ An app listing a group in `apps.<name>.groups` (`<group>: true`) gets `apps.<nam
 when `appsGroups.<group>.enabled` is true, `false` otherwise (a non-empty app without `enabled` is enabled for `base.lib.isEnabled`).
 The result is used as a default: an explicit `apps.<name>.enabled` set by the user always wins.
 */}}
-{{- define "app-apps.features.appsGroups" }}
+{{- define "app-bcl.features.appsGroups" }}
 {{- $rootContext := .rootContext }}
 
 {{- $appsGroups := $rootContext.Values.appsGroups | default dict }}

@@ -3,7 +3,7 @@ The values shared with every installed app, computed from `config`: the `app` va
 (`app.domain`, `app.name`, `app.lldapdn`, `app.lldapUsers`, `app.scaling`).
 Rendered as a `global-values` ConfigMap in the namespace of each app, used by the HelmRelease of the app as `valuesFrom`.
 */}}
-{{- define "app-apps.globalValues" }}
+{{- define "app-bcl.globalValues" }}
 {{- $rootContext := .rootContext }}
 
 {{- $config := $rootContext.Values.config | default dict }}

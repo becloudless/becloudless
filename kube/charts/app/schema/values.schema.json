@@ -4,7 +4,7 @@
   "properties": {
     "app": {
       "additionalProperties": false,
-      "description": "The values shared by every app chart (library chart `app`), set by the cluster for all the apps with the `global-values` ConfigMap of the `apps` chart.",
+      "description": "The values shared by every app chart (library chart `app`), set by the cluster for all the apps with the `global-values` ConfigMap of the `app-bcl` chart.",
       "properties": {
         "domain": {
           "description": "The domain of the cluster.",

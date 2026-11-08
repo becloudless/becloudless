@@ -18,7 +18,7 @@ backup target, under `secrets/`), and the job restores them with the volumes, be
 restored data. For this, the `backup-restore` account of the jobs gets a Role in the namespace of the app: it reads, creates and
 patches (the ownership of a restored secret) its secrets, and reads its `StringSecret`. The account of the app has no part in it.
 */}}
-{{- define "app-apps.restore.enabled" }}
+{{- define "app-bcl.restore.enabled" }}
   {{- $app := get .apps .name | default dict }}
   {{- $longhorn := get .apps "longhorn" | default dict }}
   {{- $backup := get .apps "backup-restore" | default dict }}
@@ -26,12 +26,12 @@ patches (the ownership of a restored secret) its secrets, and reads its `StringS
 {{- end }}
 
 {{- /* the namespace of the app `backup-restore` */}}
-{{- define "app-apps.restore.namespace" }}
+{{- define "app-bcl.restore.namespace" }}
   {{- $backup := get . "backup-restore" | default dict }}
   {{- $backup.namespace | default "backup-restore" }}
 {{- end }}
 
-{{- define "app-apps.features.appsRestore" }}
+{{- define "app-bcl.features.appsRestore" }}
 {{- $rootContext := .rootContext }}
 
 {{- $apps := $rootContext.Values.apps | default dict }}
@@ -41,14 +41,14 @@ patches (the ownership of a restored secret) its secrets, and reads its `StringS
 
 {{- $longhorn := get $apps "longhorn" | default dict }}
 {{- $longhornNamespace := $longhorn.namespace | default "longhorn" }}
-{{- $backupNamespace := include "app-apps.restore.namespace" $apps | trim }}
+{{- $backupNamespace := include "app-bcl.restore.namespace" $apps | trim }}
 
 {{- $helmReleases := dict }}
 {{- $roles := dict }}
 {{- $roleBindings := dict }}
 {{- range $name, $app := $apps }}
   {{- $app = $app | default dict }}
-  {{- if include "app-apps.restore.enabled" (dict "apps" $apps "name" $name) | trim }}
+  {{- if include "app-bcl.restore.enabled" (dict "apps" $apps "name" $name) | trim }}
     {{- $namespace := $app.namespace | default $name }}
     {{- $dependsOn := dict
           "longhorn" (dict "name" "app-longhorn" "namespace" $longhornNamespace)

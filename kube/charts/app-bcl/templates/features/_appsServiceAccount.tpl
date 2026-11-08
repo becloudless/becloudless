@@ -7,7 +7,7 @@ It is applied by `bcl kube bootstrap` before the HelmRelease, since the release 
 the release afterwards.
 The account and its binding are kept (`helm.sh/resource-policy: keep`), the release must be able to run its own uninstall.
 */}}
-{{- define "app-apps.features.appsServiceAccount" }}
+{{- define "app-bcl.features.appsServiceAccount" }}
 {{- $rootContext := .rootContext }}
 
 {{- $namespace := $rootContext.Release.Namespace }}

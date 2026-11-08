@@ -2,10 +2,10 @@
 
 {{- /* Each feature output is the base, values set by the user take precedence.
 Merged one by one so a feature can rely on the previous ones. */}}
-{{- range $feature := list "app-apps.features.appsGroups"
-                           "app-apps.features.appsNamespaces"
-                           "app-apps.features.appsRestore"
-                           "app-apps.features.appsHelmReleases" }}
+{{- range $feature := list "app-bcl.features.appsGroups"
+                           "app-bcl.features.appsNamespaces"
+                           "app-bcl.features.appsRestore"
+                           "app-bcl.features.appsHelmReleases" }}
   {{- $featureValues := include $feature (dict "rootContext" $) | fromYaml }}
   {{- $_ := set $ "Values" (mustMergeOverwrite $featureValues $.Values) }}
 {{- end }}

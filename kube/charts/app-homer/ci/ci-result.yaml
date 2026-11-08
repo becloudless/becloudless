@@ -34,7 +34,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -402,7 +402,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: homer
   - name: app-cert-manager

@@ -24,7 +24,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -59,7 +59,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: apex
   - name: app-cert-manager
@@ -268,7 +268,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -303,7 +303,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -338,7 +338,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -373,7 +373,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: grouped
   - name: app-cert-manager
@@ -669,7 +669,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -704,7 +704,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -739,7 +739,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: merged
   - name: app-cert-manager
@@ -949,7 +949,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: app-external-secrets
     namespace: external-secrets
@@ -1139,7 +1139,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: app-external-secrets
     namespace: external-secrets
@@ -1314,7 +1314,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -1349,7 +1349,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: protected
   - name: app-cert-manager
@@ -1578,7 +1578,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -1613,7 +1613,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: simple
   - name: app-cert-manager
@@ -1819,7 +1819,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: app-external-secrets
     namespace: external-secrets
@@ -2009,7 +2009,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   driftDetection:
     mode: enabled
   healthCheckExprs:

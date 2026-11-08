@@ -8,11 +8,11 @@ values. Removing an app deletes its `app-<name>` HelmRelease, whose finalizer un
 account: if the account was deleted by the same upgrade, the uninstall is skipped and the resources of the app are orphaned.
 The leftovers must be deleted by hand once the release is gone.
 */}}
-{{- define "app-apps.features.appsNamespaces" }}
+{{- define "app-bcl.features.appsNamespaces" }}
 {{- $rootContext := .rootContext }}
 
 {{- $systemNamespaces := list "default" "kube-system" "kube-public" "kube-node-lease" }}
-{{- $globalValues := include "app-apps.globalValues" (dict "rootContext" $rootContext) | fromYaml }}
+{{- $globalValues := include "app-bcl.globalValues" (dict "rootContext" $rootContext) | fromYaml }}
 
 {{- $namespaces := dict }}
 {{- $serviceAccounts := dict }}
@@ -25,7 +25,8 @@ The leftovers must be deleted by hand once the release is gone.
     {{- $namespace := $app.namespace | default $name }}
     {{- $fluxName := printf "flux-%s" $name }}
 
-    {{- if not (has $namespace $systemNamespaces) }}
+    {{- /* the namespace of the release exists already: it is created by `bcl kube bootstrap` / the cluster */}}
+    {{- if not (or (has $namespace $systemNamespaces) (eq $namespace $rootContext.Release.Namespace)) }}
       {{- $_ := set $namespaces $namespace (dict
             "annotations" (dict "helm.sh/resource-policy" "keep")) }}
     {{- end }}

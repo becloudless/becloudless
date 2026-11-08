@@ -31,8 +31,9 @@ appsGroups:
 # (CRDs, ClusterRoles, webhooks, ClusterIssuers, StorageClasses...) set `clusterAdmin: true`.
 apps:
 
-  # self
+  # self, in the namespace of the `apps` HelmRelease (and of the `bcl` GitRepository)
   apps:
+    namespace: bcl
     clusterAdmin: true
 
   # minimal
