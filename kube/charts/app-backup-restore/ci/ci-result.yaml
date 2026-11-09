@@ -550,7 +550,7 @@ spec:
                     config:
                       configMapRef:
                         name: sftp-gateway-config
-                  image: docker.io/rclone/rclone:1.76.0
+                  image: docker.io/rclone/rclone:1.75.2
                   name: sftp-gateway
                   ports:
                     s3:
@@ -582,7 +582,7 @@ spec:
                     config:
                       configMapRef:
                         name: sftp-gateway-config
-                  image: docker.io/alpine/socat:1.8.1.3
+                  image: docker.io/alpine/socat:1.8.0.3
                   name: sftp-tunnel
                   securityContext:
                     capabilities:
