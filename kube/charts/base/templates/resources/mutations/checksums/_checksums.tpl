@@ -2,10 +2,15 @@
 Rolls the pods out when a ConfigMap or a Secret they use changes: adds the annotations `checksum/configmaps` and `checksum/secrets` to
 the pod template of the Deployments, StatefulSets and DaemonSets, so a change of the content is a change of the pod template.
 
-Only the ConfigMaps and Secrets defined by the same release (`resources.configMaps` and `resources.secrets`) are known: their content is
-hashed (`data`, `binaryData` and `stringData`) for each one that the pod uses, as an `env` or `envFrom` reference, a `configMap` or `secret`
-volume, or a projected volume source. The ones that are made elsewhere (generated, external or cert-manager secrets, ConfigMaps of
-another release) are not visible at render time and are ignored.
+The content of the ConfigMaps and Secrets defined by the same release (`resources.configMaps` and `resources.secrets`) is hashed
+(`data`, `binaryData` and `stringData`) for each one that the pod uses, as an `env` or `envFrom` reference, a `configMap` or `secret`
+volume, or a projected volume source.
+
+The ones that are made elsewhere (generated, external secrets, ConfigMaps of another release) are read from the cluster with `lookup`,
+as they are when the chart is rendered. That is the case of a helm upgrade only: the HelmRelease has to be upgraded to see a change (a new
+revision of the chart, or a change of the values), nothing is rolled out when only the Secret changes. `lookup` is empty for
+`helm template` and the CI, and for a Secret that does not exist yet. The TLS secrets (`kubernetes.io/tls`) are ignored, they are renewed
+by cert-manager.
 
 The annotations set on the pod template by the resource are kept.
 */}}
@@ -53,22 +58,48 @@ The annotations set on the pod template by the resource are kept.
     {{- end }}
 
     {{- /* `<name>:<hash of the content>` for the ones the release defines, sorted by name */}}
+    {{- $definedConfigMaps := dict }}
     {{- $configMapSums := list }}
     {{- range $id, $resource := ($resourcesAll.configMaps | default dict) }}
       {{- $resource = $resource | default dict }}
       {{- $name := include "base.lib.computeResourceName" (dict "rootContext" $rootContext "id" $id "resource" $resource) }}
+      {{- $_ := set $definedConfigMaps $name true }}
       {{- if hasKey $usedConfigMaps $name }}
         {{- $sum := dict "data" $resource.data "binaryData" $resource.binaryData | toJson | sha256sum }}
         {{- $configMapSums = append $configMapSums (printf "%s:%s" $name $sum) }}
       {{- end }}
     {{- end }}
+    {{- $definedSecrets := dict }}
     {{- $secretSums := list }}
     {{- range $id, $resource := ($resourcesAll.secrets | default dict) }}
       {{- $resource = $resource | default dict }}
       {{- $name := include "base.lib.computeResourceName" (dict "rootContext" $rootContext "id" $id "resource" $resource) }}
+      {{- $_ := set $definedSecrets $name true }}
       {{- if hasKey $usedSecrets $name }}
         {{- $sum := dict "data" $resource.data "stringData" $resource.stringData | toJson | sha256sum }}
         {{- $secretSums = append $secretSums (printf "%s:%s" $name $sum) }}
+      {{- end }}
+    {{- end }}
+
+    {{- /* the others are read from the cluster, as they are at the time of the render (`lookup` is empty for `helm template`) */}}
+    {{- $namespace := (($object.metadata | default dict).namespace | default $rootContext.Release.Namespace) }}
+    {{- range $name, $_ := $usedConfigMaps }}
+      {{- if not (hasKey $definedConfigMaps $name) }}
+        {{- $found := lookup "v1" "ConfigMap" $namespace $name }}
+        {{- if $found }}
+          {{- $sum := dict "data" $found.data "binaryData" $found.binaryData | toJson | sha256sum }}
+          {{- $configMapSums = append $configMapSums (printf "%s:%s" $name $sum) }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- range $name, $_ := $usedSecrets }}
+      {{- if not (hasKey $definedSecrets $name) }}
+        {{- $found := lookup "v1" "Secret" $namespace $name }}
+        {{- /* the certificates are renewed by cert-manager: not a reason to restart */}}
+        {{- if and $found (ne ($found.type | default "") "kubernetes.io/tls") }}
+          {{- $sum := dict "data" $found.data | toJson | sha256sum }}
+          {{- $secretSums = append $secretSums (printf "%s:%s" $name $sum) }}
+        {{- end }}
       {{- end }}
     {{- end }}
 
