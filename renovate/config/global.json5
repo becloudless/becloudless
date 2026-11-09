@@ -8,6 +8,8 @@
     "customManagers:dockerfileVersions",
   ],
   suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
+  // the bots commit on the renovate branches too (charts.yaml regenerates the ci-results): it is not a modification by someone else
+  gitIgnoredAuthors: ["/\\[bot\\]@users\\.noreply\\.github\\.com$/"],
 
   automergeType: "branch",
   automergeStrategy: "squash",
@@ -188,6 +190,16 @@
     {
       matchUpdateTypes: ["minor", "patch", "pin", "digest"],
       automerge: true,
+    },
+    {
+      description: "regenerate the ci-result of the chart in the same commit as the bump. A separate commit pushed on the branch would make Renovate see it as modified by someone else and stop updating it. bcl is mounted in the container by the renovate-cron workflow",
+      matchFileNames: ["kube/charts/*/values.yaml", "kube/charts/*/Chart.yaml"],
+      postUpgradeTasks: {
+        commands: ["/tmp/bcl/bcl kube chart build"],
+        workingDirTemplate: "{{{packageFileDir}}}",
+        fileFilters: ["kube/charts/*/ci/ci-result.yaml"],
+        executionMode: "update",
+      },
     },
   ],
 }
