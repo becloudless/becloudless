@@ -588,7 +588,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: prometheus
   - name: app-cert-manager
@@ -898,7 +898,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: app-external-secrets
     namespace: external-secrets

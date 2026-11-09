@@ -1,6 +1,8 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.bcl.vm;
+  # VMs whose running definition is kept in sync with the declared one, see `restartOnChange`.
+  restartVms = lib.filterAttrs (_: vm: vm.restartOnChange && vm.active) cfg.vms;
   # Instantiated with the host's own native `pkgs`, not NixVirt's own
   # hardcoded x86_64-linux nixpkgs instance - see
   # ../../../packages/nixvirt/VENDORED.md for why this is vendored rather
@@ -191,6 +193,30 @@ in
               for remote console access via qemu+ssh (e.g. virt-manager).
             '';
           };
+          restartOnChange = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = ''
+              Whether the VM is restarted when the definition of the running VM (memory, vcpu, devices, ... but not the
+              install ISO) is not the declared one anymore. A definition only applies when qemu is started again, a
+              reboot of the guest is not enough.
+
+              The host tells the guest through the qemu guest agent (flag `/run/vm-restart-required`), and the guest decides
+              when to reboot: a kube node (role `serverKube`) asks kured, which drains it, respects its window, takes its
+              lock (one node at a time) and its alert filter; the other guests reboot in the window of
+              `bcl.role.vmRestartRequired`. A reboot of the guest stops the VM (`on_reboot = destroy`), the host then starts
+              it again with the declared definition.
+
+              When false, the new definition applies when the VM is stopped and started by hand.
+
+              A VM stopped while this is enabled is started again (it was running before): stop `bcl-vm-restart` first to
+              keep it stopped. The very first restart after enabling it is manual (the running VM does not have
+              `on_reboot = destroy` yet).
+
+              The VMs are never saved when the host stops (`bcl.vm` sets libvirt-guests to shut them down): a restored VM keeps
+              the definition it had, and the qemu binary it was saved with, which a new nixpkgs removes from the store.
+            '';
+          };
           # <driver name='qemu' type='raw' cache='none' io='native'/>
         };
       }));
@@ -208,6 +234,15 @@ in
     virtualisation.libvirt.enable = true; # also enables virtualisation.libvirtd
     virtualisation.libvirt.swtpm.enable = true; # emulated TPM, needed for windows template
 
+
+    # Never save the VMs when the host stops (libvirt-guests defaults to `suspend`, a managed save restored at the boot): a restored
+    # VM keeps the definition it was running with (a changed one would never apply on a host reboot), and the save records the qemu
+    # binary it ran with, which a new nixpkgs removes from the store, so the restore (and nixvirt.service with it) fails with
+    # "Cannot check QEMU binary /nix/store/...-qemu-.../bin/qemu-system-...". It is also what failed when the LVs were not active.
+    # The guests get an ACPI shutdown (a kube node drains itself, see serverKubeDrain.nix) and are started again at the boot
+    # (`onBoot = start`, and NixVirt). The timeout is per group of `parallelShutdown` guests.
+    virtualisation.libvirtd.onShutdown = "shutdown";
+    virtualisation.libvirtd.parallelShutdown = 10;
     # Without this, /etc/lvm/lvm.conf's thin_check_executable defaults to the
     # FHS path "/usr/sbin/thin_check", which doesn't exist on NixOS. This
     # makes `vgchange -aay` (run by the lvm2-activation-generator systemd
@@ -437,6 +472,10 @@ in
                 target = { type = "serial"; port = 0; };
               };
             };
+          } // lib.optionalAttrs vm.restartOnChange {
+            # A reboot of the guest (kured, ...) stops qemu instead of resetting it, bcl-vm-restart then starts it again with the
+            # declared definition. Without it the reboot keeps the same qemu process, so the old definition.
+            on_reboot = "destroy";
           }
         );
         active = vm.active;
@@ -497,6 +536,11 @@ in
               lvresize -L ${vm.diskSize} "data/${name}"
             fi
           fi
+
+          # The same interrupted autoactivation leaves the thin volumes inactive (no /dev/data/<name>), and nothing else activates
+          # them: libvirt can not start the VM, nor resume it from its managed save ("Cannot access storage file '/dev/data/<name>'"
+          # then "unexpected fatal signal 13" of libvirt_iohelper, which fails nixvirt.service). Idempotent when it is active.
+          lvchange -ay "data/${name}"
         '';
       }
     ) cfg.vms) // {
@@ -689,6 +733,75 @@ in
       lvm-activate-data = {
         after = [ "nix.mount" ];
         requires = [ "nix.mount" ];
+      };
+
+      # Applies the definition of the VMs (`restartOnChange`). NixVirt redefines a running domain without restarting it (`restart = false`
+      # above), so the running qemu keeps the previous definition until it is stopped and started again. The definition the running
+      # qemu was started with is not available from libvirt: its hash is recorded the first time a started qemu is seen, and compared
+      # with the persistent definition afterwards. The install CDROM is left out, changing the ISO must not restart anything.
+      bcl-vm-restart = lib.mkIf (restartVms != { }) {
+        description = "Restart the VMs whose definition changed, and start the ones that were stopped for it";
+        wantedBy = [ "multi-user.target" ];
+        # after libvirt-guests: at the host shutdown the watcher stops first, it must not start again the VMs that libvirt-guests shuts down
+        after = [ "libvirtd.service" "libvirt-guests.service" ];
+        path = [ pkgs.libvirt pkgs.xmlstarlet pkgs.coreutils ];
+        serviceConfig = {
+          Restart = "always";
+          RestartSec = 5;
+          # the state is the VMs' one, it must outlive the service but not the host (the VMs are started again with it)
+          RuntimeDirectory = "bcl-vm-restart";
+          RuntimeDirectoryPreserve = "yes";
+        };
+        script = ''
+          set -uo pipefail
+          export LIBVIRT_DEFAULT_URI=qemu:///system
+          state=/run/bcl-vm-restart
+          flag='{"execute":"guest-exec","arguments":{"path":"/run/current-system/sw/bin/touch","arg":["/run/vm-restart-required"]}}'
+
+          vms=(${lib.concatStringsSep " " (map (name: ''"${name}"'') (builtins.attrNames restartVms))})
+
+          definitionHash() {
+            virsh dumpxml --inactive "$1" </dev/null | xmlstarlet ed -d "//disk[@device='cdrom']" | sha256sum | cut -d' ' -f1
+          }
+
+          check() {
+            name=$1
+            current=$(virsh domstate "$name" </dev/null 2>/dev/null) || return 0
+
+            if [ "$current" = "shut off" ]; then
+              # stopped by the reboot of its guest: start it with the declared definition
+              if [ -e "$state/$name.seen" ]; then
+                echo "$name: stopped, starting it"
+                virsh start "$name" </dev/null && rm -f "$state/$name.seen"
+              fi
+              return 0
+            fi
+            [ "$current" = "running" ] || return 0
+
+            # one qemu process = one start
+            ident=$(virsh domid "$name" </dev/null):$(cat "/run/libvirt/qemu/$name.pid" 2>/dev/null)
+            hash=$(definitionHash "$name") || return 0
+            touch "$state/$name.seen"
+            if [ "$(cat "$state/$name.ident" 2>/dev/null)" != "$ident" ]; then
+              echo "$name: started, definition $hash"
+              echo "$hash" > "$state/$name.hash"
+              echo "$ident" > "$state/$name.ident"
+              return 0
+            fi
+            [ "$(cat "$state/$name.hash")" != "$hash" ] || return 0
+
+            # idempotent, and repeated: a reboot of the guest not followed by a restart of the VM would lose the flag
+            virsh qemu-agent-command "$name" "$flag" --timeout 10 </dev/null >/dev/null \
+              || echo "$name: definition changed, cannot reach the guest agent to ask for a restart"
+          }
+
+          while true; do
+            for name in "''${vms[@]}"; do
+              check "$name"
+            done
+            sleep 15
+          done
+        '';
       };
     };
   };

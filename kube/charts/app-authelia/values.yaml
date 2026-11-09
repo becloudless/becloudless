@@ -35,6 +35,10 @@ resources:
             cloudflare: {matchName: time.cloudflare.com} # TODO check why
           toPorts:
             ntp: {ports: {p123: {port: "123", protocol: UDP}}}
+        smtp: # the notifier: authelia checks the connection to the server at its start and stops if it fails
+          toFQDNs:
+            mail: {matchName: "mail.{{ .Values.app.domain }}"}
+          toPorts: [465]
 
   fluxHelmReleases:
     authelia-postgresql:
@@ -388,6 +392,8 @@ resources:
                   id_token: [ 'email', 'name', 'groups', 'preferred_username' ]
                 tuwunel:
                   id_token: [ 'email', 'name', 'groups', 'preferred_username' ]
+                kubernetes: # the apiserver reads the username and the groups in the id token
+                  id_token: [ 'email', 'name', 'groups', 'preferred_username' ]
                 immich_policy:
                   custom_claims:
                     immich_quota:
@@ -526,3 +532,24 @@ oidcClients:
     grantTypes: ["urn:ietf:params:oauth:grant-type:device_code"]
     redirectUris:
       - https://sftp.{{ .Values.app.domain }}/
+
+  # kubernetes (the OIDC authentication of the apiserver, see `bcl.role.serverKube.oidc` of the nixos module): a public client used by
+  # `kubectl oidc-login` (int128/kubelogin), which listens on the loopback (`127.0.0.1:8000`, then `:18000`), redirects to
+  # `http://localhost:<port>` and opens the browser. The client id is `kubernetes`.
+  #   kubectl config set-credentials oidc --exec-api-version=client.authentication.k8s.io/v1 --exec-command=kubectl --exec-arg=oidc-login \
+  #     --exec-arg=get-token --exec-arg=--oidc-issuer-url=https://authelia.<domain> --exec-arg=--oidc-client-id=kubernetes \
+  #     --exec-arg=--oidc-extra-scope=profile --exec-arg=--oidc-extra-scope=email \
+  #     --exec-arg=--oidc-extra-scope=groups --exec-arg=--oidc-extra-scope=offline_access
+  # The scope `profile` is required: without it the id token has no `preferred_username` (the username of the apiserver) and every
+  # request is rejected with "the server has asked for the client to provide credentials".
+  kubernetes:
+    name: Kubernetes
+    public: true
+    claimsPolicy: kubernetes
+    scopes: [openid, profile, email, groups, offline_access]
+    grantTypes: [authorization_code, refresh_token]
+    redirectUris:
+      - http://localhost:8000
+      - http://localhost:18000
+      - http://127.0.0.1:8000
+      - http://127.0.0.1:18000

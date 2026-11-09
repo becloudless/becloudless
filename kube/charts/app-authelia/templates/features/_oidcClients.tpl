@@ -15,6 +15,8 @@ Options of a client:
   - `groups`: the groups that pass with the second factor (`role_admin` and `app_<id>`), `oneFactorGroups`: the groups that pass with the
     first factor only (none). `policy`: the name of a policy of authelia (`two_factor`...) used instead of the generated `<id>_authz`.
   - `pkce`: requires PKCE (S256), `false` by default.
+  - `public`: a public client, for a CLI or a SPA that can not keep a secret (kubectl): no secret, nor Role, and the client id is the id
+    (it is not a secret). PKCE (S256) is always required, `false` by default.
   - `claimsPolicy`: the name of a claims policy of the configuration of authelia.
   - `tokenEndpointAuthMethod` (`client_secret_basic`), `signingAlgorithm` of the access token and of the userinfo (`none`), `grantTypes`
     (`authorization_code`), `responseModes` (not set).
@@ -26,7 +28,7 @@ The client ids are generated, authelia reads them from the files of the secrets 
     {{- if not (kindIs "map" $clients) }}
       {{- fail "oidcClients must be a map, keyed by the id of the OIDC client" }}
     {{- end }}
-    {{- $allowed := list "namespace" "name" "redirectUris" "scopes" "groups" "oneFactorGroups" "policy" "pkce" "claimsPolicy" "tokenEndpointAuthMethod" "signingAlgorithm" "grantTypes" "responseModes" }}
+    {{- $allowed := list "namespace" "name" "redirectUris" "scopes" "groups" "oneFactorGroups" "policy" "pkce" "public" "claimsPolicy" "tokenEndpointAuthMethod" "signingAlgorithm" "grantTypes" "responseModes" }}
     {{- $resources := $.Values.resources | default dict }}
     {{- $releases := $resources.fluxHelmReleases | default dict }}
     {{- $backtick := "`" }}
@@ -49,19 +51,22 @@ The client ids are generated, authelia reads them from the files of the secrets 
         {{- fail (printf "oidcClients.%s.redirectUris is required" $id) }}
       {{- end }}
 
+      {{- $public := eq (toString $entry.public) "true" }}
       {{- $secretName := printf "authelia-oidc-%s" $id }}
       {{- $reader := printf "%s-secrets-reader" $id }}
-      {{- $_ := set $stringSecrets $secretName (dict "fields" (dict "client-id" (dict) "secret" (dict))) }}
-      {{- $_ := set $roles $reader (dict "rules" (dict "secrets" (dict
-            "apiGroups" (list "")
-            "resources" (list "secrets")
-            "resourceNames" (list $secretName)
-            "verbs" (list "get")))) }}
-      {{- $_ := set $roleBindings $reader (dict
-            "roleRef" (printf "ref:%s" $reader)
-            "subjects" (dict "authelia-reader" (dict "kind" "ServiceAccount" "name" "authelia-reader" "namespace" ($entry.namespace | default $id)))) }}
-      {{- $_ := set $additionalSecrets $secretName (dict) }}
-      {{- $mounts = append $mounts (dict "name" (printf "secret-%s" $secretName) "mountPath" (printf "/secrets/%s" $secretName) "readOnly" true) }}
+      {{- if not $public }}
+        {{- $_ := set $stringSecrets $secretName (dict "fields" (dict "client-id" (dict) "secret" (dict))) }}
+        {{- $_ := set $roles $reader (dict "rules" (dict "secrets" (dict
+              "apiGroups" (list "")
+              "resources" (list "secrets")
+              "resourceNames" (list $secretName)
+              "verbs" (list "get")))) }}
+        {{- $_ := set $roleBindings $reader (dict
+              "roleRef" (printf "ref:%s" $reader)
+              "subjects" (dict "authelia-reader" (dict "kind" "ServiceAccount" "name" "authelia-reader" "namespace" ($entry.namespace | default $id)))) }}
+        {{- $_ := set $additionalSecrets $secretName (dict) }}
+        {{- $mounts = append $mounts (dict "name" (printf "secret-%s" $secretName) "mountPath" (printf "/secrets/%s" $secretName) "readOnly" true) }}
+      {{- end }}
 
       {{- $policy := $entry.policy }}
       {{- if not $policy }}
@@ -82,18 +87,20 @@ The client ids are generated, authelia reads them from the files of the secrets 
       {{- end }}
 
       {{- /* the template filter of authelia (secret of the file of the client id), escaped for the rendering of the values */}}
-      {{- $clientId := printf "{{ %s{{ secret %q }}%s }}" $backtick (printf "/secrets/%s/client-id" $secretName) $backtick }}
+      {{- $clientId := $id }}
+      {{- if not $public }}
+        {{- $clientId = printf "{{ %s{{ secret %q }}%s }}" $backtick (printf "/secrets/%s/client-id" $secretName) $backtick }}
+      {{- end }}
       {{- $redirectUris := list }}
       {{- range $uri := $entry.redirectUris }}
         {{- $redirectUris = append $redirectUris (replace "{clientId}" $clientId $uri) }}
       {{- end }}
-      {{- $pkce := eq (toString $entry.pkce) "true" }}
+      {{- $pkce := or $public (eq (toString $entry.pkce) "true") }}
       {{- $algorithm := $entry.signingAlgorithm | default "none" }}
       {{- $client := dict
             "client_id" $clientId
             "client_name" ($entry.name | default (title $id))
-            "client_secret" (dict "path" (printf "/config/oidc-%s.hash" $id))
-            "public" false
+            "public" $public
             "authorization_policy" $policy
             "require_pkce" $pkce
             "pkce_challenge_method" (ternary "S256" "" $pkce)
@@ -104,7 +111,10 @@ The client ids are generated, authelia reads them from the files of the secrets 
             "grant_types" ($entry.grantTypes | default (list "authorization_code"))
             "access_token_signed_response_alg" $algorithm
             "userinfo_signed_response_alg" $algorithm
-            "token_endpoint_auth_method" ($entry.tokenEndpointAuthMethod | default "client_secret_basic") }}
+            "token_endpoint_auth_method" ($entry.tokenEndpointAuthMethod | default (ternary "none" "client_secret_basic" $public)) }}
+      {{- if not $public }}
+        {{- $_ := set $client "client_secret" (dict "path" (printf "/config/oidc-%s.hash" $id)) }}
+      {{- end }}
       {{- if $entry.claimsPolicy }}
         {{- $_ := set $client "claims_policy" $entry.claimsPolicy }}
       {{- end }}

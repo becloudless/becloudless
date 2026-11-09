@@ -56,6 +56,16 @@
       datasourceTemplate: "docker",
     },
     {
+      customType: "regex",
+      description: "Docker image in a plain `image: name:tag` line (containers, initContainers...) of any yaml file",
+      managerFilePatterns: ["**/*.yaml"],
+      versioningTemplate: "{{#if versioning}}{{{versioning}}}{{else}}docker{{/if}}",
+      matchStrings: [
+        '(?:^|\\n)[ \\t]*(?:-[ \\t]+)?image:[ \\t]*[\\"\']?(?<depName>(?:[^\\s\\"\':@{}/]+:\\d+/)?[^\\s\\"\':@{}]+):(?<currentValue>[^\\s\\"\'@{}]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\\"\']?[ \\t]*(?:#[ \\t]*renovate:[ \\t]*versioning=(?<versioning>\\S+))?',
+      ],
+      datasourceTemplate: "docker",
+    },
+    {
       description: "Update Grafana dashboard revisions from grafana.com",
       customType: "regex",
       managerFilePatterns: ["**/*.yaml"], // TODO filter more

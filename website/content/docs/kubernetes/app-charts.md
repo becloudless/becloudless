@@ -1,16 +1,16 @@
 +++
 title = "App Charts"
 weight = 60
-description = "Helm chart layout of the apps installed by the apps chart"
+description = "Helm chart layout of the apps installed by the app-bcl chart"
 +++
 
-Apps are Helm charts `kube/charts/app-<name>`, built on the `base` library chart and installed by the `apps` chart.
+Apps are Helm charts `kube/charts/app-<name>`, built on the `base` library chart and installed by the `app-bcl` chart.
 This page describes how an app chart splits its resources in several `HelmRelease`s (sub-HRs) so that they are
 created in the right order.
 
 ## Installation
 
-The `apps` chart (`kube/charts/apps`) has a registry of apps in its `apps` values, each in one or more groups
+The `app-bcl` chart (`kube/charts/app-bcl`) has a registry of apps in its `apps` values, each in one or more groups
 (`minimal`, `cluster`, `extra`). For each enabled app it creates:
 
 - the namespace of the app, `<name>` by default (`namespace:` to change it)
@@ -33,7 +33,7 @@ inherits from `base`:
 | `app.lldapdn` | base DN of lldap, deduced from the domain by default (`dc=example,dc=com`) |
 | `app.lldapUsers` | users of the cluster, created in lldap and given an instance by some apps |
 
-The `apps` chart computes them from its `config` and gives them to each app as a `global-values` ConfigMap in the
+The `app-bcl` chart computes them from its `config` and gives them to each app as a `global-values` ConfigMap in the
 namespace of the app, used as `valuesFrom` of the `HelmRelease`. In an app chart they are read with `.Values.app.domain`,
 `.Values.app.name`... and are required (`checkRequiredValues`).
 
@@ -45,7 +45,7 @@ on `base.loader.all`.
 
 ## Restoring the volumes of an app
 
-The volumes of the apps are backed up daily by Longhorn into the bucket of the S3 gateway of `app-backup-restore` (the `default` group of recurring jobs). The gateway is rclone: it encrypts the names and the content of the objects (`crypt`) and stores them on an SFTP server outside of the cluster, see the header of `kube/charts/app-backup-restore/values.yaml` for what the administrator gives (the secret `sftp-gateway`: the SSH key and the passwords of `crypt`, keep a copy of them outside of the cluster) and sets for the cluster with the values `target` of `app-backup-restore` (`url`, `sftp://<user>@<host>[:<port>]/<path>` where the host is a DNS name that the network policy of the gateway allows, and `hostKeys`), in the entry `backup-restore` of the `apps` chart:
+The volumes of the apps are backed up daily by Longhorn into the bucket of the S3 gateway of `app-backup-restore` (the `default` group of recurring jobs). The gateway is rclone: it encrypts the names and the content of the objects (`crypt`) and stores them on an SFTP server outside of the cluster, see the header of `kube/charts/app-backup-restore/values.yaml` for what the administrator gives (the secret `sftp-gateway`: the SSH key and the passwords of `crypt`, keep a copy of them outside of the cluster) and sets for the cluster with the values `target` of `app-backup-restore` (`url`, `sftp://<user>@<host>[:<port>]/<path>` where the host is a DNS name that the network policy of the gateway allows, and `hostKeys`), in the entry `backup-restore` of the `app-bcl` chart:
 
 ```yaml
 apps:
@@ -62,7 +62,7 @@ A server behind a TLS SSH gateway (SSH inside TLS, the SNI is the name of the se
 is reached with the scheme `sftp+tls://`, the default port is then the one of the gateway (422). The TLS certificate is not checked, the SSH host key is the authentication.
 
 An
-app can get its volumes back from the last backup when it is enabled, with `restore: true` in its entry of the `apps` chart. The
+app can get its volumes back from the last backup when it is enabled, with `restore: true` in its entry of the `app-bcl` chart. The
 PVCs are not listed: nothing about them is declared in the chart of the app, the job finds the PVCs of the namespace in the
 backups (Longhorn saves the namespace and the name of the PVC in each one, and the storage class and access mode are those of the
 backed up volume).
@@ -73,7 +73,7 @@ apps:
     restore: true
 ```
 
-For such an app the `apps` chart also creates the HelmRelease `restore-<name>` in the namespace `backup-restore` (the app `backup-restore`, `app-backup-restore`,
+For such an app the `app-bcl` chart also creates the HelmRelease `restore-<name>` in the namespace `backup-restore` (the app `backup-restore`, `app-backup-restore`,
 must be enabled next to `longhorn`; it waits for it, and for the backup target (the gateway)), and `app-<name>` waits for it.
 Its job (`kube/charts/restore-app`), for each PVC that does not
 exist yet: syncs the backup target, finds the last completed backup of the PVC (Longhorn saves its namespace and name in the backup),
@@ -127,7 +127,7 @@ Rules:
   Let's Encrypt certificate, a route not accepted) does not keep `app-<name>`, and the apps depending on it, from being ready.
   Its state is visible on its own `HelmRelease`.
 - Only create the sub-HRs the app needs. `-pre` and `-post` are only for apps that have something to put in them.
-- A sub-HR that has to depend on an app does it with `dependsOn` in the chart, not in the `apps` chart.
+- A sub-HR that has to depend on an app does it with `dependsOn` in the chart, not in the `app-bcl` chart.
 - A certificate that a pod mounts (`tls-lldaps`) is in `-pre`, the one only used by the Gateway (`lldap-gateway`) is in `-integration`.
 - The sub-HRs of an app run as `flux-<name>`, they can only create resources in the namespace of the app, except for
   apps with `clusterAdmin`.
@@ -271,6 +271,8 @@ An app that logs in with authelia has an OIDC client, in two parts that share th
   | `groups`, `oneFactorGroups` | the groups with the second factor (`role_admin` and `app_<id>`), with the first factor only (none) |
   | `policy` | a policy of authelia (`two_factor`) instead of `<id>_authz` |
   | `pkce`, `claimsPolicy` | requires PKCE (S256), a claims policy of the configuration |
+  | `public` | a public client (a CLI): no secret nor Role, the client id is the id, PKCE is required |
+  | `public` | a public client (a CLI): no secret nor Role, the client id is the id, PKCE is required |
   | `tokenEndpointAuthMethod`, `signingAlgorithm` | `client_secret_basic`, `none` |
   | `grantTypes`, `responseModes` | `authorization_code`, not set |
 

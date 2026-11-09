@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=./schema/values.schema.json
 
 # The jobs that restore the volumes and the generated secrets of the apps (chart `restore-app`, started by the `restore: true` of an app
-# in the `apps` chart), and the account they run as. Longhorn keeps what is its own in `longhorn-system`.
+# in the `app-bcl` chart), and the account they run as. Longhorn keeps what is its own in `longhorn-system`.
 # The account `backup-restore` of the jobs, none of its rights are given to the apps or to Flux:
 #  - Longhorn: read the backups, create the volumes restored from them, ask for a sync of the backup target;
 #  - the cluster: create the PVs and the PVCs of the restored volumes, read the storage classes;
@@ -20,7 +20,7 @@
 #  - `crypt-password` and `crypt-salt`: the passwords of rclone `crypt`. THE BACKUPS CAN NOT BE READ WITHOUT THEM: keep a copy outside of
 #    the cluster (a secret generated here would be lost with the cluster, and with it the backups).
 # The server, the user, the directory and its host keys are the values `target` below, set them for the cluster
-# (`apps.backup-restore.values.target` in the `apps` chart). The host of `target.url` has to be a DNS name: the network policy
+# (`apps.backup-restore.values.target` in the `app-bcl` chart). The host of `target.url` has to be a DNS name: the network policy
 # `sftp-gateway` allows the egress to it with `toFQDNs` (it does not work with an address).
 # The gateway reaches the server through the container `sftp-tunnel` (socat, on the loopback of the pod): a plain TCP connection
 # (`sftp://`), or SSH inside TLS (`sftp+tls://`) for a server behind a TLS SSH gateway (nginx `stream` with `ssl_preread`/`ssl`, the SNI is

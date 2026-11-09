@@ -147,7 +147,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: kyverno
   driftDetection:
@@ -194,8 +194,14 @@ spec:
           pod-disable-service-links:
             name: pod-disable-service-links
             namespace: default
+          pod-host-users-require-annotation:
+            name: pod-host-users-require-annotation
+            namespace: default
           pod-restrict-host-access:
             name: pod-restrict-host-access
+            namespace: default
+          pod-rwx-require-host-users:
+            name: pod-rwx-require-host-users
             namespace: default
           pod-set-host-users:
             name: pod-set-host-users
@@ -433,6 +439,34 @@ spec:
                 spec:
                   +(enableServiceLinks): false
             name: pod-disable-service-links
+        pod-host-users-require-annotation:
+          background: false
+          failurePolicy: Ignore
+          rules:
+          - match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+                  operations:
+                  - CREATE
+            name: pod-host-users-require-annotation
+            preconditions:
+              all:
+              - key: '{{"{{"}} to_string(request.object.spec.hostUsers) {{"}}"}}'
+                operator: Equals
+                value: "true"
+              - key: '{{"{{"}} request.object.metadata.annotations."policy.bcl.tf/skipPodSetHostUsers"
+                  || '''' {{"}}"}}'
+                operator: NotEquals
+                value: "true"
+            validate:
+              deny: {}
+              message: 'This pod sets `spec.hostUsers: true` (it runs in the user
+                namespace of the host) without the annotation `policy.bcl.tf/skipPodSetHostUsers:
+                "true"`. Add the annotation to the pod, which documents the opt-out,
+                or remove `spec.hostUsers` so that the pod runs in a user namespace.'
+          validationFailureAction: Enforce
         pod-restrict-host-access:
           background: true
           failurePolicy: Ignore
@@ -477,6 +511,41 @@ spec:
               message: the pods using the host namespaces, privileged containers or
                 hostPath volumes need the annotation `policy.bcl.tf/skipPodRestrictHostAccess`
           validationFailureAction: Audit
+        pod-rwx-require-host-users:
+          background: false
+          failurePolicy: Ignore
+          rules:
+          - context:
+            - apiCall:
+                jmesPath: items[?contains(spec.accessModes, 'ReadWriteMany')].metadata.name
+                urlPath: /api/v1/namespaces/{{"{{"}} request.namespace {{"}}"}}/persistentvolumeclaims
+              name: rwxClaims
+            match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+                  operations:
+                  - CREATE
+            name: pod-rwx-require-host-users
+            preconditions:
+              all:
+              - key: '{{"{{"}} to_string(request.object.spec.hostUsers) {{"}}"}}'
+                operator: Equals
+                value: "false"
+              - key: '{{"{{"}} request.object.spec.volumes[?persistentVolumeClaim].persistentVolumeClaim.claimName
+                  || `[]` {{"}}"}}'
+                operator: AnyIn
+                value: '{{"{{"}} rwxClaims {{"}}"}}'
+            validate:
+              deny: {}
+              message: 'This pod mounts a ReadWriteMany volume (NFS), which can not
+                be used in a user namespace (`hostUsers: false`, set by default by
+                the policy pod-set-host-users). Either use a ReadWriteOnce volume
+                instead of the ReadWriteMany one, OR opt the pod out of the user namespace:
+                add the annotation `policy.bcl.tf/skipPodSetHostUsers: "true"` to
+                the pod.'
+          validationFailureAction: Enforce
         pod-set-host-users:
           failurePolicy: Ignore
           rules:

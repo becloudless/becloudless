@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=../../../base/schema/resources/kyvernoClusterPolicies.json
+
+# A pod mounting a ReadWriteMany volume (an NFS mount served by the share manager of Longhorn) can not run in a user namespace: the volume
+# can not be id-mapped, the container fails to start with `mount_setattr ... Invalid argument`. This rejects it at creation, with the
+# reason, instead of leaving it in `CreateContainerError`.
+# It runs after pod-set-host-users (the mutations are done before the validations), which sets `hostUsers: false` on the pods that do not
+# opt out: the pod has to opt out with the annotation `policy.bcl.tf/skipPodSetHostUsers: "true"` (see pod-host-users-require-annotation).
+# The access modes are the ones of the PVCs of the namespace of the pod, read from the API server when the pod is created: a PVC that does
+# not exist yet is not known, the pod is not rejected.
+# `Enforce`: the pods that are not compliant are rejected at creation. `Ignore`: a Kyverno outage must not block the creation of pods.
+# Not applied in the background: `hostUsers` can not change once the pod exists, the pods that already exist are not concerned.
+failurePolicy: Ignore
+validationFailureAction: Enforce
+background: false
+rules:
+  - name: pod-rwx-require-host-users
+    match:
+      any:
+        - resources:
+            kinds:
+              - Pod
+            operations:
+              - CREATE
+    context:
+      - name: rwxClaims
+        apiCall:
+          urlPath: "/api/v1/namespaces/{{ request.namespace }}/persistentvolumeclaims"
+          jmesPath: "items[?contains(spec.accessModes, 'ReadWriteMany')].metadata.name"
+    preconditions:
+      all:
+        - key: "{{ to_string(request.object.spec.hostUsers) }}"
+          operator: Equals
+          value: "false"
+        - key: "{{ request.object.spec.volumes[?persistentVolumeClaim].persistentVolumeClaim.claimName || `[]` }}"
+          operator: AnyIn
+          value: "{{ rwxClaims }}"
+    validate:
+      message: >-
+        This pod mounts a ReadWriteMany volume (NFS), which can not be used in a user namespace (`hostUsers: false`, set by default by
+        the policy pod-set-host-users). Either use a ReadWriteOnce volume instead of the ReadWriteMany one, OR opt the pod out of the
+        user namespace: add the annotation `policy.bcl.tf/skipPodSetHostUsers: "true"` to the pod.
+      deny: {}

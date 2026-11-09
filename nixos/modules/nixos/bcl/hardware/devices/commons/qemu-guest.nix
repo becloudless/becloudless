@@ -22,6 +22,9 @@
         "virtio_gpu"
       ];
 
+      # The host (bcl.vm) talks to the guest through it, ex: to ask for a restart when the definition of the VM changed.
+      services.qemuGuest.enable = true;
+
     })
   ];
 }

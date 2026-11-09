@@ -1,9 +1,0 @@
-apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  name: immich-postgresql
-  namespace: ${INSTANCE:=immich}
-spec:
-  ca:
-    secretName: immich-postgresql-ca
-

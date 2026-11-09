@@ -16,7 +16,7 @@
     # advertised by ACPI SPCR, nothing to set there.
     boot.kernelParams = lib.optionals pkgs.stdenv.hostPlatform.isx86_64 [ "console=tty0" "console=ttyS0,115200" ];
 
-    bcl.system.devices = [ "/dev/vda" ];
+    bcl.system.devices = lib.mkDefault [ "/dev/vda" ];
   })
   ];
 }

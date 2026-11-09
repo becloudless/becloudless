@@ -8,12 +8,12 @@ kind and the id:
   refs:
     db-pre:
       stringSecrets:
-        db-generated: {name: db-generated, namespace: apps}
+        db-generated: {name: db-generated, namespace: bcl}
       certManagerCertificates:
-        db-tls: {name: db-tls, namespace: apps, secretName: tls-db}
+        db-tls: {name: db-tls, namespace: bcl, secretName: tls-db}
     db:
       deployments:
-        db: {name: db, namespace: apps, labels: {app.kubernetes.io/instance: db, app.kubernetes.io/component: db}}
+        db: {name: db, namespace: bcl, labels: {app.kubernetes.io/instance: db, app.kubernetes.io/component: db}}
 
 The name is the one the sibling gives its resource (`prefixNamesWithRelease`, `nameOverride`, `fullNameOverride`) and the release
 name is the one of Flux (`releaseName`, else `<targetNamespace>-<name>` or the name of the HelmRelease). `refs` is a value of its

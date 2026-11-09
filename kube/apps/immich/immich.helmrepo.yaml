@@ -1,9 +1,0 @@
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: HelmRepository
-metadata:
-  name: immich
-  namespace: ${INSTANCE:=immich}
-spec:
-  url: https://immich-app.github.io/immich-charts
-  interval: 10m
-

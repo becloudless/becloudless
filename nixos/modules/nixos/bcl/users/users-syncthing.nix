@@ -74,6 +74,10 @@ in
           };
           devices."${name}.syncthing.${nixosConfig.bcl.global.domain}" = {
             id = ucfg.remote.id;
+            # The instance of the cluster listens on the relay only, and it cannot announce an address that is reachable from outside
+            # (the global discovery servers are not reachable from the cluster, and the listener address is the internal one of the
+            # relay service): the relay is the static address of the device, no discovery is needed.
+            addresses = [ "relay://syncthing.${nixosConfig.bcl.global.domain}:22067/?id=${nixosConfig.bcl.global.syncthing.relayId}" ];
             autoAcceptFolders = false;
           };
           folders =

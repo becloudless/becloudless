@@ -10,6 +10,8 @@ let
     runtimeInputs = [ pkgs.coreutils ];
     text = ''
       isRebootRequired() {
+        # the host asks for a restart of the VM to apply its new definition (bcl.vm.vms.<name>.restartOnChange, qemu-guest.nix)
+        [ -e /run/vm-restart-required ] && return 0
         [ "$(readlink -f /nix/var/nix/profiles/system)" != "$(readlink -f /run/current-system)" ] && return 0
         for part in initrd kernel kernel-modules; do
           [ "$(readlink -f "/run/booted-system/$part")" != "$(readlink -f "/run/current-system/$part")" ] && return 0

@@ -1,10 +1,10 @@
 {{- /*
 Prepare one Flux HelmRelease `syncthing-<user>` per user of `app.lldapUsers` that is a member of the `app_syncthing` group,
 installing the `syncthing` chart (one instance, see its values) with the id of the user and the `app` values (domain, name and base DN). The HelmReleases are created in
-the namespace of the release and run as the same service account as the other ones of the app (`defaults.resources` of the apps chart).
+the namespace of the release and run as the same service account as the other ones of the app (`defaults.resources` of the app-bcl chart).
 
 The id of the user is the name of the resources, so it must be a valid DNS label (lowercase letters, digits and `-`).
-The instances wait for `syncthing-pre` (values.yaml), which makes the token and the certificate of the relay they are configured from.
+The instances wait for `syncthing-pre` (values.yaml), which makes the certificate of the relay they are configured from.
 Set `resources.fluxHelmReleases.syncthing-<user>.values` in the cluster to configure an instance (ex: `storageSize`).
 */}}
 {{- define "app-syncthing.features.instances" }}
@@ -45,7 +45,7 @@ resources:
           sourceRef:
             kind: GitRepository
             name: bcl
-            namespace: apps
+            namespace: bcl
       values:
         user: {{ $id }}
         storageClassName: longhorn-files

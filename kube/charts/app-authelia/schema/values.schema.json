@@ -71,6 +71,11 @@
             "description": "The name of a policy of authelia (`two_factor`...) used instead of the generated `<id>_authz`.",
             "type": "string"
           },
+          "public": {
+            "default": false,
+            "description": "A public client (a CLI): no secret, the client id is the id, PKCE (S256) is required.",
+            "type": "boolean"
+          },
           "redirectUris": {
             "description": "The redirect URIs, `{clientId}` is replaced by the client id.",
             "items": {

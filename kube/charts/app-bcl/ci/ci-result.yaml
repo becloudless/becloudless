@@ -1,0 +1,932 @@
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: backup-restore
+spec: {}
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: bcl
+spec: {}
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: cilium
+spec: {}
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: coredns
+spec: {}
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-system
+spec: {}
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: gateway-api
+spec: {}
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: longhorn-system
+spec: {}
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: something
+spec: {}
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-backup-restore
+  namespace: backup-restore
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-bcl
+  namespace: bcl
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-cilium
+  namespace: cilium
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-coredns
+  namespace: coredns
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-flux
+  namespace: flux-system
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-gateway-api
+  namespace: gateway-api
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-kube
+  namespace: kube-system
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-longhorn
+  namespace: longhorn-system
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-something
+  namespace: something
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    app:
+      domain: test.com
+      lldapUsers: {}
+      lldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: backup-restore
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    app:
+      domain: test.com
+      lldapUsers: {}
+      lldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: bcl
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    app:
+      domain: test.com
+      lldapUsers: {}
+      lldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: cilium
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    app:
+      domain: test.com
+      lldapUsers: {}
+      lldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: coredns
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    app:
+      domain: test.com
+      lldapUsers: {}
+      lldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: flux-system
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    app:
+      domain: test.com
+      lldapUsers: {}
+      lldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: gateway-api
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    app:
+      domain: test.com
+      lldapUsers: {}
+      lldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: kube-system
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    app:
+      domain: test.com
+      lldapUsers: {}
+      lldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: longhorn-system
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: v1
+data:
+  values.yaml: |-
+    app:
+      domain: test.com
+      lldapUsers: {}
+      lldapdn: dc=test,dc=com
+      name: test
+kind: ConfigMap
+metadata:
+  name: global-values
+  namespace: something
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-backup-restore
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-backup-restore
+  namespace: backup-restore
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-bcl
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-bcl
+  namespace: bcl
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-cilium
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-cilium
+  namespace: cilium
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-coredns
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-coredns
+  namespace: coredns
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-flux
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-flux
+  namespace: flux-system
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-gateway-api
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-gateway-api
+  namespace: gateway-api
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-kube
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-kube
+  namespace: kube-system
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-longhorn
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-longhorn
+  namespace: longhorn-system
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: backup-restore
+  namespace: something
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - create
+  - patch
+- apiGroups:
+  - secretgenerator.mittwald.de
+  resources:
+  - stringsecrets
+  verbs:
+  - get
+  - list
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: backup-restore
+  namespace: something
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: backup-restore
+subjects:
+- kind: ServiceAccount
+  name: backup-restore
+  namespace: backup-restore
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: flux-something
+  namespace: something
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: flux-something
+  namespace: something
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: bcl
+  namespace: default
+spec:
+  interval: 10m
+  ref:
+    branch: n0/kube-proxy
+  url: https://github.com/becloudless/becloudless.git
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-backup-restore
+  namespace: backup-restore
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-backup-restore
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    timeout: 20m
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-backup-restore
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-backup-restore
+        fluxKustomizations:
+          serviceAccountName: flux-backup-restore
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-cilium
+  namespace: cilium
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-cilium
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    timeout: 20m
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-cilium
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-cilium
+        fluxKustomizations:
+          serviceAccountName: flux-cilium
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-coredns
+  namespace: coredns
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-coredns
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    timeout: 20m
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-coredns
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-coredns
+        fluxKustomizations:
+          serviceAccountName: flux-coredns
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-flux
+  namespace: flux-system
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-flux
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    timeout: 20m
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-flux
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-flux
+        fluxKustomizations:
+          serviceAccountName: flux-flux
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-gateway-api
+  namespace: gateway-api
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-gateway-api
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    timeout: 20m
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-gateway-api
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-gateway-api
+        fluxKustomizations:
+          serviceAccountName: flux-gateway-api
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-kube
+  namespace: kube-system
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-kube
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    timeout: 20m
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-kube
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-kube
+        fluxKustomizations:
+          serviceAccountName: flux-kube
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-longhorn
+  namespace: longhorn-system
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-longhorn
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    timeout: 20m
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-longhorn
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-longhorn
+        fluxKustomizations:
+          serviceAccountName: flux-longhorn
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: app-something
+  namespace: something
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/app-something
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  dependsOn:
+  - name: restore-something
+    namespace: backup-restore
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    timeout: 20m
+  interval: 10m
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-something
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    defaults:
+      resources:
+        fluxHelmReleases:
+          serviceAccountName: flux-something
+        fluxKustomizations:
+          serviceAccountName: flux-something
+    refs:
+      app-something:
+        fluxHelmReleases:
+          something-config:
+            name: something-config
+            namespace: something
+    resources:
+      fluxHelmReleases:
+        something-config:
+          enabled: true
+  valuesFrom:
+  - kind: ConfigMap
+    name: global-values
+---
+# Source: app-bcl/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: restore-something
+  namespace: backup-restore
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/restore-app
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: default
+  dependsOn:
+  - name: app-backup-restore
+    namespace: backup-restore
+  - name: backup-restore-pre
+    namespace: backup-restore
+  - name: longhorn-backup
+    namespace: backup-restore
+  - name: app-longhorn
+    namespace: longhorn-system
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    timeout: 1h
+  interval: 1h
+  rollback:
+    cleanupOnFail: true
+  serviceAccountName: flux-backup-restore
+  timeout: 1h
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    timeout: 1h
+  values:
+    restore:
+      namespace: something

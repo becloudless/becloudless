@@ -35,6 +35,12 @@ resources:
 
         kubeProxyReplacement: true
 
+        # The masquerade is done by the eBPF datapath instead of the iptables rule `cilium masquerade non-cluster`: with iptables, the
+        # replies of a backend pod running on the node that receives a NodePort / LoadBalancer connection are masqueraded before the
+        # reverse NAT of the NodePort, and dropped by the client (the TLS handshake of the syncthing relay stalls), see becloudless#810.
+        bpf:
+          masquerade: true
+
         operator:
           replicas: "{{ .Values.app.scaling.replicas }}"
           # The operator and the envoy are the network of the cluster, they run as root with a writable root filesystem (the envoy

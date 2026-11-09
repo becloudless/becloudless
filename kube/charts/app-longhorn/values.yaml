@@ -44,6 +44,11 @@ resources:
         webhooks:
           fromEntities: [kube-apiserver, host, remote-node]
           toPorts: [9502, 9503]
+        recovery-backend: # the NFS servers store their client records there, ganesha does not start without it
+          fromEndpoints:
+            share-manager:
+              matchLabels: {longhorn.io/component: share-manager}
+          toPorts: [9503]
       egress:
         kube-apiserver:
           toEntities: [kube-apiserver]
@@ -156,7 +161,7 @@ resources:
           toEndpoints:
             managers:
               matchLabels: {app: longhorn-manager}
-          toPorts: [9500]
+          toPorts: [9500, 9503] # 9503: the recovery backend of the NFS server
 
     longhorn-ui:
       endpointSelector:
@@ -288,7 +293,8 @@ resources:
 
             # The pods created by Longhorn itself (not by its chart) are privileged or mount host paths, they need the host users.
             # `hostUsers: true` is set explicitly: the order of the mutate policies is not guaranteed, and the policy of app-kyverno
-            # keeps a `hostUsers` that is already set but would not undo a `false` added before this policy.
+            # keeps a `hostUsers` that is already set but would not undo a `false` added before this policy. The opt-out annotation is
+            # required by app-kyverno (pod-host-users-require-annotation) for every pod with `hostUsers: true`.
             # The longhorn-manager pods are opted out by the chart (`annotations`).
             longhorn-host-users:
               failurePolicy: Ignore
@@ -317,6 +323,16 @@ resources:
                           selector:
                             matchLabels:
                               longhorn.io/component: engine-image
+                      - resources: # the NFS servers of the RWX volumes mount the volume and `/dev`, `mount_setattr` fails in a user namespace
+                          kinds:
+                            - Pod
+                          operations:
+                            - CREATE
+                          namespaces:
+                            - longhorn-system
+                          selector:
+                            matchLabels:
+                              longhorn.io/component: share-manager
                       - resources:
                           kinds:
                             - Pod
@@ -350,6 +366,9 @@ resources:
                                   - longhorn-uninstall
                   mutate:
                     patchStrategicMerge:
+                      metadata:
+                        annotations:
+                          policy.bcl.tf/skipPodSetHostUsers: "true"
                       spec:
                         hostUsers: true
 

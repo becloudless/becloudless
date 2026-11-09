@@ -189,6 +189,9 @@ spec:
               TZ: Europe/Paris
             image:
               tag: v2.5.6
+        pod:
+          annotations:
+            policy.bcl.tf/skipPodSetHostUsers: "true"
     immich:
       configurationKind: Secret
       existingConfiguration: immich-config
@@ -196,6 +199,11 @@ spec:
         library:
           existingClaim: immich-data
     machine-learning:
+      controllers:
+        main:
+          pod:
+            annotations:
+              policy.bcl.tf/skipPodSetHostUsers: "true"
       persistence:
         cache:
           accessMode: ReadWriteMany
@@ -216,7 +224,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: immich-post
   - name: app-cert-manager
@@ -353,7 +361,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: immich
   - name: immich-pre
@@ -469,7 +477,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: app-cert-manager
     namespace: cert-manager
@@ -579,7 +587,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: app-secret-generator
     namespace: secret-generator
@@ -735,7 +743,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: app-secret-generator
     namespace: secret-generator

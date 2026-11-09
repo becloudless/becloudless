@@ -33,7 +33,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: app-longhorn
     namespace: longhorn-system
@@ -85,12 +85,10 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: app-cert-manager
     namespace: cert-manager
-  - name: app-secret-generator
-    namespace: secret-generator
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -116,10 +114,6 @@ spec:
         certManagerCertificates:
           syncthing-relay-keys:
             name: syncthing-relay-keys
-            namespace: default
-        stringSecrets:
-          syncthing-relay:
-            name: syncthing-relay
             namespace: default
       syncthing-relay:
         deployments:
@@ -154,10 +148,6 @@ spec:
             rotationPolicy: Never
             size: 256
           secretName: syncthing-relay-keys
-      stringSecrets:
-        syncthing-relay:
-          fields:
-            token: {}
 ---
 # Source: app-syncthing/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -173,7 +163,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: syncthing-pre
   - name: app-gateway-api
@@ -203,10 +193,6 @@ spec:
         certManagerCertificates:
           syncthing-relay-keys:
             name: syncthing-relay-keys
-            namespace: default
-        stringSecrets:
-          syncthing-relay:
-            name: syncthing-relay
             namespace: default
       syncthing-relay:
         deployments:
@@ -240,14 +226,8 @@ spec:
                   - -keys=/var/strelaysrv
                   - -pools=
                   - -status-srv=
-                  - -token=$(RELAY_TOKEN)
                   command:
                   - /bin/strelaysrv
-                  env:
-                    RELAY_TOKEN:
-                      secretKeyRef:
-                        key: token
-                        name: ref:syncthing-relay
                   image: docker.io/syncthing/relaysrv:2.1.7
                   name: relay
                   ports:

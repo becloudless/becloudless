@@ -1,0 +1,7 @@
+apiVersion: v2
+name: app-bcl
+version: 0.0.0
+dependencies:
+  - name: base
+    version: 0.0.0
+    repository: "file://../base"

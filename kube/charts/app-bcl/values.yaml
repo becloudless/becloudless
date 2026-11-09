@@ -1,0 +1,289 @@
+# yaml-language-server: $schema=./schema/values.schema.json
+
+resources:
+  fluxGitRepositories:
+    bcl:
+      url: https://github.com/becloudless/becloudless.git
+      ref:
+        branch: main
+
+defaults:
+  resources:
+    fluxHelmReleases:
+      install:
+        timeout: 20m # install all resources for an app takes time. A new DB with 2 nodes can take 10min alone
+
+config:
+  domain:
+  # name: # deduced from domain by default
+  # ldapdn: # deduced from domain by default (dc=example,dc=com)
+  # lldapUsers: # TODO probably not a good idea to be in global config. the users of the cluster, created in lldap and given an instance by some apps (syncthing), keyed by user id
+  #   n0rad: {displayName: n0rad, email: n0rad@example.com, groups: [role_admin, role_user]}
+  # scaling: # the scale of the apps (see `app.scaling` of the `app` chart): replicas of the stateless parts (1 by default), instances of the databases (2 by default)
+  #   replicas: 2
+  #   dbReplicas: 3
+
+appsGroups:
+  minimal:
+    enabled: true
+
+# The `flux-<app>` service account of an app is cluster-admin on the namespace of the app only. Apps installing cluster-scoped resources
+# (CRDs, ClusterRoles, webhooks, ClusterIssuers, StorageClasses...) set `clusterAdmin: true`.
+#
+# `restore` is true by default (the PVCs and secrets of the app are restored from the backups when they do not exist, see the restore
+# feature): the apps that Longhorn and the backups need to run (directly or not, the restore of an app waits for them) set `restore: false`.
+apps:
+
+  # self
+  bcl:
+    namespace: bcl
+    clusterAdmin: true
+    restore: false # it creates the HelmReleases of the apps and of their restores
+
+  # minimal
+  gateway-api:
+    groups:
+      minimal: true
+    clusterAdmin: true # CRDs
+    appChart:
+      name: app-gateway-api
+    restore: false # the CRDs of the Gateway API, needed by the apps of the chain before the restore (no state)
+
+  cilium:
+    groups:
+      minimal: true
+    clusterAdmin: true
+    appChart:
+      name: app-cilium
+    restore: false # the network: Longhorn and the restore jobs can not run without it (no state)
+
+  flux:
+    groups:
+      minimal: true
+    clusterAdmin: true
+    namespace: flux-system
+    appChart:
+      name: app-flux
+    restore: false # the controllers reconciling the HelmReleases of the restore itself (no state)
+
+  kube:
+    groups:
+      minimal: true
+    clusterAdmin: true # creates a ClusterRole and a ClusterRoleBinding
+    namespace: kube-system
+    appChart:
+      name: app-kube
+    restore: false # the base of the cluster (kube-system), needed before anything runs (no state)
+
+  coredns:
+    groups:
+      minimal: true
+    clusterAdmin: true # creates a ClusterRole and a ClusterRoleBinding
+    appChart:
+      name: app-coredns
+    restore: false # the DNS: the restore jobs and Longhorn resolve names (no state)
+
+  # server
+  backup-restore: # the S3 gateway of the backups, and the jobs restoring the volumes and the secrets of the apps with `restore: true`, needs `longhorn`
+    groups:
+      cluster: true
+    clusterAdmin: true # the ClusterRole of the restore jobs
+    appChart:
+      name: app-backup-restore
+    restore: false # the restore of every app waits for it (jobs and S3 gateway): it would wait for itself
+
+  kured:
+    groups:
+      cluster: true
+    clusterAdmin: true # ClusterRole to drain the nodes
+    appChart:
+      name: app-kured
+
+  cert-manager:
+    groups:
+      cluster: true
+    clusterAdmin: true
+    appChart:
+      name: app-cert-manager
+    restore: false # longhorn-integration (needed by app-longhorn) waits for it, and its restore waits for longhorn: a cycle (no state)
+
+  longhorn:
+    groups:
+      cluster: true
+    clusterAdmin: true
+    namespace: longhorn-system
+    appChart:
+      name: app-longhorn
+    restore: false # the restore of every app waits for it (it creates the volumes from the backups): it would wait for itself
+
+  kyverno:
+    groups:
+      cluster: true
+    clusterAdmin: true
+    appChart:
+      name: app-kyverno
+    restore: false # app-longhorn depends on it (the policies of its pods), so the restore which waits for Longhorn would wait for it twice
+
+  cnpg:
+    groups:
+      cluster: true
+    clusterAdmin: true
+    namespace: cnpg-system
+    appChart:
+      name: app-cnpg
+
+  secret-generator:
+    groups:
+      cluster: true
+    clusterAdmin: true
+    appChart:
+      name: app-secret-generator
+    restore: false # backup-restore-pre depends on it (the generated key of the bucket), which the restore waits for
+
+  external-secrets:
+    groups:
+      cluster: true
+    clusterAdmin: true # CRDs and cluster roles
+    appChart:
+      name: app-external-secrets
+    restore: false # app-backup-restore depends on it (its ExternalSecrets), which the restore waits for
+
+  descheduler:
+    groups:
+      cluster: true
+    clusterAdmin: true
+    appChart:
+      name: app-descheduler
+
+  metrics-server:
+    groups:
+      cluster: true
+    clusterAdmin: true # creates ClusterRoles and an APIService
+    appChart:
+      name: app-metrics-server
+
+  external-snapshotter:
+    groups:
+      cluster: true
+    clusterAdmin: true # CRDs
+    appChart:
+      name: app-external-snapshotter
+    restore: false # app-longhorn depends on it (the snapshot CRDs for its VolumeSnapshotClasses), which the restore waits for
+  
+  lldap:
+    groups:
+      cluster: true
+    appChart:
+      name: app-lldap
+  
+  authelia:
+    groups:
+      cluster: true
+    appChart:
+      name: app-authelia
+  
+  landing:
+    groups:
+      cluster: true
+    appChart:
+      name: app-landing
+
+  homer:
+    groups:
+      cluster: true
+    appChart:
+      name: app-homer
+
+  whoami:
+    groups:
+      cluster: true
+    appChart:
+      name: app-whoami
+
+  # extra
+  prometheus:
+    groups:
+      extra: true
+    clusterAdmin: true # CRDs
+    appChart:
+      name: app-prometheus
+
+  forgejo:
+    groups:
+      extra: true
+    appChart:
+      name: app-forgejo
+
+  csi-rclone:
+    groups:
+      extra: true
+    clusterAdmin: true # CSIDriver, StorageClass, ClusterRoles
+    appChart:
+      name: app-csi-rclone
+
+  jellyfin:
+    groups:
+      extra: true
+    appChart:
+      name: app-jellyfin
+
+  seerr:
+    groups:
+      extra: true
+    appChart:
+      name: app-seerr
+
+  seafile:
+    groups:
+      extra: true
+    appChart:
+      name: app-seafile
+
+  paperless:
+    groups:
+      extra: true
+    appChart:
+      name: app-paperless
+
+  tuwunel:
+    groups:
+      extra: true
+    appChart:
+      name: app-tuwunel
+
+  element:
+    groups:
+      extra: true
+    appChart:
+      name: app-element
+
+  syncthing:
+    groups:
+      extra: true
+    appChart:
+      name: app-syncthing
+
+  firefox-sync:
+    groups:
+      extra: true
+    appChart:
+      name: app-firefox-sync
+
+  sftp:
+    groups:
+      extra: true
+    appChart:
+      name: app-sftp
+
+  mailu:
+    groups:
+      extra: true
+    appChart:
+      name: app-mailu
+
+  immich:
+    groups:
+      extra: true
+    appChart:
+      name: app-immich
+

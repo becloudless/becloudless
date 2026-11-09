@@ -1,5 +1,5 @@
 # The values shared by every app chart, in `.Values.app` (`app.domain`, `app.name`, `app.lldapdn`).
-# The cluster sets them for all the apps with the `global-values` ConfigMap of the `apps` chart (`valuesFrom` of the HelmRelease of
+# The cluster sets them for all the apps with the `global-values` ConfigMap of the `app-bcl` chart (`valuesFrom` of the HelmRelease of
 # each app), from its `config`. They are required: an app chart does not render without them.
 app:
   # the domain of the cluster, ex: example.com

@@ -7,7 +7,7 @@
       "description": "The app whose volumes and secrets are restored, and where the secrets are saved.",
       "properties": {
         "namespace": {
-          "description": "The namespace of the app, where its PVCs and its secrets are. Required, set by the `apps` chart.",
+          "description": "The namespace of the app, where its PVCs and its secrets are. Required, set by the `app-bcl` chart.",
           "type": "string"
         },
         "secretsBackupSchedule": {

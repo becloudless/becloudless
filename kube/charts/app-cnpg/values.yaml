@@ -1,5 +1,20 @@
 # yaml-language-server: $schema=../base/schema/values.schema.json
 
+# The CloudNativePG operator, and the CronJob `replica-repair` that clones again the replicas that can not start anymore.
+#
+# A replica that is down for a while (a node that is stopped, a restore, a slow disk) asks the primary for WAL segments that the primary
+# has already recycled (`wal_keep_size`), when there is no WAL archive and no replication slot. It never catches up: postgres of the replica
+# loops on `requested WAL segment ... has already been removed`, the pod is `Running` but never ready, for ever. The only way out is to
+# clone the replica again from the primary: delete the PVCs and the pod of the instance, the operator creates a new instance (a new
+# volume, `pg_basebackup` from the primary).
+# The CronJob does it (the script is in the ConfigMap `replica-repair`) for the instances that
+#  - are replicas, and not ready for `MIN_AGE` seconds (the pod is at least that old, and has been unready for that long);
+#  - have the error of the lost WAL in the log of postgres (the error of a replica that only lags is not a reason to clone it again);
+#  - are in a cluster that has no WAL archive (an instance that logs this error recovers from the archive), whose primary is ready (the
+#    data is never deleted without a healthy copy), and that does not have the annotation `cnpg.bcl.tf/replica-repair: "false"`.
+# At most one instance by cluster is cloned again by run, an event `ReplicaRecloned` is created on the `Cluster`.
+# To only see what it would do, set `DRY_RUN: "true"` in the env of the CronJob.
+
 resources:
   fluxHelmRepositories:
     cnpg:
@@ -50,3 +65,167 @@ resources:
       dependsOn:
         - name: app-external-snapshotter # cnpg snapshot support needs the CRDs before starting, or will require manual restart
           namespace: external-snapshotter
+
+  ciliumNetworkPolicies:
+    replica-repair:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/component: replica-repair}
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+
+  serviceAccounts:
+    replica-repair:
+      automountServiceAccountToken: true # the API server
+
+  clusterRoles:
+    replica-repair:
+      rules:
+        clusters:
+          apiGroups: [ postgresql.cnpg.io ]
+          resources: [ clusters ]
+          verbs: [ get, list ]
+        pods:
+          apiGroups: [ "" ]
+          resources: [ pods ]
+          verbs: [ get, list, delete ]
+        logs: # the error of the lost WAL is in the log of postgres
+          apiGroups: [ "" ]
+          resources: [ pods/log ]
+          verbs: [ get ]
+        pvcs:
+          apiGroups: [ "" ]
+          resources: [ persistentvolumeclaims ]
+          verbs: [ list, delete ]
+        events:
+          apiGroups: [ "" ]
+          resources: [ events ]
+          verbs: [ create ]
+
+  clusterRoleBindings:
+    replica-repair:
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: replica-repair
+      subjects:
+        replica-repair:
+          kind: ServiceAccount
+          name: replica-repair
+          namespace: "{{ .Release.Namespace }}"
+
+  configMaps:
+    replica-repair:
+      data:
+        replica-repair.sh: |
+          #!/usr/bin/env bash
+          # See the header of the values of the chart app-cnpg.
+          set -uo pipefail
+
+          MIN_AGE=${MIN_AGE:-1200} # seconds a replica has to be unready before it is cloned again
+          DRY_RUN=${DRY_RUN:-false}
+          LOST_WAL='has already been removed'
+
+          log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
+
+          now=$(date +%s)
+          repaired=" "
+          candidates=$(kubectl get pods -A -l cnpg.io/podRole=instance -o json | jq -r --argjson now "$now" --argjson min "$MIN_AGE" '
+            .items[]
+            | select((.metadata.labels["cnpg.io/instanceRole"] // .metadata.labels.role) == "replica")
+            | select(.metadata.deletionTimestamp == null)
+            | ([.status.conditions[]? | select(.type == "Ready")][0]) as $ready
+            | select($ready.status != "True")
+            | ([.metadata.creationTimestamp, $ready.lastTransitionTime] | map(select(. != null) | fromdateiso8601) | max) as $since
+            | select($now - $since >= $min)
+            | [.metadata.namespace, .metadata.name, .metadata.labels["cnpg.io/cluster"], ($now - $since)] | @tsv') || exit 1
+
+          if [ -z "$candidates" ]; then
+            log "no replica unready for more than ${MIN_AGE}s"
+            exit 0
+          fi
+
+          while IFS=$'\t' read -r ns pod cluster age; do
+            id="$ns/$cluster"
+            ctx="$ns/$pod (unready for ${age}s)"
+            case "$repaired" in *" $id "*) log "$ctx: another instance of $id was cloned again by this run, next time"; continue;; esac
+
+            cluster_json=$(kubectl -n "$ns" get clusters.postgresql.cnpg.io "$cluster" -o json) || { log "$ctx: cluster $cluster not found"; continue; }
+            if [ "$(jq -r '.metadata.annotations["cnpg.bcl.tf/replica-repair"] // ""' <<<"$cluster_json")" = false ]; then
+              log "$ctx: disabled by the annotation of the cluster"; continue
+            fi
+            if jq -e '(.spec.backup.barmanObjectStore != null) or ([.spec.plugins[]? | select(.isWALArchiver == true)] | length > 0)' <<<"$cluster_json" >/dev/null; then
+              log "$ctx: the cluster has a WAL archive, the replica can recover from it"; continue
+            fi
+            primary=$(jq -r '.status.currentPrimary // ""' <<<"$cluster_json")
+            if [ -z "$primary" ] || [ "$primary" = "$pod" ]; then
+              log "$ctx: no other primary ($primary)"; continue
+            fi
+            primary_ready=$(kubectl -n "$ns" get pod "$primary" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
+            if [ "$primary_ready" != True ]; then
+              log "$ctx: the primary $primary is not ready, nothing is deleted without a healthy copy"; continue
+            fi
+            pg_log=$(kubectl -n "$ns" logs "$pod" -c postgres --tail=3000 2>/dev/null) # not piped to `grep -q`: it exits first, and pipefail fails
+            if ! grep -q "$LOST_WAL" <<<"$pg_log"; then
+              log "$ctx: no lost WAL in its log, not a reason to clone it again"; continue
+            fi
+
+            if [ "$DRY_RUN" = true ]; then
+              log "$ctx: DRY RUN, would clone again from $primary (delete the PVCs and the pod)"; continue
+            fi
+            log "$ctx: the WAL it needs was removed from the primary $primary, cloning it again (delete the PVCs and the pod)"
+            kubectl -n "$ns" delete pvc -l "cnpg.io/cluster=$cluster,cnpg.io/instanceName=$pod" --wait=false || continue
+            kubectl -n "$ns" delete pod "$pod" --wait=false || continue
+            repaired="$repaired$id "
+            kubectl create -f - <<EOF || true
+          apiVersion: v1
+          kind: Event
+          metadata:
+            generateName: replica-repair-
+            namespace: $ns
+          type: Warning
+          reason: ReplicaRecloned
+          message: "$pod was cloned again from $primary: the WAL it needs was removed from the primary (unready for ${age}s)"
+          involvedObject: {apiVersion: postgresql.cnpg.io/v1, kind: Cluster, name: $cluster, namespace: $ns}
+          source: {component: replica-repair}
+          EOF
+          done <<<"$candidates"
+
+  cronJobs:
+    replica-repair:
+      schedule: "*/10 * * * *"
+      jobTemplate:
+        spec:
+          backoffLimit: 0
+          activeDeadlineSeconds: 300
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/component: replica-repair
+            spec:
+              restartPolicy: Never
+              serviceAccountName: replica-repair
+              securityContext:
+                runAsUser: 65534
+                runAsGroup: 65534
+              containers:
+                repair:
+                  name: repair
+                  image: docker.io/alpine/k8s:1.36.5 # renovate: versioning=loose
+                  command: [ bash, /scripts/replica-repair.sh ]
+                  env:
+                    HOME: /tmp
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                  volumeMounts:
+                    script:
+                      name: script
+                      mountPath: /scripts
+                      readOnly: true
+              volumes:
+                script:
+                  name: script
+                  configMap:
+                    name: replica-repair

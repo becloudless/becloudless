@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=../../../base/schema/resources/kyvernoClusterPolicies.json
+
+# Every pod runs in a user namespace (see pod-set-host-users). A pod can leave it, with `spec.hostUsers: true`, only if it is declared with
+# the annotation `policy.bcl.tf/skipPodSetHostUsers: "true"`: setting only the field would bypass the review of the opt-outs, which are
+# all findable with this annotation.
+# `Enforce`: the pods that are not compliant are rejected at creation. `Ignore`: a Kyverno outage must not block the creation of pods.
+# Not applied in the background: `hostUsers` can not change once the pod exists, the pods that already exist are not concerned.
+failurePolicy: Ignore
+validationFailureAction: Enforce
+background: false
+rules:
+  - name: pod-host-users-require-annotation
+    match:
+      any:
+        - resources:
+            kinds:
+              - Pod
+            operations:
+              - CREATE
+    preconditions:
+      all:
+        - key: "{{ to_string(request.object.spec.hostUsers) }}"
+          operator: Equals
+          value: "true"
+        - key: "{{ request.object.metadata.annotations.\"policy.bcl.tf/skipPodSetHostUsers\" || '' }}"
+          operator: NotEquals
+          value: "true"
+    validate:
+      message: >-
+        This pod sets `spec.hostUsers: true` (it runs in the user namespace of the host) without the annotation
+        `policy.bcl.tf/skipPodSetHostUsers: "true"`. Add the annotation to the pod, which documents the opt-out, or remove
+        `spec.hostUsers` so that the pod runs in a user namespace.
+      deny: {}

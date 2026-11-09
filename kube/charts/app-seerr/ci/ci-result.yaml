@@ -77,7 +77,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: seerr-postgresql
   - name: seerr-pre
@@ -481,7 +481,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: seerr
   - name: app-cert-manager
@@ -628,7 +628,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: app-cert-manager
     namespace: cert-manager
@@ -677,7 +677,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: app-external-secrets
     namespace: external-secrets

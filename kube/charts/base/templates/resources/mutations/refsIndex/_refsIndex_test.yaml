@@ -26,7 +26,7 @@ tests:
                   disabled:
                     enabled: false
           app:
-            targetNamespace: apps # the release is `apps-app`, as Flux names it
+            targetNamespace: bcl # the release is `bcl-app`, as Flux names it
             chart: {spec: {chart: ./kube/charts/base-loader, sourceRef: {kind: GitRepository, name: bcl}}}
             values:
               prefixNamesWithRelease: true
@@ -53,10 +53,10 @@ tests:
             app:
               deployments:
                 web:
-                  name: apps-app-web
-                  namespace: apps
+                  name: bcl-app-web
+                  namespace: bcl
                   labels:
-                    app.kubernetes.io/instance: apps-app
+                    app.kubernetes.io/instance: bcl-app
                     app.kubernetes.io/component: web
         documentSelector: {path: metadata.name, value: app}
       - exists:

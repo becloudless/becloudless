@@ -27,10 +27,10 @@ import (
 
 const (
 	bclChartsFolder      = "assets/kube/charts" // embedded in the binary, extracted under bcl.BCL.EmbeddedPath
-	appsChartName        = "apps"
+	appsChartName        = "app-bcl"
 	appChartPrefix       = "app-"
-	clusterAppsHrFile    = "apps/apps.hr.yaml"
-	defaultAppsNamespace = "apps"
+	clusterAppsHrFile    = "bcl/bcl.hr.yaml"
+	defaultAppsNamespace = "bcl"
 	remoteKubeconfig     = "/etc/kubernetes/admin.conf"
 	apiServerPort        = "8443"
 )
@@ -47,8 +47,8 @@ func kubeBootstrapCmd() *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "bootstrap",
 		Short: "Fetch the cluster credentials from a server and apply the minimal apps resources extracted from the app charts",
-		Long: `Fetch the kubeconfig of the cluster from a server through ssh, then render the apps chart with the values of the cluster
-(apps/apps.hr.yaml) restricted to the apps of the minimal group, render each of these app charts, and apply the resources
+		Long: `Fetch the kubeconfig of the cluster from a server through ssh, then render the app-bcl chart with the values of the cluster
+(bcl/bcl.hr.yaml) restricted to the apps of the minimal group, render each of these app charts, and apply the resources
 flux needs to start: namespaces, helm releases coming from helm repositories (ex: cilium, coredns) and the flux installation.
 Everything else is left to flux once it runs. This command is re-entrant.`,
 		Args: cobra.ExactArgs(0),
@@ -89,7 +89,7 @@ func BootstrapRemote(opts bootstrapRemoteOptions) error {
 	return applyBcl(ctx, gitRepositories)
 }
 
-// applyBcl hands over to flux: the git repositories of the apps chart with their namespaces, and the apps helm release of the cluster.
+// applyBcl hands over to flux: the git repositories of the app-bcl chart with their namespaces, and the apps helm release of the cluster.
 func applyBcl(ctx kube.Context, gitRepositories []map[string]any) error {
 	if err := waitFluxCRDs(ctx); err != nil {
 		return errs.WithE(err, "Failed to wait for the flux CRDs")
@@ -125,10 +125,10 @@ func applyBcl(ctx kube.Context, gitRepositories []map[string]any) error {
 	}
 
 	// flux does not run a resource without service account with its own permissions: the apps helm release runs as a service account
-	// declared by the apps chart (flux-apps), which is cluster-admin since it creates the accounts of every app
+	// declared by the app-bcl chart (flux-bcl), which is cluster-admin since it creates the accounts of every app
 	if len(accounts) == 0 {
 		return errs.WithF(data.WithField("file", clusterAppsHrFile).WithField("serviceAccountName", appsHr.Spec.ServiceAccountName),
-			"The apps helm release must set spec.serviceAccountName to the service account declared by the apps chart (flux-apps)")
+			"The apps helm release must set spec.serviceAccountName to the service account declared by the app-bcl chart (flux-bcl)")
 	}
 	if err := applyDocs(ctx, accounts, "service account of the apps helm release"); err != nil {
 		return errs.WithE(err, "Failed to apply the service account of the apps helm release")
@@ -240,7 +240,7 @@ func readAppsHelmRelease(ctx kube.Context) (appsHelmRelease, error) {
 }
 
 // renderGroupApps renders apps with the values of the cluster, restricted to the group, then renders the app chart of each app of the group.
-// It also returns the git repositories of the apps chart, with their namespaces, adopted by the apps helm release: flux needs them to fetch the charts.
+// It also returns the git repositories of the app-bcl chart, with their namespaces, adopted by the apps helm release: flux needs them to fetch the charts.
 func renderGroupApps(ctx kube.Context, opts bootstrapRemoteOptions) ([]renderedApp, []map[string]any, error) {
 	if bcl.BCL.EmbeddedPath == "" {
 		return nil, nil, errs.With("The charts are not embedded in this build")
@@ -338,7 +338,7 @@ func renderGroupApps(ctx kube.Context, opts bootstrapRemoteOptions) ([]renderedA
 }
 
 // appsServiceAccountDocs returns the service account of the apps helm release and the ClusterRoleBindings of the docs binding it:
-// the helm release cannot create the account it runs as, the apps chart declares it and the release adopts it once installed.
+// the helm release cannot create the account it runs as, the app-bcl chart declares it and the release adopts it once installed.
 func appsServiceAccountDocs(docs []map[string]any, appsHr appsHelmRelease) []map[string]any {
 	name := appsHr.Spec.ServiceAccountName
 	namespace := appsHr.Metadata.Namespace

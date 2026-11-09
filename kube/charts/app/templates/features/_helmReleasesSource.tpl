@@ -1,6 +1,6 @@
 {{- /*
 The chart of the `fluxHelmReleases` of the apps: a release that sets no `chart.spec.sourceRef` (nor a `chartRef`) is a chart of this
-repository, installed from the GitRepository `bcl` of the `apps` namespace (created by the `apps` chart). Its `chart.spec` defaults to
+repository, installed from the GitRepository `bcl` of the `bcl` namespace (created by the `app-bcl` chart). Its `chart.spec` defaults to
 `chart: ./kube/charts/base-loader` and `reconcileStrategy: Revision`, what it sets wins. A release with its own `sourceRef` (a
 HelmRepository for example) is left as it is.
 */}}
@@ -12,7 +12,7 @@ HelmRepository for example) is left as it is.
         {{- $chart := $release.chart | default dict }}
         {{- $spec := $chart.spec | default dict }}
         {{- if not (hasKey $spec "sourceRef") }}
-          {{- $spec = set $spec "sourceRef" (dict "kind" "GitRepository" "name" "bcl" "namespace" "apps") }}
+          {{- $spec = set $spec "sourceRef" (dict "kind" "GitRepository" "name" "bcl" "namespace" "bcl") }}
           {{- if not (hasKey $spec "chart") }}
             {{- $spec = set $spec "chart" "./kube/charts/base-loader" }}
           {{- end }}

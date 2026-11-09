@@ -257,6 +257,13 @@ spec:
     - ports:
       - port: "9500"
         protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        longhorn.io/component: share-manager
+    toPorts:
+    - ports:
+      - port: "9503"
+        protocol: TCP
   - fromEntities:
     - kube-apiserver
     - host
@@ -306,6 +313,8 @@ spec:
     toPorts:
     - ports:
       - port: "9500"
+        protocol: TCP
+      - port: "9503"
         protocol: TCP
   endpointSelector:
     matchLabels:
@@ -427,7 +436,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: longhorn-post
   - name: app-cert-manager
@@ -610,7 +619,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: longhorn
   - name: app-external-snapshotter
@@ -808,7 +817,7 @@ spec:
       sourceRef:
         kind: GitRepository
         name: bcl
-        namespace: apps
+        namespace: bcl
   dependsOn:
   - name: app-kyverno
     namespace: kyverno
@@ -973,6 +982,16 @@ spec:
                   operations:
                   - CREATE
                   selector:
+                    matchLabels:
+                      longhorn.io/component: share-manager
+              - resources:
+                  kinds:
+                  - Pod
+                  namespaces:
+                  - longhorn-system
+                  operations:
+                  - CREATE
+                  selector:
                     matchExpressions:
                     - key: app
                       operator: In
@@ -998,6 +1017,9 @@ spec:
                       - longhorn-uninstall
             mutate:
               patchStrategicMerge:
+                metadata:
+                  annotations:
+                    policy.bcl.tf/skipPodSetHostUsers: "true"
                 spec:
                   hostUsers: true
             name: pod-set-host-users
