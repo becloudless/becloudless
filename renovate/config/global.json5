@@ -116,6 +116,11 @@
       versioning: "semver",
     },
     {
+      description: "never propose pre-release tags (testing, snapshot, rc, nightly...). The docker versioning sees the suffix as a variant (like `-alpine`), not as a pre-release, so `ignoreUnstable` does not filter them. Package specific rules below can override `allowedVersions`",
+      matchDatasources: ["docker"],
+      allowedVersions: "!/(^|[-._])(snapshot|testing|nightly|canary|unstable|edge|dev|devel|develop|preview|pre|alpha|beta|rc|test)(\\d+)?([-._]|$)/i",
+    },
+    {
       matchPackagePatterns: ["mailu"],
       groupName: "mailu",
     },
