@@ -1,5 +1,22 @@
 # yaml-language-server: $schema=../app/schema/values.schema.json
 
+# Longhorn, and the CronJob `attachment-repair` (sub HelmRelease `longhorn-attachment-repair`) that removes the attachment tickets left
+# over by a pod that is gone.
+#
+# A RWO volume is attached to one node. Longhorn keeps a ticket for each attachment request of the CSI attacher in the `VolumeAttachment`
+# of Longhorn (`spec.attachmentTickets`), named like the VolumeAttachment of Kubernetes that asked for it, and removes it when Kubernetes
+# detaches the volume. When the ticket is not removed (a detach that fails or is lost while the API server or the managers are slow, a
+# VolumeAttachment removed by hand...), the volume stays attached to the old node for ever: the pod that starts on another node stays in
+# `ContainerCreating` with `FailedAttachVolume ... failed to attach to node <node>`, retried for ever.
+# The CronJob (the script is in the ConfigMap `attachment-repair`) removes the tickets of the CSI attacher that
+#  - have no VolumeAttachment in Kubernetes (the ticket would not exist without it: Kubernetes removes the VolumeAttachment after the
+#    detach), in two checks `RECHECK` seconds apart (a VolumeAttachment that was being created or removed is not a leftover);
+#  - are removed with a `test` of the node of the ticket, so that only the ticket that was checked is removed.
+# The other tickets (the share managers, the backups, the snapshots, the UI) are never touched. When more than `MAX_REPAIRS` tickets are
+# stale at once nothing is removed, it is not a leak. An event `StaleAttachmentTicketRemoved` is created on the `Volume`.
+# Longhorn then detaches the volume from the old node and attaches it to the new one. To only see what it would do, set
+# `DRY_RUN: "true"` in the env of the CronJob.
+
 resources:
 
   fluxHelmRepositories:
@@ -557,6 +574,201 @@ resources:
               parameters:
                 type: bak
                 backupMode: full
+
+    # the repair of the attachment tickets left over by a pod that is gone (see the header), once longhorn is installed
+    longhorn-attachment-repair:
+      dependsOn:
+        - ref:longhorn
+      values:
+        resources:
+          ciliumNetworkPolicies:
+            attachment-repair:
+              endpointSelector:
+                matchLabels: {app.kubernetes.io/component: attachment-repair}
+              egress:
+                kube-apiserver:
+                  toEntities: [kube-apiserver]
+
+          serviceAccounts:
+            attachment-repair:
+              automountServiceAccountToken: true # the API server
+
+          # the VolumeAttachments of Kubernetes are not namespaced
+          clusterRoles:
+            attachment-repair:
+              rules:
+                volumeattachments:
+                  apiGroups: [ storage.k8s.io ]
+                  resources: [ volumeattachments ]
+                  verbs: [ get, list ]
+
+          clusterRoleBindings:
+            attachment-repair:
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: ClusterRole
+                name: attachment-repair
+              subjects:
+                attachment-repair:
+                  kind: ServiceAccount
+                  name: attachment-repair
+                  namespace: "{{ .Release.Namespace }}"
+
+          roles:
+            attachment-repair:
+              rules:
+                attachments: # the tickets are in `spec.attachmentTickets`
+                  apiGroups: [ longhorn.io ]
+                  resources: [ volumeattachments ]
+                  verbs: [ get, list, patch ]
+                events:
+                  apiGroups: [ "" ]
+                  resources: [ events ]
+                  verbs: [ create ]
+
+          roleBindings:
+            attachment-repair:
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: Role
+                name: attachment-repair
+              subjects:
+                attachment-repair:
+                  kind: ServiceAccount
+                  name: attachment-repair
+                  namespace: "{{ .Release.Namespace }}"
+
+          configMaps:
+            attachment-repair:
+              data:
+                attachment-repair.sh: |
+                  #!/usr/bin/env bash
+                  # See the header of the values of the chart app-longhorn.
+                  set -uo pipefail
+
+                  NAMESPACE=${NAMESPACE:-longhorn-system}
+                  RECHECK=${RECHECK:-60}        # seconds between the two checks: a ticket has to be stale in both
+                  MAX_REPAIRS=${MAX_REPAIRS:-5} # more stale tickets than that is not a leak, something else is wrong: nothing is removed
+                  DRY_RUN=${DRY_RUN:-false}
+
+                  log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
+
+                  # One line for each ticket of the CSI attacher that has no VolumeAttachment of Kubernetes: `<volume> <ticket> <node>` (tab separated).
+                  stale_tickets() {
+                    local k8s lh
+                    k8s=$(kubectl get volumeattachments.storage.k8s.io -o json) || return 1
+                    lh=$(kubectl -n "$NAMESPACE" get volumeattachments.longhorn.io -o json) || return 1
+                    jq -r --argjson k8s "$k8s" '
+                      ($k8s.items | map({key: .metadata.name, value: true}) | from_entries) as $known
+                      | .items[]
+                      | .metadata.name as $volume
+                      | (.spec.attachmentTickets // {}) | to_entries[]
+                      | select(.value.type == "csi-attacher" and (.key | startswith("csi-")))
+                      | select(.key as $id | $known[$id] | not)
+                      | [$volume, .key, .value.nodeID] | @tsv' <<<"$lh"
+                  }
+
+                  first=$(stale_tickets) || { log "cannot list the attachments"; exit 1; }
+                  if [ -z "$first" ]; then
+                    log "no stale attachment ticket"
+                    exit 0
+                  fi
+                  log "stale attachment tickets, checking again in ${RECHECK}s:"
+                  echo "$first"
+
+                  sleep "$RECHECK"
+                  second=$(stale_tickets) || { log "cannot list the attachments"; exit 1; }
+
+                  # only the tickets that are stale in both checks: a VolumeAttachment that was being created or removed is not
+                  confirmed=""
+                  while IFS=$'\t' read -r volume ticket node; do
+                    line=$(printf '%s\t%s\t%s' "$volume" "$ticket" "$node")
+                    if grep -qxF -- "$line" <<<"$second"; then
+                      confirmed+="$line"$'\n'
+                    fi
+                  done <<<"$first"
+                  confirmed=${confirmed%$'\n'}
+
+                  if [ -z "$confirmed" ]; then
+                    log "no ticket is stale in both checks"
+                    exit 0
+                  fi
+                  count=$(wc -l <<<"$confirmed")
+                  if [ "$count" -gt "$MAX_REPAIRS" ]; then
+                    log "$count stale tickets, more than $MAX_REPAIRS: not a leak, nothing is removed"
+                    exit 1
+                  fi
+
+                  status=0
+                  while IFS=$'\t' read -r volume ticket node; do
+                    ctx="volume $volume, ticket $ticket (node $node)"
+                    if [ "$DRY_RUN" = true ]; then
+                      log "$ctx: DRY RUN, would remove the ticket"
+                      continue
+                    fi
+                    log "$ctx: no VolumeAttachment for it, removing the ticket"
+                    # `test`: the ticket is only removed if it is still the one that was checked
+                    if ! kubectl -n "$NAMESPACE" patch volumeattachments.longhorn.io "$volume" --type=json \
+                      -p "[{\"op\":\"test\",\"path\":\"/spec/attachmentTickets/$ticket/nodeID\",\"value\":\"$node\"},{\"op\":\"remove\",\"path\":\"/spec/attachmentTickets/$ticket\"}]"; then
+                      log "$ctx: cannot remove the ticket"
+                      status=1
+                      continue
+                    fi
+                    kubectl create -f - <<EOF || true
+                  apiVersion: v1
+                  kind: Event
+                  metadata:
+                    generateName: attachment-repair-
+                    namespace: $NAMESPACE
+                  type: Warning
+                  reason: StaleAttachmentTicketRemoved
+                  message: "the attachment ticket $ticket of the node $node was removed: it has no VolumeAttachment, it kept the volume attached to this node"
+                  involvedObject: {apiVersion: longhorn.io/v1beta2, kind: Volume, name: $volume, namespace: $NAMESPACE}
+                  source: {component: attachment-repair}
+                  EOF
+                  done <<<"$confirmed"
+                  exit $status
+
+          cronJobs:
+            attachment-repair:
+              schedule: "*/5 * * * *"
+              concurrencyPolicy: Forbid
+              jobTemplate:
+                spec:
+                  backoffLimit: 0
+                  activeDeadlineSeconds: 240
+                  template:
+                    metadata:
+                      labels:
+                        app.kubernetes.io/component: attachment-repair
+                    spec:
+                      restartPolicy: Never
+                      serviceAccountName: attachment-repair
+                      securityContext:
+                        runAsUser: 65534
+                        runAsGroup: 65534
+                      containers:
+                        repair:
+                          name: repair
+                          image: docker.io/alpine/k8s:1.36.5 # renovate: versioning=loose
+                          command: [ bash, /scripts/attachment-repair.sh ]
+                          env:
+                            HOME: /tmp
+                            NAMESPACE: "{{ .Release.Namespace }}"
+                          securityContext:
+                            capabilities:
+                              drop:
+                                all: ALL
+                          volumeMounts:
+                            script:
+                              name: script
+                              mountPath: /scripts
+                              readOnly: true
+                      volumes:
+                        script:
+                          name: script
+                          configMap:
+                            name: attachment-repair
 
 expose:
   longhorn:

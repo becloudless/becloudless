@@ -426,6 +426,348 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
+  name: longhorn-attachment-repair
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: bcl
+  dependsOn:
+  - name: longhorn
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      longhorn-attachment-repair:
+        ciliumNetworkPolicies:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        clusterRoleBindings:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        clusterRoles:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        configMaps:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        cronJobs:
+          attachment-repair:
+            labels:
+              app.kubernetes.io/component: attachment-repair
+              app.kubernetes.io/instance: longhorn-attachment-repair
+            name: attachment-repair
+            namespace: default
+        roleBindings:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        roles:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        serviceAccounts:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+      longhorn-integration:
+        certManagerCertificates:
+          longhorn-gateway:
+            name: longhorn-gateway
+            namespace: default
+            secretName: tls-longhorn-gateway
+        httpRoutes:
+          longhorn:
+            name: longhorn
+            namespace: default
+        listenerSets:
+          longhorn:
+            name: longhorn
+            namespace: default
+      longhorn-post:
+        longhornRecurringJobs:
+          daily-backups:
+            name: daily-backups
+            namespace: default
+        longhornSettings:
+          allow-collecting-longhorn-usage-metrics:
+            name: allow-collecting-longhorn-usage-metrics
+            namespace: default
+          concurrent-automatic-engine-upgrade-per-node-limit:
+            name: concurrent-automatic-engine-upgrade-per-node-limit
+            namespace: default
+          default-backup-block-size:
+            name: default-backup-block-size
+            namespace: default
+          upgrade-checker:
+            name: upgrade-checker
+            namespace: default
+        storageClasses:
+          longhorn-db:
+            name: longhorn-db
+            namespace: default
+          longhorn-files:
+            name: longhorn-files
+            namespace: default
+          longhorn-single-local-replica:
+            name: longhorn-single-local-replica
+            namespace: default
+        volumeSnapshotClasses:
+          longhorn-backing-image:
+            name: longhorn-backing-image
+            namespace: default
+          longhorn-backup-full:
+            name: longhorn-backup-full
+            namespace: default
+          longhorn-backup-incremental:
+            name: longhorn-backup-incremental
+            namespace: default
+          longhorn-snapshot:
+            name: longhorn-snapshot
+            namespace: default
+      longhorn-pre:
+        configMaps:
+          longhorn-nixos-path:
+            name: longhorn-nixos-path
+            namespace: default
+        kyvernoClusterPolicies:
+          longhorn-add-nixos-path:
+            name: longhorn-add-nixos-path
+            namespace: default
+          longhorn-host-users:
+            name: longhorn-host-users
+            namespace: default
+          longhorn-skip-security-audit:
+            name: longhorn-skip-security-audit
+            namespace: default
+    resources:
+      ciliumNetworkPolicies:
+        attachment-repair:
+          egress:
+            kube-apiserver:
+              toEntities:
+              - kube-apiserver
+          endpointSelector:
+            matchLabels:
+              app.kubernetes.io/component: attachment-repair
+      clusterRoleBindings:
+        attachment-repair:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: attachment-repair
+          subjects:
+            attachment-repair:
+              kind: ServiceAccount
+              name: attachment-repair
+              namespace: default
+      clusterRoles:
+        attachment-repair:
+          rules:
+            volumeattachments:
+              apiGroups:
+              - storage.k8s.io
+              resources:
+              - volumeattachments
+              verbs:
+              - get
+              - list
+      configMaps:
+        attachment-repair:
+          data:
+            attachment-repair.sh: |-
+              #!/usr/bin/env bash
+              # See the header of the values of the chart app-longhorn.
+              set -uo pipefail
+
+              NAMESPACE=${NAMESPACE:-longhorn-system}
+              RECHECK=${RECHECK:-60}        # seconds between the two checks: a ticket has to be stale in both
+              MAX_REPAIRS=${MAX_REPAIRS:-5} # more stale tickets than that is not a leak, something else is wrong: nothing is removed
+              DRY_RUN=${DRY_RUN:-false}
+
+              log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
+
+              # One line for each ticket of the CSI attacher that has no VolumeAttachment of Kubernetes: `<volume> <ticket> <node>` (tab separated).
+              stale_tickets() {
+                local k8s lh
+                k8s=$(kubectl get volumeattachments.storage.k8s.io -o json) || return 1
+                lh=$(kubectl -n "$NAMESPACE" get volumeattachments.longhorn.io -o json) || return 1
+                jq -r --argjson k8s "$k8s" '
+                  ($k8s.items | map({key: .metadata.name, value: true}) | from_entries) as $known
+                  | .items[]
+                  | .metadata.name as $volume
+                  | (.spec.attachmentTickets // {}) | to_entries[]
+                  | select(.value.type == "csi-attacher" and (.key | startswith("csi-")))
+                  | select(.key as $id | $known[$id] | not)
+                  | [$volume, .key, .value.nodeID] | @tsv' <<<"$lh"
+              }
+
+              first=$(stale_tickets) || { log "cannot list the attachments"; exit 1; }
+              if [ -z "$first" ]; then
+                log "no stale attachment ticket"
+                exit 0
+              fi
+              log "stale attachment tickets, checking again in ${RECHECK}s:"
+              echo "$first"
+
+              sleep "$RECHECK"
+              second=$(stale_tickets) || { log "cannot list the attachments"; exit 1; }
+
+              # only the tickets that are stale in both checks: a VolumeAttachment that was being created or removed is not
+              confirmed=""
+              while IFS=$'\t' read -r volume ticket node; do
+                line=$(printf '%s\t%s\t%s' "$volume" "$ticket" "$node")
+                if grep -qxF -- "$line" <<<"$second"; then
+                  confirmed+="$line"$'\n'
+                fi
+              done <<<"$first"
+              confirmed=${confirmed%$'\n'}
+
+              if [ -z "$confirmed" ]; then
+                log "no ticket is stale in both checks"
+                exit 0
+              fi
+              count=$(wc -l <<<"$confirmed")
+              if [ "$count" -gt "$MAX_REPAIRS" ]; then
+                log "$count stale tickets, more than $MAX_REPAIRS: not a leak, nothing is removed"
+                exit 1
+              fi
+
+              status=0
+              while IFS=$'\t' read -r volume ticket node; do
+                ctx="volume $volume, ticket $ticket (node $node)"
+                if [ "$DRY_RUN" = true ]; then
+                  log "$ctx: DRY RUN, would remove the ticket"
+                  continue
+                fi
+                log "$ctx: no VolumeAttachment for it, removing the ticket"
+                # `test`: the ticket is only removed if it is still the one that was checked
+                if ! kubectl -n "$NAMESPACE" patch volumeattachments.longhorn.io "$volume" --type=json \
+                  -p "[{\"op\":\"test\",\"path\":\"/spec/attachmentTickets/$ticket/nodeID\",\"value\":\"$node\"},{\"op\":\"remove\",\"path\":\"/spec/attachmentTickets/$ticket\"}]"; then
+                  log "$ctx: cannot remove the ticket"
+                  status=1
+                  continue
+                fi
+                kubectl create -f - <<EOF || true
+              apiVersion: v1
+              kind: Event
+              metadata:
+                generateName: attachment-repair-
+                namespace: $NAMESPACE
+              type: Warning
+              reason: StaleAttachmentTicketRemoved
+              message: "the attachment ticket $ticket of the node $node was removed: it has no VolumeAttachment, it kept the volume attached to this node"
+              involvedObject: {apiVersion: longhorn.io/v1beta2, kind: Volume, name: $volume, namespace: $NAMESPACE}
+              source: {component: attachment-repair}
+              EOF
+              done <<<"$confirmed"
+              exit $status
+      cronJobs:
+        attachment-repair:
+          concurrencyPolicy: Forbid
+          jobTemplate:
+            spec:
+              activeDeadlineSeconds: 240
+              backoffLimit: 0
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/component: attachment-repair
+                spec:
+                  containers:
+                    repair:
+                      command:
+                      - bash
+                      - /scripts/attachment-repair.sh
+                      env:
+                        HOME: /tmp
+                        NAMESPACE: default
+                      image: docker.io/alpine/k8s:1.36.5
+                      name: repair
+                      securityContext:
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        script:
+                          mountPath: /scripts
+                          name: script
+                          readOnly: true
+                  restartPolicy: Never
+                  securityContext:
+                    runAsGroup: 65534
+                    runAsUser: 65534
+                  serviceAccountName: attachment-repair
+                  volumes:
+                    script:
+                      configMap:
+                        name: attachment-repair
+                      name: script
+          schedule: '*/5 * * * *'
+      roleBindings:
+        attachment-repair:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: attachment-repair
+          subjects:
+            attachment-repair:
+              kind: ServiceAccount
+              name: attachment-repair
+              namespace: default
+      roles:
+        attachment-repair:
+          rules:
+            attachments:
+              apiGroups:
+              - longhorn.io
+              resources:
+              - volumeattachments
+              verbs:
+              - get
+              - list
+              - patch
+            events:
+              apiGroups:
+              - ""
+              resources:
+              - events
+              verbs:
+              - create
+      serviceAccounts:
+        attachment-repair:
+          automountServiceAccountToken: true
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
   name: longhorn-integration
   namespace: default
 spec:
@@ -466,6 +808,42 @@ spec:
       retryInterval: 5m
   values:
     refs:
+      longhorn-attachment-repair:
+        ciliumNetworkPolicies:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        clusterRoleBindings:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        clusterRoles:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        configMaps:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        cronJobs:
+          attachment-repair:
+            labels:
+              app.kubernetes.io/component: attachment-repair
+              app.kubernetes.io/instance: longhorn-attachment-repair
+            name: attachment-repair
+            namespace: default
+        roleBindings:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        roles:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        serviceAccounts:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
       longhorn-integration:
         certManagerCertificates:
           longhorn-gateway:
@@ -645,6 +1023,42 @@ spec:
       retryInterval: 5m
   values:
     refs:
+      longhorn-attachment-repair:
+        ciliumNetworkPolicies:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        clusterRoleBindings:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        clusterRoles:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        configMaps:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        cronJobs:
+          attachment-repair:
+            labels:
+              app.kubernetes.io/component: attachment-repair
+              app.kubernetes.io/instance: longhorn-attachment-repair
+            name: attachment-repair
+            namespace: default
+        roleBindings:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        roles:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        serviceAccounts:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
       longhorn-integration:
         certManagerCertificates:
           longhorn-gateway:
@@ -842,6 +1256,42 @@ spec:
       retryInterval: 5m
   values:
     refs:
+      longhorn-attachment-repair:
+        ciliumNetworkPolicies:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        clusterRoleBindings:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        clusterRoles:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        configMaps:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        cronJobs:
+          attachment-repair:
+            labels:
+              app.kubernetes.io/component: attachment-repair
+              app.kubernetes.io/instance: longhorn-attachment-repair
+            name: attachment-repair
+            namespace: default
+        roleBindings:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        roles:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        serviceAccounts:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
       longhorn-integration:
         certManagerCertificates:
           longhorn-gateway:
