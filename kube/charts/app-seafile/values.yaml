@@ -90,7 +90,7 @@ resources:
                   containers:
                     mariadb:
                       name: mariadb
-                      image: docker.io/library/mariadb:10.11.19 # renovate: versioning=loose
+                      image: docker.io/library/mariadb:13.0.1-ubi10-rc # renovate: versioning=loose
                       ports:
                         mysql:
                           containerPort: 3306
