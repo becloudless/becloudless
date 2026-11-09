@@ -235,7 +235,7 @@ resources:
                     # terminates the TLS of the Gateway and forwards the ssh stream to sshd
                     nginx:
                       name: nginx
-                      image: nginxinc/nginx-unprivileged:1.29.3-alpine # renovate: versioning=loose
+                      image: nginxinc/nginx-unprivileged:1.31.7 # renovate: versioning=loose
                       # nginx reads the certificate at start: reload it regularly, the certificate is renewed by cert-manager
                       command: [ /bin/sh, -c ]
                       args:
