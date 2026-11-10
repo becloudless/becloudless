@@ -150,7 +150,7 @@ spec:
                       "io.element.android"]'
                     TUWUNEL_SERVER_NAME: matrix.test.com
                     TUWUNEL_WELL_KNOWN__CLIENT: https://matrix.test.com
-                  image: ghcr.io/matrix-construct/tuwunel:v1.9.4
+                  image: ghcr.io/matrix-construct/tuwunel:v2.0.0
                   name: tuwunel
                   ports:
                     http:

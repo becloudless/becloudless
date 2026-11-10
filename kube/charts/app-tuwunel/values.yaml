@@ -62,7 +62,7 @@ resources:
                   containers:
                     tuwunel:
                       name: tuwunel
-                      image: ghcr.io/matrix-construct/tuwunel:v1.9.4
+                      image: ghcr.io/matrix-construct/tuwunel:v2.0.0
                       ports:
                         http:
                           containerPort: 8008
