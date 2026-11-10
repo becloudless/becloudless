@@ -68,7 +68,7 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: forgejo
-      version: 17.3.2
+      version: 17.3.1
   dependsOn:
   - name: forgejo-postgresql
   - name: forgejo-pre
@@ -330,7 +330,7 @@ spec:
                   command:
                   - /bin/sh
                   - -c
-                  image: nginxinc/nginx-unprivileged:1.31.7-alpine
+                  image: nginxinc/nginx-unprivileged:1.31.7
                   name: nginx
                   ports:
                     ssh:
