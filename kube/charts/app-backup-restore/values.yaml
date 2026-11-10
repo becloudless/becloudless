@@ -277,7 +277,7 @@ resources:
                     # get ready without it)
                     sftp-tunnel:
                       name: sftp-tunnel
-                      image: docker.io/alpine/socat:1.8.0.3 # renovate: versioning=loose
+                      image: docker.io/alpine/socat:1.8.1.3 # renovate: versioning=loose
                       command: [ sh, /etc/gateway/tunnel.sh ]
                       envFrom:
                         config:

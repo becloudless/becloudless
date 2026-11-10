@@ -12,7 +12,7 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: csi-rclone
-      version: 0.5.1
+      version: 0.5.0
   dependsOn:
   - name: csi-rclone-pre
   driftDetection:
