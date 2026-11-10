@@ -370,7 +370,7 @@ resources:
                           readOnly: true
                     jellyfin:
                       name: jellyfin
-                      image: ghcr.io/jellyfin/jellyfin:10.11.11 # renovate: versioning=loose
+                      image: ghcr.io/jellyfin/jellyfin:12.4 # renovate: versioning=loose
                       ports:
                         http:
                           containerPort: 8096
