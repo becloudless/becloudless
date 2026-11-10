@@ -68,7 +68,7 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: forgejo
-      version: 17.3.1
+      version: 17.3.2
   dependsOn:
   - name: forgejo-postgresql
   - name: forgejo-pre
