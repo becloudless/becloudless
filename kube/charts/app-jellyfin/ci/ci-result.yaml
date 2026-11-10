@@ -382,7 +382,7 @@ spec:
                       secretKeyRef:
                         key: FFMPEG_OVER_IP_SERVER_AUTH_SECRET
                         name: ref:ffmpeg-over-ip-server
-                  image: docker.io/library/ubuntu:24.04
+                  image: docker.io/library/ubuntu:25.10
                   name: ffmpeg-over-ip-server
                   ports:
                     ffoip:
