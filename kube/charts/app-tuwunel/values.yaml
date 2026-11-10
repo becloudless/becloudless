@@ -62,7 +62,7 @@ resources:
                   containers:
                     tuwunel:
                       name: tuwunel
-                      image: ghcr.io/matrix-construct/tuwunel:v1.9.4
+                      image: ghcr.io/matrix-construct/tuwunel:v1.9.4 # renovate: datasource=github-releases packageName=matrix-construct/tuwunel
                       ports:
                         http:
                           containerPort: 8008

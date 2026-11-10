@@ -178,7 +178,7 @@ resources:
           # The secrets of the clients (`oidcClients` below) are mounted by the generated volumeMounts.
           initContainers:
             - name: oidc-hashes
-              image: ghcr.io/authelia/authelia:4.39.27
+              image: ghcr.io/authelia/authelia:4.39.27 # renovate: datasource=github-releases packageName=authelia/authelia extractVersion=^v(?<version>.+)$
               securityContext:
                 readOnlyRootFilesystem: true
                 allowPrivilegeEscalation: false
