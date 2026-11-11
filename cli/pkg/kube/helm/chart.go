@@ -2,7 +2,6 @@ package helm
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -15,13 +14,13 @@ import (
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 	"github.com/n0rad/go-erlog/logs"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/chartutil"
-	"helm.sh/helm/v3/pkg/cli"
-	"helm.sh/helm/v3/pkg/downloader"
-	"helm.sh/helm/v3/pkg/getter"
+	"helm.sh/helm/v4/pkg/action"
+	chartcommon "helm.sh/helm/v4/pkg/chart/common"
+	chart "helm.sh/helm/v4/pkg/chart/v2"
+	"helm.sh/helm/v4/pkg/cli"
+	"helm.sh/helm/v4/pkg/downloader"
+	"helm.sh/helm/v4/pkg/getter"
+	"helm.sh/helm/v4/pkg/registry"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/cli-runtime/pkg/resource"
@@ -53,14 +52,12 @@ func OpenChart(chartPath string, settings *cli.EnvSettings) (*Chart, error) {
 
 	// Create action configuration
 	actionConfig := new(action.Configuration)
-	if err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), os.Getenv("HELM_DRIVER"), func(format string, v ...interface{}) {
-		_, _ = fmt.Fprintf(os.Stderr, format, v...)
-	}); err != nil {
+	if err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), os.Getenv("HELM_DRIVER")); err != nil {
 		return nil, errs.WithE(err, "Failed to initialize action configuration")
 	}
 
 	// Load the chart
-	chart, err := loader.LoadDir(chartPath)
+	chart, err := loadChartDir(chartPath)
 	if err != nil {
 		return nil, errs.WithE(err, "Failed to load chart")
 	}
@@ -84,14 +81,24 @@ func (c *Chart) UpdateDependencies() error {
 	}
 
 	// Create dependency manager
+	registryClient, err := registry.NewClient(
+		registry.ClientOptCredentialsFile(c.settings.RegistryConfig),
+		registry.ClientOptWriter(os.Stderr),
+	)
+	if err != nil {
+		return errs.WithE(err, "Failed to create registry client")
+	}
+
 	man := &downloader.Manager{
 		Out:              os.Stdout,
 		ChartPath:        c.path,
 		Keyring:          c.settings.RepositoryConfig,
 		SkipUpdate:       false,
 		Getters:          getter.All(c.settings),
+		RegistryClient:   registryClient,
 		RepositoryConfig: c.settings.RepositoryConfig,
 		RepositoryCache:  c.settings.RepositoryCache,
+		ContentCache:     c.settings.ContentCache,
 		Debug:            c.settings.Debug,
 	}
 
@@ -105,7 +112,7 @@ func (c *Chart) UpdateDependencies() error {
 	// disk, so without this it lacks the dependencies' templates (e.g. named
 	// templates like "base.loader.all") and rendering fails on the first run,
 	// when dependencies are not cached yet.
-	reloadedChart, err := loader.LoadDir(c.path)
+	reloadedChart, err := loadChartDir(c.path)
 	if err != nil {
 		return errs.WithE(err, "Failed to reload chart after updating dependencies")
 	}
@@ -269,7 +276,7 @@ func (c *Chart) runCiTest(kubeVersion string, validate bool, ignoreMissingCRDs b
 			logs.WithField("file", file.Name()).Info("Running test")
 			valuesPath := filepath.Join(c.ciFolder, file.Name())
 
-			values, err := chartutil.ReadValuesFile(valuesPath)
+			values, err := chartcommon.ReadValuesFile(valuesPath)
 			if err != nil {
 				testErrors = append(testErrors, errs.WithEF(err, data.WithField("file", valuesPath), "Failed to read values file"))
 				continue
@@ -308,7 +315,7 @@ func (c *Chart) PrepareTestChart() error {
 		return err
 	}
 
-	chart, err := loader.LoadDir(tempDir)
+	chart, err := loadChartDir(tempDir)
 	if err != nil {
 		return errs.WithE(err, "Failed to load chart")
 	}
@@ -370,28 +377,31 @@ func (c *Chart) writeLoaderChart(dir, name, version, depVersion, depRepository s
 func (c *Chart) render(values map[string]interface{}, kubeVersion string, output io.Writer, validate bool, ignoreMissingCRDs bool) error {
 	// Create install action (used for templating)
 	install := action.NewInstall(c.actionConfig)
-	install.DryRun = true
 	install.ReleaseName = "test-release"
 	install.Namespace = c.settings.Namespace()
 	install.Replace = true
-	// ClientOnly=false (i.e. validate=true) makes Helm contact the live
+	// DryRunServer (i.e. validate=true) makes Helm contact the live
 	// Kubernetes API server to validate the rendered manifests (schema,
 	// CRDs, discovery) without persisting anything, mirroring `helm
 	// template --validate`. Requires a reachable cluster via kubeconfig.
-	install.ClientOnly = !validate
+	if validate {
+		install.DryRunStrategy = action.DryRunServer
+	} else {
+		install.DryRunStrategy = action.DryRunClient
+	}
 	install.APIVersions = []string{}
 	install.IncludeCRDs = true
 
 	// Set the Kubernetes version used for Capabilities.KubeVersion, since
-	// ClientOnly mode otherwise falls back to Helm's default (v1.20.0),
+	// the client dry-run mode otherwise falls back to Helm's default (v1.20.0),
 	// which can be incompatible with a chart's kubeVersion constraint.
-	parsedKubeVersion, err := chartutil.ParseKubeVersion(kubeVersion)
+	parsedKubeVersion, err := chartcommon.ParseKubeVersion(kubeVersion)
 	if err != nil {
 		return errs.WithEF(err, data.WithField("kubeVersion", kubeVersion), "Failed to parse kube version")
 	}
 	install.KubeVersion = parsedKubeVersion
 
-	release, err := install.Run(c.chart, values)
+	rel, err := install.Run(c.chart, values)
 	if err != nil {
 		if ignoreMissingCRDs && meta.IsNoMatchError(err) {
 			logs.WithField("reason", err.Error()).Warn("Skipping validation: CRD/kind not registered on the cluster")
@@ -400,12 +410,17 @@ func (c *Chart) render(values map[string]interface{}, kubeVersion string, output
 		return errs.WithE(err, "Failed to run the templating")
 	}
 
-	if _, err := output.Write([]byte(release.Manifest)); err != nil {
+	manifest, err := manifestOf(rel)
+	if err != nil {
+		return err
+	}
+
+	if _, err := output.Write([]byte(manifest)); err != nil {
 		return errs.WithE(err, "Failed to write manifest to output")
 	}
 
 	if validate {
-		if err := c.validateServerSide(release.Manifest, ignoreMissingCRDs); err != nil {
+		if err := c.validateServerSide(manifest, ignoreMissingCRDs); err != nil {
 			return err
 		}
 	}
