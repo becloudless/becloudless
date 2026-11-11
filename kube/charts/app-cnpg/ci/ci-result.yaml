@@ -18,6 +18,8 @@ data:
     MIN_AGE=${MIN_AGE:-1200} # seconds a replica has to be unready before it is cloned again
     DRY_RUN=${DRY_RUN:-false}
     LOST_WAL='has already been removed'
+    # pg_rewind of the instance manager, when the replica was a primary that wrote past the point where the new primary forked off
+    DIVERGED='could not find common ancestor of the source and target cluster'
 
     log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
 
@@ -47,9 +49,6 @@ data:
       if [ "$(jq -r '.metadata.annotations["cnpg.bcl.tf/replica-repair"] // ""' <<<"$cluster_json")" = false ]; then
         log "$ctx: disabled by the annotation of the cluster"; continue
       fi
-      if jq -e '(.spec.backup.barmanObjectStore != null) or ([.spec.plugins[]? | select(.isWALArchiver == true)] | length > 0)' <<<"$cluster_json" >/dev/null; then
-        log "$ctx: the cluster has a WAL archive, the replica can recover from it"; continue
-      fi
       primary=$(jq -r '.status.currentPrimary // ""' <<<"$cluster_json")
       if [ -z "$primary" ] || [ "$primary" = "$pod" ]; then
         log "$ctx: no other primary ($primary)"; continue
@@ -58,15 +57,25 @@ data:
       if [ "$primary_ready" != True ]; then
         log "$ctx: the primary $primary is not ready, nothing is deleted without a healthy copy"; continue
       fi
-      pg_log=$(kubectl -n "$ns" logs "$pod" -c postgres --tail=3000 2>/dev/null) # not piped to `grep -q`: it exits first, and pipefail fails
-      if ! grep -q "$LOST_WAL" <<<"$pg_log"; then
-        log "$ctx: no lost WAL in its log, not a reason to clone it again"; continue
+
+      # not piped to `grep -q`: it exits first, and pipefail fails
+      pg_log=$(kubectl -n "$ns" logs "$pod" -c postgres --tail=3000 2>/dev/null)
+      if grep -q "$DIVERGED" <<<"$pg_log"; then
+        # the WAL archive does not help: the data of the replica is not a prefix of the history of the primary
+        reason="its data diverged from the primary (pg_rewind finds no common ancestor of the timelines)"
+      elif grep -q "$LOST_WAL" <<<"$pg_log"; then
+        if jq -e '(.spec.backup.barmanObjectStore != null) or ([.spec.plugins[]? | select(.isWALArchiver == true)] | length > 0)' <<<"$cluster_json" >/dev/null; then
+          log "$ctx: the cluster has a WAL archive, the replica can recover from it"; continue
+        fi
+        reason="the WAL it needs was removed from the primary"
+      else
+        log "$ctx: neither a lost WAL nor a diverged timeline in its log, not a reason to clone it again"; continue
       fi
 
       if [ "$DRY_RUN" = true ]; then
-        log "$ctx: DRY RUN, would clone again from $primary (delete the PVCs and the pod)"; continue
+        log "$ctx: DRY RUN, would clone again from $primary (delete the PVCs and the pod): $reason"; continue
       fi
-      log "$ctx: the WAL it needs was removed from the primary $primary, cloning it again (delete the PVCs and the pod)"
+      log "$ctx: $reason, cloning it again from the primary $primary (delete the PVCs and the pod)"
       kubectl -n "$ns" delete pvc -l "cnpg.io/cluster=$cluster,cnpg.io/instanceName=$pod" --wait=false || continue
       kubectl -n "$ns" delete pod "$pod" --wait=false || continue
       repaired="$repaired$id "
@@ -78,7 +87,7 @@ data:
       namespace: $ns
     type: Warning
     reason: ReplicaRecloned
-    message: "$pod was cloned again from $primary: the WAL it needs was removed from the primary (unready for ${age}s)"
+    message: "$pod was cloned again from $primary: $reason (unready for ${age}s)"
     involvedObject: {apiVersion: postgresql.cnpg.io/v1, kind: Cluster, name: $cluster, namespace: $ns}
     source: {component: replica-repair}
     EOF
