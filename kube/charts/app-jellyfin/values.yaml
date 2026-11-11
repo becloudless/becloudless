@@ -481,7 +481,7 @@ resources:
                   containers:
                     ffmpeg-over-ip-server:
                       name: ffmpeg-over-ip-server
-                      image: docker.io/library/ubuntu:24.04 # renovate: versioning=loose
+                      image: docker.io/library/ubuntu:25.10 # renovate: versioning=loose
                       command:
                         - bash
                         - -ec
