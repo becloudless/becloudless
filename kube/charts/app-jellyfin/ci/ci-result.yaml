@@ -326,13 +326,18 @@ spec:
                   schemeOverride: 'https', // the redirect uri, jellyfin sees the http of the gateway to the pod
                 }, canonicalLinks ? { canonicalLinks: canonicalLinks } : {}), token);
 
-                // the button of the login page
+                // the button of the login page, the other ways to sign in (user list, manual form, quick connect, forgotten
+                // password) and the change of password of the profile are hidden: the password is the one of authelia
+                const hidden = [
+                  '.manualLoginForm', '.visualLoginForm', '.btnManual', '.btnQuick', '.btnForgotPassword', '.btnSelectServer',
+                  '.updatePasswordForm', '.passwordSection',
+                ].join(', ') + ' { display: none !important; }';
                 const branding = await jellyfin('GET', '/System/Configuration/branding', undefined, token);
                 await jellyfin('POST', '/System/Configuration/branding', Object.assign({}, branding, {
                   LoginDisclaimer:
                     '<form action="' + env.PUBLIC_URL + '/sso/OID/start/authelia">' +
                     '<button class="raised block emby-button button-submit">Sign in with Authelia</button></form>',
-                  CustomCss: 'a.raised.emby-button { padding: 0.9em 1em; color: inherit !important; } .disclaimerContainer { display: block; }',
+                  CustomCss: 'a.raised.emby-button { padding: 0.9em 1em; color: inherit !important; } .disclaimerContainer { display: block; } ' + hidden,
                 }), token);
               }
 
