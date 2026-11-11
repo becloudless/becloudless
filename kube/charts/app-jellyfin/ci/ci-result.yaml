@@ -494,7 +494,7 @@ spec:
                     JELLYFIN_CACHE_DIR: /tmp/jellyfin
                     JELLYFIN_PublishedServerUrl: https://jellyfin.test.com
                     TZ: Europe/Paris
-                  image: ghcr.io/jellyfin/jellyfin:10.11.11
+                  image: ghcr.io/jellyfin/jellyfin:12.4
                   name: jellyfin
                   ports:
                     http:
