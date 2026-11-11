@@ -29,7 +29,7 @@ RUN set -eux; \
     apt-get purge -y --auto-remove unzip wget; \
     rm -rf /var/lib/apt/lists/*
 
-# the render node `/dev/dri` is mounted by the pod, the container reads it as root
+# the render node `/dev/dri` is added by the device plugin, it is world readable and writable: the container does not need to be root
 ENV FFMPEG_OVER_IP_SERVER_ADDRESS=0.0.0.0:5050
 EXPOSE 5050
 

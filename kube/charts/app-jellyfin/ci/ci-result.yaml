@@ -321,19 +321,7 @@ spec:
       daemonSets:
         ffmpeg-over-ip:
           template:
-            metadata:
-              annotations:
-                policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
-                policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
-                policy.bcl.tf/skipPodSetHostUsers: "true"
             spec:
-              affinity:
-                nodeAffinity:
-                  requiredDuringSchedulingIgnoredDuringExecution:
-                    nodeSelectorTerms:
-                    - matchExpressions:
-                      - key: node-role.kubernetes.io/control-plane
-                        operator: DoesNotExist
               containers:
                 ffmpeg-over-ip-server:
                   env:
@@ -359,13 +347,8 @@ spec:
                       drop:
                         all: ALL
               securityContext:
-                runAsNonRoot: false
-                runAsUser: 0
-              tolerations:
-              - effect: NoSchedule
-                key: bcl.tf/no-persistent-storage
-                operator: Equal
-                value: "true"
+                runAsGroup: 1000
+                runAsUser: 1000
       deployments:
         jellyfin:
           replicas: 1

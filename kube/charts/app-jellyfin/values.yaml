@@ -10,9 +10,9 @@
 #    SSO has a random password, set one in its profile). An SSO user with the name of an existing user (`admin`) takes its permissions.
 # The media library is the `/data` directory of an SFTP user of the NAS (`bcl.role.nas`), mounted read only by app-csi-rclone: the
 # administrator gives the secret `jellyfin-media` (see the header of app-csi-rclone). Add it as a library in the UI (`/media`).
-# The ffmpeg-over-ip server (https://github.com/steelbrain/ffmpeg-over-ip) runs on the nodes that are not control planes (the ones
-# carrying the `bcl.tf/no-persistent-storage` taint: they run the host GPU, `/dev/dri`) and does the hardware transcoding. It asks for the
-# GPU as a resource (`gpu.intel.com/i915`, the `i915` driver of the GPUs of the nodes) of app-intel-gpu-plugin:
+# The ffmpeg-over-ip server (https://github.com/steelbrain/ffmpeg-over-ip) runs on the nodes that have a GPU and does the hardware
+# transcoding. It asks for the
+# GPU as a resource (`gpu.intel.com/i915`, the `i915` driver of the GPUs of the nodes) of app-intel-gpu-plugin, which is what selects the nodes:
 # the pod is not privileged, the runtime gives it the render node only.
 # Jellyfin uses it: its image (docker/misc/jellyfin) has the client over the `ffmpeg` and `ffprobe` of jellyfin-ffmpeg, pointed to
 # `ffmpeg-over-ip:5050` with the secret `ffmpeg-over-ip-server` (the hardware acceleration is set in the web UI, `qsv` or `vaapi`).
@@ -173,7 +173,7 @@ resources:
                   initContainers:
                     sso-plugin:
                       name: sso-plugin
-                      image: ghcr.io/becloudless/jellyfin:latest
+                      image: ghcr.io/becloudless/jellyfin:1.261111.1207
                       command:
                         - jellyfin-init
                       securityContext:
@@ -224,7 +224,7 @@ resources:
                           readOnly: true
                     jellyfin:
                       name: jellyfin
-                      image: ghcr.io/becloudless/jellyfin:latest
+                      image: ghcr.io/becloudless/jellyfin:1.261111.1207
                       ports:
                         http:
                           containerPort: 8096
@@ -279,33 +279,16 @@ resources:
                         claimName: ref:jellyfin-media
                         readOnly: true
 
-          # The server runs on the nodes of the containerized kubelets (see the header), one per node, as root: the GPU is the resource
-          # of the device plugin (the render node is added to the container, nothing else of the host). The server and the GPU drivers
-          # are in the image (see docker/ubuntu/ffmpeg-over-ip).
+          # The server runs on the nodes with a GPU (the resource of the device plugin), one per node: the render node is added to the
+          # container (it is world readable and writable), nothing else of the host, so the pod keeps the defaults of the chart (non root,
+          # read only root filesystem, user namespace). The server and the GPU drivers are in the image (see docker/ubuntu/ffmpeg-over-ip).
           daemonSets:
             ffmpeg-over-ip:
               template:
-                metadata:
-                  annotations:
-                    policy.bcl.tf/skipPodSetHostUsers: "true" # the device nodes of the host can not be used from a user namespace
-                    policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
-                    policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
                 spec:
                   securityContext:
-                    runAsNonRoot: false
-                    runAsUser: 0
-                  affinity:
-                    nodeAffinity:
-                      requiredDuringSchedulingIgnoredDuringExecution:
-                        nodeSelectorTerms:
-                          - matchExpressions:
-                              - key: node-role.kubernetes.io/control-plane
-                                operator: DoesNotExist
-                  tolerations:
-                    - key: bcl.tf/no-persistent-storage
-                      operator: Equal
-                      value: "true"
-                      effect: NoSchedule
+                    runAsUser: 1000
+                    runAsGroup: 1000
                   containers:
                     ffmpeg-over-ip-server:
                       name: ffmpeg-over-ip-server
