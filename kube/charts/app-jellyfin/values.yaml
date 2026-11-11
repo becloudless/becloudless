@@ -370,7 +370,7 @@ resources:
                           readOnly: true
                     jellyfin:
                       name: jellyfin
-                      image: ghcr.io/jellyfin/jellyfin:10.11.11 # renovate: versioning=loose
+                      image: ghcr.io/jellyfin/jellyfin:12.4 # renovate: versioning=loose
                       ports:
                         http:
                           containerPort: 8096
@@ -481,7 +481,7 @@ resources:
                   containers:
                     ffmpeg-over-ip-server:
                       name: ffmpeg-over-ip-server
-                      image: docker.io/library/ubuntu:24.04 # renovate: versioning=loose
+                      image: docker.io/library/ubuntu:25.10 # renovate: versioning=loose
                       command:
                         - bash
                         - -ec
