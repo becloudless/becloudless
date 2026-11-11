@@ -1,0 +1,17 @@
+#!/bin/sh
+# Prepares the volume `/config` before jellyfin starts, without downloading anything (everything is in the image). To be run as the
+# init container of the pod, with the image of jellyfin and the user of the pod.
+set -eu
+
+# the mount of `network.xml` in the jellyfin container is in this directory: when it does not exist, the container runtime creates it
+# as root, and jellyfin can not write its own files in it
+mkdir -p /config/config
+
+# installs the SSO plugin, replacing the previous versions (and the directory of the UI)
+dir=/config/plugins/sso-authentication_${SSO_PLUGIN_VERSION}
+if [ ! -f "$dir/.installed" ]; then
+  rm -rf /config/plugins/sso-authentication_* "/config/plugins/SSO Authentication_"*
+  mkdir -p "$dir"
+  cp -r /opt/jellyfin-plugin-sso/. "$dir"/
+  touch "$dir/.installed"
+fi

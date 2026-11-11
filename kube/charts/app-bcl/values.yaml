@@ -221,6 +221,12 @@ apps:
     appChart:
       name: app-csi-rclone
 
+  intel-gpu-plugin:
+    groups:
+      extra: true
+    appChart:
+      name: app-intel-gpu-plugin
+
   jellyfin:
     groups:
       extra: true
