@@ -1,0 +1,102 @@
+# yaml-language-server: $schema=../app/schema/values.schema.json
+
+# The Intel GPU device plugin (https://github.com/intel/intel-device-plugins-for-kubernetes/tree/main/cmd/gpu_plugin): it registers the
+# GPUs of the node to the kubelet, the pods ask for one as a resource (`gpu.intel.com/i915` for the `i915` driver, `gpu.intel.com/xe`
+# for the `xe` one, recent GPUs) instead of being privileged with the host `/dev/dri`: the runtime adds the render node (and its
+# `by-path` link) to the container only.
+# It runs on every node that is not a control plane (the ones of the containerized kubelets, carrying the `bcl.tf/no-persistent-storage`
+# taint, get the GPU through `--device=/dev/dri`): on a node without Intel GPU it registers nothing.
+# The plugin needs the kubelet sockets, the DRM view of the sysfs and the devices (host paths), and writes the CDI specs of the devices in
+# `/var/run/cdi` (read by the container runtime), so its pod can not be id-mapped and it is the only pod of the cluster that needs the host.
+# `-shared-dev-num` is the number of containers that can share a GPU (1: a GPU for one container).
+
+resources:
+
+  fluxHelmReleases:
+    intel-gpu-plugin:
+      values:
+        resources:
+          daemonSets:
+            intel-gpu-plugin:
+              updateStrategy:
+                type: RollingUpdate
+                rollingUpdate:
+                  maxSurge: 0
+                  maxUnavailable: 1
+              template:
+                metadata:
+                  annotations:
+                    policy.bcl.tf/skipPodRestrictHostAccess: "true" # host paths
+                    policy.bcl.tf/skipPodSetHostUsers: "true" # the sockets of the kubelet (root) and the devices are not usable from a user namespace
+                    policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true" # the directory of the kubelet sockets is owned by root
+                spec:
+                  automountServiceAccountToken: false
+                  securityContext:
+                    runAsNonRoot: false
+                    runAsUser: 0
+                  nodeSelector:
+                    kubernetes.io/arch: amd64
+                  affinity:
+                    nodeAffinity:
+                      requiredDuringSchedulingIgnoredDuringExecution:
+                        nodeSelectorTerms:
+                          - matchExpressions:
+                              - key: node-role.kubernetes.io/control-plane
+                                operator: DoesNotExist
+                  tolerations:
+                    - key: bcl.tf/no-persistent-storage
+                      operator: Equal
+                      value: "true"
+                      effect: NoSchedule
+                  containers:
+                    intel-gpu-plugin:
+                      name: intel-gpu-plugin
+                      image: docker.io/intel/intel-gpu-plugin:0.37.1
+                      args:
+                        - -shared-dev-num=1
+                      resources:
+                        requests:
+                          cpu: 40m
+                          memory: 45Mi
+                        limits:
+                          memory: 115Mi
+                      securityContext:
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        devfs:
+                          name: devfs
+                          mountPath: /dev/dri
+                          readOnly: true
+                        sysfsdrm:
+                          name: sysfsdrm
+                          mountPath: /sys/class/drm
+                          readOnly: true
+                        kubeletsockets:
+                          name: kubeletsockets
+                          mountPath: /var/lib/kubelet/device-plugins
+                        cdipath:
+                          name: cdipath
+                          mountPath: /var/run/cdi
+                  volumes:
+                    devfs:
+                      name: devfs
+                      hostPath:
+                        path: /dev/dri
+                        type: Directory
+                    sysfsdrm:
+                      name: sysfsdrm
+                      hostPath:
+                        path: /sys/class/drm
+                        type: Directory
+                    kubeletsockets:
+                      name: kubeletsockets
+                      hostPath:
+                        path: /var/lib/kubelet/device-plugins
+                        type: Directory
+                    cdipath:
+                      name: cdipath
+                      hostPath:
+                        path: /var/run/cdi
+                        type: DirectoryOrCreate

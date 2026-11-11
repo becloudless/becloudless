@@ -1,19 +1,22 @@
 # yaml-language-server: $schema=../app/schema/values.schema.json
 
-# The pod configures jellyfin (see `configure.js`):
+# The pod configures jellyfin (see `files/configure.js`, the ConfigMap `jellyfin-scripts` is prepared by `templates/_configure.tpl`):
 #  - the setup wizard is completed: the `admin` user, its password is generated in `jellyfin-admin` (seerr uses it too), and the name of
 #    the server is `app.name`;
 #  - SSO with Authelia with the SSO plugin https://github.com/9p4/jellyfin-plugin-sso (archived, the last release is pinned and checked
-#    by its checksum), installed by the `sso-plugin` init container. The `Sign in with Authelia` button is added on the login page of
+#    by its checksum), installed by the `sso-plugin` init container from the image. The `Sign in with Authelia` button is added on the login page of
 #    the web UI. The users of the groups `app_jellyfin` are created at their first login, those of `role_admin` are administrators.
 #    SSO works in the web UI (and Quick Connect for the other clients), the TV and mobile apps use the local users (a user created by
 #    SSO has a random password, set one in its profile). An SSO user with the name of an existing user (`admin`) takes its permissions.
 # The media library is the `/data` directory of an SFTP user of the NAS (`bcl.role.nas`), mounted read only by app-csi-rclone: the
 # administrator gives the secret `jellyfin-media` (see the header of app-csi-rclone). Add it as a library in the UI (`/media`).
 # The ffmpeg-over-ip server (https://github.com/steelbrain/ffmpeg-over-ip) runs on the nodes that are not control planes (the ones
-# carrying the `bcl.tf/no-persistent-storage` taint: they run the host GPU, `/dev/dri`) and does the hardware transcoding.
-# Jellyfin uses it: the `ffmpeg-over-ip-client` init container puts the client over the `ffmpeg` and `ffprobe` of jellyfin-ffmpeg, pointed to
+# carrying the `bcl.tf/no-persistent-storage` taint: they run the host GPU, `/dev/dri`) and does the hardware transcoding. It asks for the
+# GPU as a resource (`gpu.intel.com/i915`, the `i915` driver of the GPUs of the nodes) of app-intel-gpu-plugin:
+# the pod is not privileged, the runtime gives it the render node only.
+# Jellyfin uses it: its image (docker/misc/jellyfin) has the client over the `ffmpeg` and `ffprobe` of jellyfin-ffmpeg, pointed to
 # `ffmpeg-over-ip:5050` with the secret `ffmpeg-over-ip-server` (the hardware acceleration is set in the web UI, `qsv` or `vaapi`).
+# The images of jellyfin and of the server have everything they need: nothing is downloaded when the pods start.
 
 resources:
 
@@ -37,12 +40,6 @@ resources:
         gateway: # the public addresses of the cluster are the gateway for the pods
           toEntities: [ingress]
           toPorts: [443]
-        github: # the download of the SSO plugin (release asset), by the init container
-          toFQDNs:
-            github: {matchName: github.com}
-            release-assets: {matchName: release-assets.githubusercontent.com}
-            objects: {matchName: objects.githubusercontent.com}
-          toPorts: [443]
         ffmpeg-over-ip:
           toEndpoints:
             ffmpeg-over-ip:
@@ -57,22 +54,6 @@ resources:
             jellyfin:
               matchLabels: {app.kubernetes.io/instance: jellyfin, app.kubernetes.io/component: jellyfin}
           toPorts: [5050]
-      egress:
-        github: # the download of the server (release asset), by the init container
-          toFQDNs:
-            github: {matchName: github.com}
-            release-assets: {matchName: release-assets.githubusercontent.com}
-            objects: {matchName: objects.githubusercontent.com}
-          toPorts: [443]
-        ubuntu: # the packages of the GPU drivers
-          toFQDNs:
-            archive: {matchName: archive.ubuntu.com}
-            security: {matchName: security.ubuntu.com}
-          toPorts: [80]
-        intel:
-          toFQDNs:
-            intel: {matchName: repositories.intel.com}
-          toPorts: [443]
 
   fluxHelmReleases:
     jellyfin-pre:
@@ -118,6 +99,8 @@ resources:
         - ref:jellyfin-pre
         - name: app-csi-rclone # the StorageClass of the media
           namespace: csi-rclone
+        - name: app-intel-gpu-plugin # the GPU resource of the ffmpeg-over-ip servers
+          namespace: intel-gpu-plugin
       values:
         resources:
           configMaps:
@@ -153,98 +136,6 @@ resources:
                     <IsRemoteIPFilterBlacklist>false</IsRemoteIPFilterBlacklist>
                   </NetworkConfiguration>
 
-            jellyfin-scripts:
-              data:
-                # completes the setup wizard, then (every hour, the secret can change) sets the SSO provider and the login button
-                configure.js: |
-                  const env = process.env;
-                  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-                  const header = (token) =>
-                    'MediaBrowser Client="Configure", Device="Configure", DeviceId="jellyfin-configure", Version="1.0"' +
-                    (token ? ', Token="' + token + '"' : '');
-
-                  async function jellyfin(method, path, body, token) {
-                    const res = await fetch(env.JELLYFIN_URL + path, {
-                      method: method,
-                      headers: { Authorization: header(token), 'Content-Type': 'application/json', Accept: 'application/json' },
-                      body: body === undefined ? undefined : JSON.stringify(body),
-                      signal: AbortSignal.timeout(15000),
-                    });
-                    if (!res.ok) throw new Error(method + ' ' + path + ': ' + res.status);
-                    const text = await res.text();
-                    return text ? JSON.parse(text) : undefined;
-                  }
-
-                  async function configure() {
-                    let info;
-                    for (let i = 0; i < 120 && !info; i++) { // 10 minutes, a huge library can be slow to start
-                      try {
-                        info = await jellyfin('GET', '/System/Info/Public');
-                      } catch (e) {
-                        console.log('waiting for jellyfin: ' + e.message);
-                        await sleep(5000);
-                      }
-                    }
-                    if (!info) throw new Error('jellyfin is not reachable');
-
-                    if (!info.StartupWizardCompleted) {
-                      console.log('completing the setup wizard');
-                      await jellyfin('POST', '/Startup/Configuration', { UICulture: 'en-US', MetadataCountryCode: 'FR', PreferredMetadataLanguage: 'en' });
-                      await jellyfin('GET', '/Startup/User'); // creates the default user the next call renames
-                      await jellyfin('POST', '/Startup/User', { Name: env.JELLYFIN_USER, Password: env.JELLYFIN_PASSWORD });
-                      // no `/Startup/RemoteAccess`: it saves `network.xml`, which is the read only ConfigMap (remote access is enabled in it)
-                      await jellyfin('POST', '/Startup/Complete');
-                    }
-
-                    const login = await jellyfin('POST', '/Users/AuthenticateByName', { Username: env.JELLYFIN_USER, Pw: env.JELLYFIN_PASSWORD });
-                    const token = login.AccessToken;
-
-                    // the name of the server (the pod name by default) is the name of the cluster
-                    const system = await jellyfin('GET', '/System/Configuration', undefined, token);
-                    if (system.ServerName !== env.SERVER_NAME) {
-                      await jellyfin('POST', '/System/Configuration', Object.assign({}, system, { ServerName: env.SERVER_NAME }), token);
-                      console.log('server name set to ' + env.SERVER_NAME);
-                    }
-
-                    // https://github.com/9p4/jellyfin-plugin-sso/blob/main/providers.md#authelia (the plugin answers 404 until it is loaded)
-                    // `Add` replaces the provider: the links of the SSO users to the users of jellyfin are kept (else a user whose
-                    // name differs from the one of the SSO is created again)
-                    const known = await jellyfin('GET', '/sso/OID/Get', undefined, token).catch(() => ({}));
-                    const previous = (known.authelia || known.Authelia || {});
-                    const canonicalLinks = previous.canonicalLinks || previous.CanonicalLinks;
-                    await jellyfin('POST', '/sso/OID/Add/authelia', Object.assign({
-                      oidEndpoint: env.ISSUER_URL,
-                      oidClientId: env.CLIENT_ID,
-                      oidSecret: env.CLIENT_SECRET,
-                      enabled: true,
-                      enableAuthorization: true, // the administrators and the access come from the groups, at each login
-                      enableAllFolders: true,
-                      enabledFolders: [],
-                      roles: ['app_jellyfin', 'role_admin'],
-                      adminRoles: ['role_admin'],
-                      roleClaim: 'groups',
-                      oidScopes: ['groups'],
-                      disablePushedAuthorization: true, // authelia does not require it
-                      schemeOverride: 'https', // the redirect uri, jellyfin sees the http of the gateway to the pod
-                    }, canonicalLinks ? { canonicalLinks: canonicalLinks } : {}), token);
-
-                    // the button of the login page
-                    const branding = await jellyfin('GET', '/System/Configuration/branding', undefined, token);
-                    await jellyfin('POST', '/System/Configuration/branding', Object.assign({}, branding, {
-                      LoginDisclaimer:
-                        '<form action="' + env.PUBLIC_URL + '/sso/OID/start/authelia">' +
-                        '<button class="raised block emby-button button-submit">Sign in with Authelia</button></form>',
-                      CustomCss: 'a.raised.emby-button { padding: 0.9em 1em; color: inherit !important; } .disclaimerContainer { display: block; }',
-                    }), token);
-                  }
-
-                  // one pass, the container repeats it (the script is read again each time: a change of it applies without a restart)
-                  configure().then(() => console.log('jellyfin configured')).catch((e) => {
-                    console.log('jellyfin is not configured: ' + e.message);
-                    process.exit(1);
-                  });
-
           # database, metadata and cache of jellyfin
           persistentVolumeClaims:
             jellyfin-config:
@@ -277,30 +168,14 @@ resources:
                     runAsGroup: 1000
                     fsGroup: 1000
                     fsGroupChangePolicy: OnRootMismatch # a library is a lot of files: only the first start of a volume owned by root walks it
-                  # installs the SSO plugin in the volume (jellyfin loads the plugins at its start), pinned and checked by the checksum of
-                  # https://raw.githubusercontent.com/9p4/jellyfin-plugin-sso/manifest-release/manifest.json
+                  # installs the SSO plugin in the volume (jellyfin loads the plugins at its start): the plugin is in the image, nothing is
+                  # downloaded (see docker/misc/jellyfin)
                   initContainers:
                     sso-plugin:
                       name: sso-plugin
-                      image: docker.io/library/alpine:3.24.3 # renovate: versioning=loose
+                      image: ghcr.io/becloudless/jellyfin:latest
                       command:
-                        - sh
-                        - -ec
-                        - |
-                          version=4.0.0.4
-                          md5=1e7908585ebee256203a0869dcdfbaf8
-                          dir=/config/plugins/sso-authentication_$version
-                          # the mount of `network.xml` in the jellyfin container is in this directory: when it does not exist, the
-                          # container runtime creates it as root, and jellyfin can not write its own files in it
-                          mkdir -p /config/config
-                          if [ ! -f $dir/.installed ]; then
-                            wget -q -O /tmp/plugin.zip https://github.com/9p4/jellyfin-plugin-sso/releases/download/v$version/sso-authentication_$version.zip
-                            echo "$md5  /tmp/plugin.zip" | md5sum -c -
-                            rm -rf /config/plugins/sso-authentication_* "/config/plugins/SSO Authentication_"* # the name of the directories of the UI
-                            mkdir -p $dir
-                            unzip -q /tmp/plugin.zip -d $dir
-                            touch $dir/.installed
-                          fi
+                        - jellyfin-init
                       securityContext:
                         capabilities:
                           drop:
@@ -309,27 +184,6 @@ resources:
                         config:
                           name: config
                           mountPath: /config
-                    # the client of the ffmpeg-over-ip server (hardware transcoding on the nodes of the GPU), it runs as `ffmpeg` and `ffprobe`
-                    ffmpeg-over-ip-client:
-                      name: ffmpeg-over-ip-client
-                      image: docker.io/library/alpine:3.24.3 # renovate: versioning=loose
-                      command:
-                        - sh
-                        - -ec
-                        - |
-                          wget -q -O /tmp/client.zip https://github.com/steelbrain/ffmpeg-over-ip/releases/download/v5.2.1/linux-amd64-ffmpeg-over-ip-client.zip
-                          unzip -o /tmp/client.zip -d /tmp/client
-                          cp /tmp/client/ffmpeg-over-ip-client /ffmpeg-client/ffmpeg
-                          cp /tmp/client/ffmpeg-over-ip-client /ffmpeg-client/ffprobe
-                          chmod +x /ffmpeg-client/ffmpeg /ffmpeg-client/ffprobe
-                      securityContext:
-                        capabilities:
-                          drop:
-                            all: ALL
-                      volumeMounts:
-                        ffmpeg-client:
-                          name: ffmpeg-client
-                          mountPath: /ffmpeg-client
                   containers:
                     # completes the setup wizard and configures the SSO (see the header of this file), once jellyfin has started
                     configure:
@@ -370,7 +224,7 @@ resources:
                           readOnly: true
                     jellyfin:
                       name: jellyfin
-                      image: ghcr.io/jellyfin/jellyfin:12.4 # renovate: versioning=loose
+                      image: ghcr.io/becloudless/jellyfin:latest
                       ports:
                         http:
                           containerPort: 8096
@@ -406,14 +260,6 @@ resources:
                           name: media
                           mountPath: /media
                           readOnly: true
-                        ffmpeg:
-                          name: ffmpeg-client
-                          mountPath: /usr/lib/jellyfin-ffmpeg/ffmpeg
-                          subPath: ffmpeg
-                        ffprobe:
-                          name: ffmpeg-client
-                          mountPath: /usr/lib/jellyfin-ffmpeg/ffprobe
-                          subPath: ffprobe
                   volumes:
                     config:
                       name: config
@@ -432,19 +278,16 @@ resources:
                       persistentVolumeClaim:
                         claimName: ref:jellyfin-media
                         readOnly: true
-                    ffmpeg-client:
-                      name: ffmpeg-client
-                      emptyDir: {}
 
-          # The server runs on the nodes of the containerized kubelets (see the header), one per node. Everything runs as root: the packages of
-          # the GPU drivers are installed at the start, and the privileged container reaches the render node `/dev/dri`.
+          # The server runs on the nodes of the containerized kubelets (see the header), one per node, as root: the GPU is the resource
+          # of the device plugin (the render node is added to the container, nothing else of the host). The server and the GPU drivers
+          # are in the image (see docker/ubuntu/ffmpeg-over-ip).
           daemonSets:
             ffmpeg-over-ip:
               template:
                 metadata:
                   annotations:
-                    policy.bcl.tf/skipPodRestrictHostAccess: "true" # privileged, hostPath
-                    policy.bcl.tf/skipPodSetHostUsers: "true"
+                    policy.bcl.tf/skipPodSetHostUsers: "true" # the device nodes of the host can not be used from a user namespace
                     policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
                     policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
                 spec:
@@ -463,41 +306,10 @@ resources:
                       operator: Equal
                       value: "true"
                       effect: NoSchedule
-                  initContainers:
-                    fetch-ffmpeg-over-ip:
-                      name: fetch-ffmpeg-over-ip
-                      image: docker.io/library/alpine:3.24.3 # renovate: versioning=loose
-                      command:
-                        - sh
-                        - -ec
-                        - |
-                          wget -q -O /tmp/server.zip https://github.com/steelbrain/ffmpeg-over-ip/releases/download/v5.2.1/linux-amd64-ffmpeg-over-ip-server.zip
-                          unzip -o /tmp/server.zip -d /opt/ffmpeg-over-ip
-                          chmod +x /opt/ffmpeg-over-ip/*
-                      volumeMounts:
-                        binaries:
-                          name: binaries
-                          mountPath: /opt/ffmpeg-over-ip
                   containers:
                     ffmpeg-over-ip-server:
                       name: ffmpeg-over-ip-server
-                      image: docker.io/library/ubuntu:25.10 # renovate: versioning=loose
-                      command:
-                        - bash
-                        - -ec
-                        - |
-                          apt-get update
-                          apt-get install -y --no-install-recommends gpg ca-certificates wget
-                          # The drivers of Debian and Ubuntu (2023) do not know the recent GPUs (Intel Arrow Lake-H, 8086:7dd1:
-                          # the VAAPI initialization fails), the repository of Intel follows the new hardware.
-                          wget -qO- https://repositories.intel.com/gpu/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg
-                          echo "deb [signed-by=/usr/share/keyrings/intel-graphics.gpg arch=amd64] https://repositories.intel.com/gpu/ubuntu noble client" > /etc/apt/sources.list.d/intel-gpu-noble.list
-                          apt-get update
-                          # intel-media-va-driver-non-free: VAAPI (iHD), hwaccel=vaapi
-                          # libmfxgen1, libvpl2: oneVPL runtime and dispatcher, hwaccel=qsv ("Error creating a MFX session: -9" without)
-                          # intel-opencl-icd, ocl-icd-libopencl1: OpenCL, hwaccel=opencl (HDR tone mapping, CL_PLATFORM_NOT_FOUND_KHR without)
-                          apt-get install -y --no-install-recommends intel-media-va-driver-non-free libmfxgen1 libvpl2 intel-opencl-icd ocl-icd-libopencl1 vainfo clinfo
-                          exec /opt/ffmpeg-over-ip/ffmpeg-over-ip-server
+                      image: ghcr.io/becloudless/ffmpeg-over-ip:1.261105.848
                       ports:
                         ffoip:
                           containerPort: 5050
@@ -508,31 +320,16 @@ resources:
                             name: ref:ffmpeg-over-ip-server
                             key: FFMPEG_OVER_IP_SERVER_AUTH_SECRET
                       securityContext:
-                        privileged: true # the render node
-                        allowPrivilegeEscalation: true
-                        readOnlyRootFilesystem: false # the packages are installed at the start
+                        capabilities:
+                          drop:
+                            all: ALL
                       resources:
                         requests:
                           cpu: 100m
                           memory: 256Mi
                         limits:
                           memory: 8Gi # the transcodes of 4K HDR remuxes with the tone mapping were OOM killed at 2Gi
-                      volumeMounts:
-                        binaries:
-                          name: binaries
-                          mountPath: /opt/ffmpeg-over-ip
-                        dev-dri:
-                          name: dev-dri
-                          mountPath: /dev/dri
-                  volumes:
-                    binaries:
-                      name: binaries
-                      emptyDir: {}
-                    dev-dri:
-                      name: dev-dri
-                      hostPath:
-                        path: /dev/dri
-                        type: Directory
+                          gpu.intel.com/i915: 1 # the render node, given by the device plugin
 
           services:
             jellyfin:

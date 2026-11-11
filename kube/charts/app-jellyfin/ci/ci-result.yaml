@@ -6,28 +6,6 @@ metadata:
   name: ffmpeg-over-ip
   namespace: default
 spec:
-  egress:
-  - toFQDNs:
-    - matchName: github.com
-    - matchName: objects.githubusercontent.com
-    - matchName: release-assets.githubusercontent.com
-    toPorts:
-    - ports:
-      - port: "443"
-        protocol: TCP
-  - toFQDNs:
-    - matchName: repositories.intel.com
-    toPorts:
-    - ports:
-      - port: "443"
-        protocol: TCP
-  - toFQDNs:
-    - matchName: archive.ubuntu.com
-    - matchName: security.ubuntu.com
-    toPorts:
-    - ports:
-      - port: "80"
-        protocol: TCP
   endpointSelector:
     matchLabels:
       app.kubernetes.io/component: ffmpeg-over-ip
@@ -66,14 +44,6 @@ spec:
         protocol: TCP
   - toEntities:
     - ingress
-    toPorts:
-    - ports:
-      - port: "443"
-        protocol: TCP
-  - toFQDNs:
-    - matchName: github.com
-    - matchName: objects.githubusercontent.com
-    - matchName: release-assets.githubusercontent.com
     toPorts:
     - ports:
       - port: "443"
@@ -120,6 +90,8 @@ spec:
   - name: jellyfin-pre
   - name: app-csi-rclone
     namespace: csi-rclone
+  - name: app-intel-gpu-plugin
+    namespace: intel-gpu-plugin
   driftDetection:
     mode: enabled
   healthCheckExprs:
@@ -326,13 +298,18 @@ spec:
                   schemeOverride: 'https', // the redirect uri, jellyfin sees the http of the gateway to the pod
                 }, canonicalLinks ? { canonicalLinks: canonicalLinks } : {}), token);
 
-                // the button of the login page
+                // the button of the login page, the other ways to sign in (user list, manual form, quick connect, forgotten
+                // password) and the change of password of the profile are hidden: the password is the one of authelia
+                const hidden = [
+                  '.manualLoginForm', '.visualLoginForm', '.btnManual', '.btnQuick', '.btnForgotPassword', '.btnSelectServer',
+                  '.updatePasswordForm', '.passwordSection',
+                ].join(', ') + ' { display: none !important; }';
                 const branding = await jellyfin('GET', '/System/Configuration/branding', undefined, token);
                 await jellyfin('POST', '/System/Configuration/branding', Object.assign({}, branding, {
                   LoginDisclaimer:
                     '<form action="' + env.PUBLIC_URL + '/sso/OID/start/authelia">' +
                     '<button class="raised block emby-button button-submit">Sign in with Authelia</button></form>',
-                  CustomCss: 'a.raised.emby-button { padding: 0.9em 1em; color: inherit !important; } .disclaimerContainer { display: block; }',
+                  CustomCss: 'a.raised.emby-button { padding: 0.9em 1em; color: inherit !important; } .disclaimerContainer { display: block; } ' + hidden,
                 }), token);
               }
 
@@ -348,7 +325,6 @@ spec:
               annotations:
                 policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
                 policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
-                policy.bcl.tf/skipPodRestrictHostAccess: "true"
                 policy.bcl.tf/skipPodSetHostUsers: "true"
             spec:
               affinity:
@@ -360,65 +336,28 @@ spec:
                         operator: DoesNotExist
               containers:
                 ffmpeg-over-ip-server:
-                  command:
-                  - bash
-                  - -ec
-                  - |-
-                    apt-get update
-                    apt-get install -y --no-install-recommends gpg ca-certificates wget
-                    # The drivers of Debian and Ubuntu (2023) do not know the recent GPUs (Intel Arrow Lake-H, 8086:7dd1:
-                    # the VAAPI initialization fails), the repository of Intel follows the new hardware.
-                    wget -qO- https://repositories.intel.com/gpu/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg
-                    echo "deb [signed-by=/usr/share/keyrings/intel-graphics.gpg arch=amd64] https://repositories.intel.com/gpu/ubuntu noble client" > /etc/apt/sources.list.d/intel-gpu-noble.list
-                    apt-get update
-                    # intel-media-va-driver-non-free: VAAPI (iHD), hwaccel=vaapi
-                    # libmfxgen1, libvpl2: oneVPL runtime and dispatcher, hwaccel=qsv ("Error creating a MFX session: -9" without)
-                    # intel-opencl-icd, ocl-icd-libopencl1: OpenCL, hwaccel=opencl (HDR tone mapping, CL_PLATFORM_NOT_FOUND_KHR without)
-                    apt-get install -y --no-install-recommends intel-media-va-driver-non-free libmfxgen1 libvpl2 intel-opencl-icd ocl-icd-libopencl1 vainfo clinfo
-                    exec /opt/ffmpeg-over-ip/ffmpeg-over-ip-server
                   env:
                     FFMPEG_OVER_IP_SERVER_ADDRESS: 0.0.0.0:5050
                     FFMPEG_OVER_IP_SERVER_AUTH_SECRET:
                       secretKeyRef:
                         key: FFMPEG_OVER_IP_SERVER_AUTH_SECRET
                         name: ref:ffmpeg-over-ip-server
-                  image: docker.io/library/ubuntu:25.10
+                  image: ghcr.io/becloudless/ffmpeg-over-ip:1.261105.848
                   name: ffmpeg-over-ip-server
                   ports:
                     ffoip:
                       containerPort: 5050
                   resources:
                     limits:
+                      gpu.intel.com/i915: 1
                       memory: 8Gi
                     requests:
                       cpu: 100m
                       memory: 256Mi
                   securityContext:
-                    allowPrivilegeEscalation: true
-                    privileged: true
-                    readOnlyRootFilesystem: false
-                  volumeMounts:
-                    binaries:
-                      mountPath: /opt/ffmpeg-over-ip
-                      name: binaries
-                    dev-dri:
-                      mountPath: /dev/dri
-                      name: dev-dri
-              initContainers:
-                fetch-ffmpeg-over-ip:
-                  command:
-                  - sh
-                  - -ec
-                  - |-
-                    wget -q -O /tmp/server.zip https://github.com/steelbrain/ffmpeg-over-ip/releases/download/v5.2.1/linux-amd64-ffmpeg-over-ip-server.zip
-                    unzip -o /tmp/server.zip -d /opt/ffmpeg-over-ip
-                    chmod +x /opt/ffmpeg-over-ip/*
-                  image: docker.io/library/alpine:3.24.3
-                  name: fetch-ffmpeg-over-ip
-                  volumeMounts:
-                    binaries:
-                      mountPath: /opt/ffmpeg-over-ip
-                      name: binaries
+                    capabilities:
+                      drop:
+                        all: ALL
               securityContext:
                 runAsNonRoot: false
                 runAsUser: 0
@@ -427,15 +366,6 @@ spec:
                 key: bcl.tf/no-persistent-storage
                 operator: Equal
                 value: "true"
-              volumes:
-                binaries:
-                  emptyDir: {}
-                  name: binaries
-                dev-dri:
-                  hostPath:
-                    path: /dev/dri
-                    type: Directory
-                  name: dev-dri
       deployments:
         jellyfin:
           replicas: 1
@@ -494,7 +424,7 @@ spec:
                     JELLYFIN_CACHE_DIR: /tmp/jellyfin
                     JELLYFIN_PublishedServerUrl: https://jellyfin.test.com
                     TZ: Europe/Paris
-                  image: ghcr.io/jellyfin/jellyfin:12.4
+                  image: ghcr.io/becloudless/jellyfin:latest
                   name: jellyfin
                   ports:
                     http:
@@ -513,14 +443,6 @@ spec:
                     config:
                       mountPath: /config
                       name: config
-                    ffmpeg:
-                      mountPath: /usr/lib/jellyfin-ffmpeg/ffmpeg
-                      name: ffmpeg-client
-                      subPath: ffmpeg
-                    ffprobe:
-                      mountPath: /usr/lib/jellyfin-ffmpeg/ffprobe
-                      name: ffmpeg-client
-                      subPath: ffprobe
                     media:
                       mountPath: /media
                       name: media
@@ -531,46 +453,10 @@ spec:
                       readOnly: true
                       subPath: network.xml
               initContainers:
-                ffmpeg-over-ip-client:
-                  command:
-                  - sh
-                  - -ec
-                  - |-
-                    wget -q -O /tmp/client.zip https://github.com/steelbrain/ffmpeg-over-ip/releases/download/v5.2.1/linux-amd64-ffmpeg-over-ip-client.zip
-                    unzip -o /tmp/client.zip -d /tmp/client
-                    cp /tmp/client/ffmpeg-over-ip-client /ffmpeg-client/ffmpeg
-                    cp /tmp/client/ffmpeg-over-ip-client /ffmpeg-client/ffprobe
-                    chmod +x /ffmpeg-client/ffmpeg /ffmpeg-client/ffprobe
-                  image: docker.io/library/alpine:3.24.3
-                  name: ffmpeg-over-ip-client
-                  securityContext:
-                    capabilities:
-                      drop:
-                        all: ALL
-                  volumeMounts:
-                    ffmpeg-client:
-                      mountPath: /ffmpeg-client
-                      name: ffmpeg-client
                 sso-plugin:
                   command:
-                  - sh
-                  - -ec
-                  - |-
-                    version=4.0.0.4
-                    md5=1e7908585ebee256203a0869dcdfbaf8
-                    dir=/config/plugins/sso-authentication_$version
-                    # the mount of `network.xml` in the jellyfin container is in this directory: when it does not exist, the
-                    # container runtime creates it as root, and jellyfin can not write its own files in it
-                    mkdir -p /config/config
-                    if [ ! -f $dir/.installed ]; then
-                      wget -q -O /tmp/plugin.zip https://github.com/9p4/jellyfin-plugin-sso/releases/download/v$version/sso-authentication_$version.zip
-                      echo "$md5  /tmp/plugin.zip" | md5sum -c -
-                      rm -rf /config/plugins/sso-authentication_* "/config/plugins/SSO Authentication_"* # the name of the directories of the UI
-                      mkdir -p $dir
-                      unzip -q /tmp/plugin.zip -d $dir
-                      touch $dir/.installed
-                    fi
-                  image: docker.io/library/alpine:3.24.3
+                  - jellyfin-init
+                  image: ghcr.io/becloudless/jellyfin:latest
                   name: sso-plugin
                   securityContext:
                     capabilities:
@@ -590,9 +476,6 @@ spec:
                   name: config
                   persistentVolumeClaim:
                     claimName: ref:jellyfin-config
-                ffmpeg-client:
-                  emptyDir: {}
-                  name: ffmpeg-client
                 media:
                   name: media
                   persistentVolumeClaim:

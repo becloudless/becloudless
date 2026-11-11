@@ -1,1 +1,6 @@
+{{- /* The ConfigMap of the configure script is prepared in the values of the HelmRelease by default (before the loaders, which
+build the HelmReleases), values set by the cluster take precedence. */}}
+{{- $featureValues := include "app-jellyfin.configure" (dict "rootContext" $) | fromYaml }}
+{{- $_ := set $ "Values" (mustMergeOverwrite $featureValues $.Values) }}
+
 {{- include "app.loader.all" $ }}
