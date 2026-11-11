@@ -137,7 +137,7 @@ spec:
                     SYNC_TOKENSERVER__INIT_NODE_URL: https://firefox-sync.test.com
                     SYNC_TOKENSERVER__NODE_TYPE: postgres
                     SYNC_TOKENSERVER__RUN_MIGRATIONS: "true"
-                  image: ghcr.io/mozilla-services/syncstorage-rs/syncserver-postgres:0.24.1
+                  image: ghcr.io/mozilla-services/syncstorage-rs/syncserver-postgres:0.24.0
                   livenessProbe:
                     httpGet:
                       path: /__lbheartbeat__
