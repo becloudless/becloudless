@@ -38,6 +38,16 @@ in {
   config = mkIf cfg.enable {
     networking.networkmanager.enable = true;
 
+    # Being on ethernet and wifi of the same network at the same time puts two interfaces in the same subnet:
+    # - the firewall reverse path filter is strict by default: a packet received on the wifi is dropped when the best route to its source (lower metric) is the ethernet
+    # - the kernel answers ARP requests for any local address on any interface (ARP flux): peers learn the wrong MAC for an IP, and the traffic goes in on the other interface
+    networking.firewall.checkReversePath = lib.mkDefault "loose";
+    boot.kernel.sysctl = {
+      "net.ipv4.conf.all.rp_filter" = lib.mkDefault 2;
+      "net.ipv4.conf.all.arp_ignore" = lib.mkDefault 1;
+      "net.ipv4.conf.all.arp_announce" = lib.mkDefault 2;
+    };
+
     # Declare SOPS secrets for wifi passwords derived from keys in the secret file
     sops.secrets = mkIf (global.secretFile != null && wirelessSsids != []) (
       lib.listToAttrs (map (ssid: {
