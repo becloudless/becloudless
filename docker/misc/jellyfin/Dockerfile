@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM alpine:3.24.3 AS fetch
+FROM --platform=$BUILDPLATFORM alpine:3.24.4 AS fetch
 
 # the architecture of the image (amd64, arm64): the client of ffmpeg-over-ip is the one of the release for it
 ARG TARGETARCH

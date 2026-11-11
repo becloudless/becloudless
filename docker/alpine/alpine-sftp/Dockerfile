@@ -9,7 +9,7 @@ RUN curl -fsSL "https://github.com/Nithe14/pam_oauth2_device/archive/refs/tags/$
 # musl links the C runtime statically by default, which a shared library can not do
 RUN RUSTFLAGS="-C target-feature=-crt-static" cargo build --release
 
-FROM alpine:3.24.3
+FROM alpine:3.24.4
 
 # sshd with PAM, only for the sftp subsystem: the configuration is made by the pod at its start
 RUN apk add --no-cache openssh-server-pam openssh-sftp-server linux-pam libgcc openssl ca-certificates
