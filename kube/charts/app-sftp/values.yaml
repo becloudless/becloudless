@@ -129,7 +129,7 @@ resources:
                   containers:
                     sftp:
                       name: sftp
-                      image: ghcr.io/becloudless/alpine-sftp:1.261106.2213
+                      image: ghcr.io/becloudless/alpine-sftp:1.261111.2226
                       command: [ sh ]
                       args:
                         - -c
