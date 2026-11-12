@@ -1,6 +1,6 @@
 ---
 # Source: base-test/templates/loader.yaml
-apiVersion: notification.toolkit.fluxcd.io/v1beta3
+apiVersion: notification.toolkit.fluxcd.io/v1
 kind: Provider
 metadata:
   name: test-release
