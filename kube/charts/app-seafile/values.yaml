@@ -222,7 +222,7 @@ resources:
                   containers:
                     seafile:
                       name: seafile
-                      image: docker.io/seafileltd/seafile-mc:13.0.28 # renovate: versioning=loose
+                      image: docker.io/seafileltd/seafile-mc:14.0.9 # renovate: versioning=loose
                       command:
                         - sh
                         - -c
