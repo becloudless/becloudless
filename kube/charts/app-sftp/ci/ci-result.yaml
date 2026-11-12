@@ -269,7 +269,7 @@ spec:
                       secretKeyRef:
                         key: secret
                         name: sftp-oidc
-                  image: ghcr.io/becloudless/alpine-sftp:1.261106.2213
+                  image: ghcr.io/becloudless/alpine-sftp:1.261111.2226
                   name: sftp
                   ports:
                     ssh:
