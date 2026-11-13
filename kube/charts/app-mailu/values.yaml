@@ -495,7 +495,7 @@ resources:
                       spec:
                         containers:
                         - name: fts-heal
-                          image: ghcr.io/mailu/dovecot:2024.06.58 # the one of the dovecot of the chart (xapian-check), to keep in sync with it
+                          image: ghcr.io/mailu/dovecot:2024.06.68 # the one of the dovecot of the chart (xapian-check), to keep in sync with it
                           securityContext:
                             runAsUser: 8 # mail, the owner of the indexes
                             runAsGroup: 12
