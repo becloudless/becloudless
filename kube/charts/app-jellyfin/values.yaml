@@ -188,7 +188,7 @@ resources:
                     # completes the setup wizard and configures the SSO (see the header of this file), once jellyfin has started
                     configure:
                       name: configure
-                      image: docker.io/library/node:26.13.0-alpine
+                      image: docker.io/library/node:26.13.1-alpine
                       command:
                         - sh
                         - -c
