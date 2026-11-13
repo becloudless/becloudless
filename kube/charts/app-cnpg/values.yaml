@@ -139,7 +139,7 @@ resources:
               containers:
                 repair:
                   name: repair
-                  image: docker.io/alpine/k8s:1.36.5 # renovate: versioning=loose
+                  image: docker.io/alpine/k8s:1.37.1 # renovate: versioning=loose
                   command: [ bash, /scripts/replica-repair.sh ]
                   env:
                     HOME: /tmp
