@@ -342,7 +342,7 @@ spec:
                       secretKeyRef:
                         key: FFMPEG_OVER_IP_SERVER_AUTH_SECRET
                         name: ref:ffmpeg-over-ip-server
-                  image: ghcr.io/becloudless/ffmpeg-over-ip:1.261105.848
+                  image: ghcr.io/becloudless/ffmpeg-over-ip:1.261111.1207
                   name: ffmpeg-over-ip-server
                   ports:
                     ffoip:
