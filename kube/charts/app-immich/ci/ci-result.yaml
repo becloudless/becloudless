@@ -456,7 +456,7 @@ spec:
                       secretKeyRef:
                         key: password
                         name: ref:immich-admin
-                  image: curlimages/curl:8.19.0
+                  image: curlimages/curl:8.23.0
                   name: bootstrap
               restartPolicy: Never
               securityContext:
