@@ -58,7 +58,7 @@ resources:
                   containers:
                     element:
                       name: element
-                      image: vectorim/element-web:v1.12.33
+                      image: vectorim/element-web:v1.12.35
                       ports:
                         http:
                           containerPort: 8080
