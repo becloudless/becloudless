@@ -75,7 +75,7 @@ tests:
                 containers:
                   web:
                     name: web
-                    image: nginx:1.27
+                    image: nginx:1.31
                     command:
                       - sh
                       - -c
