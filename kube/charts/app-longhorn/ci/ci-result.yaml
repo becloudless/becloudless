@@ -708,7 +708,7 @@ spec:
                       env:
                         HOME: /tmp
                         NAMESPACE: default
-                      image: docker.io/alpine/k8s:1.36.5
+                      image: docker.io/alpine/k8s:1.37.1
                       name: repair
                       securityContext:
                         capabilities:
