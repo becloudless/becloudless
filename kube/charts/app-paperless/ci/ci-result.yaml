@@ -293,7 +293,7 @@ spec:
                     PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://gotenberg:3000
                     PAPERLESS_TIME_ZONE: Europe/Paris
                     PAPERLESS_URL: https://paperless.test.com
-                  image: ghcr.io/paperless-ngx/paperless-ngx:3.3.4
+                  image: ghcr.io/paperless-ngx/paperless-ngx:3.4.2
                   name: paperless
                   ports:
                     http:

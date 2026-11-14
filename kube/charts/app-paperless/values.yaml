@@ -141,7 +141,7 @@ resources:
                   containers:
                     paperless:
                       name: paperless
-                      image: ghcr.io/paperless-ngx/paperless-ngx:3.3.4 # renovate: datasource=github-releases packageName=paperless-ngx/paperless-ngx extractVersion=^v(?<version>.+)$ versioning=loose
+                      image: ghcr.io/paperless-ngx/paperless-ngx:3.4.2 # renovate: datasource=github-releases packageName=paperless-ngx/paperless-ngx extractVersion=^v(?<version>.+)$ versioning=loose
                       ports:
                         http:
                           containerPort: 8000
