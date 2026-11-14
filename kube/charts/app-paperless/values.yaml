@@ -258,7 +258,7 @@ resources:
                   containers:
                     gotenberg:
                       name: gotenberg
-                      image: gotenberg/gotenberg:8.20.1 # renovate: versioning=loose
+                      image: gotenberg/gotenberg:8.40.0 # renovate: versioning=loose
                       args:
                         - gotenberg
                         - --chromium-disable-javascript=true
