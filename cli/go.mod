@@ -24,7 +24,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/moby/buildkit v0.34.2
 	github.com/n0rad/go-erlog v0.0.0-20260803020042-6c728ddb3e7a
-	github.com/n0rad/gomake v0.0.0-20260423115156-cb11feadac58
+	github.com/n0rad/gomake v0.0.0-20261109075051-bc9167b18b1f
 	github.com/n0rad/memguarded v1.20201101.100527-031299f.0.20260120012428-7b6c2af7698a
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
