@@ -237,7 +237,7 @@ resources:
                   containers:
                     tika:
                       name: tika
-                      image: apache/tika:4.1.0-1-full # renovate: versioning=loose
+                      image: apache/tika:4.2.0 # renovate: versioning=loose
                       ports:
                         http:
                           containerPort: 9998
