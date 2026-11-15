@@ -235,7 +235,7 @@ resources:
                   containers:
                     sftp-gateway:
                       name: sftp-gateway
-                      image: docker.io/rclone/rclone:1.75.2 # renovate: versioning=loose
+                      image: docker.io/rclone/rclone:1.76.0 # renovate: versioning=loose
                       command: [ sh, /etc/gateway/gateway.sh ]
                       ports:
                         s3:
