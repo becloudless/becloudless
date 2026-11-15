@@ -297,7 +297,7 @@ resources:
                   containers:
                     bootstrap:
                       name: bootstrap
-                      image: curlimages/curl:8.19.0 # renovate: versioning=loose
+                      image: curlimages/curl:8.23.0 # renovate: versioning=loose
                       command: [ sh, -ec ]
                       args:
                         - |
