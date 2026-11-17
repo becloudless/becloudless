@@ -309,7 +309,7 @@ resources:
                   containers:
                     ffmpeg-over-ip-server:
                       name: ffmpeg-over-ip-server
-                      image: ghcr.io/becloudless/ffmpeg-over-ip:1.261105.848
+                      image: ghcr.io/becloudless/ffmpeg-over-ip:1.261111.1207
                       ports:
                         ffoip:
                           containerPort: 5050
