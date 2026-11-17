@@ -67,7 +67,7 @@ resources:
           containers:
             restore: &container
               name: restore
-              image: docker.io/alpine/k8s:1.36.5 # renovate: versioning=loose
+              image: docker.io/alpine/k8s:1.37.1 # renovate: versioning=loose
               command: [ bash, /scripts/restore.sh ] # `files/restore.sh`, in the ConfigMap `restore.scriptConfigMap`
               env: &env
                 NAMESPACE: '{{ .Values.restore.namespace }}'
