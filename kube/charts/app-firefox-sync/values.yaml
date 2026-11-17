@@ -78,7 +78,7 @@ resources:
                   containers:
                     firefox-sync:
                       name: firefox-sync
-                      image: ghcr.io/mozilla-services/syncstorage-rs/syncserver-postgres:0.24.0 # renovate: versioning=loose
+                      image: ghcr.io/mozilla-services/syncstorage-rs/syncserver-postgres:0.25.0 # renovate: versioning=loose
                       ports:
                         http:
                           containerPort: 8000
