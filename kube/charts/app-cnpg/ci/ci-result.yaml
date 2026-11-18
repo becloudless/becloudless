@@ -183,7 +183,7 @@ spec:
             env:
             - name: HOME
               value: /tmp
-            image: docker.io/alpine/k8s:1.37.1
+            image: docker.io/alpine/k8s:1.37.2
             name: repair
             securityContext:
               allowPrivilegeEscalation: false

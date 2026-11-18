@@ -253,7 +253,7 @@ spec:
         - secretRef:
             name: s3-secrets
             optional: true
-        image: docker.io/alpine/k8s:1.37.1
+        image: docker.io/alpine/k8s:1.37.2
         name: restore
         securityContext:
           allowPrivilegeEscalation: false
@@ -326,7 +326,7 @@ spec:
             - secretRef:
                 name: s3-secrets
                 optional: true
-            image: docker.io/alpine/k8s:1.37.1
+            image: docker.io/alpine/k8s:1.37.2
             name: restore
             securityContext:
               allowPrivilegeEscalation: false
