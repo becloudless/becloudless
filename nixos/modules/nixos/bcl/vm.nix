@@ -202,7 +202,7 @@ in
               reboot of the guest is not enough.
 
               The host tells the guest through the qemu guest agent (flag `/run/vm-restart-required`), and the guest decides
-              when to reboot: a kube node (role `serverKube`) asks kured, which drains it, respects its window, takes its
+              when to reboot: a kube node (role `kube`) asks kured, which drains it, respects its window, takes its
               lock (one node at a time) and its alert filter; the other guests reboot in the window of
               `bcl.role.vmRestartRequired`. A reboot of the guest stops the VM (`on_reboot = destroy`), the host then starts
               it again with the declared definition.
@@ -239,7 +239,7 @@ in
     # VM keeps the definition it was running with (a changed one would never apply on a host reboot), and the save records the qemu
     # binary it ran with, which a new nixpkgs removes from the store, so the restore (and nixvirt.service with it) fails with
     # "Cannot check QEMU binary /nix/store/...-qemu-.../bin/qemu-system-...". It is also what failed when the LVs were not active.
-    # The guests get an ACPI shutdown (a kube node drains itself, see serverKubeDrain.nix) and are started again at the boot
+    # The guests get an ACPI shutdown (a kube node drains itself, see kubeDrain.nix) and are started again at the boot
     # (`onBoot = start`, and NixVirt). The timeout is per group of `parallelShutdown` guests.
     virtualisation.libvirtd.onShutdown = "shutdown";
     virtualisation.libvirtd.parallelShutdown = 10;

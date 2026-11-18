@@ -1,10 +1,10 @@
 { config, lib, pkgs, ... }:
 let
-  cfg = config.bcl.role.serverKube;
+  cfg = config.bcl.role.kube;
   nodeName = n: "${cfg.clusterName}${toString n}";
 in
 {
-  config = lib.mkIf (config.bcl.role.name == "serverKube") {
+  config = lib.mkIf (config.bcl.role.name == "kube") {
     # on a worker, haproxy runs as a systemd service as there is no static pod path
     systemd.services."haproxy-apiserver" = lib.mkIf cfg.worker {
       serviceConfig = {

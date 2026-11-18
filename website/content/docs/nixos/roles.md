@@ -18,11 +18,11 @@ A desktop or laptop for daily use. Enables a graphical environment, user-facing 
 
 ---
 
-### `serverKube`
+### `kube`
 
 A Kubernetes worker/control-plane node. Enables CRI-O, kubeadm, Longhorn prerequisites, and high-availability keepalived. No graphical environment.
 
-Related role modules: `serverKubeCrio`, `serverKubeCerts`, `serverKubeHap`.
+Related role modules: `kubeCrio`, `kubeCerts`, `kubeHap`.
 
 **Typical hardware:** bare-metal server, NUC, OrangePi.
 
@@ -30,7 +30,7 @@ Related role modules: `serverKubeCrio`, `serverKubeCerts`, `serverKubeHap`.
 
 ### `popKube`
 
-A lightweight Kubernetes node intended for edge or resource-constrained environments (e.g., a single-board computer). Shares a subset of the `serverKube` configuration.
+A lightweight Kubernetes node intended for edge or resource-constrained environments (e.g., a single-board computer). Shares a subset of the `kube` configuration.
 
 ---
 

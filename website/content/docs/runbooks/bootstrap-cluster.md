@@ -8,7 +8,7 @@ Full sequence for provisioning a new BeCloudLess Kubernetes cluster from bare me
 
 ## Prerequisites
 
-- At least one machine with a fresh NixOS install using the `serverKube` role
+- At least one machine with a fresh NixOS install using the `kube` role
 - `bcl` CLI available (`nix develop`)
 - Git access to the repository
 - Secrets backend configured (SOPS age key or Vault)

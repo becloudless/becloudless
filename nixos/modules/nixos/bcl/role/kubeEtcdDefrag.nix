@@ -1,13 +1,13 @@
 { config, lib, pkgs, ... }:
 let
-  cfg = config.bcl.role.serverKube;
+  cfg = config.bcl.role.kube;
   nodeNumber = lib.strings.toInt (builtins.substring ((builtins.stringLength config.networking.hostName) - 1) (-1) config.networking.hostName);
   myIp = lib.bcl.net.ipAdd cfg.firstNodeIp (nodeNumber - 1);
 in
 {
   # etcd never gives freed space back to the filesystem: defragment the local member when the db is mostly free space.
   # A defrag blocks the member for a few seconds, so the timers are staggered (one member per hour).
-  config = lib.mkIf (config.bcl.role.name == "serverKube" && !cfg.worker) {
+  config = lib.mkIf (config.bcl.role.name == "kube" && !cfg.worker) {
     systemd.services."etcd-defrag" = {
       description = "Defragment the local etcd member when it is mostly free space";
       path = [ pkgs.etcd pkgs.jq ];

@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 {
-  config = lib.mkIf (config.bcl.role.name == "serverKube") {
+  config = lib.mkIf (config.bcl.role.name == "kube") {
     environment.systemPackages = with pkgs; [
       cri-o
     ];
