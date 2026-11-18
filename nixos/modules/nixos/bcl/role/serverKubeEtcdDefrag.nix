@@ -12,7 +12,6 @@ in
       description = "Defragment the local etcd member when it is mostly free space";
       path = [ pkgs.etcd pkgs.jq ];
       environment = {
-        ETCDCTL_API = "3";
         ETCDCTL_ENDPOINTS = "https://${myIp}:2379";
         ETCDCTL_CACERT = "/etc/kubernetes/pki/etcd/ca.crt";
         ETCDCTL_CERT = "/etc/kubernetes/pki/etcd/healthcheck-client.crt";

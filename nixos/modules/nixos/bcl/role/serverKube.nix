@@ -299,6 +299,10 @@ in
               listen-client-urls: https://${myIp}:2379
               advertise-client-urls: https://${myIp}:2379
               initial-advertise-peer-urls: https://${myIp}:2380
+              # The VM disks are consumer NVMe behind thin LVM (fsync 4-65 ms): the defaults (100 ms / 1000 ms) miss heartbeats and
+              # trigger elections. Must be the same on every member, the election timeout is 10 times the heartbeat.
+              heartbeat-interval: "250"
+              election-timeout: "2500"
         apiServer:
           extraArgs:
             advertise-address: ${myIp}
