@@ -284,7 +284,7 @@ resources:
                   containers:
                     homer:
                       name: homer
-                      image: b4bz/homer:v26.08.3 # renovate: versioning=loose
+                      image: b4bz/homer:v26.11.2 # renovate: versioning=loose
                       env:
                         INIT_ASSETS: "0" # the entrypoint would copy the default assets in /www/assets, read only
                       ports:
