@@ -135,6 +135,7 @@ spec:
     replicationTLSSecret: test-release-replication-tls
     serverCASecret: test-release-tls
     serverTLSSecret: test-release-tls
+  enablePDB: false
   instances: 1
   postgresql:
     parameters:

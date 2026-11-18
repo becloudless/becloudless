@@ -86,6 +86,8 @@ resources:
   cnpgClusters:
     main:
       instances: {{ $values.instances }}
+      {{- /* No PodDisruptionBudget: they block the drain of the nodes (kured, upgrades) when the primary is on it */}}
+      enablePDB: false
       certificates:
         clientCASecret: {{ $name }}-ca
         replicationTLSSecret: {{ $name }}-replication-tls
