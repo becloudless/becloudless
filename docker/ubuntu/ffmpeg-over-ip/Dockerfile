@@ -4,7 +4,7 @@ FROM ubuntu:26.04
 ARG TARGETARCH
 
 # renovate: datasource=github-releases depName=steelbrain/ffmpeg-over-ip
-ARG FFMPEG_OVER_IP_VERSION=v5.2.1
+ARG FFMPEG_OVER_IP_VERSION=v6.0.0
 
 # The drivers come from Ubuntu: 26.04 ships recent ones (iHD 26.1.2), newer than the ones of the repository of Intel for 24.04 (24.3.4),
 # and this repository has no suite for 26.04. The drivers of 24.04 did not know the Arrow Lake-H GPU (8086:7dd1).

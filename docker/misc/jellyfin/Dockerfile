@@ -8,7 +8,7 @@ ARG TARGETARCH
 ARG SSO_PLUGIN_VERSION=4.0.0.4
 ARG SSO_PLUGIN_MD5=1e7908585ebee256203a0869dcdfbaf8
 # renovate: datasource=github-releases depName=steelbrain/ffmpeg-over-ip
-ARG FFMPEG_OVER_IP_VERSION=v5.2.1
+ARG FFMPEG_OVER_IP_VERSION=v6.0.0
 
 RUN set -eux; \
     wget -q -O /tmp/plugin.zip "https://github.com/9p4/jellyfin-plugin-sso/releases/download/v${SSO_PLUGIN_VERSION}/sso-authentication_${SSO_PLUGIN_VERSION}.zip"; \
