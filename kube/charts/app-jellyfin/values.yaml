@@ -286,6 +286,22 @@ resources:
             ffmpeg-over-ip:
               template:
                 spec:
+                  # TODO the GPU nodes are the containerized kubelets, tainted like for app-intel-gpu-plugin: without the toleration the
+                  # DaemonSet only targets the other nodes, which have no GPU resource, and its pods stay Pending
+                  nodeSelector:
+                    kubernetes.io/arch: amd64
+                  affinity: # same nodes as app-intel-gpu-plugin
+                    nodeAffinity:
+                      requiredDuringSchedulingIgnoredDuringExecution:
+                        nodeSelectorTerms:
+                          - matchExpressions:
+                              - key: node-role.kubernetes.io/control-plane
+                                operator: DoesNotExist
+                  tolerations:
+                    - key: bcl.tf/no-persistent-storage
+                      operator: Equal
+                      value: "true"
+                      effect: NoSchedule
                   securityContext:
                     runAsUser: 1000
                     runAsGroup: 1000
