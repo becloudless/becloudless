@@ -322,6 +322,13 @@ spec:
         ffmpeg-over-ip:
           template:
             spec:
+              affinity:
+                nodeAffinity:
+                  requiredDuringSchedulingIgnoredDuringExecution:
+                    nodeSelectorTerms:
+                    - matchExpressions:
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: DoesNotExist
               containers:
                 ffmpeg-over-ip-server:
                   env:
@@ -346,9 +353,16 @@ spec:
                     capabilities:
                       drop:
                         all: ALL
+              nodeSelector:
+                kubernetes.io/arch: amd64
               securityContext:
                 runAsGroup: 1000
                 runAsUser: 1000
+              tolerations:
+              - effect: NoSchedule
+                key: bcl.tf/no-persistent-storage
+                operator: Equal
+                value: "true"
       deployments:
         jellyfin:
           replicas: 1
