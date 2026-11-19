@@ -321,6 +321,9 @@ spec:
       daemonSets:
         ffmpeg-over-ip:
           template:
+            metadata:
+              annotations:
+                policy.bcl.tf/skipPodSetHostUsers: "true"
             spec:
               affinity:
                 nodeAffinity:
