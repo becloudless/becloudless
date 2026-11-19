@@ -41,7 +41,7 @@ spec:
     bgpControlPlane:
       enabled: true
     bpf:
-      masquerade: true
+      masquerade: false
     cni:
       exclusive: false
     devices: br0
