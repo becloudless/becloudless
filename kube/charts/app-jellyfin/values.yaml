@@ -281,10 +281,15 @@ resources:
 
           # The server runs on the nodes with a GPU (the resource of the device plugin), one per node: the render node is added to the
           # container (it is world readable and writable), nothing else of the host, so the pod keeps the defaults of the chart (non root,
-          # read only root filesystem, user namespace). The server and the GPU drivers are in the image (see docker/ubuntu/ffmpeg-over-ip).
+          # read only root filesystem). The server and the GPU drivers are in the image (see docker/ubuntu/ffmpeg-over-ip).
+          # The GPU nodes are the containerized kubelets, which can not do the id-mapped mounts of a user namespace (`MOUNT_ATTR_IDMAP`
+          # fails on the emptyDir): `skipPodSetHostUsers`, like app-intel-gpu-plugin.
           daemonSets:
             ffmpeg-over-ip:
               template:
+                metadata:
+                  annotations:
+                    policy.bcl.tf/skipPodSetHostUsers: "true"
                 spec:
                   # TODO the GPU nodes are the containerized kubelets, tainted like for app-intel-gpu-plugin: without the toleration the
                   # DaemonSet only targets the other nodes, which have no GPU resource, and its pods stay Pending
