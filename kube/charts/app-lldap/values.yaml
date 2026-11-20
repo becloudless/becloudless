@@ -348,6 +348,192 @@ resources:
                       secret:
                         secretName: ref:lldap-authelia
 
+    # The CronJob `lldap-repair` restarts lldap when its pool of connections to the database is stuck.
+    # lldap keeps a pool of connections to the primary of `lldap-postgresql`. When the instances of the database are recreated (node
+    # reboot, volume problem...) the connections of the pool can be dead without lldap noticing: the primary has no session from lldap,
+    # every request fails after 30s with `Failed to acquire connection from pool: Connection pool timed out`, for ever, while the probes
+    # stay green (`/health` and the LDAP root search do not use the database). Authelia then fails its startup check on the LDAP bind
+    # (`LDAP Result Code 200 "Network Error"`) and crash loops, and nobody can log in.
+    # The script (in the ConfigMap `lldap-repair`) restarts the Deployment (`rollout restart`, the new pod is ready before the old one is
+    # removed) when
+    #  - at least `MIN_ERRORS` lines of the log have the error of the pool in the last `WINDOW` seconds (each error is logged on two lines),
+    #    and the error goes on `RECHECK` seconds later: a failover of the database makes a few errors, not a stuck pool;
+    #  - the pod runs for `MIN_AGE` seconds at least: when the database is really down, lldap is restarted once every `MIN_AGE` seconds
+    #    at most, not in a loop.
+    # An event `LldapRestarted` is created on the Deployment. To only see what it would do, set `DRY_RUN: "true"` in the env of the CronJob.
+    lldap-repair:
+      dependsOn:
+        - ref:lldap
+      values:
+        resources:
+          ciliumNetworkPolicies:
+            lldap-repair:
+              endpointSelector:
+                matchLabels: {app.kubernetes.io/component: lldap-repair}
+              egress:
+                kube-apiserver:
+                  toEntities: [kube-apiserver]
+
+          serviceAccounts:
+            lldap-repair:
+              automountServiceAccountToken: true # the API server
+
+          roles:
+            lldap-repair:
+              rules:
+                deployments: # `kubectl rollout restart` patches the annotations of the pod template
+                  apiGroups: [ apps ]
+                  resources: [ deployments ]
+                  verbs: [ get, patch ]
+                pods:
+                  apiGroups: [ "" ]
+                  resources: [ pods ]
+                  verbs: [ get, list ]
+                logs: # the error of the pool is in the log of lldap
+                  apiGroups: [ "" ]
+                  resources: [ pods/log ]
+                  verbs: [ get ]
+                events:
+                  apiGroups: [ "" ]
+                  resources: [ events ]
+                  verbs: [ create ]
+
+          roleBindings:
+            lldap-repair:
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: Role
+                name: lldap-repair
+              subjects:
+                lldap-repair:
+                  kind: ServiceAccount
+                  name: lldap-repair
+                  namespace: "{{ .Release.Namespace }}"
+
+          configMaps:
+            lldap-repair:
+              data:
+                lldap-repair.sh: |
+                  #!/usr/bin/env bash
+                  # See the comment of `lldap-repair` in the values of the chart app-lldap.
+                  set -uo pipefail
+
+                  NAMESPACE=${NAMESPACE:-lldap}
+                  DEPLOYMENT=${DEPLOYMENT:-lldap}
+                  WINDOW=${WINDOW:-300}        # seconds of log of the first check
+                  MIN_ERRORS=${MIN_ERRORS:-10} # lines with the error in the window: less is not a stuck pool (a failover of the database makes a few)
+                  RECHECK=${RECHECK:-60}       # seconds between the two checks: the errors have to go on
+                  MIN_AGE=${MIN_AGE:-600}      # seconds: a pod younger than that is not restarted, the database may just be down
+                  DRY_RUN=${DRY_RUN:-false}
+                  POOL_ERROR='Connection pool timed out'
+
+                  log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
+
+                  # The number of lines of the log of lldap of the last `$1` seconds with the error of the pool.
+                  pool_errors() {
+                    local out
+                    out=$(kubectl -n "$NAMESPACE" logs "deploy/$DEPLOYMENT" --since="${1}s" --tail=-1 2>&1) || return 1
+                    grep -c "$POOL_ERROR" <<<"$out" || true
+                  }
+
+                  # The age in seconds of the youngest running container of lldap, empty when none is running.
+                  youngest_age() {
+                    local selector
+                    selector=$(kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o json \
+                      | jq -r '.spec.selector.matchLabels | to_entries | map("\(.key)=\(.value)") | join(",")') || return 1
+                    kubectl -n "$NAMESPACE" get pods -l "$selector" -o json \
+                      | jq -r '[.items[] | select(.metadata.deletionTimestamp == null) | .status.containerStatuses[]?
+                          | .state.running.startedAt // empty | (now - fromdateiso8601)] | min // empty | floor'
+                  }
+
+                  age=$(youngest_age) || { log "cannot read the pods of $DEPLOYMENT"; exit 1; }
+                  if [ -z "$age" ]; then
+                    log "no running pod of $DEPLOYMENT"
+                    exit 0
+                  fi
+                  if [ "$age" -lt "$MIN_AGE" ]; then
+                    log "$DEPLOYMENT runs for ${age}s only, less than ${MIN_AGE}s: not checked"
+                    exit 0
+                  fi
+
+                  errors=$(pool_errors "$WINDOW") || { log "cannot read the log of $DEPLOYMENT"; exit 1; }
+                  if [ "$errors" -lt "$MIN_ERRORS" ]; then
+                    log "$errors lines with the error of the pool in the last ${WINDOW}s, less than $MIN_ERRORS: ok"
+                    exit 0
+                  fi
+                  log "$errors lines with the error of the pool in the last ${WINDOW}s, checking again in ${RECHECK}s"
+
+                  sleep "$RECHECK"
+                  errors=$(pool_errors "$RECHECK") || { log "cannot read the log of $DEPLOYMENT"; exit 1; }
+                  if [ "$errors" -eq 0 ]; then
+                    log "no error of the pool in the last ${RECHECK}s: recovered"
+                    exit 0
+                  fi
+
+                  ctx="deployment $DEPLOYMENT"
+                  if [ "$DRY_RUN" = true ]; then
+                    log "$ctx: $errors lines with the error of the pool in the last ${RECHECK}s, DRY RUN, would restart it"
+                    exit 0
+                  fi
+                  log "$ctx: $errors lines with the error of the pool in the last ${RECHECK}s, the pool is stuck, restarting it"
+                  if ! kubectl -n "$NAMESPACE" rollout restart "deploy/$DEPLOYMENT"; then
+                    log "$ctx: cannot restart it"
+                    exit 1
+                  fi
+                  kubectl create -f - <<EOF || true
+                  apiVersion: v1
+                  kind: Event
+                  metadata:
+                    generateName: lldap-repair-
+                    namespace: $NAMESPACE
+                  type: Warning
+                  reason: LldapRestarted
+                  message: "lldap was restarted: its pool of connections to the database was stuck ($errors lines with the error in the log of the last ${RECHECK}s), the connections are dead since the database was restarted"
+                  involvedObject: {apiVersion: apps/v1, kind: Deployment, name: $DEPLOYMENT, namespace: $NAMESPACE}
+                  source: {component: lldap-repair}
+                  EOF
+
+          cronJobs:
+            lldap-repair:
+              schedule: "*/5 * * * *"
+              concurrencyPolicy: Forbid
+              jobTemplate:
+                spec:
+                  backoffLimit: 0
+                  activeDeadlineSeconds: 240
+                  template:
+                    metadata:
+                      labels:
+                        app.kubernetes.io/component: lldap-repair
+                    spec:
+                      restartPolicy: Never
+                      serviceAccountName: lldap-repair
+                      securityContext:
+                        runAsUser: 65534
+                        runAsGroup: 65534
+                      containers:
+                        repair:
+                          name: repair
+                          image: docker.io/alpine/k8s:1.36.5 # renovate: versioning=loose
+                          command: [ bash, /scripts/lldap-repair.sh ]
+                          env:
+                            HOME: /tmp
+                            NAMESPACE: "{{ .Release.Namespace }}"
+                          securityContext:
+                            capabilities:
+                              drop:
+                                all: ALL
+                          volumeMounts:
+                            script:
+                              name: script
+                              mountPath: /scripts
+                              readOnly: true
+                      volumes:
+                        script:
+                          name: script
+                          configMap:
+                            name: lldap-repair
+
     # the public exposure (`expose` below), merged with the generated release: the ldaps part
     lldap-integration:
       values:
