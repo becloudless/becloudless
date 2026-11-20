@@ -14,8 +14,18 @@
 #  - are removed with a `test` of the node of the ticket, so that only the ticket that was checked is removed.
 # The other tickets (the share managers, the backups, the snapshots, the UI) are never touched. When more than `MAX_REPAIRS` tickets are
 # stale at once nothing is removed, it is not a leak. An event `StaleAttachmentTicketRemoved` is created on the `Volume`.
-# Longhorn then detaches the volume from the old node and attaches it to the new one. To only see what it would do, set
-# `DRY_RUN: "true"` in the env of the CronJob.
+# Longhorn then detaches the volume from the old node and attaches it to the new one.
+#
+# It also removes the replicas that are on a disk that their node does not have any more. A disk that is initialized again (a
+# reinstalled node, a wiped `/var/lib/longhorn`) gets a new UUID: the replicas that were on it are lost, Longhorn can neither start nor
+# fail them (`cannot find disk name for replica`), and the volume stays in `attaching` for ever (the pod that uses it stays in `Init` or
+# `ContainerCreating` with `FailedAttachVolume ... DeadlineExceeded`, even if the other replicas are fine). A replica is removed, in two
+# checks `RECHECK` seconds apart as the tickets, when
+#  - its node has disks, none of them has the UUID of the replica, and the replica is not running;
+#  - the volume has another healthy replica (not failed, healthy once) on a disk of its node: Longhorn rebuilds a replica from it.
+# At most `MAX_REPAIRS` replicas at once. An event `StaleReplicaRemoved` is created on the `Volume`.
+#
+# To only see what it would do, set `DRY_RUN: "true"` in the env of the CronJob.
 
 resources:
 
@@ -621,6 +631,14 @@ resources:
                   apiGroups: [ longhorn.io ]
                   resources: [ volumeattachments ]
                   verbs: [ get, list, patch ]
+                nodes: # the UUIDs of the disks
+                  apiGroups: [ longhorn.io ]
+                  resources: [ nodes ]
+                  verbs: [ get, list ]
+                replicas:
+                  apiGroups: [ longhorn.io ]
+                  resources: [ replicas ]
+                  verbs: [ get, list, delete ]
                 events:
                   apiGroups: [ "" ]
                   resources: [ events ]
@@ -647,8 +665,8 @@ resources:
                   set -uo pipefail
 
                   NAMESPACE=${NAMESPACE:-longhorn-system}
-                  RECHECK=${RECHECK:-60}        # seconds between the two checks: a ticket has to be stale in both
-                  MAX_REPAIRS=${MAX_REPAIRS:-5} # more stale tickets than that is not a leak, something else is wrong: nothing is removed
+                  RECHECK=${RECHECK:-60}        # seconds between the two checks: a ticket or a replica has to be stale in both
+                  MAX_REPAIRS=${MAX_REPAIRS:-5} # more stale tickets (or replicas) than that is not a leak, something else is wrong: nothing is removed
                   DRY_RUN=${DRY_RUN:-false}
 
                   log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
@@ -668,52 +686,46 @@ resources:
                       | [$volume, .key, .value.nodeID] | @tsv' <<<"$lh"
                   }
 
-                  first=$(stale_tickets) || { log "cannot list the attachments"; exit 1; }
-                  if [ -z "$first" ]; then
-                    log "no stale attachment ticket"
-                    exit 0
-                  fi
-                  log "stale attachment tickets, checking again in ${RECHECK}s:"
-                  echo "$first"
+                  # One line for each replica on a disk that its node does not have any more (a disk that was initialized again gets a new
+                  # UUID, the data of the replica is gone), while the volume has another healthy replica on a disk of its node:
+                  # `<volume> <replica> <node> <disk>` (tab separated). Such a replica can not start, it blocks the attach of the volume.
+                  stale_replicas() {
+                    local nodes replicas
+                    nodes=$(kubectl -n "$NAMESPACE" get nodes.longhorn.io -o json) || return 1
+                    replicas=$(kubectl -n "$NAMESPACE" get replicas.longhorn.io -o json) || return 1
+                    jq -r --argjson nodes "$nodes" '
+                      # the UUIDs of the disks of each node, a node without any known disk (not started yet) has no entry
+                      ($nodes.items
+                        | map({key: .metadata.name, value: [(.status.diskStatus // {}) | .[] | .diskUUID // empty | select(. != "")]})
+                        | map(select(.value | length > 0))
+                        | from_entries) as $disks
+                      | def onDisk: (.spec.diskID // "") as $d | ($disks[.spec.nodeID // ""] // []) | any(. == $d);
+                      .items as $all
+                      | $all[]
+                      | select(.metadata.deletionTimestamp == null)
+                      | select((.spec.nodeID // "") != "" and (.spec.diskID // "") != "")
+                      | select($disks[.spec.nodeID] != null)
+                      | select(onDisk | not)
+                      | select((.status.currentState // "") != "running")
+                      | select(.spec.volumeName as $volume | .metadata.name as $name
+                          | any($all[]; .spec.volumeName == $volume and .metadata.name != $name
+                              and (.spec.failedAt // "") == "" and (.spec.healthyAt // "") != "" and onDisk))
+                      | [.spec.volumeName, .metadata.name, .spec.nodeID, .spec.diskID] | @tsv' <<<"$replicas"
+                  }
 
-                  sleep "$RECHECK"
-                  second=$(stale_tickets) || { log "cannot list the attachments"; exit 1; }
+                  # The lines of the first list that are also in the second one.
+                  both() {
+                    local line out=""
+                    while IFS= read -r line; do
+                      if [ -n "$line" ] && grep -qxF -- "$line" <<<"$2"; then
+                        out+="$line"$'\n'
+                      fi
+                    done <<<"$1"
+                    printf '%s' "${out%$'\n'}"
+                  }
 
-                  # only the tickets that are stale in both checks: a VolumeAttachment that was being created or removed is not
-                  confirmed=""
-                  while IFS=$'\t' read -r volume ticket node; do
-                    line=$(printf '%s\t%s\t%s' "$volume" "$ticket" "$node")
-                    if grep -qxF -- "$line" <<<"$second"; then
-                      confirmed+="$line"$'\n'
-                    fi
-                  done <<<"$first"
-                  confirmed=${confirmed%$'\n'}
-
-                  if [ -z "$confirmed" ]; then
-                    log "no ticket is stale in both checks"
-                    exit 0
-                  fi
-                  count=$(wc -l <<<"$confirmed")
-                  if [ "$count" -gt "$MAX_REPAIRS" ]; then
-                    log "$count stale tickets, more than $MAX_REPAIRS: not a leak, nothing is removed"
-                    exit 1
-                  fi
-
-                  status=0
-                  while IFS=$'\t' read -r volume ticket node; do
-                    ctx="volume $volume, ticket $ticket (node $node)"
-                    if [ "$DRY_RUN" = true ]; then
-                      log "$ctx: DRY RUN, would remove the ticket"
-                      continue
-                    fi
-                    log "$ctx: no VolumeAttachment for it, removing the ticket"
-                    # `test`: the ticket is only removed if it is still the one that was checked
-                    if ! kubectl -n "$NAMESPACE" patch volumeattachments.longhorn.io "$volume" --type=json \
-                      -p "[{\"op\":\"test\",\"path\":\"/spec/attachmentTickets/$ticket/nodeID\",\"value\":\"$node\"},{\"op\":\"remove\",\"path\":\"/spec/attachmentTickets/$ticket\"}]"; then
-                      log "$ctx: cannot remove the ticket"
-                      status=1
-                      continue
-                    fi
+                  # <volume> <reason> <message>: an event on the Longhorn volume
+                  event() {
                     kubectl create -f - <<EOF || true
                   apiVersion: v1
                   kind: Event
@@ -721,12 +733,92 @@ resources:
                     generateName: attachment-repair-
                     namespace: $NAMESPACE
                   type: Warning
-                  reason: StaleAttachmentTicketRemoved
-                  message: "the attachment ticket $ticket of the node $node was removed: it has no VolumeAttachment, it kept the volume attached to this node"
-                  involvedObject: {apiVersion: longhorn.io/v1beta2, kind: Volume, name: $volume, namespace: $NAMESPACE}
+                  reason: $2
+                  message: "$3"
+                  involvedObject: {apiVersion: longhorn.io/v1beta2, kind: Volume, name: $1, namespace: $NAMESPACE}
                   source: {component: attachment-repair}
                   EOF
-                  done <<<"$confirmed"
+                  }
+
+                  # The stale tickets (`<volume> <ticket> <node>` lines) are removed, returns 1 when something went wrong.
+                  remove_tickets() {
+                    [ -n "$1" ] || return 0
+                    local count volume ticket node ctx status=0
+                    count=$(wc -l <<<"$1")
+                    if [ "$count" -gt "$MAX_REPAIRS" ]; then
+                      log "$count stale tickets, more than $MAX_REPAIRS: not a leak, nothing is removed"
+                      return 1
+                    fi
+                    while IFS=$'\t' read -r volume ticket node; do
+                      ctx="volume $volume, ticket $ticket (node $node)"
+                      if [ "$DRY_RUN" = true ]; then
+                        log "$ctx: DRY RUN, would remove the ticket"
+                        continue
+                      fi
+                      log "$ctx: no VolumeAttachment for it, removing the ticket"
+                      # `test`: the ticket is only removed if it is still the one that was checked
+                      if ! kubectl -n "$NAMESPACE" patch volumeattachments.longhorn.io "$volume" --type=json \
+                        -p "[{\"op\":\"test\",\"path\":\"/spec/attachmentTickets/$ticket/nodeID\",\"value\":\"$node\"},{\"op\":\"remove\",\"path\":\"/spec/attachmentTickets/$ticket\"}]"; then
+                        log "$ctx: cannot remove the ticket"
+                        status=1
+                        continue
+                      fi
+                      event "$volume" StaleAttachmentTicketRemoved "the attachment ticket $ticket of the node $node was removed: it has no VolumeAttachment, it kept the volume attached to this node"
+                    done <<<"$1"
+                    return $status
+                  }
+
+                  # The stale replicas (`<volume> <replica> <node> <disk>` lines) are removed, returns 1 when something went wrong.
+                  remove_replicas() {
+                    [ -n "$1" ] || return 0
+                    local count volume replica node disk ctx status=0
+                    count=$(wc -l <<<"$1")
+                    if [ "$count" -gt "$MAX_REPAIRS" ]; then
+                      log "$count stale replicas, more than $MAX_REPAIRS: not a leak, nothing is removed"
+                      return 1
+                    fi
+                    while IFS=$'\t' read -r volume replica node disk; do
+                      ctx="volume $volume, replica $replica (node $node, disk $disk)"
+                      if [ "$DRY_RUN" = true ]; then
+                        log "$ctx: DRY RUN, would remove the replica"
+                        continue
+                      fi
+                      log "$ctx: the node has no disk with this UUID and the volume has a healthy replica, removing the replica"
+                      if ! kubectl -n "$NAMESPACE" delete replicas.longhorn.io "$replica" --wait=false; then
+                        log "$ctx: cannot remove the replica"
+                        status=1
+                        continue
+                      fi
+                      event "$volume" StaleReplicaRemoved "the replica $replica was removed: its disk $disk is not a disk of the node $node any more, it kept the volume from being attached, Longhorn rebuilds a replica from the healthy ones"
+                    done <<<"$1"
+                    return $status
+                  }
+
+                  tickets=$(stale_tickets) || { log "cannot list the attachments"; exit 1; }
+                  replicas=$(stale_replicas) || { log "cannot list the replicas"; exit 1; }
+                  if [ -z "$tickets" ] && [ -z "$replicas" ]; then
+                    log "no stale attachment ticket, no stale replica"
+                    exit 0
+                  fi
+                  [ -z "$tickets" ] || { log "stale attachment tickets:"; echo "$tickets"; }
+                  [ -z "$replicas" ] || { log "stale replicas:"; echo "$replicas"; }
+                  log "checking again in ${RECHECK}s"
+
+                  sleep "$RECHECK"
+                  second=$(stale_tickets) || { log "cannot list the attachments"; exit 1; }
+                  # only what is stale in both checks: a VolumeAttachment that was being created or removed is not, nor a node that was starting
+                  tickets=$(both "$tickets" "$second")
+                  second=$(stale_replicas) || { log "cannot list the replicas"; exit 1; }
+                  replicas=$(both "$replicas" "$second")
+
+                  if [ -z "$tickets" ] && [ -z "$replicas" ]; then
+                    log "nothing is stale in both checks"
+                    exit 0
+                  fi
+
+                  status=0
+                  remove_tickets "$tickets" || status=1
+                  remove_replicas "$replicas" || status=1
                   exit $status
 
           cronJobs:
