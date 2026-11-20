@@ -8,12 +8,14 @@
 #    `requested WAL segment ... has already been removed`;
 #  - it was the primary and wrote past the point where the new primary forked off (a failover while the API server is unreachable, the old
 #    primary comes back): `pg_rewind` of the instance manager fails on `could not find common ancestor of the source and target cluster's
-#    timelines`, the data of the replica is not a prefix of the history of the primary, a WAL archive does not help.
+#    timelines`, the data of the replica is not a prefix of the history of the primary, a WAL archive does not help;
+#  - its data directory was damaged by an unclean shutdown (a node or a volume that stopped): `pg_rewind` of the instance manager runs the
+#    crash recovery of the replica, and postgres panics on `replication slot file ... has wrong magic number`, a WAL archive does not help.
 # The pod is `Running` but never ready, for ever. The only way out is to clone the replica again from the primary: delete the PVCs and
 # the pod of the instance, the operator creates a new instance (a new volume, `pg_basebackup` from the primary).
 # The CronJob does it (the script is `files/replica-repair.sh`, in the ConfigMap `replica-repair`) for the instances that
 #  - are replicas, and not ready for `MIN_AGE` seconds (the pod is at least that old, and has been unready for that long);
-#  - have one of the two errors in the log of the instance (the error of a replica that only lags is not a reason to clone it again);
+#  - have one of the three errors in the log of the instance (the error of a replica that only lags is not a reason to clone it again);
 #  - are in a cluster whose primary is ready (the data is never deleted without a healthy copy), and that does not have the annotation
 #    `cnpg.bcl.tf/replica-repair: "false"`. For the lost WAL, the cluster must also have no WAL archive (an instance that logs this
 #    error recovers from the archive).

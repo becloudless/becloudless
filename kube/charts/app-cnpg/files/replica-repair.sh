@@ -7,6 +7,8 @@ DRY_RUN=${DRY_RUN:-false}
 LOST_WAL='has already been removed'
 # pg_rewind of the instance manager, when the replica was a primary that wrote past the point where the new primary forked off
 DIVERGED='could not find common ancestor of the source and target cluster'
+# crash recovery of the replica (started by pg_rewind) panics on a replication slot file half written by an unclean shutdown
+CORRUPT_SLOT='replication slot file .* has wrong magic number'
 
 log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
 
@@ -50,13 +52,16 @@ while IFS=$'\t' read -r ns pod cluster age; do
   if grep -q "$DIVERGED" <<<"$pg_log"; then
     # the WAL archive does not help: the data of the replica is not a prefix of the history of the primary
     reason="its data diverged from the primary (pg_rewind finds no common ancestor of the timelines)"
+  elif grep -q "$CORRUPT_SLOT" <<<"$pg_log"; then
+    # local files of the replica: the WAL archive does not help, postgres panics before it replays anything
+    reason="a replication slot file of its data directory is corrupted (postgres panics in crash recovery)"
   elif grep -q "$LOST_WAL" <<<"$pg_log"; then
     if jq -e '(.spec.backup.barmanObjectStore != null) or ([.spec.plugins[]? | select(.isWALArchiver == true)] | length > 0)' <<<"$cluster_json" >/dev/null; then
       log "$ctx: the cluster has a WAL archive, the replica can recover from it"; continue
     fi
     reason="the WAL it needs was removed from the primary"
   else
-    log "$ctx: neither a lost WAL nor a diverged timeline in its log, not a reason to clone it again"; continue
+    log "$ctx: neither a lost WAL, a diverged timeline nor a corrupted replication slot in its log, not a reason to clone it again"; continue
   fi
 
   if [ "$DRY_RUN" = true ]; then
