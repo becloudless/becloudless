@@ -4,8 +4,13 @@
   outputs = {self, ...} @ bclInputs: let
     revision = self.rev or "dirty";
 
+    # snowfall-lib expects `nixos-generators` in its inputs to build the virtual systems (iso, raw-efi)
+    snowfallInputs = bclInputs // {
+      nixos-generators = import ./imageGenerator.nix { inherit (bclInputs) nixpkgs; };
+    };
+
     bclSnowfallLib = bclInputs.snowfall-lib.mkLib {
-      inputs = bclInputs;
+      inputs = snowfallInputs;
       src = ./.;
 
       snowfall = {
@@ -48,7 +53,6 @@
         bclInputs.disko.nixosModules.disko
         bclInputs.impermanence.nixosModules.impermanence
         bclInputs.home-manager.nixosModules.home-manager
-        bclInputs.nixos-generators.nixosModules.all-formats # allow any system to be generated as iso, raw-efi, etc.
     ];
 
     mkFlake = flake-and-lib-options @ {
@@ -73,7 +77,7 @@
         }: let
           lib = bclInputs.snowfall-lib.mkLib {
             inherit src;
-            inputs = bclInputs // inputs;
+            inputs = snowfallInputs // inputs;
             snowfall = { namespace = "infra"; } // snowfall;
           };
           nixpkgsLib = bclInputs.nixpkgs.lib;
@@ -162,11 +166,6 @@
 
     sops-nix = {
       url = "github:Mic92/sops-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    nixos-generators = {
-      url = "github:nix-community/nixos-generators";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
