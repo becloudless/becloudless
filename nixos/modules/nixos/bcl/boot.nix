@@ -93,6 +93,11 @@ in {
           efiSupport = cfg.loader == "efi";
           efiInstallAsRemovable = lib.mkIf (cfg.loader == "efi") ((builtins.length config.bcl.diskSystem.devices) > 1); # required to install on multiple disks
           configurationLimit = 10;
+          # plymouth needs a graphical framebuffer from the start: the BIOS default `text` boots the kernel in
+          # VGA text mode (no splash until the GPU driver loads, if ever), `keep` hands grub's mode over
+          # (the EFI default is already `keep`)
+          gfxpayloadBios = lib.mkIf cfg.plymouth.enable (lib.mkDefault "keep");
+          gfxpayloadEfi = lib.mkIf cfg.plymouth.enable (lib.mkDefault "keep");
 #          device = "nodev";
 #          theme = "${pkgs.grub-cyberexs}/share/grub/themes/CyberEXS";
         } else {
@@ -113,7 +118,10 @@ in {
             shell = "/bin/systemd-tty-ask-password-agent";
           };
         };
-        kernelModules = config.boot.kernelModules;
+        kernelModules = config.boot.kernelModules
+          # KMS driver in the initrd, so that plymouth draws on the real display from the first second (and not on the
+          # firmware framebuffer, or nothing until stage 2)
+          ++ lib.optional (cfg.plymouth.enable && builtins.elem "intel" config.bcl.hardware.commons) "i915";
         network = lib.mkIf cfg.ssh {
           enable = true;
           ssh = {
