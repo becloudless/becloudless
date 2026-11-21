@@ -26,14 +26,14 @@ BeCloudLess is composed of four interconnected layers:
 
 All physical and virtual machines (laptops, desktops, servers, TVs) are configured declaratively using NixOS. Configuration is structured around:
 
-- **Roles** — high-level machine purpose (`workstation`, `serverKube`, `popKube`, `tv`, `install`)
+- **Roles** — high-level machine purpose (`workstation`, `kube`, `popKube`, `tv`, `install`)
 - **Parts** — optional feature modules (`wifi`, `sound`, `bluetooth`, `docker`, `disk`, …)
 - **Hardware** — device-specific configuration (`orangepi5`, `orangepi5plus`, …)
 - **Global** — common settings applied to every machine
 
 ### Kubernetes — Application Platform
 
-A GitOps-managed Kubernetes cluster running on `serverKube` nodes. Flux CD watches the `kube/` directory and reconciles the desired state. Apps are organised into:
+A GitOps-managed Kubernetes cluster running on `kube` nodes. Flux CD watches the `kube/` directory and reconciles the desired state. Apps are organised into:
 
 - `kube/clusters/` — cluster-level bootstrap configuration
 - `kube/groups/` — named groups of machines (`global`, `minimal`, `pop`, `server`)

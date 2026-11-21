@@ -3,9 +3,9 @@
   config = lib.mkMerge [
     { bcl.group.knownGroups = [ "test-server" ]; }
     (lib.mkIf (config.bcl.group.name == "test-server") {
-      bcl.role.name = "serverKube";
+      bcl.role.name = "kube";
       bcl.network.cidr = "192.168.1.0/24";
-      bcl.role.serverKube = {
+      bcl.role.kube = {
         clusterName = "test";
         firstNodeIp = "192.168.1.11";
         masterNodeCount = 2;

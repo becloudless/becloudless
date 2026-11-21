@@ -18,10 +18,10 @@ in
   };
 
   # The host asks for a restart of the VM by creating /run/vm-restart-required (see `restartOnChange` in bcl/vm.nix). The kube nodes hand it
-  # to kured (serverKubeRebootRequired.nix), the other guests have nothing to drain: they reboot in the window. The VM is stopped by the
+  # to kured (kubeRebootRequired.nix), the other guests have nothing to drain: they reboot in the window. The VM is stopped by the
   # reboot and started again by the host, with its new definition.
   config = lib.mkIf (
-    config.bcl.role.name != "" && config.bcl.role.name != "serverKube" && builtins.elem "qemu-guest" config.bcl.hardware.commons
+    config.bcl.role.name != "" && config.bcl.role.name != "kube" && builtins.elem "qemu-guest" config.bcl.hardware.commons
   ) {
     systemd.services.vm-restart-required = {
       description = "Reboot when the host asks for a restart of the VM, in the window";

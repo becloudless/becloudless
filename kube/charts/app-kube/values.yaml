@@ -27,7 +27,7 @@ resources:
             all: "*"
 
   clusterRoleBindings:
-    # the users of authelia (OIDC authentication of the apiserver, `bcl.role.serverKube.oidc` of the nixos module) of the group
+    # the users of authelia (OIDC authentication of the apiserver, `bcl.role.kube.oidc` of the nixos module) of the group
     # `role_admin` of lldap: the groups of the id token are prefixed by `oidc:`
     oidc-admin:
       roleRef:

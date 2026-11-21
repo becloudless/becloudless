@@ -1,8 +1,8 @@
 { inputs, config, lib, pkgs, ... }:
 let
-  cfg = config.bcl.role.serverKube;
+  cfg = config.bcl.role.kube;
   nodeIp = n: lib.bcl.net.ipAdd cfg.firstNodeIp (n - 1);
-  nodeName = n: "${config.bcl.role.serverKube.clusterName}${toString n}";
+  nodeName = n: "${config.bcl.role.kube.clusterName}${toString n}";
   nodeNumber = lib.strings.toInt(builtins.substring ((builtins.stringLength config.networking.hostName) -1)  (-1) config.networking.hostName);
   myIp = nodeIp nodeNumber;
   kubeadmStaticConfigPath = "/etc/kubernetes/kubeadm.yaml";
@@ -57,7 +57,7 @@ let
   };
 in
 {
-  options.bcl.role.serverKube = {
+  options.bcl.role.kube = {
     clusterName = lib.mkOption {type = lib.types.str;};
     firstNodeIp = lib.mkOption {
       type = lib.types.str;
@@ -105,8 +105,8 @@ in
   ####################
 
   config = lib.mkMerge [
-    { bcl.role.knownRoles = [ "serverKube" ]; }
-    (lib.mkIf (config.bcl.role.name == "serverKube") {
+    { bcl.role.knownRoles = [ "kube" ]; }
+    (lib.mkIf (config.bcl.role.name == "kube") {
 
     bcl.role.autoUpgrade.useHostNumber = lib.mkDefault true; # the nodes upgrade on different days
 
@@ -299,6 +299,10 @@ in
               listen-client-urls: https://${myIp}:2379
               advertise-client-urls: https://${myIp}:2379
               initial-advertise-peer-urls: https://${myIp}:2380
+              # The VM disks are consumer NVMe behind thin LVM (fsync 4-65 ms): the defaults (100 ms / 1000 ms) miss heartbeats and
+              # trigger elections. Must be the same on every member, the election timeout is 10 times the heartbeat.
+              heartbeat-interval: "250"
+              election-timeout: "2500"
         apiServer:
           extraArgs:
             advertise-address: ${myIp}

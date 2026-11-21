@@ -175,6 +175,34 @@ spec:
           lldap-generated:
             name: lldap-generated
             namespace: default
+      lldap-repair:
+        ciliumNetworkPolicies:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        configMaps:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        cronJobs:
+          lldap-repair:
+            labels:
+              app.kubernetes.io/component: lldap-repair
+              app.kubernetes.io/instance: lldap-repair
+            name: lldap-repair
+            namespace: default
+        roleBindings:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        roles:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        serviceAccounts:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
     resources:
       configMaps:
         lldap-config:
@@ -376,6 +404,34 @@ spec:
           lldap-generated:
             name: lldap-generated
             namespace: default
+      lldap-repair:
+        ciliumNetworkPolicies:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        configMaps:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        cronJobs:
+          lldap-repair:
+            labels:
+              app.kubernetes.io/component: lldap-repair
+              app.kubernetes.io/instance: lldap-repair
+            name: lldap-repair
+            namespace: default
+        roleBindings:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        roles:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        serviceAccounts:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
     resources:
       certManagerCertificates:
         lldap-gateway:
@@ -555,6 +611,34 @@ spec:
             namespace: default
           lldap-generated:
             name: lldap-generated
+            namespace: default
+      lldap-repair:
+        ciliumNetworkPolicies:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        configMaps:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        cronJobs:
+          lldap-repair:
+            labels:
+              app.kubernetes.io/component: lldap-repair
+              app.kubernetes.io/instance: lldap-repair
+            name: lldap-repair
+            namespace: default
+        roleBindings:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        roles:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        serviceAccounts:
+          lldap-repair:
+            name: lldap-repair
             namespace: default
     resources:
       configMaps:
@@ -802,6 +886,34 @@ spec:
           lldap-generated:
             name: lldap-generated
             namespace: default
+      lldap-repair:
+        ciliumNetworkPolicies:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        configMaps:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        cronJobs:
+          lldap-repair:
+            labels:
+              app.kubernetes.io/component: lldap-repair
+              app.kubernetes.io/instance: lldap-repair
+            name: lldap-repair
+            namespace: default
+        roleBindings:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        roles:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        serviceAccounts:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
     resources:
       certManagerCertificates:
         tls-lldaps:
@@ -847,3 +959,320 @@ spec:
               fieldName: LLDAP_LDAP_USER_DN
             user-pass:
               fieldName: LLDAP_LDAP_USER_PASS
+---
+# Source: app-lldap/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: lldap-repair
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: bcl
+  dependsOn:
+  - name: lldap
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      lldap:
+        configMaps:
+          lldap-config:
+            name: lldap-config
+            namespace: default
+        deployments:
+          lldap:
+            labels:
+              app.kubernetes.io/component: lldap
+              app.kubernetes.io/instance: lldap
+            name: lldap
+            namespace: default
+        services:
+          lldap:
+            name: lldap
+            namespace: default
+      lldap-integration:
+        certManagerCertificates:
+          lldap-gateway:
+            name: lldap-gateway
+            namespace: default
+            secretName: tls-lldap-gateway
+        httpRoutes:
+          lldap:
+            name: lldap
+            namespace: default
+        listenerSets:
+          lldap:
+            name: lldap
+            namespace: default
+        tlsRoutes:
+          lldap-ldaps:
+            name: lldap-ldaps
+            namespace: default
+      lldap-post:
+        configMaps:
+          lldap-bootstrap:
+            name: lldap-bootstrap
+            namespace: default
+        jobs:
+          lldap-bootstrap:
+            labels:
+              app.kubernetes.io/component: lldap-bootstrap
+              app.kubernetes.io/instance: lldap-post
+            name: ""
+            namespace: default
+      lldap-pre:
+        certManagerCertificates:
+          tls-lldaps:
+            name: tls-lldaps
+            namespace: default
+        roleBindings:
+          authelia-secrets-reader:
+            name: authelia-secrets-reader
+            namespace: default
+        roles:
+          authelia-secrets-reader:
+            name: authelia-secrets-reader
+            namespace: default
+        stringSecrets:
+          lldap:
+            name: lldap
+            namespace: default
+          lldap-authelia:
+            name: lldap-authelia
+            namespace: default
+          lldap-generated:
+            name: lldap-generated
+            namespace: default
+      lldap-repair:
+        ciliumNetworkPolicies:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        configMaps:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        cronJobs:
+          lldap-repair:
+            labels:
+              app.kubernetes.io/component: lldap-repair
+              app.kubernetes.io/instance: lldap-repair
+            name: lldap-repair
+            namespace: default
+        roleBindings:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        roles:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+        serviceAccounts:
+          lldap-repair:
+            name: lldap-repair
+            namespace: default
+    resources:
+      ciliumNetworkPolicies:
+        lldap-repair:
+          egress:
+            kube-apiserver:
+              toEntities:
+              - kube-apiserver
+          endpointSelector:
+            matchLabels:
+              app.kubernetes.io/component: lldap-repair
+      configMaps:
+        lldap-repair:
+          data:
+            lldap-repair.sh: |-
+              #!/usr/bin/env bash
+              # See the comment of `lldap-repair` in the values of the chart app-lldap.
+              set -uo pipefail
+
+              NAMESPACE=${NAMESPACE:-lldap}
+              DEPLOYMENT=${DEPLOYMENT:-lldap}
+              WINDOW=${WINDOW:-300}        # seconds of log of the first check
+              MIN_ERRORS=${MIN_ERRORS:-10} # lines with the error in the window: less is not a stuck pool (a failover of the database makes a few)
+              RECHECK=${RECHECK:-60}       # seconds between the two checks: the errors have to go on
+              MIN_AGE=${MIN_AGE:-600}      # seconds: a pod younger than that is not restarted, the database may just be down
+              DRY_RUN=${DRY_RUN:-false}
+              POOL_ERROR='Connection pool timed out'
+
+              log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
+
+              # The number of lines of the log of lldap of the last `$1` seconds with the error of the pool.
+              pool_errors() {
+                local out
+                out=$(kubectl -n "$NAMESPACE" logs "deploy/$DEPLOYMENT" --since="${1}s" --tail=-1 2>&1) || return 1
+                grep -c "$POOL_ERROR" <<<"$out" || true
+              }
+
+              # The age in seconds of the youngest running container of lldap, empty when none is running.
+              youngest_age() {
+                local selector
+                selector=$(kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o json \
+                  | jq -r '.spec.selector.matchLabels | to_entries | map("\(.key)=\(.value)") | join(",")') || return 1
+                kubectl -n "$NAMESPACE" get pods -l "$selector" -o json \
+                  | jq -r '[.items[] | select(.metadata.deletionTimestamp == null) | .status.containerStatuses[]?
+                      | .state.running.startedAt // empty | (now - fromdateiso8601)] | min // empty | floor'
+              }
+
+              age=$(youngest_age) || { log "cannot read the pods of $DEPLOYMENT"; exit 1; }
+              if [ -z "$age" ]; then
+                log "no running pod of $DEPLOYMENT"
+                exit 0
+              fi
+              if [ "$age" -lt "$MIN_AGE" ]; then
+                log "$DEPLOYMENT runs for ${age}s only, less than ${MIN_AGE}s: not checked"
+                exit 0
+              fi
+
+              errors=$(pool_errors "$WINDOW") || { log "cannot read the log of $DEPLOYMENT"; exit 1; }
+              if [ "$errors" -lt "$MIN_ERRORS" ]; then
+                log "$errors lines with the error of the pool in the last ${WINDOW}s, less than $MIN_ERRORS: ok"
+                exit 0
+              fi
+              log "$errors lines with the error of the pool in the last ${WINDOW}s, checking again in ${RECHECK}s"
+
+              sleep "$RECHECK"
+              errors=$(pool_errors "$RECHECK") || { log "cannot read the log of $DEPLOYMENT"; exit 1; }
+              if [ "$errors" -eq 0 ]; then
+                log "no error of the pool in the last ${RECHECK}s: recovered"
+                exit 0
+              fi
+
+              ctx="deployment $DEPLOYMENT"
+              if [ "$DRY_RUN" = true ]; then
+                log "$ctx: $errors lines with the error of the pool in the last ${RECHECK}s, DRY RUN, would restart it"
+                exit 0
+              fi
+              log "$ctx: $errors lines with the error of the pool in the last ${RECHECK}s, the pool is stuck, restarting it"
+              if ! kubectl -n "$NAMESPACE" rollout restart "deploy/$DEPLOYMENT"; then
+                log "$ctx: cannot restart it"
+                exit 1
+              fi
+              kubectl create -f - <<EOF || true
+              apiVersion: v1
+              kind: Event
+              metadata:
+                generateName: lldap-repair-
+                namespace: $NAMESPACE
+              type: Warning
+              reason: LldapRestarted
+              message: "lldap was restarted: its pool of connections to the database was stuck ($errors lines with the error in the log of the last ${RECHECK}s), the connections are dead since the database was restarted"
+              involvedObject: {apiVersion: apps/v1, kind: Deployment, name: $DEPLOYMENT, namespace: $NAMESPACE}
+              source: {component: lldap-repair}
+              EOF
+      cronJobs:
+        lldap-repair:
+          concurrencyPolicy: Forbid
+          jobTemplate:
+            spec:
+              activeDeadlineSeconds: 240
+              backoffLimit: 0
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/component: lldap-repair
+                spec:
+                  containers:
+                    repair:
+                      command:
+                      - bash
+                      - /scripts/lldap-repair.sh
+                      env:
+                        HOME: /tmp
+                        NAMESPACE: default
+                      image: docker.io/alpine/k8s:1.36.5
+                      name: repair
+                      securityContext:
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        script:
+                          mountPath: /scripts
+                          name: script
+                          readOnly: true
+                  restartPolicy: Never
+                  securityContext:
+                    runAsGroup: 65534
+                    runAsUser: 65534
+                  serviceAccountName: lldap-repair
+                  volumes:
+                    script:
+                      configMap:
+                        name: lldap-repair
+                      name: script
+          schedule: '*/5 * * * *'
+      roleBindings:
+        lldap-repair:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: lldap-repair
+          subjects:
+            lldap-repair:
+              kind: ServiceAccount
+              name: lldap-repair
+              namespace: default
+      roles:
+        lldap-repair:
+          rules:
+            deployments:
+              apiGroups:
+              - apps
+              resources:
+              - deployments
+              verbs:
+              - get
+              - patch
+            events:
+              apiGroups:
+              - ""
+              resources:
+              - events
+              verbs:
+              - create
+            logs:
+              apiGroups:
+              - ""
+              resources:
+              - pods/log
+              verbs:
+              - get
+            pods:
+              apiGroups:
+              - ""
+              resources:
+              - pods
+              verbs:
+              - get
+              - list
+      serviceAccounts:
+        lldap-repair:
+          automountServiceAccountToken: true

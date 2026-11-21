@@ -23,7 +23,7 @@ Use `aarch64-linux` for ARM machines (e.g., OrangePi).
   imports = [
     # Role — choose one
     ../../../modules/nixos/role/workstation.nix
-    # ../../../modules/nixos/role/serverKube.nix
+    # ../../../modules/nixos/role/kube.nix
 
     # Hardware — choose if applicable
     # ../../../modules/nixos/hardware/devices/orangepi5plus.nix

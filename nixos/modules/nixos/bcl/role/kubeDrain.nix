@@ -1,11 +1,11 @@
 { config, lib, pkgs, ... }:
 let
-  cfg = config.bcl.role.serverKube;
+  cfg = config.bcl.role.kube;
 
   # Set on the node by `kube-drain` when it cordons it, so the node is uncordoned at the next boot (and only then: a node cordoned by hand stays so).
   uncordonAnnotation = "bcl.tf/uncordon-on-boot";
 
-  # Masters have the cluster admin kubeconfig. Workers hold the cluster CA (see serverKubeWorker.nix), so they sign a short-lived admin client
+  # Masters have the cluster admin kubeconfig. Workers hold the cluster CA (see kubeWorker.nix), so they sign a short-lived admin client
   # certificate: their own node identity is not allowed to evict pods nor to cordon.
   kubeLib = ''
     setup_kubeconfig() {
@@ -73,7 +73,7 @@ let
   after = [ "network-online.target" "crio.service" "kubelet.service" ] ++ lib.optional cfg.worker "haproxy-apiserver.service";
 in
 {
-  options.bcl.role.serverKube.shutdownDrainTimeout = lib.mkOption {
+  options.bcl.role.kube.shutdownDrainTimeout = lib.mkOption {
     type = lib.types.ints.positive;
     default = 300;
     description = ''
@@ -82,7 +82,7 @@ in
     '';
   };
 
-  config = lib.mkIf (config.bcl.role.name == "serverKube") {
+  config = lib.mkIf (config.bcl.role.name == "kube") {
     users.users.root.packages = [ kubeDrain ];
 
     # Drain the node, respecting the PodDisruptionBudgets, whatever triggers the reboot/poweroff through logind (`systemctl reboot`, power

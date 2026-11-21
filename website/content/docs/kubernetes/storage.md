@@ -23,7 +23,7 @@ Longhorn provides distributed block storage backed by node-local disks. It handl
 The `longhorn` app installs the operator. `longhorn-config` defines the default `StorageClass` and backup targets.
 
 **Prerequisites on NixOS nodes:**
-Nodes running the `serverKube` role include the required kernel modules and open-iscsi service.
+Nodes running the `kube` role include the required kernel modules and open-iscsi service.
 
 ### Backup Target
 

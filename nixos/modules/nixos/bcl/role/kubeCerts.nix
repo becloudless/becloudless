@@ -1,6 +1,6 @@
 { config, lib, pkgs, ... }:
 {
-  config = lib.mkIf (config.bcl.role.name == "serverKube" && !config.bcl.role.serverKube.worker) {
+  config = lib.mkIf (config.bcl.role.name == "kube" && !config.bcl.role.kube.worker) {
 
     sops.secrets."ca_crt" = {
       sopsFile = config.bcl.role.secretFile;

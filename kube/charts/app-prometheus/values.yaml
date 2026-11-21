@@ -381,6 +381,7 @@ resources:
             externalUrl: https://prometheus.{{ .Values.app.domain }}/
             scrapeInterval: 30s
             evaluationInterval: 30s
+            # In GB: the size of the volume is computed from it (see `storageSpec`), a full volume stops the ingestion
             retentionSize: "20GB"
             ruleSelectorNilUsesHelmValues: false
             serviceMonitorSelectorNilUsesHelmValues: false # scrape all namespaces. Single prom install
@@ -401,7 +402,8 @@ resources:
                     - ReadWriteOnce
                   resources:
                     requests:
-                      storage: 10Gi
+                      # 1.5 times the retention (in GB, rounded up): the WAL and the head block are not counted by the retention
+                      storage: '{{ $r := .Values.resources.fluxHelmReleases.prometheus.values.prometheus.prometheusSpec.retentionSize | trimSuffix "GB" | int }}{{ div (add (mul $r 3) 1) 2 }}Gi'
         nodeExporter:
           enabled: false
         prometheusOperator:

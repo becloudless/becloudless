@@ -30,7 +30,7 @@ in
 {
   # The reboot sentinel of the node: its presence asks the node to be drained and rebooted. Not tied to the reader, which today is kured (see
   # kube/charts/app-kured). It lives in a directory of its own, as kured mounts the directory of the sentinel from the host in its pod.
-  config = lib.mkIf (config.bcl.role.name == "serverKube") {
+  config = lib.mkIf (config.bcl.role.name == "kube") {
     systemd.tmpfiles.rules = [ "d ${sentinelDirectory} 0755 root root -" ];
 
     systemd.services."kube-update-reboot-required-sentinel" = {

@@ -30,14 +30,14 @@ nix develop
 ## Step 1 – Configure a NixOS Machine
 
 1. Add your machine under `nixos/systems/x86_64-linux/<hostname>/`.
-2. Assign a role (e.g., `workstation`, `serverKube`) in the system configuration.
+2. Assign a role (e.g., `workstation`, `kube`) in the system configuration.
 3. Apply optional hardware and parts modules.
 
 See [NixOS — Adding a System]({{< relref "docs/nixos/adding-a-system" >}}) for a detailed walkthrough.
 
 ## Step 2 – Bootstrap a Kubernetes Cluster
 
-1. Provision one or more nodes running the `serverKube` NixOS role.
+1. Provision one or more nodes running the `kube` NixOS role.
 2. Use the `bcl` CLI to bootstrap Flux onto the cluster.
 3. Flux will reconcile all apps defined under `kube/`.
 

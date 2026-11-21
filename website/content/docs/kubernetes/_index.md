@@ -15,7 +15,7 @@ kube/
 │   ├── global/    # Applied to every node in the cluster
 │   ├── minimal/   # Minimal base for edge/resource-constrained nodes
 │   ├── pop/       # Pop nodes (popKube role)
-│   └── server/    # Full server nodes (serverKube role)
+│   └── server/    # Full server nodes (kube role)
 └── apps/          # Individual application manifests (one directory per app)
 ```
 

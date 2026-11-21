@@ -1,10 +1,10 @@
 { config, lib, pkgs, ... }:
 let
-  cfg = config.bcl.role.serverKube;
-  endpoint = "kube.${config.bcl.global.domain}:8443"; # the local haproxy, see serverKubeHap.nix
+  cfg = config.bcl.role.kube;
+  endpoint = "kube.${config.bcl.global.domain}:8443"; # the local haproxy, see kubeHap.nix
 in
 {
-  config = lib.mkIf (config.bcl.role.name == "serverKube" && cfg.worker) {
+  config = lib.mkIf (config.bcl.role.name == "kube" && cfg.worker) {
 
     # Only the cluster CA is needed: the kubelet client certificate is signed locally (same token-free join as the
     # container kubelet nodes), there is no bootstrap token to distribute.

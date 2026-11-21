@@ -323,8 +323,6 @@ spec:
           template:
             metadata:
               annotations:
-                policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
-                policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
                 policy.bcl.tf/skipPodSetHostUsers: "true"
             spec:
               affinity:
@@ -358,9 +356,11 @@ spec:
                     capabilities:
                       drop:
                         all: ALL
+              nodeSelector:
+                kubernetes.io/arch: amd64
               securityContext:
-                runAsNonRoot: false
-                runAsUser: 0
+                runAsGroup: 1000
+                runAsUser: 1000
               tolerations:
               - effect: NoSchedule
                 key: bcl.tf/no-persistent-storage
@@ -424,7 +424,7 @@ spec:
                     JELLYFIN_CACHE_DIR: /tmp/jellyfin
                     JELLYFIN_PublishedServerUrl: https://jellyfin.test.com
                     TZ: Europe/Paris
-                  image: ghcr.io/becloudless/jellyfin:latest
+                  image: ghcr.io/becloudless/jellyfin:1.261111.1207
                   name: jellyfin
                   ports:
                     http:
@@ -456,7 +456,7 @@ spec:
                 sso-plugin:
                   command:
                   - jellyfin-init
-                  image: ghcr.io/becloudless/jellyfin:latest
+                  image: ghcr.io/becloudless/jellyfin:1.261111.1207
                   name: sso-plugin
                   securityContext:
                     capabilities:

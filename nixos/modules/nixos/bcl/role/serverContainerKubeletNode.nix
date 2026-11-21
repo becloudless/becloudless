@@ -184,6 +184,9 @@ let
               listen-client-urls: https://${cp.address}:2379
               advertise-client-urls: https://${cp.address}:2379
               initial-advertise-peer-urls: https://${cp.address}:2380
+              # Same as kube.nix: must be the same on every member of the etcd cluster.
+              heartbeat-interval: "250"
+              election-timeout: "2500"
         apiServer:
           extraArgs:
             advertise-address: ${cp.address}
