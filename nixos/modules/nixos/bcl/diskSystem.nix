@@ -78,8 +78,20 @@ in {
               partNum=$(cat "/sys/class/block/$partName/partition")
               parentName=$(basename "$(readlink -f "/sys/class/block/$partName/..")")
               parentDev="/dev/$parentName"
-              echo ", +" | sfdisk --no-reread -N "$partNum" "$parentDev" || true
-              partx -u "$parentDev" || true
+
+              # End the partition on a 1MiB boundary instead of the last usable sector ("+"): an odd end makes the
+              # LUKS device size not a multiple of its 4096 bytes sector, the kernel table is only reloaded at the next
+              # boot where cryptsetup then refuses to activate it ("Device size is not multiple of sector_size")
+              alignmentSectors=2048
+              diskSectors=$(cat "/sys/class/block/$parentName/size")
+              partStart=$(cat "/sys/class/block/$partName/start")
+              partSectors=$(cat "/sys/class/block/$partName/size")
+              alignedEnd=$(( (diskSectors - 33) / alignmentSectors * alignmentSectors ))
+              newPartSectors=$(( alignedEnd - partStart ))
+              if [ "$newPartSectors" -gt "$partSectors" ]; then
+                echo ", $newPartSectors" | sfdisk --no-reread -N "$partNum" "$parentDev" || true
+                partx -u "$parentDev" || true
+              fi
             fi
           '';
           growLuks = target: lib.optionalString cfg.encrypted ''
