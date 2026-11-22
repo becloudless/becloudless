@@ -52,10 +52,10 @@ apps:
   backup-restore:
     values:
       target:
-        url: sftp://awired@backup-hot1.example.com/backup
+        url: sftp://backup@sftp.example.com/backup
         hostKeys: # all the types of the server
-          - backup-hot1.example.com ssh-ed25519 AAAA...
-          - backup-hot1.example.com ssh-rsa AAAA...
+          - sftp.example.com ssh-ed25519 AAAA...
+          - sftp.example.com ssh-rsa AAAA...
 ```
 
 A server behind a TLS SSH gateway (SSH inside TLS, the SNI is the name of the server, like `ProxyCommand ncat --ssl --ssl-servername %h %h 422`)
