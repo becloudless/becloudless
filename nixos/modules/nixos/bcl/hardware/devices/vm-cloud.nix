@@ -7,6 +7,10 @@
 
       hardware.enableRedistributableFirmware = false; # VM do not need firmware
 
+      # the virtio drivers (net, pci, blk, scsi) of the initrd: without them the initrd has neither the network (SSH to
+      # unlock the disk) nor the disk
+      bcl.hardware.commons = [ "qemu-guest" ];
+
       bcl.boot.loader = "bios";
 
       boot.initrd.availableKernelModules = [ "ata_piix" "uhci_hcd" ];
