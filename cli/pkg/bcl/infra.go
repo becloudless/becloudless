@@ -48,6 +48,10 @@ func FindInfraFromPath(path string) (*Infra, error) {
 	return &Infra{Git: repo, rootPath: infraPath}, nil
 }
 
+func (r *Infra) GetRootDir() string {
+	return r.rootPath
+}
+
 func (r *Infra) GetNixosDir() string {
 	nixosPath := path.Join(r.rootPath, "nixos")
 	if nixosPath[0] != '/' && !strings.HasPrefix(nixosPath, "./") {

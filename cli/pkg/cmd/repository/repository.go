@@ -12,6 +12,7 @@ func RepositoryCmd() *cobra.Command {
 	}
 	cmd.AddCommand(
 		repositoryInitCmd(),
+		repositoryAddCmd(),
 	)
 	return cmd
 }
