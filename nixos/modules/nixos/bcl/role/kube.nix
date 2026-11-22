@@ -73,7 +73,8 @@ in
     pop = {
       enable = lib.mkEnableOption ''
         a node reachable from the internet (a VPS of a provider) instead of one of a private network: the address comes from
-        the DHCP of the provider (and its IPv6 router advertisements) on the bridge, not from `bcl.network.cidr`, so
+        the DHCP of the provider (and its IPv6 router advertisements) on the interface, without bridge unless
+        `bcl.network.bridge` is set (the provider only knows the MAC of the NIC), not from `bcl.network.cidr`, so
         `firstNodeIp` has to be set (the public address of the node), the firewall is enabled: etcd, the apiserver and the
         kubelet are closed, and so are the NodePorts (the traffic of the pods, cilium and veth, is trusted), the disk is
         encrypted, and the cluster is named `pop` unless `clusterName` is set
@@ -127,7 +128,7 @@ in
     bcl.role.setAdminPassword = true; # being able to log in to console
     security.sudo.wheelNeedsPassword = false;
 
-    bcl.network.bridge = true; # we need a bridge for kube
+    bcl.network.bridge = lib.mkDefault (!cfg.pop.enable); # we need a bridge for kube, except on the internet (the provider only knows the MAC of the NIC)
 
     environment.systemPackages = with pkgs; [
       kubernetes
@@ -154,25 +155,41 @@ in
       trustedInterfaces = [ "cilium_host" "cilium_net" "lxc+" ];
     };
 
-    # the bridge `br0` (see `bcl.network.bridge`) carries the interface: the DHCP client runs on it
-    systemd.network.networks.br0.networkConfig = lib.mkIf cfg.pop.enable {
-      DHCP = "yes";
-      IPv6AcceptRA = true;
-    };
+    # the DHCP client runs on the bridge `br0` when there is one (see `bcl.network.bridge`), on the interface otherwise
+    systemd.network.enable = lib.mkIf cfg.pop.enable true;
+    systemd.network.networks = lib.mkMerge [
+      {
+        kube = {
+          matchConfig = {
+            Name = "kube* veth* cilium* lxc*";
+          };
+          linkConfig = {
+            Unmanaged = true;
+          };
+        };
+      }
+      (lib.mkIf cfg.pop.enable (if config.bcl.network.bridge then {
+        br0.networkConfig = {
+          DHCP = "yes";
+          IPv6AcceptRA = true;
+        };
+      } else {
+        net = {
+          matchConfig.Name = config.bcl.network.interface;
+          networkConfig = {
+            DHCP = "yes";
+            IPv6AcceptRA = true;
+            IgnoreCarrierLoss = true;
+          };
+          linkConfig.RequiredForOnline = "routable";
+        };
+      }))
+    ];
 
     # a node on the internet has its disk encrypted (unlocked through the SSH of the initrd, `bcl.boot.ssh`)
     bcl.diskSystem.encrypted = lib.mkIf cfg.pop.enable (lib.mkDefault true);
 
     bcl.role.kube.clusterName = lib.mkIf cfg.pop.enable (lib.mkDefault "pop");
-
-    systemd.network.networks.kube = {
-      matchConfig = {
-        Name = "kube* veth* cilium* lxc*";
-      };
-      linkConfig = {
-        Unmanaged = true;
-      };
-    };
 
     services.openiscsi.enable = true;
     services.openiscsi.name = "iqn.2016-04.com.open-iscsi:543a6fbe2d4c"; # dummy name taken from archlinux
