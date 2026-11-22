@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"github.com/becloudless/becloudless/pkg/cmd/repository/nixos"
 	"github.com/spf13/cobra"
 )
 
@@ -12,7 +13,7 @@ func RepositoryCmd() *cobra.Command {
 	}
 	cmd.AddCommand(
 		repositoryInitCmd(),
-		repositoryAddCmd(),
+		nixos.NixosCmd(),
 	)
 	return cmd
 }

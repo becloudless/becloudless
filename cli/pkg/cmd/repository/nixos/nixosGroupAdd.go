@@ -1,21 +1,21 @@
-package repository
+package nixos
 
 import (
 	"path"
 
 	"github.com/becloudless/becloudless/pkg/bcl"
-	"github.com/becloudless/becloudless/pkg/repository"
+	repositorynixos "github.com/becloudless/becloudless/pkg/repository/nixos"
 	"github.com/becloudless/becloudless/pkg/security"
 	"github.com/becloudless/becloudless/pkg/system/runner"
 	"github.com/n0rad/go-erlog/logs"
 	"github.com/spf13/cobra"
 )
 
-func repositoryAddNixosGroupCmd() *cobra.Command {
-	options := repository.AddNixosGroupOptions{}
+func nixosGroupAddCmd() *cobra.Command {
+	options := repositorynixos.AddGroupOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "group <name>",
+		Use:   "add <name>",
 		Short: "Add a nixos group to the infrastructure repository",
 		Long: "Creates nixos/modules/nixos/groups/<name> in the infrastructure repository of the current directory: " +
 			"the group module, and its secret file holding new ssh host keys, encrypted with sops for you and for the group. " +
@@ -41,7 +41,7 @@ func repositoryAddNixosGroupCmd() *cobra.Command {
 				return sopsRunner.ExecCmd("sops", "--config", sopsConfigFile, "--in-place", "--encrypt", secretFile)
 			}
 
-			groupDirectory, err := repository.AddNixosGroup(options)
+			groupDirectory, err := repositorynixos.AddGroup(options)
 			if err != nil {
 				return err
 			}

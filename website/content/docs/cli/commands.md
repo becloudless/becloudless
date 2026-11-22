@@ -20,8 +20,8 @@ Handle the infrastructure repository.
 | Command | Description |
 |---|---|
 | `bcl repository init [directory]` | Initialize an infrastructure repository in the directory (current by default): git, `nixos/flake.nix`, `.sops.yaml` with your age key, `kube/clusters/.env`, `.gitignore`. Existing files are never overwritten |
-| `bcl repository add nixos system <name> --group <group>` | Create `nixos/systems/<architecture>/<name>/default.nix` in the repository of the current directory. Flags: `--architecture` (default `x86_64-linux`), `--hardware`, `--device` (repeatable), `--motherboard-uuid`, `--mac` (repeatable). An existing system is never overwritten; `git add` the file, flakes ignore untracked files |
-| `bcl repository add nixos group <name>` | Create `nixos/modules/nixos/groups/<name>/` in the repository of the current directory: the group module (`--role` sets the role of the group), a `.sops.yaml` and a `default.secrets.yaml` holding new ssh host keys, encrypted with sops for you and for the group. An existing group is never overwritten; `git add` the files, flakes ignore untracked files |
+| `bcl repository nixos system add <name> --group <group>` | Create `nixos/systems/<architecture>/<name>/default.nix` in the repository of the current directory. Flags: `--architecture` (default `x86_64-linux`), `--hardware`, `--device` (repeatable), `--motherboard-uuid`, `--mac` (repeatable). An existing system is never overwritten; `git add` the file, flakes ignore untracked files |
+| `bcl repository nixos group add <name>` | Create `nixos/modules/nixos/groups/<name>/` in the repository of the current directory: the group module (`--role` sets the role of the group), a `.sops.yaml` and a `default.secrets.yaml` holding new ssh host keys, encrypted with sops for you and for the group. An existing group is never overwritten; `git add` the files, flakes ignore untracked files |
 
 ---
 

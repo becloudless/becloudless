@@ -1,17 +1,17 @@
-package repository
+package nixos
 
 import (
 	"github.com/becloudless/becloudless/pkg/bcl"
-	"github.com/becloudless/becloudless/pkg/repository"
+	repositorynixos "github.com/becloudless/becloudless/pkg/repository/nixos"
 	"github.com/n0rad/go-erlog/logs"
 	"github.com/spf13/cobra"
 )
 
-func repositoryAddNixosSystemCmd() *cobra.Command {
-	options := repository.AddNixosSystemOptions{}
+func nixosSystemAddCmd() *cobra.Command {
+	options := repositorynixos.AddSystemOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "system <name>",
+		Use:   "add <name>",
 		Short: "Add a nixos system to the infrastructure repository",
 		Long:  "Creates nixos/systems/<architecture>/<name>/default.nix in the infrastructure repository of the current directory. An existing system is never overwritten.",
 		Args:  cobra.ExactArgs(1),
@@ -23,7 +23,7 @@ func repositoryAddNixosSystemCmd() *cobra.Command {
 
 			options.Name = args[0]
 			options.InfraDirectory = infra.GetRootDir()
-			systemFile, err := repository.AddNixosSystem(options)
+			systemFile, err := repositorynixos.AddSystem(options)
 			if err != nil {
 				return err
 			}
@@ -34,7 +34,7 @@ func repositoryAddNixosSystemCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&options.Architecture, "architecture", repository.DefaultNixosSystemArchitecture, "System architecture")
+	cmd.Flags().StringVar(&options.Architecture, "architecture", repositorynixos.DefaultSystemArchitecture, "System architecture")
 	cmd.Flags().StringVar(&options.Group, "group", "", "System group")
 	cmd.Flags().StringVar(&options.Hardware, "hardware", "", "Hardware module of the system")
 	cmd.Flags().StringSliceVar(&options.Devices, "device", nil, "System disk device, can be repeated")

@@ -1,4 +1,4 @@
-package repository
+package nixos
 
 import (
 	"errors"
@@ -14,11 +14,11 @@ func noopEncrypt(sopsConfigFile string, secretFile string) error {
 	return nil
 }
 
-func TestAddNixosGroup_CreatesGroupFiles(t *testing.T) {
+func TestAddGroup_CreatesGroupFiles(t *testing.T) {
 	infraDirectory := t.TempDir()
 	var encryptedConfigFile, encryptedSecretFile string
 
-	groupDirectory, err := AddNixosGroup(AddNixosGroupOptions{
+	groupDirectory, err := AddGroup(AddGroupOptions{
 		InfraDirectory:    infraDirectory,
 		Name:              "servers",
 		Role:              "server",
@@ -61,8 +61,8 @@ func TestAddNixosGroup_CreatesGroupFiles(t *testing.T) {
 `, string(nixFile))
 }
 
-func TestAddNixosGroup_WithoutRoleOmitsRoleName(t *testing.T) {
-	groupDirectory, err := AddNixosGroup(AddNixosGroupOptions{
+func TestAddGroup_WithoutRoleOmitsRoleName(t *testing.T) {
+	groupDirectory, err := AddGroup(AddGroupOptions{
 		InfraDirectory:    t.TempDir(),
 		Name:              "servers",
 		AdminAgePublicKey: "age1admin",
@@ -75,19 +75,19 @@ func TestAddNixosGroup_WithoutRoleOmitsRoleName(t *testing.T) {
 	assert.NotContains(t, string(nixFile), "bcl.role.name")
 }
 
-func TestAddNixosGroup_RefusesExistingGroup(t *testing.T) {
-	options := AddNixosGroupOptions{
+func TestAddGroup_RefusesExistingGroup(t *testing.T) {
+	options := AddGroupOptions{
 		InfraDirectory:    t.TempDir(),
 		Name:              "servers",
 		AdminAgePublicKey: "age1admin",
 		EncryptSecretFile: noopEncrypt,
 	}
-	groupDirectory, err := AddNixosGroup(options)
+	groupDirectory, err := AddGroup(options)
 	require.NoError(t, err)
 	nixFilePath := filepath.Join(groupDirectory, "default.nix")
 	require.NoError(t, os.WriteFile(nixFilePath, []byte("mine"), 0644))
 
-	_, err = AddNixosGroup(options)
+	_, err = AddGroup(options)
 
 	assert.Error(t, err)
 	nixFile, err := os.ReadFile(nixFilePath)
@@ -95,10 +95,10 @@ func TestAddNixosGroup_RefusesExistingGroup(t *testing.T) {
 	assert.Equal(t, "mine", string(nixFile))
 }
 
-func TestAddNixosGroup_RemovesGroupDirectoryWhenEncryptionFails(t *testing.T) {
+func TestAddGroup_RemovesGroupDirectoryWhenEncryptionFails(t *testing.T) {
 	infraDirectory := t.TempDir()
 
-	groupDirectory, err := AddNixosGroup(AddNixosGroupOptions{
+	groupDirectory, err := AddGroup(AddGroupOptions{
 		InfraDirectory:    infraDirectory,
 		Name:              "servers",
 		AdminAgePublicKey: "age1admin",
@@ -110,10 +110,10 @@ func TestAddNixosGroup_RemovesGroupDirectoryWhenEncryptionFails(t *testing.T) {
 	assert.NoDirExists(t, filepath.Join(infraDirectory, "nixos", "modules", "nixos", "groups", "servers"))
 }
 
-func TestAddNixosGroup_RejectsInvalidInput(t *testing.T) {
-	_, err := AddNixosGroup(AddNixosGroupOptions{InfraDirectory: t.TempDir(), Name: "Bad_Name", AdminAgePublicKey: "age1admin", EncryptSecretFile: noopEncrypt})
+func TestAddGroup_RejectsInvalidInput(t *testing.T) {
+	_, err := AddGroup(AddGroupOptions{InfraDirectory: t.TempDir(), Name: "Bad_Name", AdminAgePublicKey: "age1admin", EncryptSecretFile: noopEncrypt})
 	assert.Error(t, err)
 
-	_, err = AddNixosGroup(AddNixosGroupOptions{InfraDirectory: t.TempDir(), Name: "servers", EncryptSecretFile: noopEncrypt})
+	_, err = AddGroup(AddGroupOptions{InfraDirectory: t.TempDir(), Name: "servers", EncryptSecretFile: noopEncrypt})
 	assert.Error(t, err)
 }

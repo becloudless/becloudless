@@ -1,11 +1,11 @@
-package repository
+package nixos
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/becloudless/becloudless/pkg/nixos"
+	bclnixos "github.com/becloudless/becloudless/pkg/nixos"
 	"github.com/becloudless/becloudless/pkg/security"
 	"github.com/becloudless/becloudless/pkg/utils"
 	"github.com/n0rad/go-erlog/data"
@@ -14,7 +14,7 @@ import (
 
 const groupSecretFileName = "default.secrets.yaml"
 
-type AddNixosGroupOptions struct {
+type AddGroupOptions struct {
 	InfraDirectory    string
 	Name              string
 	Role              string
@@ -23,11 +23,11 @@ type AddNixosGroupOptions struct {
 	EncryptSecretFile func(sopsConfigFile string, secretFile string) error
 }
 
-// AddNixosGroup returns the created group directory, it never overwrites an existing group.
+// AddGroup returns the created group directory, it never overwrites an existing group.
 // The group secret file holds the ssh host keys of the machines of the group, encrypted for the
 // admin and for the age key derived from the group host key.
-func AddNixosGroup(options AddNixosGroupOptions) (createdGroupDirectory string, resultError error) {
-	if !nixosNamePattern.MatchString(options.Name) {
+func AddGroup(options AddGroupOptions) (createdGroupDirectory string, resultError error) {
+	if !namePattern.MatchString(options.Name) {
 		return "", errs.WithF(data.WithField("name", options.Name), "Group name must be lowercase letters, digits and dashes")
 	}
 	if options.AdminAgePublicKey == "" {
@@ -73,7 +73,7 @@ func AddNixosGroup(options AddNixosGroupOptions) (createdGroupDirectory string, 
 	}
 
 	secretFile := filepath.Join(groupDirectory, groupSecretFileName)
-	secrets := nixos.GroupSecretFile{
+	secrets := bclnixos.GroupSecretFile{
 		SshHostEd25519Key:       string(hostPrivateKey),
 		InitrdSshHostEd25519Key: string(initrdPrivateKey),
 	}
@@ -85,13 +85,13 @@ func AddNixosGroup(options AddNixosGroupOptions) (createdGroupDirectory string, 
 	}
 
 	nixFile := filepath.Join(groupDirectory, "default.nix")
-	if err := os.WriteFile(nixFile, []byte(renderNixosGroup(options.Name, options.Role)), 0644); err != nil {
+	if err := os.WriteFile(nixFile, []byte(renderGroup(options.Name, options.Role)), 0644); err != nil {
 		return "", errs.WithEF(err, groupField, "Failed to write group file")
 	}
 	return groupDirectory, nil
 }
 
-func renderNixosGroup(name string, role string) string {
+func renderGroup(name string, role string) string {
 	roleLine := ""
 	if role != "" {
 		roleLine = fmt.Sprintf("      bcl.role.name = %s;\n", nixString(role))

@@ -1,21 +1,18 @@
-package repository
+package nixos
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/n0rad/go-erlog/data"
 	"github.com/n0rad/go-erlog/errs"
 )
 
-const DefaultNixosSystemArchitecture = "x86_64-linux"
+const DefaultSystemArchitecture = "x86_64-linux"
 
-var nixosNamePattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
-
-type AddNixosSystemOptions struct {
+type AddSystemOptions struct {
 	InfraDirectory  string
 	Name            string
 	Architecture    string
@@ -26,9 +23,9 @@ type AddNixosSystemOptions struct {
 	NetworkMacs     []string
 }
 
-// AddNixosSystem returns the path of the created default.nix, it never overwrites an existing system
-func AddNixosSystem(options AddNixosSystemOptions) (string, error) {
-	if !nixosNamePattern.MatchString(options.Name) {
+// AddSystem returns the path of the created default.nix, it never overwrites an existing system
+func AddSystem(options AddSystemOptions) (string, error) {
+	if !namePattern.MatchString(options.Name) {
 		return "", errs.WithF(data.WithField("name", options.Name), "System name must be lowercase letters, digits and dashes")
 	}
 	if options.Group == "" {
@@ -37,7 +34,7 @@ func AddNixosSystem(options AddNixosSystemOptions) (string, error) {
 
 	architecture := options.Architecture
 	if architecture == "" {
-		architecture = DefaultNixosSystemArchitecture
+		architecture = DefaultSystemArchitecture
 	}
 
 	systemDirectory := filepath.Join(options.InfraDirectory, "nixos", "systems", architecture, options.Name)
@@ -53,13 +50,13 @@ func AddNixosSystem(options AddNixosSystemOptions) (string, error) {
 	if err := os.MkdirAll(systemDirectory, 0755); err != nil {
 		return "", errs.WithEF(err, systemField, "Failed to create system directory")
 	}
-	if err := os.WriteFile(systemFile, []byte(renderNixosSystem(options)), 0644); err != nil {
+	if err := os.WriteFile(systemFile, []byte(renderSystem(options)), 0644); err != nil {
 		return "", errs.WithEF(err, systemField, "Failed to write system file")
 	}
 	return systemFile, nil
 }
 
-func renderNixosSystem(options AddNixosSystemOptions) string {
+func renderSystem(options AddSystemOptions) string {
 	var content strings.Builder
 	content.WriteString("{\n  bcl.system = {\n")
 	if options.Hardware != "" {
@@ -77,17 +74,4 @@ func renderNixosSystem(options AddNixosSystemOptions) string {
 	}
 	content.WriteString("  };\n}\n")
 	return content.String()
-}
-
-func nixString(value string) string {
-	escaped := strings.NewReplacer(`\`, `\\`, `"`, `\"`, "${", `\${`).Replace(value)
-	return `"` + escaped + `"`
-}
-
-func nixStringList(values []string) string {
-	quotedValues := make([]string, len(values))
-	for i, value := range values {
-		quotedValues[i] = nixString(value)
-	}
-	return "[ " + strings.Join(quotedValues, " ") + " ]"
 }

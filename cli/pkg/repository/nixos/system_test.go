@@ -1,4 +1,4 @@
-package repository
+package nixos
 
 import (
 	"os"
@@ -9,10 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAddNixosSystem_WritesSystemFile(t *testing.T) {
+func TestAddSystem_WritesSystemFile(t *testing.T) {
 	infraDirectory := t.TempDir()
 
-	systemFile, err := AddNixosSystem(AddNixosSystemOptions{
+	systemFile, err := AddSystem(AddSystemOptions{
 		InfraDirectory:  infraDirectory,
 		Name:            "server1",
 		Group:           "server",
@@ -38,10 +38,10 @@ func TestAddNixosSystem_WritesSystemFile(t *testing.T) {
 `, string(content))
 }
 
-func TestAddNixosSystem_MinimalSystemAndArchitecture(t *testing.T) {
+func TestAddSystem_MinimalSystemAndArchitecture(t *testing.T) {
 	infraDirectory := t.TempDir()
 
-	systemFile, err := AddNixosSystem(AddNixosSystemOptions{
+	systemFile, err := AddSystem(AddSystemOptions{
 		InfraDirectory: infraDirectory,
 		Name:           "pi",
 		Architecture:   "aarch64-linux",
@@ -55,27 +55,23 @@ func TestAddNixosSystem_MinimalSystemAndArchitecture(t *testing.T) {
 	assert.Equal(t, "{\n  bcl.system = {\n    group = \"server\";\n  };\n}\n", string(content))
 }
 
-func TestAddNixosSystem_RefusesExistingSystem(t *testing.T) {
+func TestAddSystem_RefusesExistingSystem(t *testing.T) {
 	infraDirectory := t.TempDir()
-	options := AddNixosSystemOptions{InfraDirectory: infraDirectory, Name: "server1", Group: "server"}
-	_, err := AddNixosSystem(options)
+	options := AddSystemOptions{InfraDirectory: infraDirectory, Name: "server1", Group: "server"}
+	_, err := AddSystem(options)
 	require.NoError(t, err)
 
-	_, err = AddNixosSystem(options)
+	_, err = AddSystem(options)
 
 	assert.Error(t, err)
 }
 
-func TestAddNixosSystem_RejectsInvalidInput(t *testing.T) {
+func TestAddSystem_RejectsInvalidInput(t *testing.T) {
 	infraDirectory := t.TempDir()
 
-	_, err := AddNixosSystem(AddNixosSystemOptions{InfraDirectory: infraDirectory, Name: "Bad_Name", Group: "server"})
+	_, err := AddSystem(AddSystemOptions{InfraDirectory: infraDirectory, Name: "Bad_Name", Group: "server"})
 	assert.Error(t, err)
 
-	_, err = AddNixosSystem(AddNixosSystemOptions{InfraDirectory: infraDirectory, Name: "server1"})
+	_, err = AddSystem(AddSystemOptions{InfraDirectory: infraDirectory, Name: "server1"})
 	assert.Error(t, err)
-}
-
-func TestNixString_EscapesSpecialCharacters(t *testing.T) {
-	assert.Equal(t, `"a\"b\\c\${d}"`, nixString(`a"b\c${d}`))
 }
