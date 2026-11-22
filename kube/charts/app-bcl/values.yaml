@@ -287,6 +287,12 @@ apps:
     appChart:
       name: app-mailu
 
+  stalwart:
+    groups:
+      extra: true
+    appChart:
+      name: app-stalwart
+
   immich:
     groups:
       extra: true

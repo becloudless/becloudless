@@ -44,6 +44,7 @@ All applications are defined under `kube/apps/`, one directory per app.
 | `secret-generator` | Security | Generates random secrets and stores them as Kubernetes Secrets |
 | `seerr` | Media | Overseerr/Jellyseerr media request management |
 | `sftp` | Productivity | SFTP server over TLS on the Gateway (one chrooted directory for each lldap user of `app_sftp`, login with an SSH key and the approval of Authelia, with its second factor) |
+| `stalwart` | Email | All-in-one mail server (SMTP, IMAP, JMAP, web UI) with an embedded database, mail ports public on the Gateway |
 | `syncthing` | Productivity | Continuous file synchronization (one instance for each user, web UI behind Authelia, and a public relay on TCP 22067 of the Gateway) |
 | `terraform` | Platform | Terraform runner for cloud resources |
 | `traefik` | Networking | Ingress controller and reverse proxy |

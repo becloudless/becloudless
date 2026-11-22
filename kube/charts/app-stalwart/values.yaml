@@ -1,0 +1,245 @@
+# yaml-language-server: $schema=../app/schema/values.schema.json
+
+# Stalwart (https://stalw.art): an all-in-one mail server (SMTP, IMAP, JMAP, POP3, ManageSieve, CalDAV/CardDAV/WebDAV), written in Rust, with its
+# own embedded database (RocksDB), so there is no postgresql here. One instance: the database is local to the volume.
+#
+# Almost all the configuration of Stalwart (domains, accounts, listeners, DKIM keys, spam filter...) lives in its database, not in a file: only
+# the data store is in a file (the `stalwart-config` ConfigMap). It is managed in the web UI, or with JMAP.
+#  - `https://mail.<domain>`: the web UI (`/admin`) and the JMAP API, behind the Gateway (TLS by the Gateway, plain HTTP to the pod on 8080). No
+#    forward auth: the clients of the mail protocols sign in by themselves;
+#  - the mail ports (25 SMTP, 465 SMTP submission over TLS, 993 IMAP over TLS) are public on the Gateway `shared` (cilium): plain TCP listeners
+#    served by Cilium on the LoadBalancer service of the Gateway without Envoy (a TCPRoute: Stalwart does its own TLS and sees the address of the
+#    client);
+#  - `admin`: the recovery administrator (`STALWART_RECOVERY_ADMIN`), its password is generated in `stalwart-admin`
+#    (`kubectl -n stalwart get secret stalwart-admin -o jsonpath='{.data.password}' | base64 -d`).
+#
+# First run, in the web UI: sign in as `admin`, create the domain (and its DNS records, see below), the real administrator and the mailboxes. The
+# recovery administrator is a full access credential kept by the pod: it is the way back in when the database is empty or locked, remove
+# `STALWART_RECOVERY_ADMIN` (`env` of the container) once a real administrator exists if it is not wanted.
+#
+# NOT done by this chart:
+#  - the DNS records of the domain (MX, SPF, DKIM, DMARC, the reverse DNS of the IP of the Gateway, `mail.<domain>`) and the open port 25 (a
+#    lot of residential networks and clouds block it) : they depend on the provider;
+#  - the TLS certificate of the mail protocols: Stalwart serves a self-signed one until one is set (ACME needs the egress to the ACME server and the
+#    challenge on the Gateway, or import the certificate of cert-manager);
+#  - the address of the clients behind a proxy (PROXY protocol / `X-Forwarded-For`): the web UI, the audit and the auto ban see the Gateway;
+#  - SSO with authelia, the relay of the outgoing mails (the egress only allows the port 25), the POP3 and ManageSieve ports (995, 4190).
+
+resources:
+
+  ciliumNetworkPolicies:
+    stalwart:
+      endpointSelector: ref:stalwart
+      ingress:
+        gateway: # the web UI and JMAP
+          fromEntities: [ingress, host, remote-node]
+          toPorts: [8080]
+        mail: # served by the Gateway service without Envoy: the source is the client itself (public, or in the cluster)
+          fromEntities: [world, cluster]
+          toPorts: [25, 465, 993]
+      egress:
+        internet: # the delivery of the mails to the mail exchangers of the recipients
+          toFQDNs:
+            any: {matchPattern: "*"}
+          toPorts: [25]
+        github: # the web UI bundle and the rules of the spam filter are downloaded from GitHub
+          toFQDNs:
+            github: {matchName: github.com}
+            objects: {matchName: objects.githubusercontent.com}
+          toPorts: [443]
+
+  fluxHelmReleases:
+    stalwart-pre:
+      dependsOn:
+        - name: app-external-secrets
+          namespace: external-secrets
+        - name: app-secret-generator
+          namespace: secret-generator
+      values:
+        resources:
+          stringSecrets:
+            stalwart-admin:
+              fields:
+                password: {}
+
+    stalwart:
+      dependsOn:
+        - ref:stalwart-pre
+        - name: app-longhorn
+          namespace: longhorn-system
+      values:
+        resources:
+          # https://stalw.art/docs/configuration/declarative-deployments: the data store, the rest is in it
+          configMaps:
+            stalwart-config:
+              data:
+                config.json: |
+                  {
+                    "@type": "RocksDb",
+                    "path": "/var/lib/stalwart/data/"
+                  }
+
+          # the database (RocksDB) and the blobs of the mails
+          persistentVolumeClaims:
+            stalwart-data:
+              storageClassName: longhorn-db
+              resources:
+                requests:
+                  storage: 20Gi
+
+          deployments:
+            stalwart:
+              replicas: 1 # the embedded database is only for one instance
+              strategy:
+                type: Recreate
+              template:
+                spec:
+                  securityContext:
+                    fsGroup: 2000 # the volume is writable by the user of the container
+                  containers:
+                    stalwart:
+                      name: stalwart
+                      image: docker.io/stalwartlabs/stalwart:v1.1.1 # renovate: datasource=github-releases packageName=stalwartlabs/stalwart
+                      ports:
+                        http:
+                          containerPort: 8080
+                        smtp:
+                          containerPort: 25
+                        submissions:
+                          containerPort: 465
+                        imaps:
+                          containerPort: 993
+                      # The variables are sorted by name when the pod is rendered, and `$(NAME)` only gets the variables defined before it: the
+                      # secrets used by other variables are named before `STALWART_*`.
+                      env:
+                        ADMIN_PASSWORD:
+                          secretKeyRef:
+                            name: ref:stalwart-admin
+                            key: password
+                        STALWART_RECOVERY_ADMIN: admin:$(ADMIN_PASSWORD)
+                        # the base of the URLs of the discovery documents (JMAP, OAuth): the Gateway terminates the TLS
+                        STALWART_PUBLIC_URL: https://mail.{{ .Values.app.domain }}
+                      probe:
+                        httpGet:
+                          path: /healthz/live
+                      securityContext:
+                        runAsUser: 2000
+                        runAsGroup: 2000
+                        capabilities:
+                          drop:
+                            all: ALL
+                          add:
+                            bind: NET_BIND_SERVICE # a file capability of the binary, it listens on the ports 25, 465 and 993
+                      volumeMounts:
+                        config:
+                          name: config
+                          mountPath: /etc/stalwart/config.json
+                          subPath: config.json
+                          readOnly: true
+                        data:
+                          name: data
+                          mountPath: /var/lib/stalwart
+                        tmp:
+                          name: tmp
+                          mountPath: /tmp
+                  volumes:
+                    config:
+                      name: config
+                      configMap:
+                        name: ref:stalwart-config
+                    data:
+                      name: data
+                      persistentVolumeClaim:
+                        claimName: ref:stalwart-data
+                    tmp:
+                      name: tmp
+                      emptyDir: {}
+
+          services:
+            stalwart:
+              ports:
+                http:
+                  port: 8080
+                smtp:
+                  port: 25
+                submissions:
+                  port: 465
+                imaps:
+                  port: 993
+
+          # The mail ports, public on the Cilium Gateway `shared` (cilium).
+          listenerSets:
+            stalwart-mail:
+              parentRef:
+                group: gateway.networking.k8s.io
+                kind: Gateway
+                name: shared
+                namespace: cilium
+              listeners:
+                smtp:
+                  name: smtp
+                  port: 25
+                  protocol: TCP
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+                submissions:
+                  name: submissions
+                  port: 465
+                  protocol: TCP
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+                imaps:
+                  name: imaps
+                  port: 993
+                  protocol: TCP
+                  allowedRoutes:
+                    namespaces:
+                      from: Same
+
+          tcpRoutes:
+            stalwart-smtp:
+              parentRefs:
+                stalwart-mail:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: stalwart-mail
+                  sectionName: smtp
+              rules:
+                smtp:
+                  backendRefs:
+                    stalwart:
+                      name: stalwart
+                      port: 25
+            stalwart-submissions:
+              parentRefs:
+                stalwart-mail:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: stalwart-mail
+                  sectionName: submissions
+              rules:
+                submissions:
+                  backendRefs:
+                    stalwart:
+                      name: stalwart
+                      port: 465
+            stalwart-imaps:
+              parentRefs:
+                stalwart-mail:
+                  group: gateway.networking.k8s.io
+                  kind: ListenerSet
+                  name: stalwart-mail
+                  sectionName: imaps
+              rules:
+                imaps:
+                  backendRefs:
+                    stalwart:
+                      name: stalwart
+                      port: 993
+
+expose:
+  stalwart: # no forward auth: the mail clients (JMAP, OAuth) sign in by themselves
+    hostname: mail
+    port: 8080
