@@ -13,6 +13,16 @@ description = "All commands grouped by subsystem"
 
 ---
 
+## `bcl repository` (alias `bcl repo`)
+
+Handle the infrastructure repository.
+
+| Command | Description |
+|---|---|
+| `bcl repository init [directory]` | Initialize an infrastructure repository in the directory (current by default): git, `nixos/flake.nix`, `.sops.yaml` with your age key, `kube/clusters/.env`, `.gitignore`. Existing files are never overwritten |
+
+---
+
 ## `bcl nixos`
 
 Manage NixOS machines.

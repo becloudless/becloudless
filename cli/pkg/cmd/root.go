@@ -9,6 +9,7 @@ import (
 	"github.com/becloudless/becloudless/pkg/cmd/docker"
 	"github.com/becloudless/becloudless/pkg/cmd/kube"
 	"github.com/becloudless/becloudless/pkg/cmd/nixos"
+	"github.com/becloudless/becloudless/pkg/cmd/repository"
 	"github.com/becloudless/becloudless/pkg/cmd/terraform"
 	"github.com/becloudless/becloudless/pkg/cmd/version"
 	"github.com/n0rad/go-erlog/logs"
@@ -46,6 +47,7 @@ func RootCmd() *cobra.Command {
 		version.VersionCmd(),
 		terraform.TerraformCmd(),
 		nixos.NixosCmd(),
+		repository.RepositoryCmd(),
 		WebCmd(),
 	)
 
