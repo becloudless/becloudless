@@ -70,6 +70,20 @@ in
       default = 1;
       description = "Number of master nodes in the cluster";
     };
+    pop = {
+      enable = lib.mkEnableOption ''
+        a node reachable from the internet (a VPS of a provider) instead of one of a private network: the address comes from
+        the DHCP of the provider (and its IPv6 router advertisements) on the bridge, not from `bcl.network.cidr`, so
+        `firstNodeIp` has to be set (the public address of the node), the firewall is enabled: etcd, the apiserver and the
+        kubelet are closed, and so are the NodePorts (the traffic of the pods, cilium and veth, is trusted), the disk is
+        encrypted, and the cluster is named `pop` unless `clusterName` is set
+      '';
+      allowedTCPPorts = lib.mkOption {
+        type = lib.types.listOf lib.types.port;
+        default = [ 80 443 ];
+        description = "TCP ports open to everybody when `pop` is enabled (SSH is opened by the OpenSSH service).";
+      };
+    };
     worker = lib.mkOption {
       type = lib.types.bool;
       readOnly = true;
@@ -134,7 +148,22 @@ in
     '';
 
     services.resolved.settings.Resolve.DNSSEC = "true";
-    networking.firewall.enable = false;
+    networking.firewall = {
+      enable = cfg.pop.enable; # the nodes of a private network have none
+      inherit (cfg.pop) allowedTCPPorts;
+      trustedInterfaces = [ "cilium_host" "cilium_net" "lxc+" ];
+    };
+
+    # the bridge `br0` (see `bcl.network.bridge`) carries the interface: the DHCP client runs on it
+    systemd.network.networks.br0.networkConfig = lib.mkIf cfg.pop.enable {
+      DHCP = "yes";
+      IPv6AcceptRA = true;
+    };
+
+    # a node on the internet has its disk encrypted (unlocked through the SSH of the initrd, `bcl.boot.ssh`)
+    bcl.diskSystem.encrypted = lib.mkIf cfg.pop.enable (lib.mkDefault true);
+
+    bcl.role.kube.clusterName = lib.mkIf cfg.pop.enable (lib.mkDefault "pop");
 
     systemd.network.networks.kube = {
       matchConfig = {
