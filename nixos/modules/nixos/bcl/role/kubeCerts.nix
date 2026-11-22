@@ -1,6 +1,8 @@
 { config, lib, pkgs, ... }:
 {
-  config = lib.mkIf (config.bcl.role.name == "kube" && !config.bcl.role.kube.worker) {
+  # The CAs and the service account keys of the cluster come from the secret file of the group, shared by its nodes. A
+  # `pop` node (a single VPS) has none: kubeadm generates them in /etc/kubernetes/pki at its first start.
+  config = lib.mkIf (config.bcl.role.name == "kube" && !config.bcl.role.kube.worker && !config.bcl.role.kube.pop.enable) {
 
     sops.secrets."ca_crt" = {
       sopsFile = config.bcl.role.secretFile;
