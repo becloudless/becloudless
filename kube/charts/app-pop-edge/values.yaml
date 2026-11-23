@@ -1,0 +1,280 @@
+# yaml-language-server: $schema=../app/schema/values.schema.json
+
+# The entry point of the cluster from the internet through the pops (the nodes of `bcl.role.kube.pop.edge`): like a Cloudflare Tunnel, no router in
+# the path and the address of the clients is kept.
+#
+#   client -> pop (haproxy: 80/443, by the SNI / Host) -> WireGuard tunnel -> this pod (haproxy) -> Gateway `shared` of the cluster
+#   client -> pop (haproxy: the `tcp` ports, 25/465/993 for a mail server) -> tunnel -> this pod -> the service of the mail server
+#   mail server -> this pod (service `pop-edge-relay`: the outgoing mails) -> tunnel -> postfix of a pop -> the internet, from the address of the pop
+#
+# The pod dials every pop (the pops only listen), so the cluster needs no open port nor public address. Each haproxy sends the address of the
+# client with the PROXY protocol (v2): the pop to this pod, this pod to the Gateway, which takes it as the address of the client (it is logged and
+# forwarded in `X-Forwarded-For` to the apps; the forward auth does not get it). Cilium is set with, in the cluster values of the cilium app:
+#   resources.fluxHelmReleases.cilium.values.gatewayAPI: {enableProxyProtocol: true}
+# The Gateway then rejects the connections without the PROXY header (it is global to its listeners): the clients of the LAN and the pods of the
+# cluster come through this pod too, which takes the LoadBalancer IP the Gateway had (`loadBalancerIP`). The Gateway moves to another address
+# (`addresses` of the Gateway `shared` in `cilium-post`), that nobody uses.
+#
+# The `tcp` services (the mail ports) do not go through the Gateway: this pod sends the PROXY header to the service of the server, which must read
+# it from this pod only (stalwart: `overrideProxyTrustedNetworks` of its mail listeners, see its chart).
+#
+# Order of the change on a running cluster: deploy this app with `pops` and the secret but no `loadBalancerIP` (the service takes any address),
+# then move the Gateway and set the Cilium values above, then set `loadBalancerIP`. The names of the apps point to the public addresses of the
+# pops (one record for each pop), and to `loadBalancerIP` in the LAN.
+#
+# Not done by this chart (the secret key stays out of git):
+#  - the private key of the tunnel, in the Secret `pop-edge-wireguard` (key `privatekey`) of the namespace of the app, and its public key in
+#    `bcl.role.kube.pop.edge.upstream.publicKey` of the pops:
+#      wg genkey | tee privatekey | wg pubkey > publickey
+#      kubectl -n pop-edge create secret generic pop-edge-wireguard --from-file=privatekey
+#  - the public key and the address of each pop in `pops` (`wg show wg-edge public-key` on the pop, `bcl.role.kube.pop.edge.address`).
+
+# The tunnel network (the same as `bcl.role.kube.pop.edge` of the pops), the address of this pod in it.
+tunnel:
+  address: 10.99.0.254
+  prefixLength: 24
+  popPort: 51820 # the UDP port of the pops (`bcl.role.kube.pop.edge.listenPort`)
+
+# The pops, by name: `address` is the public address of the pop, `tunnelAddress` its address in the tunnel network (`bcl.role.kube.pop.edge.address`).
+# A pop without `publicKey` is ignored until it has one.
+#   pop1: {address: 203.0.113.10, tunnelAddress: 10.99.0.1, publicKey: <public key>}
+pops: {}
+
+# The TCP services (not HTTP: the mail protocols) published by the pops (`bcl.role.kube.pop.edge.upstream.tcpPorts`), by name: `port` is the public
+# port, `backend` the `host:port` of the server inside the cluster, which gets the PROXY header (v2) of the pop with the address of the client.
+# This pod listens for the pops on `tcpPortOffset` + `port`.
+#   smtp: {port: 25, backend: stalwart.stalwart.svc:25}
+tcp: {}
+tcpPortOffset: 10000
+
+# The relay of the outgoing mails: the Service `pop-edge-relay` (port 2525) sends to the postfix of the pops (`bcl.role.kube.pop.edge.relay`,
+# same port), so the mails leave from the public address of a pop (one of them, in turn).
+
+# The address of the LoadBalancer Service that takes the connections of the LAN and of the cluster (the former address of the Gateway).
+loadBalancerIP: ""
+
+resources:
+
+  ciliumNetworkPolicies:
+    pop-edge:
+      endpointSelector: ref:pop-edge
+      ingress:
+        clients: # the LAN through the LoadBalancer IP, the pods of the cluster (the public names of the apps)
+          fromEntities: [world, cluster]
+          toPorts: [9080, 9443]
+        relay: # the mail servers of the cluster: the outgoing mails
+          fromEntities: [cluster]
+          toPorts: [2525]
+      egress:
+        gateway: # the connections to the Gateway
+          toEntities: [ingress]
+          toPorts: [80, 443]
+        tcp: # the servers of the `tcp` services (the ports are the ones of `tcp.<name>.backend`)
+          toEntities: [cluster]
+        pops: # the tunnels, the pop never initiates one
+          toEntities: [world]
+          toPorts:
+            wireguard:
+              ports:
+                udp: {port: "{{ .Values.tunnel.popPort }}", protocol: UDP}
+
+  # The public names of the apps now resolve to this pod, not to the Gateway (the `ingress` entity of the policies of the apps).
+  ciliumClusterwideNetworkPolicies:
+    allow-pop-edge:
+      endpointSelector:
+        matchExpressions:
+          any-namespace: {key: "k8s:io.kubernetes.pod.namespace", operator: Exists}
+      egress:
+        pop-edge:
+          toEndpoints:
+            edge:
+              matchLabels:
+                "k8s:io.kubernetes.pod.namespace": pop-edge
+                "k8s:app.kubernetes.io/instance": pop-edge
+                "k8s:app.kubernetes.io/component": pop-edge
+          toPorts: [9080, 9443]
+
+  fluxHelmReleases:
+    pop-edge:
+      values:
+        resources:
+          configMaps:
+            # the interface of the tunnel (the key is mounted from the secret), a peer for each pop
+            wireguard:
+              data:
+                up.sh: |
+                  set -eu
+                  ip link add wg0 type wireguard
+                  ip address add {{ .Values.tunnel.address }}/{{ .Values.tunnel.prefixLength }} dev wg0
+                  wg set wg0 private-key /wireguard/privatekey
+                  {{- $popPort := .Values.tunnel.popPort }}
+                  {{- range $name, $pop := .Values.pops }}
+                  {{- if $pop.publicKey }}
+                  wg set wg0 peer {{ $pop.publicKey }} endpoint {{ $pop.address }}:{{ $popPort }} allowed-ips {{ $pop.tunnelAddress }}/32 persistent-keepalive 25
+                  {{- end }}
+                  {{- end }}
+                  ip link set wg0 mtu 1380 up
+                  exec sleep infinity
+
+            # The ports 8080 and 8443 only get what comes from the tunnel (the policy of the pod does not let anything else reach
+            # them): the pops send the PROXY header with the address of their client. The ports 9080 and 9443 are the ones of the
+            # LAN and of the cluster, the client is the connection itself. Both go to the Gateway with the address of the client.
+            haproxy:
+              data:
+                haproxy.cfg: |
+                  global
+                    maxconn 20000
+
+                  defaults
+                    mode tcp
+                    timeout connect 10s
+                    timeout client 1h
+                    timeout server 1h
+                    timeout tunnel 1h
+
+                  frontend tunnel-http
+                    bind :8080 accept-proxy
+                    default_backend gateway-http
+
+                  frontend tunnel-https
+                    bind :8443 accept-proxy
+                    default_backend gateway-https
+
+                  frontend lan-http
+                    bind :9080
+                    default_backend gateway-http
+
+                  frontend lan-https
+                    bind :9443
+                    default_backend gateway-https
+
+                  backend gateway-http
+                    server gateway cilium-gateway-shared.cilium.svc:80 send-proxy-v2
+
+                  backend gateway-https
+                    server gateway cilium-gateway-shared.cilium.svc:443 send-proxy-v2
+
+                  # The `tcp` services: the pops send the PROXY header with the address of their client, it is sent on to the server (it reads
+                  # it from this pod only). The name of the server is resolved when it is used: it may not exist yet when this pod starts.
+                  resolvers cluster
+                    parse-resolv-conf
+                    hold valid 10s
+                  {{- $offset := int .Values.tcpPortOffset }}
+                  {{- range $name, $svc := .Values.tcp }}
+
+                  frontend tcp-{{ $name }}
+                    bind :{{ add (int $svc.port) $offset }} accept-proxy
+                    default_backend svc-{{ $name }}
+
+                  backend svc-{{ $name }}
+                    server {{ $name }} {{ $svc.backend }} send-proxy-v2 resolvers cluster init-addr none
+                  {{- end }}
+
+                  # The relay of the outgoing mails: one of the pops, in turn (the connection leaves by the tunnel)
+                  frontend relay-in
+                    bind :2525
+                    default_backend relay-pops
+
+                  backend relay-pops
+                    balance roundrobin
+                  {{- range $name, $pop := .Values.pops }}
+                  {{- if $pop.publicKey }}
+                    server {{ $name }} {{ $pop.tunnelAddress }}:2525 check
+                  {{- end }}
+                  {{- end }}
+
+          deployments:
+            pop-edge:
+              replicas: 1 # a tunnel has a single end, the same key is not shared by two pods
+              strategy:
+                type: Recreate
+              template:
+                metadata:
+                  annotations:
+                    policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true" # the interface of the tunnel needs NET_ADMIN, run as root
+                spec:
+                  securityContext:
+                    runAsNonRoot: false
+                  containers:
+                    wireguard:
+                      name: wireguard
+                      image: ghcr.io/becloudless/alpine-wireguard:1.260202.1735-H7074dbd
+                      command: [ sh, /config/up.sh ]
+                      securityContext:
+                        capabilities:
+                          drop:
+                            all: ALL
+                          add:
+                            admin: NET_ADMIN
+                      volumeMounts:
+                        config:
+                          name: wireguard-config
+                          mountPath: /config
+                          readOnly: true
+                        key:
+                          name: wireguard-key
+                          mountPath: /wireguard
+                          readOnly: true
+                    haproxy:
+                      name: haproxy
+                      image: docker.io/haproxy:2.6.6 # renovate: versioning=loose
+                      ports:
+                        tunnel-http:
+                          containerPort: 8080
+                        tunnel-https:
+                          containerPort: 8443
+                        lan-http:
+                          containerPort: 9080
+                        lan-https:
+                          containerPort: 9443
+                      probe:
+                        tcpSocket:
+                          port: lan-https
+                      securityContext:
+                        runAsNonRoot: true
+                        runAsUser: 99 # haproxy
+                        runAsGroup: 99
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        config:
+                          name: haproxy-config
+                          mountPath: /usr/local/etc/haproxy
+                          readOnly: true
+                  volumes:
+                    wireguard-config:
+                      name: wireguard-config
+                      configMap:
+                        name: ref:wireguard
+                    haproxy-config:
+                      name: haproxy-config
+                      configMap:
+                        name: ref:haproxy
+                    wireguard-key:
+                      name: wireguard-key
+                      secret:
+                        secretName: pop-edge-wireguard
+                        defaultMode: 0400
+
+          services:
+            pop-edge:
+              type: LoadBalancer
+              externalTrafficPolicy: Local # the address of the clients of the LAN
+              loadBalancerIP: "{{ .Values.loadBalancerIP }}"
+              ports:
+                http:
+                  port: 80
+                  targetPort: 9080
+                https:
+                  port: 443
+                  targetPort: 9443
+
+            # the mail servers of the cluster send their outgoing mails here (the relay of the pops)
+            pop-edge-relay:
+              selector:
+                app.kubernetes.io/component: pop-edge
+              ports:
+                relay:
+                  port: 2525
+                  targetPort: 2525

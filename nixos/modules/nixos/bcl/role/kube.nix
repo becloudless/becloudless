@@ -86,9 +86,9 @@ in
         the DHCP of the provider (and its IPv6 router advertisements) on the interface, without bridge unless
         `bcl.network.bridge` is set (the provider only knows the MAC of the NIC), not from `bcl.network.cidr`, so
         `firstNodeIp` has to be set (the public address of the node), the firewall is enabled: etcd, the apiserver and the
-        kubelet are closed, and so are the NodePorts (the traffic of the pods, cilium and veth, is trusted), the apiserver is
-        exposed on the port 443 by the Gateway of cilium (`kube.<clusterName>.<domain>`, the `hostname` of app-kube to set in the
-        cluster, its DNS record points to `firstNodeIp`), the disk is encrypted, and the cluster is named `pop` unless `clusterName` is set
+        kubelet are closed, and so are the NodePorts (the traffic of the pods, cilium and veth, is trusted), the disk is encrypted,
+        and the cluster is named `pop` unless `clusterName` is set. The apiserver is published on the port 443 as
+        `kube.<clusterName>.<domain>` (its DNS record points to `firstNodeIp`) by the haproxy of `pop.edge`, set it to reach the cluster
       '';
       allowedTCPPorts = lib.mkOption {
         type = lib.types.listOf lib.types.port;

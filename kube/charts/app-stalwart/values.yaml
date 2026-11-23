@@ -17,13 +17,42 @@
 # recovery administrator is a full access credential kept by the pod: it is the way back in when the database is empty or locked, remove
 # `STALWART_RECOVERY_ADMIN` (`env` of the container) once a real administrator exists if it is not wanted.
 #
+# Behind the pops (app `pop-edge`): the mail ports are the ones of the pops, which send the PROXY header (the address of the client) to the service
+# of Stalwart through `pop-edge`, and the outgoing mails go to the relay of the pops (`pop-edge-relay`), so they leave from the address of a pop.
+# It changes (in the cluster values of this app):
+#  - the Gateway does not publish the mail ports: `resources.fluxHelmReleases.stalwart.values.resources.listenerSets.stalwart-mail` and the
+#    `tcpRoutes` are set to `null`;
+#  - the policy `stalwart` only lets `pop-edge` in on the mail ports (`ingress.mail: null`, `ingress.edge` is here) and only lets the mails out to
+#    its relay (`egress.internet: null`, `egress.relay` is here);
+#  - Stalwart reads the PROXY header from `pop-edge` only, and sends its mails to the relay: this is in its database, set by the CronJob
+#    `stalwart-setup` (below).
+#
+# The CronJob `stalwart-setup` (disabled, `resources.fluxHelmReleases.stalwart-setup.enabled: true` in the cluster values) applies the plan `setup.plan`
+# with the CLI of Stalwart (https://stalw.art/docs/management/cli/plan-format) every `setup.schedule`, so no credential is in git: it signs in
+# as `admin` (the recovery administrator, the password is the one of `stalwart-admin`). The plan is made of idempotent operations (`upsert`
+# with a `matchOn`, `update` of the singletons), applied again at every run. A run fails while Stalwart has not been set up yet (the listeners
+# do not exist before the first setup in the web UI): it works at a following run. When the plan changed, Stalwart is restarted once after it
+# was applied (the listeners are only read at the start), the hash of the plan applied is in the annotation `bcl.tf/stalwart-setup-plan` of the Deployment.
+# Example, for the pops (the trusted network is the one of the pods of the cluster, only `pop-edge` can connect to the mail ports):
+#   setup:
+#     plan:
+#       - {"@type": upsert, object: NetworkListener, matchOn: [name], value: {smtp: {name: smtp, overrideProxyTrustedNetworks: {10.42.0.0/16: true}}}}
+#       - {"@type": upsert, object: MtaRoute, matchOn: [name], value: {relay: {"@type": Relay, name: pop-relay, host: pop-edge-relay.pop-edge.svc, port: 2525}}}
+#       - {"@type": update, object: MtaOutboundStrategy, value: {route: {else: "'pop-relay'", match: {"0": {if: is_local_domain(rcpt_domain), then: "'local'"}}}}}
+#       - {"@type": create, object: Action, value: {reload: {"@type": ReloadSettings}}}
+#
 # NOT done by this chart:
-#  - the DNS records of the domain (MX, SPF, DKIM, DMARC, the reverse DNS of the IP of the Gateway, `mail.<domain>`) and the open port 25 (a
-#    lot of residential networks and clouds block it) : they depend on the provider;
+#  - the DNS records of the domain (MX, SPF, DKIM, DMARC, the reverse DNS of the IP of the Gateway or of the pops, `mail.<domain>`) and the open
+#    port 25 (a lot of residential networks and clouds block it) : they depend on the provider;
 #  - the TLS certificate of the mail protocols: Stalwart serves a self-signed one until one is set (ACME needs the egress to the ACME server and the
 #    challenge on the Gateway, or import the certificate of cert-manager);
-#  - the address of the clients behind a proxy (PROXY protocol / `X-Forwarded-For`): the web UI, the audit and the auto ban see the Gateway;
-#  - SSO with authelia, the relay of the outgoing mails (the egress only allows the port 25), the POP3 and ManageSieve ports (995, 4190).
+#  - the address of the clients of the web UI behind a proxy (`X-Forwarded-For`): the web UI, the audit and the auto ban see the Gateway;
+#  - SSO with authelia, the POP3 and ManageSieve ports (995, 4190).
+
+setup:
+  image: ghcr.io/stalwartlabs/cli:2.0.0 # renovate: datasource=docker packageName=ghcr.io/stalwartlabs/cli
+  schedule: "*/10 * * * *"
+  plan: [] # the operations of the plan, one object each (see above)
 
 resources:
 
@@ -37,11 +66,32 @@ resources:
         mail: # served by the Gateway service without Envoy: the source is the client itself (public, or in the cluster)
           fromEntities: [world, cluster]
           toPorts: [25, 465, 993]
+        edge: # `pop-edge`: the mail ports of the pops, with the PROXY header
+          fromEndpoints:
+            edge:
+              matchLabels:
+                "k8s:io.kubernetes.pod.namespace": pop-edge
+                "k8s:app.kubernetes.io/instance": pop-edge
+                "k8s:app.kubernetes.io/component": pop-edge
+          toPorts: [25, 465, 993]
+        setup: # the CronJob `stalwart-setup`
+          fromEndpoints:
+            setup:
+              matchLabels: {app.kubernetes.io/component: stalwart-setup}
+          toPorts: [8080]
       egress:
         internet: # the delivery of the mails to the mail exchangers of the recipients
           toFQDNs:
             any: {matchPattern: "*"}
           toPorts: [25]
+        relay: # the relay of the pops (`pop-edge`): the outgoing mails leave from their address
+          toEndpoints:
+            edge:
+              matchLabels:
+                "k8s:io.kubernetes.pod.namespace": pop-edge
+                "k8s:app.kubernetes.io/instance": pop-edge
+                "k8s:app.kubernetes.io/component": pop-edge
+          toPorts: [2525]
         github: # the web UI bundle and the rules of the spam filter are downloaded from GitHub
           toFQDNs:
             github: {matchName: github.com}
@@ -238,6 +288,142 @@ resources:
                     stalwart:
                       name: stalwart
                       port: 993
+
+    # The setup of Stalwart (the plan `setup.plan`, see the header), once the server is ready: a CronJob of the CLI of Stalwart, then a restart of
+    # the Deployment when the plan changed. The init container applies the plan (it fails while Stalwart is not set up, the next run tries again),
+    # the container restarts Stalwart when the hash of the plan is not the one of the annotation of the Deployment (set at the same time).
+    stalwart-setup:
+      enabled: false # `true` in the cluster values, with a plan
+      dependsOn:
+        - ref:stalwart
+      values:
+        resources:
+          ciliumNetworkPolicies:
+            stalwart-setup:
+              endpointSelector:
+                matchLabels: {app.kubernetes.io/component: stalwart-setup}
+              egress:
+                stalwart:
+                  toEndpoints:
+                    stalwart:
+                      matchLabels: {app.kubernetes.io/component: stalwart}
+                  toPorts: [8080]
+                kube-apiserver:
+                  toEntities: [kube-apiserver]
+
+          serviceAccounts:
+            stalwart-setup:
+              automountServiceAccountToken: true # the API server, to restart Stalwart
+
+          roles:
+            stalwart-setup:
+              rules:
+                deployments: # `kubectl rollout restart` patches the annotations of the pod template
+                  apiGroups: [ apps ]
+                  resources: [ deployments ]
+                  resourceNames: [ stalwart ]
+                  verbs: [ get, patch ]
+
+          roleBindings:
+            stalwart-setup:
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: Role
+                name: stalwart-setup
+              subjects:
+                stalwart-setup:
+                  kind: ServiceAccount
+                  name: stalwart-setup
+                  namespace: "{{ .Release.Namespace }}"
+
+          configMaps:
+            stalwart-setup:
+              data:
+                plan.ndjson: | # one operation per line
+                  {{- range .Values.setup.plan }}
+                  {{ toJson . }}
+                  {{- end }}
+                restart.sh: |
+                  set -eu
+                  current=$(kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{.metadata.annotations.bcl\.tf/stalwart-setup-plan}')
+                  if [ "$current" = "$PLAN_HASH" ]; then
+                    echo "the plan $PLAN_HASH is already applied and read by $DEPLOYMENT"
+                    exit 0
+                  fi
+                  echo "the plan $PLAN_HASH is applied (it was ${current:-none}), restarting $DEPLOYMENT: the listeners are read at its start"
+                  kubectl -n "$NAMESPACE" annotate deploy "$DEPLOYMENT" "bcl.tf/stalwart-setup-plan=$PLAN_HASH" --overwrite
+                  kubectl -n "$NAMESPACE" rollout restart "deploy/$DEPLOYMENT"
+
+          cronJobs:
+            stalwart-setup:
+              schedule: '{{ .Values.setup.schedule }}'
+              concurrencyPolicy: Forbid
+              jobTemplate:
+                spec:
+                  backoffLimit: 0
+                  activeDeadlineSeconds: 300
+                  template:
+                    metadata:
+                      labels:
+                        app.kubernetes.io/component: stalwart-setup
+                    spec:
+                      restartPolicy: Never
+                      serviceAccountName: stalwart-setup
+                      securityContext:
+                        runAsUser: 65532
+                        runAsGroup: 65532
+                      initContainers:
+                        apply:
+                          name: apply
+                          image: '{{ .Values.setup.image }}'
+                          args: [ apply, --file, /plan/plan.ndjson, --no-color ]
+                          env:
+                            HOME: /home/nonroot
+                            STALWART_URL: http://stalwart:8080
+                            STALWART_USER: admin
+                            STALWART_PASSWORD:
+                              secretKeyRef:
+                                name: ref:stalwart-admin
+                                key: password
+                          securityContext:
+                            capabilities:
+                              drop:
+                                all: ALL
+                          volumeMounts:
+                            plan:
+                              name: plan
+                              mountPath: /plan
+                              readOnly: true
+                            cache: # the schema of the server
+                              name: cache
+                              mountPath: /home/nonroot/.cache
+                      containers:
+                        restart:
+                          name: restart
+                          image: docker.io/alpine/k8s:1.37.2 # renovate: versioning=loose
+                          command: [ bash, /plan/restart.sh ]
+                          env:
+                            HOME: /tmp
+                            NAMESPACE: "{{ .Release.Namespace }}"
+                            DEPLOYMENT: stalwart
+                            PLAN_HASH: '{{ .Values.setup.plan | toJson | sha256sum | trunc 16 }}'
+                          securityContext:
+                            capabilities:
+                              drop:
+                                all: ALL
+                          volumeMounts:
+                            plan:
+                              name: plan
+                              mountPath: /plan
+                              readOnly: true
+                      volumes:
+                        plan:
+                          name: plan
+                          configMap:
+                            name: ref:stalwart-setup
+                        cache:
+                          name: cache
+                          emptyDir: {}
 
 expose:
   stalwart: # no forward auth: the mail clients (JMAP, OAuth) sign in by themselves

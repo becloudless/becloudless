@@ -300,3 +300,10 @@ apps:
     appChart:
       name: app-immich
 
+  pop-edge: # the entry point of the cluster through the pops (WireGuard tunnels), needs the secret of its key, see the chart
+    enabled: false # in no group: a cluster enables it
+    clusterAdmin: true # a ClusterwideNetworkPolicy
+    appChart:
+      name: app-pop-edge
+    restore: false # no state
+

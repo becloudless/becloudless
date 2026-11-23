@@ -20,11 +20,33 @@ spec:
     - ports:
       - port: "25"
         protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/component: pop-edge
+        k8s:app.kubernetes.io/instance: pop-edge
+        k8s:io.kubernetes.pod.namespace: pop-edge
+    toPorts:
+    - ports:
+      - port: "2525"
+        protocol: TCP
   endpointSelector:
     matchLabels:
       app.kubernetes.io/component: stalwart
       app.kubernetes.io/instance: stalwart
   ingress:
+  - fromEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/component: pop-edge
+        k8s:app.kubernetes.io/instance: pop-edge
+        k8s:io.kubernetes.pod.namespace: pop-edge
+    toPorts:
+    - ports:
+      - port: "25"
+        protocol: TCP
+      - port: "465"
+        protocol: TCP
+      - port: "993"
+        protocol: TCP
   - fromEntities:
     - ingress
     - host
@@ -43,6 +65,13 @@ spec:
       - port: "465"
         protocol: TCP
       - port: "993"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: stalwart-setup
+    toPorts:
+    - ports:
+      - port: "8080"
         protocol: TCP
 ---
 # Source: app-stalwart/templates/loader.yaml
