@@ -25,6 +25,9 @@ data:
     # crash recovery of the replica panics when the checkpoint record of its own WAL is unreadable (the end of the WAL written before an
     # unclean shutdown of the volume is lost or garbage)
     CORRUPT_WAL='could not locate a valid checkpoint record'
+    # the instance manager refuses to start postgres when the volume has no free space for the WAL (the volume was filled by the
+    # WAL kept for a replica that lagged, with `wal_keep_size` or a replication slot too big for it)
+    NO_WAL_SPACE='no free disk space for WALs'
 
     log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
 
@@ -74,13 +77,16 @@ data:
       elif grep -q "$CORRUPT_WAL" <<<"$pg_log"; then
         # also local: the checkpoint record is read from the WAL of the replica itself, the archive is not used to find it
         reason="the checkpoint record of its own WAL is unreadable (postgres panics in crash recovery)"
+      elif grep -q "$NO_WAL_SPACE" <<<"$pg_log"; then
+        # the volume of the replica itself is full: the WAL archive does not free it, only a new volume does
+        reason="its volume has no free space for the WAL (the instance manager does not start postgres)"
       elif grep -q "$LOST_WAL" <<<"$pg_log"; then
         if jq -e '(.spec.backup.barmanObjectStore != null) or ([.spec.plugins[]? | select(.isWALArchiver == true)] | length > 0)' <<<"$cluster_json" >/dev/null; then
           log "$ctx: the cluster has a WAL archive, the replica can recover from it"; continue
         fi
         reason="the WAL it needs was removed from the primary"
       else
-        log "$ctx: neither a lost WAL, a diverged timeline nor a corrupted slot or WAL in its log, not a reason to clone it again"; continue
+        log "$ctx: neither a lost WAL, a diverged timeline, a corrupted slot or WAL nor a full WAL volume in its log, not a reason to clone it again"; continue
       fi
 
       if [ "$DRY_RUN" = true ]; then
