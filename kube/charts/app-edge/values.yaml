@@ -16,7 +16,7 @@
 # (`addresses` of the Gateway `shared` in `cilium-post`), that nobody uses.
 #
 # The `tcp` services (the mail ports) do not go through the Gateway: this pod sends the PROXY header to the service of the server, which must read
-# it from this pod only (stalwart: `overrideProxyTrustedNetworks` of its mail listeners, see its chart).
+# it from this pod only (stalwart: `overrideProxyTrustedNetworks` of its mail listeners, see its chart; mailu: `ingress.proxyProtocol`, see its chart).
 #
 # Order of the change on a running cluster: deploy this app with `nodes` and the secret but no `loadBalancerIP` (the service takes any address),
 # then move the Gateway and set the Cilium values above, then set `loadBalancerIP`. The names of the apps point to the public addresses of the

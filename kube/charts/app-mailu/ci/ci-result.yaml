@@ -189,12 +189,6 @@ spec:
     - ports:
       - port: "11334"
         protocol: TCP
-  - toFQDNs:
-    - matchPattern: '*'
-    toPorts:
-    - ports:
-      - port: "51820"
-        protocol: UDP
   - toEndpoints:
     - matchLabels:
         app.kubernetes.io/component: webdav
@@ -216,6 +210,23 @@ spec:
       app.kubernetes.io/component: front
       app.kubernetes.io/name: mailu
   ingress:
+  - fromEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/component: edge
+        k8s:app.kubernetes.io/instance: edge
+        k8s:io.kubernetes.pod.namespace: edge
+    toPorts:
+    - ports:
+      - port: "25"
+        protocol: TCP
+      - port: "4190"
+        protocol: TCP
+      - port: "465"
+        protocol: TCP
+      - port: "993"
+        protocol: TCP
+      - port: "995"
+        protocol: TCP
   - fromEntities:
     - ingress
     - host
@@ -319,11 +330,14 @@ spec:
     - ports:
       - port: "2525"
         protocol: TCP
-  - toFQDNs:
-    - matchPattern: '*'
+  - toEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/component: edge
+        k8s:app.kubernetes.io/instance: edge
+        k8s:io.kubernetes.pod.namespace: edge
     toPorts:
     - ports:
-      - port: "25"
+      - port: "2525"
         protocol: TCP
   - toEndpoints:
     - matchLabels:
@@ -333,12 +347,6 @@ spec:
     - ports:
       - port: "11332"
         protocol: TCP
-  - toFQDNs:
-    - matchPattern: '*'
-    toPorts:
-    - ports:
-      - port: "51820"
-        protocol: UDP
   endpointSelector:
     matchLabels:
       app.kubernetes.io/component: postfix
@@ -649,90 +657,6 @@ spec:
         target:
           kind: Deployment
           name: mailu-dovecot
-  - kustomize:
-      patches:
-      - patch: |-
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: mailu-front
-          spec:
-            template:
-              metadata:
-                annotations:
-                  policy.bcl.tf/skipPodRestrictHostAccess: "true" # the privileged vpn sidecar
-              spec:
-                containers:
-                - name: vpn
-                  image: ghcr.io/becloudless/alpine-wireguard:1.260202.1735-H7074dbd
-                  securityContext:
-                    privileged: true
-                  command: [ sh, -x, -e, -c ]
-                  args:
-                  - |
-                    wg-quick down wg0 || true
-                    wg-quick up wg0
-                    KUBE_GATEWAY=$(/sbin/ip route | awk '/default/ { print $3 }')
-                    ip route add 172.16.42.0/24 via $KUBE_GATEWAY || true
-                    ip route add 10.42.0.0/16 via $KUBE_GATEWAY || true
-                    sleep infinity
-                  livenessProbe:
-                    exec:
-                      command: [ping, -c1, -W2, 10.0.0.1]
-                    initialDelaySeconds: 10
-                    periodSeconds: 10
-                  volumeMounts:
-                  - mountPath: /etc/wireguard
-                    name: conf
-                volumes:
-                - name: conf
-                  secret:
-                    secretName: mailu-front-vpn
-                    defaultMode: 0400
-        target:
-          kind: Deployment
-          name: mailu-front
-      - patch: |-
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: mailu-postfix
-          spec:
-            template:
-              metadata:
-                annotations:
-                  policy.bcl.tf/skipPodRestrictHostAccess: "true" # the privileged vpn sidecar
-              spec:
-                containers:
-                - name: vpn
-                  image: ghcr.io/becloudless/alpine-wireguard:1.260202.1735-H7074dbd
-                  securityContext:
-                    privileged: true
-                  command: [ sh, -x, -e, -c ]
-                  args:
-                  - |
-                    wg-quick down wg0 || true
-                    wg-quick up wg0
-                    KUBE_GATEWAY=$(/sbin/ip route | awk '/default/ { print $3 }')
-                    ip route add 172.16.42.0/24 via $KUBE_GATEWAY || true
-                    ip route add 10.42.0.0/16 via $KUBE_GATEWAY || true
-                    sleep infinity
-                  livenessProbe:
-                    exec:
-                      command: [ping, -c1, -W2, 10.0.0.1]
-                    initialDelaySeconds: 10
-                    periodSeconds: 10
-                  volumeMounts:
-                  - mountPath: /etc/wireguard
-                    name: conf
-                volumes:
-                - name: conf
-                  secret:
-                    secretName: mailu-postfix-vpn
-                    defaultMode: 0400
-        target:
-          kind: Deployment
-          name: mailu-postfix
   timeout: 15m
   upgrade:
     cleanupOnFail: true
@@ -773,6 +697,8 @@ spec:
       updateStrategy:
         type: Recreate
     existingSecret: mailu
+    externalRelay:
+      host: '[edge-relay.edge.svc]:2525'
     front:
       containerSecurityContext:
         capabilities:
@@ -782,8 +708,7 @@ spec:
         runAsUser: 0
       externalService:
         enabled: true
-        externalTrafficPolicy: Cluster
-        type: LoadBalancer
+        type: ClusterIP
       updateStrategy:
         type: Recreate
     global:
