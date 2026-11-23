@@ -772,9 +772,6 @@ spec:
           app.kubernetes.io/component: lldap
           app.kubernetes.io/instance: lldap
     instances: 2
-    postgresql:
-      parameters:
-        max_slot_wal_keep_size: 500MB
 ---
 # Source: app-lldap/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

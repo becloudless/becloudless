@@ -140,6 +140,9 @@ spec:
   postgresql:
     parameters:
       max_slot_wal_keep_size: 500MB
+      max_wal_size: 1024MB
+      min_wal_size: 80MB
+      wal_keep_size: 512MB
     pg_hba:
     - hostssl app all all cert
   storage:

@@ -29,6 +29,25 @@ deadlocks (https://github.com/cloudnative-pg/cloudnative-pg/issues/10433). Only 
   {{- $_ := set $postgresql "pg_hba" (list "hostssl app all all cert") }}
 {{- end }}
 
+{{- /* The WAL has to fit in the volume next to the data, on every instance: the defaults of CloudNativePG
+(max_wal_size 1GB, wal_keep_size 512MB) fill a small one, and the instance refuses to start with
+`Not enough WAL disk space`. They are a fraction of the size of the volume, the defaults are the upper bound.
+Parameters set by the user take precedence. */}}
+{{- $sizeMi := include "postgresql.sizeMi" $values.storageSize | int64 }}
+{{- $parameters := $postgresql.parameters | default dict }}
+{{- $walParameters := dict
+  "max_wal_size" (printf "%dMB" (min (div $sizeMi 4) 1024))
+  "min_wal_size" (printf "%dMB" (min (div $sizeMi 32) 80))
+  "wal_keep_size" (printf "%dMB" (min (div $sizeMi 8) 512))
+  "max_slot_wal_keep_size" (printf "%dMB" (min (div $sizeMi 4) 4096))
+}}
+{{- range $key, $value := $walParameters }}
+  {{- if not (hasKey $parameters $key) }}
+    {{- $_ := set $parameters $key $value }}
+  {{- end }}
+{{- end }}
+{{- $_ := set $postgresql "parameters" $parameters }}
+
 resources:
   certManagerCertificates:
     ca:
@@ -145,4 +164,14 @@ resources:
               matchLabels:
                 cnpg.io/cluster: {{ $name }}
           toPorts: [5432, 8000]
+{{- end }}
+
+{{- /* A size such as `1Gi`, `512Mi` or `2Ti` in MiB (`M`, `G` and `T` are taken as binary ones too). */}}
+{{- define "postgresql.sizeMi" }}
+  {{- $size := toString . }}
+  {{- $units := dict "Mi" 1 "M" 1 "Gi" 1024 "G" 1024 "Ti" 1048576 "T" 1048576 }}
+  {{- if not (regexMatch "^[0-9]+(Mi|M|Gi|G|Ti|T)$" $size) }}
+    {{- fail (printf "storageSize `%s` is not supported, use a whole number of Mi, Gi or Ti (ex: 1Gi)" $size) }}
+  {{- end }}
+  {{- mul (atoi (regexFind "^[0-9]+" $size)) (get $units (regexFind "[A-Za-z]+$" $size)) }}
 {{- end }}
