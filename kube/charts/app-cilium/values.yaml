@@ -1,5 +1,10 @@
 # yaml-language-server: $schema=../app/schema/values.schema.json
 
+# A node reachable from the internet (`bcl.role.kube.pop` of the NixOS role): it has no bridge `br0`, its interface is the one of the
+# provider. Cilium then detects the devices and the direct routing device itself, instead of the `br0` of the nodes of a private network.
+# A cluster sets it with `apps.cilium.values.pop: true`.
+pop: false
+
 resources:
   fluxHelmRepositories:
     cilium:
@@ -29,9 +34,9 @@ resources:
         k8sServiceHost: kube.{{.Values.app.domain}}
         k8sServicePort: 8443
 
-        devices: br0
+        devices: '{{ ternary "" "br0" .Values.pop }}' # empty: detected by cilium
         nodePort:
-          directRoutingDevice: br0
+          directRoutingDevice: '{{ ternary "" "br0" .Values.pop }}'
 
         kubeProxyReplacement: true
 
