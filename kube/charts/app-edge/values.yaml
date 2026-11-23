@@ -224,7 +224,7 @@ resources:
                       name: haproxy
                       image: docker.io/haproxy:2.6.6 # renovate: versioning=loose
                       # The rendering of the resources removes the last newline of the strings and haproxy refuses a file without one (`Missing
-                      # LF on last line`): it runs on a copy with it. The arguments are the ones of the entrypoint of the image.
+                      # LF on last line`): it runs on a copy with it, in the /tmp every container has (base chart). The arguments are the ones of the entrypoint of the image.
                       command:
                         - sh
                         - -ec
@@ -255,9 +255,6 @@ resources:
                           name: haproxy-config
                           mountPath: /usr/local/etc/haproxy
                           readOnly: true
-                        run:
-                          name: haproxy-run
-                          mountPath: /tmp
                   volumes:
                     wireguard-config:
                       name: wireguard-config
@@ -267,10 +264,6 @@ resources:
                       name: haproxy-config
                       configMap:
                         name: ref:config
-                    haproxy-run:
-                      name: haproxy-run
-                      emptyDir:
-                        sizeLimit: 10Mi
                     wireguard-key:
                       name: wireguard-key
                       secret:

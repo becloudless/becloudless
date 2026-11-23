@@ -241,9 +241,6 @@ spec:
                       mountPath: /usr/local/etc/haproxy
                       name: haproxy-config
                       readOnly: true
-                    run:
-                      mountPath: /tmp
-                      name: haproxy-run
                 wireguard:
                   command:
                   - sh
@@ -272,10 +269,6 @@ spec:
                   configMap:
                     name: ref:config
                   name: haproxy-config
-                haproxy-run:
-                  emptyDir:
-                    sizeLimit: 10Mi
-                  name: haproxy-run
                 wireguard-config:
                   configMap:
                     name: ref:config
