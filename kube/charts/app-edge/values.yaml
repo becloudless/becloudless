@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../app/schema/values.schema.json
+# yaml-language-server: $schema=./schema/values.schema.json
 
 # The entry point of the cluster from the internet through the edge nodes (the nodes with the NixOS module `bcl.edge`, the role `edge` for a plain VPS without cluster): like a Cloudflare Tunnel, no router in
 # the path and the address of the clients is kept.
@@ -22,12 +22,14 @@
 # then move the Gateway and set the Cilium values above, then set `loadBalancerIP`. The names of the apps point to the public addresses of the
 # edge nodes (one record for each edge node), and to `loadBalancerIP` in the LAN.
 #
-# Not done by this chart (the secret key stays out of git):
+# Not done by this chart:
 #  - the private key of the tunnel, in the Secret `edge-wireguard` (key `privatekey`) of the namespace of the app, and its public key in
-#    `bcl.edge.upstream.publicKey` of the edge nodes:
-#      wg genkey | tee privatekey | wg pubkey > publickey
-#      kubectl -n edge create secret generic edge-wireguard --from-file=privatekey
-#  - the public key and the address of each edge node in `nodes` (`wg show wg-edge public-key` on the edge node, `bcl.edge.address`).
+#    `bcl.edge.upstream.publicKey` of the edge nodes. The Secret is committed encrypted in the repository of the cluster (sops):
+#      priv=$(wg genkey); echo "$priv" | wg pubkey   # the public key
+#      printf 'apiVersion: v1\nkind: Secret\nmetadata: {name: edge-wireguard, namespace: edge}\nstringData: {privatekey: %s}\n' "$priv" \
+#        | sops -e --filename-override <cluster>/edge/wireguard.secret.yaml /dev/stdin > <cluster>/edge/wireguard.secret.yaml
+#  - the public key and the address of each edge node in `nodes` (`wg show wg-edge public-key` on the edge node, `bcl.edge.address`; the key
+#    is also the one derived from the SSH host key of the node, see `bcl.edge`).
 
 # The tunnel network (the same as `bcl.edge` of the edge nodes), the address of this pod in it.
 tunnel:
@@ -35,9 +37,11 @@ tunnel:
   prefixLength: 24
   listenPort: 51820 # the UDP port of the edge nodes (`bcl.edge.listenPort`)
 
-# The edge nodes, by name: `address` is the public address of the edge node, `tunnelAddress` its address in the tunnel network (`bcl.edge.address`).
+# The edge nodes, by name (the hostname of the node): `address` is the public address of the edge node, an IP or a DNS name (resolved once, when
+# the pod starts), `tunnelAddress` its address in the tunnel network. By default the number at the end of the name is the host number in the tunnel
+# network (`edge1` gives 10.99.0.1), like the default of `bcl.edge.address` of the NixOS module.
 # An edge node without `publicKey` is ignored until it has one.
-#   edge1: {address: 203.0.113.10, tunnelAddress: 10.99.0.1, publicKey: <public key>}
+#   edge1: {address: edge1.example.com, publicKey: <public key>}
 nodes: {}
 
 # The TCP services (not HTTP: the mail protocols) published by the edge nodes (`bcl.edge.upstream.tcpPorts`), by name: `port` is the public
@@ -99,27 +103,10 @@ resources:
       values:
         resources:
           configMaps:
-            # the interface of the tunnel (the key is mounted from the secret), a peer for each edge node
-            wireguard:
-              data:
-                up.sh: |
-                  set -eu
-                  ip link add wg0 type wireguard
-                  ip address add {{ .Values.tunnel.address }}/{{ .Values.tunnel.prefixLength }} dev wg0
-                  wg set wg0 private-key /wireguard/privatekey
-                  {{- $listenPort := .Values.tunnel.listenPort }}
-                  {{- range $name, $node := .Values.nodes }}
-                  {{- if $node.publicKey }}
-                  wg set wg0 peer {{ $node.publicKey }} endpoint {{ $node.address }}:{{ $listenPort }} allowed-ips {{ $node.tunnelAddress }}/32 persistent-keepalive 25
-                  {{- end }}
-                  {{- end }}
-                  ip link set wg0 mtu 1380 up
-                  exec sleep infinity
-
             # The ports 8080 and 8443 only get what comes from the tunnel (the policy of the pod does not let anything else reach
             # them): the edge nodes send the PROXY header with the address of their client. The ports 9080 and 9443 are the ones of the
             # LAN and of the cluster, the client is the connection itself. Both go to the Gateway with the address of the client.
-            haproxy:
+            config:
               data:
                 haproxy.cfg: |
                   global
@@ -177,11 +164,29 @@ resources:
 
                   backend relay-nodes
                     balance roundrobin
+                  {{- $root := . }}
                   {{- range $name, $node := .Values.nodes }}
                   {{- if $node.publicKey }}
-                    server {{ $name }} {{ $node.tunnelAddress }}:2525 check
+                    server {{ $name }} {{ $node.tunnelAddress | default (include "app-edge.tunnelAddress" (dict "root" $root "name" $name)) }}:2525 check
                   {{- end }}
                   {{- end }}
+
+                # the interface of the tunnel (the key is mounted from the secret), a peer for each edge node. Run again by a container
+                # restart in the same network namespace: the interface may exist already
+                up.sh: |
+                  set -eu
+                  ip link show wg0 > /dev/null 2>&1 || ip link add wg0 type wireguard
+                  ip address replace {{ .Values.tunnel.address }}/{{ .Values.tunnel.prefixLength }} dev wg0
+                  wg set wg0 private-key /wireguard/privatekey
+                  {{- $listenPort := .Values.tunnel.listenPort }}
+                  {{- $root := . }}
+                  {{- range $name, $node := .Values.nodes }}
+                  {{- if $node.publicKey }}
+                  wg set wg0 peer {{ $node.publicKey }} endpoint {{ $node.address }}:{{ $listenPort }} allowed-ips {{ $node.tunnelAddress | default (include "app-edge.tunnelAddress" (dict "root" $root "name" $name)) }}/32 persistent-keepalive 25
+                  {{- end }}
+                  {{- end }}
+                  ip link set wg0 mtu 1380 up
+                  exec sleep infinity
 
           deployments:
             edge:
@@ -218,6 +223,14 @@ resources:
                     haproxy:
                       name: haproxy
                       image: docker.io/haproxy:2.6.6 # renovate: versioning=loose
+                      # The rendering of the resources removes the last newline of the strings and haproxy refuses a file without one (`Missing
+                      # LF on last line`): it runs on a copy with it. The arguments are the ones of the entrypoint of the image.
+                      command:
+                        - sh
+                        - -ec
+                        - |
+                          { cat /usr/local/etc/haproxy/haproxy.cfg; echo; } > /tmp/haproxy.cfg
+                          exec haproxy -W -db -f /tmp/haproxy.cfg
                       ports:
                         tunnel-http:
                           containerPort: 8080
@@ -242,15 +255,22 @@ resources:
                           name: haproxy-config
                           mountPath: /usr/local/etc/haproxy
                           readOnly: true
+                        run:
+                          name: haproxy-run
+                          mountPath: /tmp
                   volumes:
                     wireguard-config:
                       name: wireguard-config
                       configMap:
-                        name: ref:wireguard
+                        name: ref:config
                     haproxy-config:
                       name: haproxy-config
                       configMap:
-                        name: ref:haproxy
+                        name: ref:config
+                    haproxy-run:
+                      name: haproxy-run
+                      emptyDir:
+                        sizeLimit: 10Mi
                     wireguard-key:
                       name: wireguard-key
                       secret:

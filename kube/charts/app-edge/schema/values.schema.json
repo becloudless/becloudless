@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "app": {
+      "$ref": "../../app/schema/values.schema.json#/properties/app"
+    },
+    "checkRequiredValues": {
+      "$ref": "../../app/schema/values.schema.json#/properties/checkRequiredValues"
+    },
+    "expose": {
+      "$ref": "../../app/schema/values.schema.json#/properties/expose"
+    },
+    "oidc": {
+      "$ref": "../../app/schema/values.schema.json#/properties/oidc"
+    },
+    "prefixNamesWithRelease": {
+      "$ref": "../../app/schema/values.schema.json#/properties/prefixNamesWithRelease"
+    },
+    "defaults": {
+      "$ref": "../../app/schema/values.schema.json#/properties/defaults"
+    },
+    "resources": {
+      "$ref": "../../app/schema/values.schema.json#/properties/resources"
+    },
+    "tunnel": {
+      "additionalProperties": false,
+      "description": "The tunnel network (the same as `bcl.edge` of the edge nodes) and the address of this pod in it.",
+      "properties": {
+        "address": {
+          "default": "10.99.0.254",
+          "description": "The address of this pod in the tunnel network (the last usable address of `bcl.edge.cidr` by default on the nodes, `bcl.edge.upstream.address`).",
+          "type": "string"
+        },
+        "prefixLength": {
+          "default": 24,
+          "description": "The prefix length of the tunnel network (the one of `bcl.edge.cidr`).",
+          "maximum": 30,
+          "minimum": 8,
+          "type": "integer"
+        },
+        "listenPort": {
+          "default": 51820,
+          "description": "The UDP port of the edge nodes the pod dials (`bcl.edge.listenPort`).",
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "nodes": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "description": "The public address of the edge node, an IP or a DNS name (resolved once, when the pod starts), where the pod dials the tunnel.",
+            "type": "string"
+          },
+          "tunnelAddress": {
+            "description": "The address of the edge node in the tunnel network (`bcl.edge.address`). By default the number at the end of the name of the node is the host number in the tunnel network (`edge1` gives 10.99.0.1).",
+            "type": "string"
+          },
+          "publicKey": {
+            "description": "The WireGuard public key of the edge node (`wg show wg-edge public-key` on the node). A node without it is ignored.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "address"
+        ],
+        "type": "object"
+      },
+      "default": {},
+      "description": "The edge nodes, by name (the hostname of the node).",
+      "type": "object"
+    },
+    "tcp": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "port": {
+            "description": "The public port, one of `bcl.edge.upstream.tcpPorts` of the edge nodes. The pod listens for the edge nodes on `tcpPortOffset` + `port`.",
+            "maximum": 65535,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "backend": {
+            "description": "The `host:port` of the server inside the cluster, which gets the PROXY header (v2) of the edge node with the address of the client.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "port",
+          "backend"
+        ],
+        "type": "object"
+      },
+      "default": {},
+      "description": "The TCP services (not HTTP: the mail protocols) published by the edge nodes, by name.",
+      "type": "object"
+    },
+    "tcpPortOffset": {
+      "default": 10000,
+      "description": "Added to a public port of `tcp` to get the port the pod listens on for the edge nodes (`bcl.edge.upstream.tcpPortOffset`).",
+      "maximum": 60000,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "loadBalancerIP": {
+      "default": "",
+      "description": "The address of the LoadBalancer Service that takes the connections of the LAN and of the cluster (the former address of the Gateway). Empty: the service takes any address.",
+      "type": "string"
+    }
+  },
+  "type": "object"
+}

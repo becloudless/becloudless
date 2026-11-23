@@ -105,11 +105,8 @@ spec:
     refs:
       edge:
         configMaps:
-          haproxy:
-            name: haproxy
-            namespace: default
-          wireguard:
-            name: wireguard
+          config:
+            name: config
             namespace: default
         deployments:
           edge:
@@ -127,7 +124,7 @@ spec:
             namespace: default
     resources:
       configMaps:
-        haproxy:
+        config:
           data:
             haproxy.cfg: |-
               global
@@ -191,14 +188,12 @@ spec:
                 balance roundrobin
                 server edge1 10.99.0.1:2525 check
                 server edge2 10.99.0.2:2525 check
-        wireguard:
-          data:
             up.sh: |-
               set -eu
-              ip link add wg0 type wireguard
-              ip address add 10.99.0.254/24 dev wg0
+              ip link show wg0 > /dev/null 2>&1 || ip link add wg0 type wireguard
+              ip address replace 10.99.0.254/24 dev wg0
               wg set wg0 private-key /wireguard/privatekey
-              wg set wg0 peer Hl0aZ5Qe4kYhX1b7w0M4k1c2p0kR3q9d1m0vQy2s0Xk= endpoint 203.0.113.10:51820 allowed-ips 10.99.0.1/32 persistent-keepalive 25
+              wg set wg0 peer Hl0aZ5Qe4kYhX1b7w0M4k1c2p0kR3q9d1m0vQy2s0Xk= endpoint edge1.example.com:51820 allowed-ips 10.99.0.1/32 persistent-keepalive 25
               wg set wg0 peer yb1oEw3r9sN8m5x1c0p7t6v4q2z0k8j9h7g6f5d4s3A= endpoint 203.0.113.20:51820 allowed-ips 10.99.0.2/32 persistent-keepalive 25
               ip link set wg0 mtu 1380 up
               exec sleep infinity
@@ -214,6 +209,12 @@ spec:
             spec:
               containers:
                 haproxy:
+                  command:
+                  - sh
+                  - -ec
+                  - |-
+                    { cat /usr/local/etc/haproxy/haproxy.cfg; echo; } > /tmp/haproxy.cfg
+                    exec haproxy -W -db -f /tmp/haproxy.cfg
                   image: docker.io/haproxy:2.6.6
                   name: haproxy
                   ports:
@@ -240,6 +241,9 @@ spec:
                       mountPath: /usr/local/etc/haproxy
                       name: haproxy-config
                       readOnly: true
+                    run:
+                      mountPath: /tmp
+                      name: haproxy-run
                 wireguard:
                   command:
                   - sh
@@ -266,11 +270,15 @@ spec:
               volumes:
                 haproxy-config:
                   configMap:
-                    name: ref:haproxy
+                    name: ref:config
                   name: haproxy-config
+                haproxy-run:
+                  emptyDir:
+                    sizeLimit: 10Mi
+                  name: haproxy-run
                 wireguard-config:
                   configMap:
-                    name: ref:wireguard
+                    name: ref:config
                   name: wireguard-config
                 wireguard-key:
                   name: wireguard-key

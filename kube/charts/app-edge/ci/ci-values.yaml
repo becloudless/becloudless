@@ -10,8 +10,7 @@ tunnel:
 
 nodes:
   edge1:
-    address: 203.0.113.10
-    tunnelAddress: 10.99.0.1
+    address: edge1.example.com
     publicKey: Hl0aZ5Qe4kYhX1b7w0M4k1c2p0kR3q9d1m0vQy2s0Xk=
   edge2:
     address: 203.0.113.20
