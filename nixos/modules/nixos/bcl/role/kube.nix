@@ -153,6 +153,8 @@ in
       enable = cfg.pop.enable; # the nodes of a private network have none
       inherit (cfg.pop) allowedTCPPorts;
       trustedInterfaces = [ "cilium_host" "cilium_net" "lxc+" ];
+      # the strict filter drops the traffic of the pods: it enters by an `lxc` interface while the route back to its source is `cilium_host`
+      checkReversePath = lib.mkIf cfg.pop.enable "loose";
     };
 
     # the DHCP client runs on the bridge `br0` when there is one (see `bcl.network.bridge`), on the interface otherwise
