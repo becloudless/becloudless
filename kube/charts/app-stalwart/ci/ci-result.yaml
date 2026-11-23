@@ -22,9 +22,9 @@ spec:
         protocol: TCP
   - toEndpoints:
     - matchLabels:
-        k8s:app.kubernetes.io/component: pop-edge
-        k8s:app.kubernetes.io/instance: pop-edge
-        k8s:io.kubernetes.pod.namespace: pop-edge
+        k8s:app.kubernetes.io/component: edge
+        k8s:app.kubernetes.io/instance: edge
+        k8s:io.kubernetes.pod.namespace: edge
     toPorts:
     - ports:
       - port: "2525"
@@ -36,9 +36,9 @@ spec:
   ingress:
   - fromEndpoints:
     - matchLabels:
-        k8s:app.kubernetes.io/component: pop-edge
-        k8s:app.kubernetes.io/instance: pop-edge
-        k8s:io.kubernetes.pod.namespace: pop-edge
+        k8s:app.kubernetes.io/component: edge
+        k8s:app.kubernetes.io/instance: edge
+        k8s:io.kubernetes.pod.namespace: edge
     toPorts:
     - ports:
       - port: "25"

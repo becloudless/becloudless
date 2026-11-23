@@ -19,7 +19,6 @@ config:
   # ldapdn: # deduced from domain by default (dc=example,dc=com)
   # lldapUsers: # TODO probably not a good idea to be in global config. the users of the cluster, created in lldap and given an instance by some apps (syncthing), keyed by user id
   #   n0rad: {displayName: n0rad, email: n0rad@example.com, groups: [role_admin, role_user]}
-  # pop: false # a node reachable from the internet (`bcl.role.kube.pop`), alone in its cluster: 1 replica of the stateless parts and 1 instance of the databases by default
   # scaling: # the scale of the apps (see `app.scaling` of the `app` chart): replicas of the stateless parts (2 by default), instances of the databases (2 by default)
   #   replicas: 2
   #   dbReplicas: 3
@@ -300,10 +299,10 @@ apps:
     appChart:
       name: app-immich
 
-  pop-edge: # the entry point of the cluster through the pops (WireGuard tunnels), needs the secret of its key, see the chart
+  edge: # the entry point of the cluster through the pops (WireGuard tunnels), needs the secret of its key, see the chart
     enabled: false # in no group: a cluster enables it
     clusterAdmin: true # a ClusterwideNetworkPolicy
     appChart:
-      name: app-pop-edge
+      name: app-edge
     restore: false # no state
 

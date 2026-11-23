@@ -3,11 +3,11 @@ app:
   name: test
   lldapdn: dc=test,dc=com
 
-# behind the pops (app pop-edge): the plan of the setup
+# behind the pops (app edge): the plan of the setup
 setup:
   plan:
     - {"@type": upsert, object: NetworkListener, matchOn: [name], value: {smtp: {name: smtp, overrideProxyTrustedNetworks: {10.42.0.0/16: true}}, submissions: {name: submissions, overrideProxyTrustedNetworks: {10.42.0.0/16: true}}, imaps: {name: imaps, overrideProxyTrustedNetworks: {10.42.0.0/16: true}}}}
-    - {"@type": upsert, object: MtaRoute, matchOn: [name], value: {relay: {"@type": Relay, name: pop-relay, host: pop-edge-relay.pop-edge.svc, port: 2525}}}
+    - {"@type": upsert, object: MtaRoute, matchOn: [name], value: {relay: {"@type": Relay, name: pop-relay, host: edge-relay.edge.svc, port: 2525}}}
     - {"@type": update, object: MtaOutboundStrategy, value: {route: {else: "'pop-relay'", match: {"0": {if: "is_local_domain(rcpt_domain)", then: "'local'"}}}}}
     - {"@type": create, object: Action, value: {reload: {"@type": ReloadSettings}}}
 

@@ -16,9 +16,9 @@ spec:
         protocol: TCP
   - toEndpoints:
     - matchLabels:
-        k8s:app.kubernetes.io/component: pop-edge
-        k8s:app.kubernetes.io/instance: pop-edge
-        k8s:io.kubernetes.pod.namespace: pop-edge
+        k8s:app.kubernetes.io/component: edge
+        k8s:app.kubernetes.io/instance: edge
+        k8s:io.kubernetes.pod.namespace: edge
     toPorts:
     - ports:
       - port: "2525"
@@ -30,9 +30,9 @@ spec:
   ingress:
   - fromEndpoints:
     - matchLabels:
-        k8s:app.kubernetes.io/component: pop-edge
-        k8s:app.kubernetes.io/instance: pop-edge
-        k8s:io.kubernetes.pod.namespace: pop-edge
+        k8s:app.kubernetes.io/component: edge
+        k8s:app.kubernetes.io/instance: edge
+        k8s:io.kubernetes.pod.namespace: edge
     toPorts:
     - ports:
       - port: "25"
@@ -656,7 +656,7 @@ spec:
           data:
             plan.ndjson: |-
               {"@type":"upsert","matchOn":["name"],"object":"NetworkListener","value":{"imaps":{"name":"imaps","overrideProxyTrustedNetworks":{"10.42.0.0/16":true}},"smtp":{"name":"smtp","overrideProxyTrustedNetworks":{"10.42.0.0/16":true}},"submissions":{"name":"submissions","overrideProxyTrustedNetworks":{"10.42.0.0/16":true}}}}
-              {"@type":"upsert","matchOn":["name"],"object":"MtaRoute","value":{"relay":{"@type":"Relay","host":"pop-edge-relay.pop-edge.svc","name":"pop-relay","port":2525}}}
+              {"@type":"upsert","matchOn":["name"],"object":"MtaRoute","value":{"relay":{"@type":"Relay","host":"edge-relay.edge.svc","name":"pop-relay","port":2525}}}
               {"@type":"update","object":"MtaOutboundStrategy","value":{"route":{"else":"'pop-relay'","match":{"0":{"if":"is_local_domain(rcpt_domain)","then":"'local'"}}}}}
               {"@type":"create","object":"Action","value":{"reload":{"@type":"ReloadSettings"}}}
             restart.sh: |-
@@ -690,7 +690,7 @@ spec:
                         DEPLOYMENT: stalwart
                         HOME: /tmp
                         NAMESPACE: default
-                        PLAN_HASH: 0de28e0337c7dd42
+                        PLAN_HASH: 7eca46c2526a5267
                       image: docker.io/alpine/k8s:1.37.2
                       name: restart
                       securityContext:

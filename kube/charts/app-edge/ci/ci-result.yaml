@@ -1,16 +1,16 @@
 ---
-# Source: app-pop-edge/templates/loader.yaml
+# Source: app-edge/templates/loader.yaml
 apiVersion: cilium.io/v2
 kind: CiliumClusterwideNetworkPolicy
 metadata:
-  name: allow-pop-edge
+  name: allow-edge
 spec:
   egress:
   - toEndpoints:
     - matchLabels:
-        k8s:app.kubernetes.io/component: pop-edge
-        k8s:app.kubernetes.io/instance: pop-edge
-        k8s:io.kubernetes.pod.namespace: pop-edge
+        k8s:app.kubernetes.io/component: edge
+        k8s:app.kubernetes.io/instance: edge
+        k8s:io.kubernetes.pod.namespace: edge
     toPorts:
     - ports:
       - port: "9080"
@@ -22,11 +22,11 @@ spec:
     - key: k8s:io.kubernetes.pod.namespace
       operator: Exists
 ---
-# Source: app-pop-edge/templates/loader.yaml
+# Source: app-edge/templates/loader.yaml
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
-  name: pop-edge
+  name: edge
   namespace: default
 spec:
   egress:
@@ -48,8 +48,8 @@ spec:
     - cluster
   endpointSelector:
     matchLabels:
-      app.kubernetes.io/component: pop-edge
-      app.kubernetes.io/instance: pop-edge
+      app.kubernetes.io/component: edge
+      app.kubernetes.io/instance: edge
   ingress:
   - fromEntities:
     - world
@@ -67,11 +67,11 @@ spec:
       - port: "2525"
         protocol: TCP
 ---
-# Source: app-pop-edge/templates/loader.yaml
+# Source: app-edge/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: pop-edge
+  name: edge
   namespace: default
 spec:
   chart:
@@ -103,7 +103,7 @@ spec:
       retryInterval: 5m
   values:
     refs:
-      pop-edge:
+      edge:
         configMaps:
           haproxy:
             name: haproxy
@@ -112,18 +112,18 @@ spec:
             name: wireguard
             namespace: default
         deployments:
-          pop-edge:
+          edge:
             labels:
-              app.kubernetes.io/component: pop-edge
-              app.kubernetes.io/instance: pop-edge
-            name: pop-edge
+              app.kubernetes.io/component: edge
+              app.kubernetes.io/instance: edge
+            name: edge
             namespace: default
         services:
-          pop-edge:
-            name: pop-edge
+          edge:
+            name: edge
             namespace: default
-          pop-edge-relay:
-            name: pop-edge-relay
+          edge-relay:
+            name: edge-relay
             namespace: default
     resources:
       configMaps:
@@ -203,7 +203,7 @@ spec:
               ip link set wg0 mtu 1380 up
               exec sleep infinity
       deployments:
-        pop-edge:
+        edge:
           replicas: 1
           strategy:
             type: Recreate
@@ -276,9 +276,9 @@ spec:
                   name: wireguard-key
                   secret:
                     defaultMode: 256
-                    secretName: pop-edge-wireguard
+                    secretName: edge-wireguard
       services:
-        pop-edge:
+        edge:
           externalTrafficPolicy: Local
           loadBalancerIP: 192.0.2.10
           ports:
@@ -289,10 +289,10 @@ spec:
               port: 443
               targetPort: 9443
           type: LoadBalancer
-        pop-edge-relay:
+        edge-relay:
           ports:
             relay:
               port: 2525
               targetPort: 2525
           selector:
-            app.kubernetes.io/component: pop-edge
+            app.kubernetes.io/component: edge

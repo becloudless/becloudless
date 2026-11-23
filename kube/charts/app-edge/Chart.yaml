@@ -1,5 +1,5 @@
 apiVersion: v2
-name: app-pop-edge
+name: app-edge
 version: 0.0.0
 dependencies:
   - name: app
