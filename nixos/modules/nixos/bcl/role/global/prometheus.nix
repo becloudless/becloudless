@@ -38,7 +38,7 @@
     systemd.services."prometheus-pushprox-client" = {
       path = with pkgs; [ openssh coreutils gawk gnused ];
       script = ''
-        username="pushprox-${config.bcl.group.name}"
+        username="pushprox-${if config.bcl.group.name != "" then config.bcl.group.name else config.networking.hostName}"
         password="$(sed -e 's/[[:space:]]*$//' /nix/etc/ssh/ssh_host_ed25519_key | tr -d '\n' | sha256sum | awk '{print $1}')"
         domain="pushprox.${config.bcl.global.domain}"
         ${pkgs.bcl.prometheus-pushprox}/bin/pushprox-client --proxy-url="https://$username:$password@$domain" --log.level=warn

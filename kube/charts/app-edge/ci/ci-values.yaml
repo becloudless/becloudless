@@ -6,14 +6,14 @@ app:
 tunnel:
   address: 10.99.0.254
   prefixLength: 24
-  popPort: 51820
+  listenPort: 51820
 
-pops:
-  pop1:
+nodes:
+  edge1:
     address: 203.0.113.10
     tunnelAddress: 10.99.0.1
     publicKey: Hl0aZ5Qe4kYhX1b7w0M4k1c2p0kR3q9d1m0vQy2s0Xk=
-  pop2:
+  edge2:
     address: 203.0.113.20
     tunnelAddress: 10.99.0.2
     publicKey: yb1oEw3r9sN8m5x1c0p7t6v4q2z0k8j9h7g6f5d4s3A=

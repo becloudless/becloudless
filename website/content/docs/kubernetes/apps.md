@@ -38,7 +38,7 @@ All applications are defined under `kube/apps/`, one directory per app.
 | `multus` | Networking | Meta-CNI plugin for attaching multiple network interfaces to pods |
 | `multus-config` | Networking | NetworkAttachmentDefinitions for Multus |
 | `paperless` | Productivity | Document management with OCR and full text search (Paperless-ngx), SSO with Authelia |
-| `edge` | Networking | Entry point of the cluster through the `pop` nodes (WireGuard tunnels the cluster dials, the address of the clients kept with the PROXY protocol), and of the LAN |
+| `edge` | Networking | Entry point of the cluster through the edge nodes (WireGuard tunnels the cluster dials, the address of the clients kept with the PROXY protocol), and of the LAN |
 | `prometheus` | Observability | Prometheus + Grafana monitoring stack |
 | `renovate` | DevOps | Automated dependency update PRs |
 | `seafile` | Productivity | Self-hosted file sync and share (Dropbox alternative), SSO with Authelia |

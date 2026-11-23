@@ -10,6 +10,14 @@ let
   globalRepository = config.bcl.global.git.repository or null;
 in {
   options.bcl.system = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      # the install image has a role but no disk, no hardware: it is not a machine of the infrastructure. A machine of a group is on
+      # without looking at the role: the role is set by its group module, which reads `bcl.group.name`
+      default = cfg.group != "" || (config.bcl.role.name != "" && config.bcl.role.name != "install");
+      defaultText = lib.literalExpression ''group != "" || (config.bcl.role.name != "" && config.bcl.role.name != "install")'';
+      description = "Enable the bcl stack on the machine (boot, disks, hardware, /etc/bcl/config.yaml, upgrades with the bcl CLI). On with a role, or a group.";
+    };
     id = lib.mkOption {
       type = lib.types.submodule {
         options = {
@@ -52,6 +60,7 @@ in {
     group = lib.mkOption {
       type = lib.types.str;
       default = "";
+      description = "Optional group of the machine (see `bcl.group`), set by the group module that shares the role and the secrets of several machines.";
     };
     repository = lib.mkOption {
       type = lib.types.str;
@@ -66,7 +75,10 @@ in {
   };
 
 
-  config = lib.mkIf (cfg.group != "") {
+  config = lib.mkMerge [
+    # outside of the gate: the group modules (that set the role) read it, the gate reads the role
+    { bcl.group.name = cfg.group; }
+    (lib.mkIf cfg.enable {
     bcl.users.syncthing = lib.mkIf (cfg.sopsFile != null) (
       lib.mapAttrs (_: _: {
         sopsFile = lib.mkDefault cfg.sopsFile;
@@ -85,9 +97,6 @@ in {
       global = {
         enable = true;
       };
-      group = {
-        name = cfg.group;
-      };
       boot = {
         enable = true;
       };
@@ -99,7 +108,8 @@ in {
         devices = cfg.devices;
       };
     };
-  };
+    })
+  ];
 }
 
 

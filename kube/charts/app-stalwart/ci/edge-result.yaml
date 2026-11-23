@@ -656,8 +656,8 @@ spec:
           data:
             plan.ndjson: |-
               {"@type":"upsert","matchOn":["name"],"object":"NetworkListener","value":{"imaps":{"name":"imaps","overrideProxyTrustedNetworks":{"10.42.0.0/16":true}},"smtp":{"name":"smtp","overrideProxyTrustedNetworks":{"10.42.0.0/16":true}},"submissions":{"name":"submissions","overrideProxyTrustedNetworks":{"10.42.0.0/16":true}}}}
-              {"@type":"upsert","matchOn":["name"],"object":"MtaRoute","value":{"relay":{"@type":"Relay","host":"edge-relay.edge.svc","name":"pop-relay","port":2525}}}
-              {"@type":"update","object":"MtaOutboundStrategy","value":{"route":{"else":"'pop-relay'","match":{"0":{"if":"is_local_domain(rcpt_domain)","then":"'local'"}}}}}
+              {"@type":"upsert","matchOn":["name"],"object":"MtaRoute","value":{"relay":{"@type":"Relay","host":"edge-relay.edge.svc","name":"edge-relay","port":2525}}}
+              {"@type":"update","object":"MtaOutboundStrategy","value":{"route":{"else":"'edge-relay'","match":{"0":{"if":"is_local_domain(rcpt_domain)","then":"'local'"}}}}}
               {"@type":"create","object":"Action","value":{"reload":{"@type":"ReloadSettings"}}}
             restart.sh: |-
               set -eu
@@ -690,7 +690,7 @@ spec:
                         DEPLOYMENT: stalwart
                         HOME: /tmp
                         NAMESPACE: default
-                        PLAN_HASH: 7eca46c2526a5267
+                        PLAN_HASH: 7a5d540575edd0a8
                       image: docker.io/alpine/k8s:1.37.2
                       name: restart
                       securityContext:

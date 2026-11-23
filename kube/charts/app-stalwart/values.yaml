@@ -17,8 +17,8 @@
 # recovery administrator is a full access credential kept by the pod: it is the way back in when the database is empty or locked, remove
 # `STALWART_RECOVERY_ADMIN` (`env` of the container) once a real administrator exists if it is not wanted.
 #
-# Behind the pops (app `edge`): the mail ports are the ones of the pops, which send the PROXY header (the address of the client) to the service
-# of Stalwart through `edge`, and the outgoing mails go to the relay of the pops (`edge-relay`), so they leave from the address of a pop.
+# Behind the edge nodes (app `edge`): the mail ports are the ones of the edge nodes, which send the PROXY header (the address of the client) to the service
+# of Stalwart through `edge`, and the outgoing mails go to the relay of the edge nodes (`edge-relay`), so they leave from the address of an edge node.
 # It changes (in the cluster values of this app):
 #  - the Gateway does not publish the mail ports: `resources.fluxHelmReleases.stalwart.values.resources.listenerSets.stalwart-mail` and the
 #    `tcpRoutes` are set to `null`;
@@ -33,16 +33,16 @@
 # with a `matchOn`, `update` of the singletons), applied again at every run. A run fails while Stalwart has not been set up yet (the listeners
 # do not exist before the first setup in the web UI): it works at a following run. When the plan changed, Stalwart is restarted once after it
 # was applied (the listeners are only read at the start), the hash of the plan applied is in the annotation `bcl.tf/stalwart-setup-plan` of the Deployment.
-# Example, for the pops (the trusted network is the one of the pods of the cluster, only `edge` can connect to the mail ports):
+# Example, for the edge nodes (the trusted network is the one of the pods of the cluster, only `edge` can connect to the mail ports):
 #   setup:
 #     plan:
 #       - {"@type": upsert, object: NetworkListener, matchOn: [name], value: {smtp: {name: smtp, overrideProxyTrustedNetworks: {10.42.0.0/16: true}}}}
-#       - {"@type": upsert, object: MtaRoute, matchOn: [name], value: {relay: {"@type": Relay, name: pop-relay, host: edge-relay.edge.svc, port: 2525}}}
-#       - {"@type": update, object: MtaOutboundStrategy, value: {route: {else: "'pop-relay'", match: {"0": {if: is_local_domain(rcpt_domain), then: "'local'"}}}}}
+#       - {"@type": upsert, object: MtaRoute, matchOn: [name], value: {relay: {"@type": Relay, name: edge-relay, host: edge-relay.edge.svc, port: 2525}}}
+#       - {"@type": update, object: MtaOutboundStrategy, value: {route: {else: "'edge-relay'", match: {"0": {if: is_local_domain(rcpt_domain), then: "'local'"}}}}}
 #       - {"@type": create, object: Action, value: {reload: {"@type": ReloadSettings}}}
 #
 # NOT done by this chart:
-#  - the DNS records of the domain (MX, SPF, DKIM, DMARC, the reverse DNS of the IP of the Gateway or of the pops, `mail.<domain>`) and the open
+#  - the DNS records of the domain (MX, SPF, DKIM, DMARC, the reverse DNS of the IP of the Gateway or of the edge nodes, `mail.<domain>`) and the open
 #    port 25 (a lot of residential networks and clouds block it) : they depend on the provider;
 #  - the TLS certificate of the mail protocols: Stalwart serves a self-signed one until one is set (ACME needs the egress to the ACME server and the
 #    challenge on the Gateway, or import the certificate of cert-manager);
@@ -66,7 +66,7 @@ resources:
         mail: # served by the Gateway service without Envoy: the source is the client itself (public, or in the cluster)
           fromEntities: [world, cluster]
           toPorts: [25, 465, 993]
-        edge: # `edge`: the mail ports of the pops, with the PROXY header
+        edge: # `edge`: the mail ports of the edge nodes, with the PROXY header
           fromEndpoints:
             edge:
               matchLabels:
@@ -84,7 +84,7 @@ resources:
           toFQDNs:
             any: {matchPattern: "*"}
           toPorts: [25]
-        relay: # the relay of the pops (`edge`): the outgoing mails leave from their address
+        relay: # the relay of the edge nodes (`edge`): the outgoing mails leave from their address
           toEndpoints:
             edge:
               matchLabels:

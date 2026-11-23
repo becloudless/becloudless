@@ -162,7 +162,7 @@ spec:
               backend gateway-https
                 server gateway cilium-gateway-shared.cilium.svc:443 send-proxy-v2
 
-              # The `tcp` services: the pops send the PROXY header with the address of their client, it is sent on to the server (it reads
+              # The `tcp` services: the edge nodes send the PROXY header with the address of their client, it is sent on to the server (it reads
               # it from this pod only). The name of the server is resolved when it is used: it may not exist yet when this pod starts.
               resolvers cluster
                 parse-resolv-conf
@@ -182,15 +182,15 @@ spec:
               backend svc-smtp
                 server smtp stalwart.stalwart.svc:25 send-proxy-v2 resolvers cluster init-addr none
 
-              # The relay of the outgoing mails: one of the pops, in turn (the connection leaves by the tunnel)
+              # The relay of the outgoing mails: one of the edge nodes, in turn (the connection leaves by the tunnel)
               frontend relay-in
                 bind :2525
-                default_backend relay-pops
+                default_backend relay-nodes
 
-              backend relay-pops
+              backend relay-nodes
                 balance roundrobin
-                server pop1 10.99.0.1:2525 check
-                server pop2 10.99.0.2:2525 check
+                server edge1 10.99.0.1:2525 check
+                server edge2 10.99.0.2:2525 check
         wireguard:
           data:
             up.sh: |-
