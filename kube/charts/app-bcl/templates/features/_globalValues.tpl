@@ -27,12 +27,18 @@ Rendered as a `global-values` ConfigMap in the namespace of each app, used by th
 {{- end }}
 
 {{- $lldapUsers := $config.lldapUsers | default dict }}
+
+{{- /* a node reachable from the internet (`bcl.role.kube.pop`) is the only one of its cluster: one replica and one database instance unless the cluster sets them */}}
+{{- $scaling := $config.scaling | default dict }}
+{{- if $config.pop }}
+  {{- $scaling = merge (deepCopy $scaling) (dict "replicas" 1 "dbReplicas" 1) }}
+{{- end }}
 app:
   domain: {{ $domain }}
   name: {{ $name }}
   lldapdn: {{ $ldapdn }}
   lldapUsers: {{- $lldapUsers | toYaml | nindent 4 }}
-  {{- with $config.scaling }}
+  {{- with $scaling }}
   scaling: {{- . | toYaml | nindent 4 }}
   {{- end }}
 {{- end }}
