@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Docker assets
+
+# The image `stalwart-assets` bakes in data that changes without any change of the repository (the ASN and country tables): it is built again every week.
+# The other images are built by docker.yaml, when their files change.
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download bcl
+        run: |
+          VERSION="$(grep -E '^\s+version = ' nixos/packages/bcl/default.nix | sed 's/.*"\(.*\)".*/\1/')"
+          mkdir -p cli/dist
+          curl -fsSL "https://github.com/becloudless/becloudless/releases/download/v${VERSION}/bcl-linux-amd64.tar.gz" \
+            | tar -xz -C cli/dist
+          chmod +x cli/dist/bcl-linux-amd64/bcl
+
+      - name: Build/Push image
+        run: cli/dist/bcl-linux-amd64/bcl docker push --path docker/misc/stalwart-assets -L trace
