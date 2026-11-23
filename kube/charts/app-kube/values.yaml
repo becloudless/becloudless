@@ -1,6 +1,24 @@
 # yaml-language-server: $schema=../app/schema/values.schema.json
 
-# Kubernetes own objects that the cluster needs and that nothing else installs.
+# Kubernetes own objects that the cluster needs and that nothing else installs, and the CronJob `node-repair`.
+#
+# A node that stops (a crash, a power cut, a hang) takes its pods with it, and Kubernetes does not move them: the pods stay `Terminating`
+# for ever (the kubelet that confirms the end of the pod is gone) and their volumes stay attached to the dead node. The pods that nothing
+# else replaces (the instances of the CloudNativePG clusters are pods of the operator, not of a StatefulSet) are never started again, and
+# the other pods that use a volume stay in `ContainerCreating` (`Multi-Attach error`/`FailedAttachVolume`). Longhorn only handles the
+# pods of the StatefulSets and Deployments (`nodeDownPodDeletionPolicy`).
+# The CronJob `node-repair` (the script is `files/node-repair.sh`, in the ConfigMap `node-repair`) applies the taint
+# `node.kubernetes.io/out-of-service=nodeshutdown:NoExecute` (non graceful node shutdown of Kubernetes) to a node that
+#  - is `Unknown` for `DEAD_AFTER` seconds (its kubelet does not report: a kubelet that reports `NotReady` is running, its pods are too);
+#  - does not answer at all on the kubelet port of its address (a machine that refuses the connection is up, only its kubelet is down
+#    and its containers still run);
+#  - is not in a cluster where most of the nodes are in this case (more a problem of the network of the job);
+#  - does not have the annotation `node-repair.bcl.tf/disabled: "true"`.
+# Kubernetes then deletes the pods of the node (the ones that tolerate it excepted, the DaemonSets) and detaches its volumes at once:
+# the controllers and the operators start the pods again on the other nodes. The taint (and the annotation
+# `node-repair.bcl.tf/out-of-service` that marks it, a taint set by hand is never touched) is removed when the node is ready again.
+# An event `NodeOutOfService` or `NodeBackInService` is created on the node.
+# To only see what it would do, set `DRY_RUN: "true"` in the env of the CronJob.
 
 # The public name of the API server on the Gateway `shared`, `kube.<domain>` when empty. It has to be one of the certificate SANs of the API server.
 # A node reachable from the internet (`bcl.role.kube.pop`) has the name `bcl.role.kube.pop.apiServerName` (`kube.pop.<domain>`).
@@ -30,7 +48,29 @@ resources:
           verbs:
             all: "*"
 
+    node-repair:
+      rules:
+        nodes: # the taint and the annotation
+          apiGroups: [ "" ]
+          resources: [ nodes ]
+          verbs: [ get, list, patch ]
+        events: # on the nodes, in `default`
+          apiGroups: [ "" ]
+          resources: [ events ]
+          verbs: [ create ]
+
   clusterRoleBindings:
+    node-repair:
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: node-repair
+      subjects:
+        node-repair:
+          kind: ServiceAccount
+          name: node-repair
+          namespace: "{{ .Release.Namespace }}"
+
     # the users of authelia (OIDC authentication of the apiserver, `bcl.role.kube.oidc` of the nixos module) of the group
     # `role_admin` of lldap: the groups of the id token are prefixed by `oidc:`
     oidc-admin:
@@ -56,6 +96,61 @@ resources:
           apiGroup: rbac.authorization.k8s.io
           kind: User
           name: kube-apiserver-kubelet-client
+
+  serviceAccounts:
+    node-repair:
+      automountServiceAccountToken: true # the API server
+
+  ciliumNetworkPolicies:
+    node-repair:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/component: node-repair}
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+        kubelets: # is the machine up
+          toEntities: [host, remote-node]
+          toPorts: [10250]
+
+  cronJobs:
+    node-repair:
+      schedule: "*/5 * * * *"
+      concurrencyPolicy: Forbid
+      jobTemplate:
+        spec:
+          backoffLimit: 0
+          activeDeadlineSeconds: 120
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/component: node-repair
+            spec:
+              restartPolicy: Never
+              serviceAccountName: node-repair
+              securityContext:
+                runAsUser: 65534
+                runAsGroup: 65534
+              containers:
+                repair:
+                  name: repair
+                  image: docker.io/alpine/k8s:1.37.2 # renovate: versioning=loose
+                  command: [ bash, /scripts/node-repair.sh ]
+                  env:
+                    HOME: /tmp
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                  volumeMounts:
+                    script:
+                      name: script
+                      mountPath: /scripts
+                      readOnly: true
+              volumes:
+                script:
+                  name: script
+                  configMap:
+                    name: node-repair
 
   fluxHelmReleases:
     # Public access to the API server on <hostname>:443 (kube.<domain> by default), through the Cilium Gateway `shared` (cilium).

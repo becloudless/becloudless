@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# See the header of the values of the chart app-kube.
+set -uo pipefail
+
+DEAD_AFTER=${DEAD_AFTER:-600}       # seconds a node has to be unknown to the API server before it is out of service
+KUBELET_PORT=${KUBELET_PORT:-10250} # a node whose kubelet port answers (or refuses) is a machine that is up
+DRY_RUN=${DRY_RUN:-false}
+TAINT=node.kubernetes.io/out-of-service
+TAINT_VALUE=nodeshutdown
+ANNOTATION=node-repair.bcl.tf/out-of-service # set by this script on the nodes it taints, only these ones are untainted
+DISABLED=node-repair.bcl.tf/disabled         # annotation of a node, "true" to never taint it
+
+log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
+
+# <node> <reason> <message>: an event on the node
+event() {
+  kubectl create -f - <<EOF || true
+apiVersion: v1
+kind: Event
+metadata:
+  generateName: node-repair-
+  namespace: default
+type: Warning
+reason: $2
+message: "$3"
+involvedObject: {apiVersion: v1, kind: Node, name: $1}
+source: {component: node-repair}
+EOF
+}
+
+# <address>: 0 when something answers on the kubelet port of the machine, even to refuse the connection (the machine is up, only
+# its kubelet is down: its containers still run). Nothing at all (timeout, no route) is a machine that is down or cut off.
+machine_is_up() {
+  local err
+  err=$(timeout 5 bash -c "exec 3<>/dev/tcp/$1/$KUBELET_PORT" 2>&1) && return 0
+  grep -qi 'refused' <<<"$err"
+}
+
+now=$(date +%s)
+# `<node> <address> <ready> <seconds since the ready condition changed> <tainted> <tainted by this script> <disabled>` (tab separated)
+nodes=$(kubectl get nodes -o json | jq -r --argjson now "$now" '
+  .items[]
+  | ([.status.conditions[]? | select(.type == "Ready")][0] // {}) as $ready
+  | [ .metadata.name,
+      (((.status.addresses // []) | map(select(.type == "InternalIP")) | .[0].address) // "-"),
+      ($ready.status // "Unknown"),
+      (if $ready.lastTransitionTime then $now - ($ready.lastTransitionTime | fromdateiso8601) else 0 end),
+      ((.spec.taints // []) | any(.key == "node.kubernetes.io/out-of-service")),
+      ((.metadata.annotations["node-repair.bcl.tf/out-of-service"] // "") != ""),
+      ((.metadata.annotations["node-repair.bcl.tf/disabled"] // "") == "true")
+    ] | @tsv') || { log "cannot list the nodes"; exit 1; }
+
+# the nodes that are ready, and the ones whose kubelet does not report for long enough: when most of the nodes are in this state it is
+# a problem of the network of this pod, not nodes that are down
+ready=0
+dead=0
+while IFS=$'\t' read -r node address status age tainted ours disabled; do
+  [ -n "$node" ] || continue
+  if [ "$status" = True ]; then
+    ready=$((ready + 1))
+  elif [ "$status" = Unknown ] && [ "$age" -ge "$DEAD_AFTER" ]; then
+    dead=$((dead + 1))
+  fi
+done <<<"$nodes"
+
+status=0
+while IFS=$'\t' read -r node address ready_status age tainted ours disabled; do
+  [ -n "$node" ] || continue
+  ctx="node $node"
+
+  if [ "$tainted" = true ] && [ "$ours" = true ] && [ "$ready_status" = True ]; then
+    # back: the pods that were on it were deleted when it was out of service, its kubelet stops the containers that are left
+    if [ "$DRY_RUN" = true ]; then
+      log "$ctx: ready again, DRY RUN, would remove the taint $TAINT"; continue
+    fi
+    log "$ctx: ready again, removing the taint $TAINT"
+    if ! kubectl taint nodes "$node" "$TAINT:NoExecute-"; then
+      log "$ctx: cannot remove the taint"; status=1; continue
+    fi
+    kubectl annotate node "$node" "$ANNOTATION-" || status=1
+    event "$node" NodeBackInService "the node is ready again, the taint $TAINT was removed"
+    continue
+  fi
+
+  [ "$ready_status" = Unknown ] && [ "$age" -ge "$DEAD_AFTER" ] || continue
+  [ "$tainted" != true ] || continue # already out of service
+  if [ "$disabled" = true ]; then
+    log "$ctx: unknown for ${age}s, disabled by the annotation $DISABLED"; continue
+  fi
+  if [ "$ready" -le "$dead" ]; then
+    log "$ctx: unknown for ${age}s, but $dead nodes are in this state and only $ready are ready: more a problem of the network than of the nodes, nothing is done"; continue
+  fi
+  if [ "$address" != - ] && machine_is_up "$address"; then
+    log "$ctx: unknown for ${age}s, but $address answers on the port $KUBELET_PORT: the machine is up, its containers may still run"; continue
+  fi
+
+  if [ "$DRY_RUN" = true ]; then
+    log "$ctx: unknown for ${age}s and $address does not answer, DRY RUN, would taint it $TAINT=$TAINT_VALUE:NoExecute"; continue
+  fi
+  log "$ctx: unknown for ${age}s and $address does not answer, tainting it $TAINT=$TAINT_VALUE:NoExecute"
+  # the annotation first: a taint without it would never be removed
+  kubectl annotate node "$node" "$ANNOTATION=$(date -u +%Y-%m-%dT%H:%M:%SZ)" --overwrite || { status=1; continue; }
+  if ! kubectl taint nodes "$node" "$TAINT=$TAINT_VALUE:NoExecute"; then
+    log "$ctx: cannot taint it"
+    kubectl annotate node "$node" "$ANNOTATION-"
+    status=1
+    continue
+  fi
+  event "$node" NodeOutOfService "the node was unknown for ${age}s and does not answer on the port $KUBELET_PORT: it is out of service ($TAINT), its pods are deleted and its volumes detached"
+done <<<"$nodes"
+
+[ "$dead" -gt 0 ] || [ "$status" -ne 0 ] || log "no node is down"
+exit $status
