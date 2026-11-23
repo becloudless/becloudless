@@ -61,7 +61,8 @@ can be closed to the network. Then render the app-bcl chart with the values of t
 (bcl/bcl.hr.yaml) restricted to the apps of the minimal group, render each of these app charts, and apply the resources
 flux needs to start: namespaces, helm releases coming from helm repositories (ex: cilium, coredns) and the flux installation.
 Everything else is left to flux once it runs. This command is re-entrant.`,
-		Args: cobra.ExactArgs(0),
+		Args:    cobra.ExactArgs(0),
+		Aliases: []string{"boot"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return BootstrapRemote(opts)
 		},
@@ -739,7 +740,7 @@ func applyRenderedApps(ctx kube.Context, apps []renderedApp, adoptResources bool
 	}
 
 	for _, hr := range helmReleases {
-		if err := applyFluxHelmReleaseWithHelm(ctx, hr.folder, hr.ref, nil, adoptResources); err != nil {
+		if err := applyFluxHelmReleaseWithHelm(ctx, hr.folder, hr.ref, adoptResources); err != nil {
 			return errs.WithEF(err, data.WithField("name", hr.ref.Name), "Failed to apply helm release")
 		}
 	}

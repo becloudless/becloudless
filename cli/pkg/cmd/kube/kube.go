@@ -13,7 +13,6 @@ func KubeCmd() *cobra.Command {
 	cmd.AddCommand(
 		chart.ChartsCmd(),
 		kubeBootstrapCmd(),
-		kubeBootstrapOldCmd(),
 		kubeContextCmd(),
 		kubeSecretCmd(),
 	)
