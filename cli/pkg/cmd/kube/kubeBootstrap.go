@@ -41,6 +41,7 @@ const (
 	dnsPolicyName        = "allow-dns"
 	dnsPolicyKind        = "CiliumClusterwideNetworkPolicy"
 	dnsPolicyCRD         = "crd/ciliumclusterwidenetworkpolicies.cilium.io"
+	policyCRD            = "crd/ciliumnetworkpolicies.cilium.io"
 )
 
 type bootstrapRemoteOptions struct {
@@ -362,10 +363,33 @@ func renderGroupApps(ctx kube.Context, opts bootstrapRemoteOptions) ([]renderedA
 				docs = append(docs, dnsPolicy)
 			}
 		}
+		// the policies of the apps are applied by the bootstrap too, they are adopted by the release once flux installs it: the DNS policy
+		// turns on the default deny of the egress of every pod, flux and coredns can not reach the apiserver without their own policies
+		markOwnedByHelmRelease(filterDocs(docs, func(doc map[string]any) bool { return isCiliumPolicy(doc) && !isDNSPolicy(doc) }), releaseName, releaseNamespace)
 		apps = append(apps, renderedApp{name: name, docs: docs})
 	}
 
 	return apps, gitRepositoryDocs(appsDocs, appsHr), nil
+}
+
+// isCiliumPolicy tells whether the doc is a (clusterwide) Cilium network policy.
+func isCiliumPolicy(doc map[string]any) bool {
+	return doc["kind"] == "CiliumNetworkPolicy" || doc["kind"] == dnsPolicyKind
+}
+
+// isDNSPolicy tells whether the doc is the policy allowing the DNS of the pods, see renderDNSPolicy.
+func isDNSPolicy(doc map[string]any) bool {
+	return doc["kind"] == dnsPolicyKind && nestedValue(doc, "metadata", "name") == dnsPolicyName
+}
+
+func filterDocs(docs []map[string]any, keep func(doc map[string]any) bool) []map[string]any {
+	var result []map[string]any
+	for _, doc := range docs {
+		if keep(doc) {
+			result = append(result, doc)
+		}
+	}
+	return result
 }
 
 // helmReleaseTarget returns the name of the helm release flux installs for the HelmRelease hr, and the namespace it installs it in.
@@ -695,6 +719,9 @@ func applyRenderedApps(ctx kube.Context, apps []renderedApp, adoptResources bool
 			case kind == dnsPolicyKind && name == dnsPolicyName:
 				dnsPolicies = append(dnsPolicies, doc)
 				continue
+			case kind == "CiliumNetworkPolicy" || kind == dnsPolicyKind:
+				dnsPolicies = append(dnsPolicies, doc)
+				continue
 			case kind == "Kustomization" && sourceKind == "GitRepository":
 				sourceName, _ := nestedValue(doc, "spec", "sourceRef", "name").(string)
 				sourceNamespace, _ := nestedValue(doc, "spec", "sourceRef", "namespace").(string)
@@ -807,8 +834,8 @@ func applyGitKustomization(ctx kube.Context, ks map[string]any, repository map[s
 	return nil
 }
 
-// applyDNSPolicies applies the policies allowing the DNS of the pods. The Cilium operator creates the CRDs of the policies when it starts,
-// which is after the helm release of cilium is installed: wait for them.
+// applyDNSPolicies applies the policy allowing the DNS of the pods and the policies of the apps. The Cilium operator creates the CRDs of the
+// policies when it starts, which is after the helm release of cilium is installed: wait for them.
 func applyDNSPolicies(ctx kube.Context, policies []map[string]any) error {
 	if len(policies) == 0 {
 		return nil
@@ -819,7 +846,7 @@ func applyDNSPolicies(ctx kube.Context, policies []map[string]any) error {
 	var lastOutput []byte
 	var lastErr error
 	for attempt := 0; attempt < attemptCount; attempt++ {
-		wait := exec.Command("kubectl", "wait", "--for=condition=Established", "--timeout=5s", dnsPolicyCRD)
+		wait := exec.Command("kubectl", "wait", "--for=condition=Established", "--timeout=5s", dnsPolicyCRD, policyCRD)
 		wait.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
 		lastOutput, lastErr = wait.CombinedOutput()
 		if lastErr == nil {
@@ -831,8 +858,8 @@ func applyDNSPolicies(ctx kube.Context, policies []map[string]any) error {
 		return errs.WithEF(lastErr, data.WithField("output", string(lastOutput)).WithField("crd", dnsPolicyCRD), "The CRD of the DNS policy is not established, is the cilium operator running?")
 	}
 
-	if err := applyDocs(ctx, policies, "the DNS policies"); err != nil {
-		return errs.WithE(err, "Failed to apply the DNS policies, flux cannot fetch its sources without them")
+	if err := applyDocs(ctx, policies, "the DNS policy and the policies of the apps"); err != nil {
+		return errs.WithE(err, "Failed to apply the policies, flux cannot fetch its sources without them")
 	}
 	return nil
 }
