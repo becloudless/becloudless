@@ -175,14 +175,58 @@ func validateOverrideInputs(flakeDir string, overrideInputs []string) error {
 	return nil
 }
 
+// parseSystemNames reads the JSON list of names printed by `nix eval --json <flake>#nixosConfigurations --apply builtins.attrNames`.
+func parseSystemNames(output string) ([]string, error) {
+	var names []string
+	if err := json.Unmarshal([]byte(output), &names); err != nil {
+		return nil, errs.WithE(err, "Failed to parse the system names of the flake")
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
+// checkSystemName fails with the list of the available systems when systemName is not one of them.
+func checkSystemName(systemName string, available []string) error {
+	for _, name := range available {
+		if name == systemName {
+			return nil
+		}
+	}
+	return errs.WithF(data.WithField("system", systemName).WithField("available", strings.Join(available, ", ")),
+		"Unknown system, it is not declared by the flake. Use --system-name to select one")
+}
+
+// validateSystemName ensures the system to build is declared by the local flake, instead of letting nixos-rebuild fail
+// on a missing `nixosConfigurations.<name>` attribute. An empty name is the one nixos-rebuild picks for a local build:
+// the hostname of this machine, or "default" when it has none.
+func validateSystemName(flakeDir string, systemName string, overrideInputArgs []string) error {
+	if systemName == "" {
+		hostname, err := os.Hostname()
+		if err != nil || hostname == "" {
+			hostname = "default"
+		}
+		systemName = hostname
+	}
+
+	args := append([]string{"eval", "--json", "--no-write-lock-file", flakeDir + "#nixosConfigurations", "--apply", "builtins.attrNames"}, overrideInputArgs...)
+	output, err := runner.NewLocalRunner().ExecCmdGetStdout("nix", args...)
+	if err != nil {
+		return errs.WithEF(err, data.WithField("flake", flakeDir), "Failed to list the systems of the flake")
+	}
+	available, err := parseSystemNames(output)
+	if err != nil {
+		return err
+	}
+	return checkSystemName(systemName, available)
+}
+
 // upgradeLocalFromGit rebuilds the current (local) system from the local infra git repository state.
 func upgradeLocalFromGit(action string, systemName string, overrideInputs []string) error {
-	logs.WithField("repo", bcl.BCL.System.Repository).Warn("Update current system using local git repository state")
-
 	repository, err := openLocalInfraRepository()
 	if err != nil {
 		return err
 	}
+	logs.WithField("repo", repository.Root).Warn("Update current system using local git repository state")
 
 	flakeDir := filepath.Join(repository.Root, "nixos")
 	if err := validateOverrideInputs(flakeDir, overrideInputs); err != nil {
@@ -190,6 +234,9 @@ func upgradeLocalFromGit(action string, systemName string, overrideInputs []stri
 	}
 	overrideInputArgs, err := buildOverrideInputArgs(overrideInputs)
 	if err != nil {
+		return err
+	}
+	if err := validateSystemName(flakeDir, systemName, overrideInputArgs); err != nil {
 		return err
 	}
 
@@ -224,12 +271,11 @@ func upgradeLocalFromUpstream(action string, systemName string) error {
 // upgradeRemoteTargetHostFromGit builds locally from the local infra git repository state and deploys to a
 // remote host via nixos-rebuild's --target-host/--sudo.
 func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, action string, systemName string, overrideInputs []string, askSudoPassword bool) error {
-	logs.WithField("repo", bcl.BCL.System.Repository).Warn("Update remote system using local git repository state")
-
 	repository, err := openLocalInfraRepository()
 	if err != nil {
 		return err
 	}
+	logs.WithField("repo", repository.Root).Warn("Update remote system using local git repository state")
 
 	flakeDir := filepath.Join(repository.Root, "nixos")
 	if err := validateOverrideInputs(flakeDir, overrideInputs); err != nil {
@@ -256,6 +302,9 @@ func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, actio
 		if err != nil || systemName == "" {
 			return errs.WithE(err, "Failed to get the hostname of the remote host, use --system-name")
 		}
+	}
+	if err := validateSystemName(flakeDir, systemName, overrideInputArgs); err != nil {
+		return err
 	}
 
 	args := append([]string{nixosRebuildAction(action), "--flake", buildFlakeTarget(flakeDir, systemName),
@@ -286,7 +335,7 @@ func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, actio
 // upgradeRemoteFromUpstream connects to a remote host over SSH and rebuilds it there, using the upstream
 // repository configured in that remote host's own system config.
 func upgradeRemoteFromUpstream(sshConfig *runner.SshConnectionConfig, action string, systemName string) error {
-	logs.WithField("repo", bcl.BCL.System.Repository).WithField("host", sshConfig.Host).Info("Update remote host using upstream state")
+	logs.WithField("host", sshConfig.Host).Info("Update remote host using upstream state")
 
 	run, err := runner.NewSshRunner(sshConfig)
 	if err != nil {
@@ -296,6 +345,7 @@ func upgradeRemoteFromUpstream(sshConfig *runner.SshConnectionConfig, action str
 	if err != nil {
 		return errs.WithE(err, "Failed to get system config from remote system")
 	}
+	logs.WithField("repo", config.Repository).WithField("host", sshConfig.Host).Debug("Upstream repository of the remote host")
 
 	sudoRun, err := runner.NewSudoRunner(run)
 	if err != nil {

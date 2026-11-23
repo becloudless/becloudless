@@ -243,41 +243,6 @@ func prepareDiskPassword(repo *bcl.Infra, temp string, systemName string, diskPa
 	return nil
 }
 
-func createSystemConfig(repo *bcl.Infra, err error, info SystemInfo) (SystemConfig, error) {
-	config, err := newSystemConfig(info)
-	if err != nil {
-		return config, errs.WithE(err, "Failed to create new host")
-	}
-
-	systemFolder := path.Join(repo.GetNixosDir(), "systems", "x86_64-linux", config.Name)
-	if err := os.MkdirAll(systemFolder, 0755); err != nil {
-		return config, errs.WithE(err, "Failed to create git system folder")
-	}
-
-	if err := utils.CopyFile(path.Join(bcl.BCL.EmbeddedPath, "assets", "repository", "nixos", "yamlSystem.nix"), path.Join(systemFolder, "default.nix")); err != nil {
-		return config, errs.WithE(err, "Failed to copy system's default.nix")
-	}
-
-	systemYamlFile := path.Join(systemFolder, "default.yaml")
-	file, err := os.OpenFile(systemYamlFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return config, errs.WithE(err, "Failed to open nix system file")
-	}
-	defer file.Close()
-	out, err := yaml.Marshal(config)
-	if err != nil {
-		return config, errs.WithE(err, "failed to marshal system configuration")
-	}
-	if _, err := file.Write(out); err != nil {
-		return config, errs.WithE(err, "Failed to write system configuration to file")
-	}
-
-	if err := repo.Git.AddAll(); err != nil {
-		return config, errs.WithE(err, "Failed to add new system to git repository")
-	}
-	return config, nil
-}
-
 func findSystem(repo *bcl.Infra, localRunner *runner.LocalRunner, info SystemInfo) (string, error) {
 	flakeShow, err := localRunner.ExecCmdGetStdout(
 		"nix",

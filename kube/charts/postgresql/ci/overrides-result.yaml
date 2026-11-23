@@ -128,6 +128,12 @@ spec:
     serverTLSSecret: test-release-tls
   enablePDB: false
   instances: 2
+  postgresql:
+    parameters:
+      max_slot_wal_keep_size: 256MB
+      max_wal_size: 256MB
+      min_wal_size: 32MB
+      wal_keep_size: 128MB
   storage:
     size: 1Gi
     storageClass: longhorn-db

@@ -76,6 +76,21 @@ spec:
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
+  name: cert-manager-startupapicheck
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - kube-apiserver
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: startupapicheck
+      app.kubernetes.io/instance: cert-manager
+---
+# Source: app-cert-manager/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
   name: cert-manager-webhook
   namespace: default
 spec:

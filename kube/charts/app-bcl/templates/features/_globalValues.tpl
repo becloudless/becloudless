@@ -27,12 +27,14 @@ Rendered as a `global-values` ConfigMap in the namespace of each app, used by th
 {{- end }}
 
 {{- $lldapUsers := $config.lldapUsers | default dict }}
+
+{{- $scaling := $config.scaling | default dict }}
 app:
   domain: {{ $domain }}
   name: {{ $name }}
   lldapdn: {{ $ldapdn }}
   lldapUsers: {{- $lldapUsers | toYaml | nindent 4 }}
-  {{- with $config.scaling }}
+  {{- with $scaling }}
   scaling: {{- . | toYaml | nindent 4 }}
   {{- end }}
 {{- end }}

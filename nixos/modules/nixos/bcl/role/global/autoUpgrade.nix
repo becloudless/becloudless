@@ -64,8 +64,8 @@ in
 
     # The upgrade is run by `bcl nix up` (the same command as by hand, from the repository of /etc/bcl/config.yaml): it repairs the nix
     # store when a crash left a path empty or truncated (`error parsing derivation ... file is empty`), and runs nixos-rebuild again.
-    # `flake` and `flags` above are only used by the hosts without /etc/bcl/config.yaml (no `bcl.system.group`).
-    systemd.services.nixos-upgrade = lib.mkIf (config.bcl.system.group != "") {
+    # `flake` and `flags` above are only used by the hosts without /etc/bcl/config.yaml (no `bcl.system`, the install image).
+    systemd.services.nixos-upgrade = lib.mkIf config.bcl.system.enable {
       script = lib.mkForce ''
         ${pkgs.bcl.bcl}/bin/bcl nix up --action ${config.system.autoUpgrade.operation}
       '';

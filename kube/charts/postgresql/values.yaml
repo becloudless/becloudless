@@ -14,6 +14,9 @@ issuer: self-signed
 clientCertAuth: false
 
 # `spec.postgresql` of the cluster, ex: parameters
+# The WAL parameters are computed from `storageSize` so that the WAL fits in the volume of every instance (an instance
+# does not start without free space for it): `max_wal_size` and `max_slot_wal_keep_size` 1/4 of it, `wal_keep_size` 1/8 and
+# `min_wal_size` 1/32, limited to 1GB, 4GB, 512MB and 80MB. Set one of them in `parameters` to replace it.
 postgresql: {}
 
 # The pods allowed to connect to the database (the default deny of Cilium blocks everyone else), one `matchLabels` selector

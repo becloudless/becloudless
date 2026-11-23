@@ -1,5 +1,6 @@
 { config, lib, pkgs, ... }:
 {
+  # The CAs and the service account keys of the cluster come from the secret file of the group, shared by its nodes.
   config = lib.mkIf (config.bcl.role.name == "kube" && !config.bcl.role.kube.worker) {
 
     sops.secrets."ca_crt" = {

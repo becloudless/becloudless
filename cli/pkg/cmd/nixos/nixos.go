@@ -18,7 +18,6 @@ func NixosCmd() *cobra.Command {
 		iso.NixosIsoCmd(),
 		nixosPrepareCmd(),
 		nixosGroupCmd(),
-		nixosGlobalCmd(),
 		hardware.NixosHardwareCmd(),
 		nixosUpgradeCmd(),
 		backup.NixosBackupCmd(),

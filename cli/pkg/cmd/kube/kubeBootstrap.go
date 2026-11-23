@@ -33,7 +33,7 @@ const (
 	clusterAppsHrFile    = "bcl/bcl.hr.yaml"
 	defaultAppsNamespace = "bcl"
 	remoteKubeconfig     = "/etc/kubernetes/admin.conf"
-	apiServerPort        = "8443"
+	apiServerPort        = "6443" // of the apiserver of the node, reached through ssh on its loopback (certificate SAN 127.0.0.1)
 
 	// the policy allowing the DNS of the pods is declared by this release of this app, see renderDNSPolicy
 	dnsPolicyApp         = "cilium"
@@ -41,6 +41,7 @@ const (
 	dnsPolicyName        = "allow-dns"
 	dnsPolicyKind        = "CiliumClusterwideNetworkPolicy"
 	dnsPolicyCRD         = "crd/ciliumclusterwidenetworkpolicies.cilium.io"
+	policyCRD            = "crd/ciliumnetworkpolicies.cilium.io"
 )
 
 type bootstrapRemoteOptions struct {
@@ -54,12 +55,15 @@ func kubeBootstrapCmd() *cobra.Command {
 	opts := bootstrapRemoteOptions{}
 	cmd := cobra.Command{
 		Use:   "bootstrap",
-		Short: "Fetch the cluster credentials from a server and apply the minimal apps resources extracted from the app charts",
-		Long: `Fetch the kubeconfig of the cluster from a server through ssh, then render the app-bcl chart with the values of the cluster
+		Short: "Fetch temporary cluster credentials from a server and apply the minimal apps resources extracted from the app charts",
+		Long: `Fetch the kubeconfig of the cluster from a server through ssh into a temporary file, removed when the command ends (it is never
+written in the infra folder). The API of the cluster is reached through an ssh tunnel to the apiserver of the server, which
+can be closed to the network. Then render the app-bcl chart with the values of the cluster
 (bcl/bcl.hr.yaml) restricted to the apps of the minimal group, render each of these app charts, and apply the resources
 flux needs to start: namespaces, helm releases coming from helm repositories (ex: cilium, coredns) and the flux installation.
 Everything else is left to flux once it runs. This command is re-entrant.`,
-		Args: cobra.ExactArgs(0),
+		Args:    cobra.ExactArgs(0),
+		Aliases: []string{"boot"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return BootstrapRemote(opts)
 		},
@@ -81,7 +85,31 @@ func BootstrapRemote(opts bootstrapRemoteOptions) error {
 		return errs.With("Current directory is not in a kube/cluster folder")
 	}
 
-	if err := fetchKubeconfig(ctx.KubeConfig, opts); err != nil {
+	// the admin credentials only live for the duration of the bootstrap, they are not kept in the infra folder
+	tmpDir, err := os.MkdirTemp("", "bcl-bootstrap-kubeconfig-")
+	if err != nil {
+		return errs.WithE(err, "Failed to create kubeconfig temp directory")
+	}
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			logs.WithField("dir", tmpDir).WithField("error", err.Error()).Warn("Failed to remove kubeconfig temp dir")
+		}
+	}()
+	ctx.KubeConfig = filepath.Join(tmpDir, "admin.conf")
+
+	sshRunner, err := runner.NewSshRunner(&opts.ssh)
+	if err != nil {
+		return errs.WithEF(err, data.WithField("host", opts.ssh.Host), "Failed to connect to the server")
+	}
+
+	// the apiserver may not be reachable from here (firewall of a node on the internet): the API goes through the ssh connection
+	localAPI, stopForward, err := sshRunner.ForwardLocal(net.JoinHostPort("127.0.0.1", apiServerPort))
+	if err != nil {
+		return errs.WithE(err, "Failed to forward the apiserver port through ssh")
+	}
+	defer stopForward()
+
+	if err := fetchKubeconfig(sshRunner, ctx.KubeConfig, "https://"+localAPI, opts.ssh.Host); err != nil {
 		return errs.WithE(err, "Failed to fetch the kubeconfig")
 	}
 
@@ -161,19 +189,15 @@ func waitFluxCRDs(ctx kube.Context) error {
 	return nil
 }
 
-// fetchKubeconfig reads the kubeconfig on the server and writes it to destination.
-func fetchKubeconfig(destination string, opts bootstrapRemoteOptions) error {
-	logs.WithField("host", opts.ssh.Host).WithField("path", remoteKubeconfig).Info("Fetching kubeconfig")
-	sshRunner, err := runner.NewSshRunner(&opts.ssh)
-	if err != nil {
-		return errs.WithEF(err, data.WithField("host", opts.ssh.Host), "Failed to connect to the server")
-	}
+// fetchKubeconfig reads the kubeconfig on the server and writes it to destination, targeting the apiserver at server.
+func fetchKubeconfig(sshRunner *runner.SshRunner, destination string, server string, host string) error {
+	logs.WithField("host", host).WithField("path", remoteKubeconfig).Info("Fetching kubeconfig")
 	kubeconfig, err := sshRunner.ExecCmdGetStdout("sudo", "cat", remoteKubeconfig)
 	if err != nil {
-		return errs.WithEF(err, data.WithField("host", opts.ssh.Host).WithField("path", remoteKubeconfig), "Failed to read the kubeconfig through ssh")
+		return errs.WithEF(err, data.WithField("host", host).WithField("path", remoteKubeconfig), "Failed to read the kubeconfig through ssh")
 	}
 
-	content, err := rewriteKubeconfigServer([]byte(kubeconfig+"\n"), opts.ssh.Host)
+	content, err := rewriteKubeconfigServer([]byte(kubeconfig+"\n"), server)
 	if err != nil {
 		return err
 	}
@@ -188,9 +212,8 @@ func fetchKubeconfig(destination string, opts bootstrapRemoteOptions) error {
 	return nil
 }
 
-// rewriteKubeconfigServer sets the API url of the clusters to https://<serverHost>:8443,
-// since the kubeconfig of a control plane node targets itself.
-func rewriteKubeconfigServer(content []byte, serverHost string) ([]byte, error) {
+// rewriteKubeconfigServer sets the API url of the clusters to server, since the kubeconfig of a control plane node targets itself.
+func rewriteKubeconfigServer(content []byte, server string) ([]byte, error) {
 	var config map[string]any
 	if err := yaml.Unmarshal(content, &config); err != nil {
 		return nil, errs.WithE(err, "Failed to parse the kubeconfig")
@@ -203,7 +226,7 @@ func rewriteKubeconfigServer(content []byte, serverHost string) ([]byte, error) 
 		if cluster == nil {
 			continue
 		}
-		cluster["server"] = "https://" + net.JoinHostPort(serverHost, apiServerPort)
+		cluster["server"] = server
 	}
 
 	result, err := yaml.Marshal(config)
@@ -340,10 +363,33 @@ func renderGroupApps(ctx kube.Context, opts bootstrapRemoteOptions) ([]renderedA
 				docs = append(docs, dnsPolicy)
 			}
 		}
+		// the policies of the apps are applied by the bootstrap too, they are adopted by the release once flux installs it: the DNS policy
+		// turns on the default deny of the egress of every pod, flux and coredns can not reach the apiserver without their own policies
+		markOwnedByHelmRelease(filterDocs(docs, func(doc map[string]any) bool { return isCiliumPolicy(doc) && !isDNSPolicy(doc) }), releaseName, releaseNamespace)
 		apps = append(apps, renderedApp{name: name, docs: docs})
 	}
 
 	return apps, gitRepositoryDocs(appsDocs, appsHr), nil
+}
+
+// isCiliumPolicy tells whether the doc is a (clusterwide) Cilium network policy.
+func isCiliumPolicy(doc map[string]any) bool {
+	return doc["kind"] == "CiliumNetworkPolicy" || doc["kind"] == dnsPolicyKind
+}
+
+// isDNSPolicy tells whether the doc is the policy allowing the DNS of the pods, see renderDNSPolicy.
+func isDNSPolicy(doc map[string]any) bool {
+	return doc["kind"] == dnsPolicyKind && nestedValue(doc, "metadata", "name") == dnsPolicyName
+}
+
+func filterDocs(docs []map[string]any, keep func(doc map[string]any) bool) []map[string]any {
+	var result []map[string]any
+	for _, doc := range docs {
+		if keep(doc) {
+			result = append(result, doc)
+		}
+	}
+	return result
 }
 
 // helmReleaseTarget returns the name of the helm release flux installs for the HelmRelease hr, and the namespace it installs it in.
@@ -673,6 +719,9 @@ func applyRenderedApps(ctx kube.Context, apps []renderedApp, adoptResources bool
 			case kind == dnsPolicyKind && name == dnsPolicyName:
 				dnsPolicies = append(dnsPolicies, doc)
 				continue
+			case kind == "CiliumNetworkPolicy" || kind == dnsPolicyKind:
+				dnsPolicies = append(dnsPolicies, doc)
+				continue
 			case kind == "Kustomization" && sourceKind == "GitRepository":
 				sourceName, _ := nestedValue(doc, "spec", "sourceRef", "name").(string)
 				sourceNamespace, _ := nestedValue(doc, "spec", "sourceRef", "namespace").(string)
@@ -718,7 +767,7 @@ func applyRenderedApps(ctx kube.Context, apps []renderedApp, adoptResources bool
 	}
 
 	for _, hr := range helmReleases {
-		if err := applyFluxHelmReleaseWithHelm(ctx, hr.folder, hr.ref, nil, adoptResources); err != nil {
+		if err := applyFluxHelmReleaseWithHelm(ctx, hr.folder, hr.ref, adoptResources); err != nil {
 			return errs.WithEF(err, data.WithField("name", hr.ref.Name), "Failed to apply helm release")
 		}
 	}
@@ -785,8 +834,8 @@ func applyGitKustomization(ctx kube.Context, ks map[string]any, repository map[s
 	return nil
 }
 
-// applyDNSPolicies applies the policies allowing the DNS of the pods. The Cilium operator creates the CRDs of the policies when it starts,
-// which is after the helm release of cilium is installed: wait for them.
+// applyDNSPolicies applies the policy allowing the DNS of the pods and the policies of the apps. The Cilium operator creates the CRDs of the
+// policies when it starts, which is after the helm release of cilium is installed: wait for them.
 func applyDNSPolicies(ctx kube.Context, policies []map[string]any) error {
 	if len(policies) == 0 {
 		return nil
@@ -797,7 +846,7 @@ func applyDNSPolicies(ctx kube.Context, policies []map[string]any) error {
 	var lastOutput []byte
 	var lastErr error
 	for attempt := 0; attempt < attemptCount; attempt++ {
-		wait := exec.Command("kubectl", "wait", "--for=condition=Established", "--timeout=5s", dnsPolicyCRD)
+		wait := exec.Command("kubectl", "wait", "--for=condition=Established", "--timeout=5s", dnsPolicyCRD, policyCRD)
 		wait.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", ctx.KubeConfig))
 		lastOutput, lastErr = wait.CombinedOutput()
 		if lastErr == nil {
@@ -809,8 +858,8 @@ func applyDNSPolicies(ctx kube.Context, policies []map[string]any) error {
 		return errs.WithEF(lastErr, data.WithField("output", string(lastOutput)).WithField("crd", dnsPolicyCRD), "The CRD of the DNS policy is not established, is the cilium operator running?")
 	}
 
-	if err := applyDocs(ctx, policies, "the DNS policies"); err != nil {
-		return errs.WithE(err, "Failed to apply the DNS policies, flux cannot fetch its sources without them")
+	if err := applyDocs(ctx, policies, "the DNS policy and the policies of the apps"); err != nil {
+		return errs.WithE(err, "Failed to apply the policies, flux cannot fetch its sources without them")
 	}
 	return nil
 }

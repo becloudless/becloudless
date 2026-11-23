@@ -1,1 +1,5 @@
+{{- /* The ConfigMap of the node-repair script is prepared as a resource by default, values set by the cluster take precedence. */}}
+{{- $featureValues := include "app-kube.nodeRepair" (dict "rootContext" $) | fromYaml }}
+{{- $_ := set $ "Values" (mustMergeOverwrite $featureValues $.Values) }}
+
 {{- include "app.loader.all" $ }}

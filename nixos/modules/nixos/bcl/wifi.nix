@@ -11,20 +11,12 @@
     else
       let
         lines = lib.splitString "\n" (builtins.readFile global.secretFile);
-        prefix = "networking.wireless.";
+        # the SSID may contain dots (ex: lmr2.4): everything between the prefix and `.password:`
         extractSsid = line:
-          if lib.hasPrefix prefix line
-          then
-            let
-              withoutPrefix = lib.removePrefix prefix line;
-              parts = lib.splitString "." withoutPrefix;
-            in
-              # parts = [ "<ssid>" "password:" ... ] — need at least 2 elements
-              # and the second element must start with "password:"
-              if lib.length parts >= 2 && lib.hasPrefix "password:" (lib.elemAt parts 1)
-              then lib.head parts
-              else null
-          else null;
+          let
+            m = builtins.match "networking\\.wireless\\.(.+)\\.password:.*" line;
+          in
+            if m != null then builtins.head m else null;
       in lib.filter (s: s != null) (map extractSsid lines);
 
   # Merge SSIDs from the secret file and the explicit option, deduplicating

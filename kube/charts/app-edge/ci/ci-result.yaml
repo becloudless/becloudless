@@ -1,0 +1,299 @@
+---
+# Source: app-edge/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: allow-edge
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/component: edge
+        k8s:app.kubernetes.io/instance: edge
+        k8s:io.kubernetes.pod.namespace: edge
+    toPorts:
+    - ports:
+      - port: "9080"
+        protocol: TCP
+      - port: "9443"
+        protocol: TCP
+  endpointSelector:
+    matchExpressions:
+    - key: k8s:io.kubernetes.pod.namespace
+      operator: Exists
+---
+# Source: app-edge/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: edge
+  namespace: default
+spec:
+  egress:
+  - toEntities:
+    - ingress
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+      - port: "80"
+        protocol: TCP
+  - toEntities:
+    - world
+    toPorts:
+    - ports:
+      - port: "51820"
+        protocol: UDP
+  - toEntities:
+    - cluster
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: edge
+      app.kubernetes.io/instance: edge
+  ingress:
+  - fromEntities:
+    - world
+    - cluster
+    toPorts:
+    - ports:
+      - port: "9080"
+        protocol: TCP
+      - port: "9443"
+        protocol: TCP
+  - fromEntities:
+    - cluster
+    toPorts:
+    - ports:
+      - port: "2525"
+        protocol: TCP
+---
+# Source: app-edge/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: edge
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: bcl
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      edge:
+        configMaps:
+          config:
+            name: config
+            namespace: default
+        deployments:
+          edge:
+            labels:
+              app.kubernetes.io/component: edge
+              app.kubernetes.io/instance: edge
+            name: edge
+            namespace: default
+        services:
+          edge:
+            name: edge
+            namespace: default
+          edge-relay:
+            name: edge-relay
+            namespace: default
+    resources:
+      configMaps:
+        config:
+          data:
+            haproxy.cfg: |-
+              global
+                maxconn 20000
+
+              defaults
+                mode tcp
+                timeout connect 10s
+                timeout client 1h
+                timeout server 1h
+                timeout tunnel 1h
+
+              frontend tunnel-http
+                bind :8080 accept-proxy
+                default_backend gateway-http
+
+              frontend tunnel-https
+                bind :8443 accept-proxy
+                default_backend gateway-https
+
+              frontend lan-http
+                bind :9080
+                default_backend gateway-http
+
+              frontend lan-https
+                bind :9443
+                default_backend gateway-https
+
+              backend gateway-http
+                server gateway cilium-gateway-shared.cilium.svc:80 send-proxy-v2
+
+              backend gateway-https
+                server gateway cilium-gateway-shared.cilium.svc:443 send-proxy-v2
+
+              # The `tcp` services: the edge nodes send the PROXY header with the address of their client, it is sent on to the server (it reads
+              # it from this pod only). The name of the server is resolved when it is used: it may not exist yet when this pod starts.
+              resolvers cluster
+                parse-resolv-conf
+                hold valid 10s
+
+              frontend tcp-imaps
+                bind :10993 accept-proxy
+                default_backend svc-imaps
+
+              backend svc-imaps
+                server imaps stalwart.stalwart.svc:993 send-proxy-v2 resolvers cluster init-addr none
+
+              frontend tcp-smtp
+                bind :10025 accept-proxy
+                default_backend svc-smtp
+
+              backend svc-smtp
+                server smtp stalwart.stalwart.svc:25 send-proxy-v2 resolvers cluster init-addr none
+
+              # The relay of the outgoing mails: one of the edge nodes, in turn (the connection leaves by the tunnel)
+              frontend relay-in
+                bind :2525
+                default_backend relay-nodes
+
+              backend relay-nodes
+                balance roundrobin
+                server edge1 10.99.0.1:2525 check
+                server edge2 10.99.0.2:2525 check
+            up.sh: |-
+              set -eu
+              ip link show wg0 > /dev/null 2>&1 || ip link add wg0 type wireguard
+              ip address replace 10.99.0.254/24 dev wg0
+              wg set wg0 private-key /wireguard/privatekey
+              wg set wg0 peer Hl0aZ5Qe4kYhX1b7w0M4k1c2p0kR3q9d1m0vQy2s0Xk= endpoint edge1.example.com:51820 allowed-ips 10.99.0.1/32 persistent-keepalive 25
+              wg set wg0 peer yb1oEw3r9sN8m5x1c0p7t6v4q2z0k8j9h7g6f5d4s3A= endpoint 203.0.113.20:51820 allowed-ips 10.99.0.2/32 persistent-keepalive 25
+              ip link set wg0 mtu 1380 up
+              exec sleep infinity
+      deployments:
+        edge:
+          replicas: 1
+          strategy:
+            type: Recreate
+          template:
+            metadata:
+              annotations:
+                policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+            spec:
+              containers:
+                haproxy:
+                  command:
+                  - sh
+                  - -ec
+                  - |-
+                    { cat /usr/local/etc/haproxy/haproxy.cfg; echo; } > /tmp/haproxy.cfg
+                    exec haproxy -W -db -f /tmp/haproxy.cfg
+                  image: docker.io/haproxy:2.6.6
+                  name: haproxy
+                  ports:
+                    lan-http:
+                      containerPort: 9080
+                    lan-https:
+                      containerPort: 9443
+                    tunnel-http:
+                      containerPort: 8080
+                    tunnel-https:
+                      containerPort: 8443
+                  probe:
+                    tcpSocket:
+                      port: lan-https
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                    runAsGroup: 99
+                    runAsNonRoot: true
+                    runAsUser: 99
+                  volumeMounts:
+                    config:
+                      mountPath: /usr/local/etc/haproxy
+                      name: haproxy-config
+                      readOnly: true
+                wireguard:
+                  command:
+                  - sh
+                  - /config/up.sh
+                  image: ghcr.io/becloudless/alpine-wireguard:1.260202.1735-H7074dbd
+                  name: wireguard
+                  securityContext:
+                    capabilities:
+                      add:
+                        admin: NET_ADMIN
+                      drop:
+                        all: ALL
+                  volumeMounts:
+                    config:
+                      mountPath: /config
+                      name: wireguard-config
+                      readOnly: true
+                    key:
+                      mountPath: /wireguard
+                      name: wireguard-key
+                      readOnly: true
+              securityContext:
+                runAsNonRoot: false
+              volumes:
+                haproxy-config:
+                  configMap:
+                    name: ref:config
+                  name: haproxy-config
+                wireguard-config:
+                  configMap:
+                    name: ref:config
+                  name: wireguard-config
+                wireguard-key:
+                  name: wireguard-key
+                  secret:
+                    defaultMode: 256
+                    secretName: edge-wireguard
+      services:
+        edge:
+          externalTrafficPolicy: Local
+          loadBalancerIP: 192.0.2.10
+          ports:
+            http:
+              port: 80
+              targetPort: 9080
+            https:
+              port: 443
+              targetPort: 9443
+          type: LoadBalancer
+        edge-relay:
+          ports:
+            relay:
+              port: 2525
+              targetPort: 2525
+          selector:
+            app.kubernetes.io/component: edge

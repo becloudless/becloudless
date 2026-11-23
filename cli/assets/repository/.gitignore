@@ -1,3 +1,8 @@
-
 # result of last nix builds, being just a link to the nix store
 nixos/result
+
+# sops
+.decrypted~*
+
+# kube
+.kube/

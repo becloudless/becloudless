@@ -1,0 +1,24 @@
+app:
+  domain: test.com
+  name: test
+  lldapdn: dc=test,dc=com
+
+tunnel:
+  address: 10.99.0.254
+  prefixLength: 24
+  listenPort: 51820
+
+nodes:
+  edge1:
+    address: edge1.example.com
+    publicKey: Hl0aZ5Qe4kYhX1b7w0M4k1c2p0kR3q9d1m0vQy2s0Xk=
+  edge2:
+    address: 203.0.113.20
+    tunnelAddress: 10.99.0.2
+    publicKey: yb1oEw3r9sN8m5x1c0p7t6v4q2z0k8j9h7g6f5d4s3A=
+
+loadBalancerIP: 192.0.2.10
+
+tcp:
+  smtp: {port: 25, backend: stalwart.stalwart.svc:25}
+  imaps: {port: 993, backend: stalwart.stalwart.svc:993}

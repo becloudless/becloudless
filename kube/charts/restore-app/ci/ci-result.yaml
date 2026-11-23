@@ -222,7 +222,7 @@ metadata:
     app.kubernetes.io/component: restore-app
     app.kubernetes.io/instance: test-release
     app.kubernetes.io/name: restore-app
-  name: restore-test-dd3240db1b
+  name: restore-test-b7d648b4a7
   namespace: default
 spec:
   activeDeadlineSeconds: 3000

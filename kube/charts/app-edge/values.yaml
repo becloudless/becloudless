@@ -1,0 +1,293 @@
+# yaml-language-server: $schema=./schema/values.schema.json
+
+# The entry point of the cluster from the internet through the edge nodes (the nodes with the NixOS module `bcl.edge`, the role `edge` for a plain VPS without cluster): like a Cloudflare Tunnel, no router in
+# the path and the address of the clients is kept.
+#
+#   client -> edge node (haproxy: 80/443, by the SNI / Host) -> WireGuard tunnel -> this pod (haproxy) -> Gateway `shared` of the cluster
+#   client -> edge node (haproxy: the `tcp` ports, 25/465/993 for a mail server) -> tunnel -> this pod -> the service of the mail server
+#   mail server -> this pod (service `edge-relay`: the outgoing mails) -> tunnel -> postfix of an edge node -> the internet, from the address of the edge node
+#
+# The pod dials every edge node (the edge nodes only listen), so the cluster needs no open port nor public address. Each haproxy sends the address of the
+# client with the PROXY protocol (v2): the edge node to this pod, this pod to the Gateway, which takes it as the address of the client (it is logged and
+# forwarded in `X-Forwarded-For` to the apps; the forward auth does not get it). Cilium is set with, in the cluster values of the cilium app:
+#   resources.fluxHelmReleases.cilium.values.gatewayAPI: {enableProxyProtocol: true}
+# The Gateway then rejects the connections without the PROXY header (it is global to its listeners): the clients of the LAN and the pods of the
+# cluster come through this pod too, which takes the LoadBalancer IP the Gateway had (`loadBalancerIP`). The Gateway moves to another address
+# (`addresses` of the Gateway `shared` in `cilium-post`), that nobody uses.
+#
+# The `tcp` services (the mail ports) do not go through the Gateway: this pod sends the PROXY header to the service of the server, which must read
+# it from this pod only (stalwart: `overrideProxyTrustedNetworks` of its mail listeners, see its chart).
+#
+# Order of the change on a running cluster: deploy this app with `nodes` and the secret but no `loadBalancerIP` (the service takes any address),
+# then move the Gateway and set the Cilium values above, then set `loadBalancerIP`. The names of the apps point to the public addresses of the
+# edge nodes (one record for each edge node), and to `loadBalancerIP` in the LAN.
+#
+# Not done by this chart:
+#  - the private key of the tunnel, in the Secret `edge-wireguard` (key `privatekey`) of the namespace of the app, and its public key in
+#    `bcl.edge.upstream.publicKey` of the edge nodes. The Secret is committed encrypted in the repository of the cluster (sops):
+#      priv=$(wg genkey); echo "$priv" | wg pubkey   # the public key
+#      printf 'apiVersion: v1\nkind: Secret\nmetadata: {name: edge-wireguard, namespace: edge}\nstringData: {privatekey: %s}\n' "$priv" \
+#        | sops -e --filename-override <cluster>/edge/wireguard.secret.yaml /dev/stdin > <cluster>/edge/wireguard.secret.yaml
+#  - the public key and the address of each edge node in `nodes` (`wg show wg-edge public-key` on the edge node, `bcl.edge.address`; the key
+#    is also the one derived from the SSH host key of the node, see `bcl.edge`).
+
+# The tunnel network (the same as `bcl.edge` of the edge nodes), the address of this pod in it.
+tunnel:
+  address: 10.99.0.254
+  prefixLength: 24
+  listenPort: 51820 # the UDP port of the edge nodes (`bcl.edge.listenPort`)
+
+# The edge nodes, by name (the hostname of the node): `address` is the public address of the edge node, an IP or a DNS name (resolved once, when
+# the pod starts), `tunnelAddress` its address in the tunnel network. By default the number at the end of the name is the host number in the tunnel
+# network (`edge1` gives 10.99.0.1), like the default of `bcl.edge.address` of the NixOS module.
+# An edge node without `publicKey` is ignored until it has one.
+#   edge1: {address: edge1.example.com, publicKey: <public key>}
+nodes: {}
+
+# The TCP services (not HTTP: the mail protocols) published by the edge nodes (`bcl.edge.upstream.tcpPorts`), by name: `port` is the public
+# port, `backend` the `host:port` of the server inside the cluster, which gets the PROXY header (v2) of the edge node with the address of the client.
+# This pod listens for the edge nodes on `tcpPortOffset` + `port`.
+#   smtp: {port: 25, backend: stalwart.stalwart.svc:25}
+tcp: {}
+tcpPortOffset: 10000
+
+# The relay of the outgoing mails: the Service `edge-relay` (port 2525) sends to the postfix of the edge nodes (`bcl.edge.relay`,
+# same port), so the mails leave from the public address of an edge node (one of them, in turn).
+
+# The address of the LoadBalancer Service that takes the connections of the LAN and of the cluster (the former address of the Gateway).
+loadBalancerIP: ""
+
+resources:
+
+  ciliumNetworkPolicies:
+    edge:
+      endpointSelector: ref:edge
+      ingress:
+        clients: # the LAN through the LoadBalancer IP, the pods of the cluster (the public names of the apps)
+          fromEntities: [world, cluster]
+          toPorts: [9080, 9443]
+        relay: # the mail servers of the cluster: the outgoing mails
+          fromEntities: [cluster]
+          toPorts: [2525]
+      egress:
+        gateway: # the connections to the Gateway
+          toEntities: [ingress]
+          toPorts: [80, 443]
+        tcp: # the servers of the `tcp` services (the ports are the ones of `tcp.<name>.backend`)
+          toEntities: [cluster]
+        nodes: # the tunnels, the edge node never initiates one
+          toEntities: [world]
+          toPorts:
+            wireguard:
+              ports:
+                udp: {port: "{{ .Values.tunnel.listenPort }}", protocol: UDP}
+
+  # The public names of the apps now resolve to this pod, not to the Gateway (the `ingress` entity of the policies of the apps).
+  ciliumClusterwideNetworkPolicies:
+    allow-edge:
+      endpointSelector:
+        matchExpressions:
+          any-namespace: {key: "k8s:io.kubernetes.pod.namespace", operator: Exists}
+      egress:
+        edge:
+          toEndpoints:
+            edge:
+              matchLabels:
+                "k8s:io.kubernetes.pod.namespace": edge
+                "k8s:app.kubernetes.io/instance": edge
+                "k8s:app.kubernetes.io/component": edge
+          toPorts: [9080, 9443]
+
+  fluxHelmReleases:
+    edge:
+      values:
+        resources:
+          configMaps:
+            # The ports 8080 and 8443 only get what comes from the tunnel (the policy of the pod does not let anything else reach
+            # them): the edge nodes send the PROXY header with the address of their client. The ports 9080 and 9443 are the ones of the
+            # LAN and of the cluster, the client is the connection itself. Both go to the Gateway with the address of the client.
+            config:
+              data:
+                haproxy.cfg: |
+                  global
+                    maxconn 20000
+
+                  defaults
+                    mode tcp
+                    timeout connect 10s
+                    timeout client 1h
+                    timeout server 1h
+                    timeout tunnel 1h
+
+                  frontend tunnel-http
+                    bind :8080 accept-proxy
+                    default_backend gateway-http
+
+                  frontend tunnel-https
+                    bind :8443 accept-proxy
+                    default_backend gateway-https
+
+                  frontend lan-http
+                    bind :9080
+                    default_backend gateway-http
+
+                  frontend lan-https
+                    bind :9443
+                    default_backend gateway-https
+
+                  backend gateway-http
+                    server gateway cilium-gateway-shared.cilium.svc:80 send-proxy-v2
+
+                  backend gateway-https
+                    server gateway cilium-gateway-shared.cilium.svc:443 send-proxy-v2
+
+                  # The `tcp` services: the edge nodes send the PROXY header with the address of their client, it is sent on to the server (it reads
+                  # it from this pod only). The name of the server is resolved when it is used: it may not exist yet when this pod starts.
+                  resolvers cluster
+                    parse-resolv-conf
+                    hold valid 10s
+                  {{- $offset := int .Values.tcpPortOffset }}
+                  {{- range $name, $svc := .Values.tcp }}
+
+                  frontend tcp-{{ $name }}
+                    bind :{{ add (int $svc.port) $offset }} accept-proxy
+                    default_backend svc-{{ $name }}
+
+                  backend svc-{{ $name }}
+                    server {{ $name }} {{ $svc.backend }} send-proxy-v2 resolvers cluster init-addr none
+                  {{- end }}
+
+                  # The relay of the outgoing mails: one of the edge nodes, in turn (the connection leaves by the tunnel)
+                  frontend relay-in
+                    bind :2525
+                    default_backend relay-nodes
+
+                  backend relay-nodes
+                    balance roundrobin
+                  {{- $root := . }}
+                  {{- range $name, $node := .Values.nodes }}
+                  {{- if $node.publicKey }}
+                    server {{ $name }} {{ $node.tunnelAddress | default (include "app-edge.tunnelAddress" (dict "root" $root "name" $name)) }}:2525 check
+                  {{- end }}
+                  {{- end }}
+
+                # the interface of the tunnel (the key is mounted from the secret), a peer for each edge node. Run again by a container
+                # restart in the same network namespace: the interface may exist already
+                up.sh: |
+                  set -eu
+                  ip link show wg0 > /dev/null 2>&1 || ip link add wg0 type wireguard
+                  ip address replace {{ .Values.tunnel.address }}/{{ .Values.tunnel.prefixLength }} dev wg0
+                  wg set wg0 private-key /wireguard/privatekey
+                  {{- $listenPort := .Values.tunnel.listenPort }}
+                  {{- $root := . }}
+                  {{- range $name, $node := .Values.nodes }}
+                  {{- if $node.publicKey }}
+                  wg set wg0 peer {{ $node.publicKey }} endpoint {{ $node.address }}:{{ $listenPort }} allowed-ips {{ $node.tunnelAddress | default (include "app-edge.tunnelAddress" (dict "root" $root "name" $name)) }}/32 persistent-keepalive 25
+                  {{- end }}
+                  {{- end }}
+                  ip link set wg0 mtu 1380 up
+                  exec sleep infinity
+
+          deployments:
+            edge:
+              replicas: 1 # a tunnel has a single end, the same key is not shared by two pods
+              strategy:
+                type: Recreate
+              template:
+                metadata:
+                  annotations:
+                    policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true" # the interface of the tunnel needs NET_ADMIN, run as root
+                spec:
+                  securityContext:
+                    runAsNonRoot: false
+                  containers:
+                    wireguard:
+                      name: wireguard
+                      image: ghcr.io/becloudless/alpine-wireguard:1.260202.1735-H7074dbd
+                      command: [ sh, /config/up.sh ]
+                      securityContext:
+                        capabilities:
+                          drop:
+                            all: ALL
+                          add:
+                            admin: NET_ADMIN
+                      volumeMounts:
+                        config:
+                          name: wireguard-config
+                          mountPath: /config
+                          readOnly: true
+                        key:
+                          name: wireguard-key
+                          mountPath: /wireguard
+                          readOnly: true
+                    haproxy:
+                      name: haproxy
+                      image: docker.io/haproxy:2.6.6 # renovate: versioning=loose
+                      # The rendering of the resources removes the last newline of the strings and haproxy refuses a file without one (`Missing
+                      # LF on last line`): it runs on a copy with it, in the /tmp every container has (base chart). The arguments are the ones of the entrypoint of the image.
+                      command:
+                        - sh
+                        - -ec
+                        - |
+                          { cat /usr/local/etc/haproxy/haproxy.cfg; echo; } > /tmp/haproxy.cfg
+                          exec haproxy -W -db -f /tmp/haproxy.cfg
+                      ports:
+                        tunnel-http:
+                          containerPort: 8080
+                        tunnel-https:
+                          containerPort: 8443
+                        lan-http:
+                          containerPort: 9080
+                        lan-https:
+                          containerPort: 9443
+                      probe:
+                        tcpSocket:
+                          port: lan-https
+                      securityContext:
+                        runAsNonRoot: true
+                        runAsUser: 99 # haproxy
+                        runAsGroup: 99
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        config:
+                          name: haproxy-config
+                          mountPath: /usr/local/etc/haproxy
+                          readOnly: true
+                  volumes:
+                    wireguard-config:
+                      name: wireguard-config
+                      configMap:
+                        name: ref:config
+                    haproxy-config:
+                      name: haproxy-config
+                      configMap:
+                        name: ref:config
+                    wireguard-key:
+                      name: wireguard-key
+                      secret:
+                        secretName: edge-wireguard
+                        defaultMode: 0400
+
+          services:
+            edge:
+              type: LoadBalancer
+              externalTrafficPolicy: Local # the address of the clients of the LAN
+              loadBalancerIP: "{{ .Values.loadBalancerIP }}"
+              ports:
+                http:
+                  port: 80
+                  targetPort: 9080
+                https:
+                  port: 443
+                  targetPort: 9443
+
+            # the mail servers of the cluster send their outgoing mails here (the relay of the edge nodes)
+            edge-relay:
+              selector:
+                app.kubernetes.io/component: edge
+              ports:
+                relay:
+                  port: 2525
+                  targetPort: 2525

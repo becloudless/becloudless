@@ -1,0 +1,572 @@
+---
+# Source: app-stalwart/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: stalwart
+  namespace: default
+spec:
+  egress:
+  - toFQDNs:
+    - matchName: github.com
+    - matchName: objects.githubusercontent.com
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toFQDNs:
+    - matchPattern: '*'
+    toPorts:
+    - ports:
+      - port: "25"
+        protocol: TCP
+  - toEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/component: edge
+        k8s:app.kubernetes.io/instance: edge
+        k8s:io.kubernetes.pod.namespace: edge
+    toPorts:
+    - ports:
+      - port: "2525"
+        protocol: TCP
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: stalwart
+      app.kubernetes.io/instance: stalwart
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/component: edge
+        k8s:app.kubernetes.io/instance: edge
+        k8s:io.kubernetes.pod.namespace: edge
+    toPorts:
+    - ports:
+      - port: "25"
+        protocol: TCP
+      - port: "465"
+        protocol: TCP
+      - port: "993"
+        protocol: TCP
+  - fromEntities:
+    - ingress
+    - host
+    - remote-node
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+  - fromEntities:
+    - world
+    - cluster
+    toPorts:
+    - ports:
+      - port: "25"
+        protocol: TCP
+      - port: "465"
+        protocol: TCP
+      - port: "993"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: stalwart-setup
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+---
+# Source: app-stalwart/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: stalwart
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: bcl
+  dependsOn:
+  - name: stalwart-pre
+  - name: app-longhorn
+    namespace: longhorn-system
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      stalwart:
+        configMaps:
+          stalwart-config:
+            name: stalwart-config
+            namespace: default
+        deployments:
+          stalwart:
+            labels:
+              app.kubernetes.io/component: stalwart
+              app.kubernetes.io/instance: stalwart
+            name: stalwart
+            namespace: default
+        listenerSets:
+          stalwart-mail:
+            name: stalwart-mail
+            namespace: default
+        persistentVolumeClaims:
+          stalwart-data:
+            name: stalwart-data
+            namespace: default
+        services:
+          stalwart:
+            name: stalwart
+            namespace: default
+        tcpRoutes:
+          stalwart-imaps:
+            name: stalwart-imaps
+            namespace: default
+          stalwart-smtp:
+            name: stalwart-smtp
+            namespace: default
+          stalwart-submissions:
+            name: stalwart-submissions
+            namespace: default
+      stalwart-integration:
+        certManagerCertificates:
+          stalwart-gateway:
+            name: stalwart-gateway
+            namespace: default
+            secretName: tls-stalwart-gateway
+        httpRoutes:
+          stalwart:
+            name: stalwart
+            namespace: default
+        listenerSets:
+          stalwart:
+            name: stalwart
+            namespace: default
+      stalwart-pre:
+        stringSecrets:
+          stalwart-admin:
+            name: stalwart-admin
+            namespace: default
+    resources:
+      configMaps:
+        stalwart-config:
+          data:
+            config.json: |-
+              {
+                "@type": "RocksDb",
+                "path": "/var/lib/stalwart/data/"
+              }
+      deployments:
+        stalwart:
+          replicas: 1
+          strategy:
+            type: Recreate
+          template:
+            spec:
+              containers:
+                stalwart:
+                  env:
+                    ADMIN_PASSWORD:
+                      secretKeyRef:
+                        key: password
+                        name: ref:stalwart-admin
+                    STALWART_PUBLIC_URL: https://mail.test.com
+                    STALWART_RECOVERY_ADMIN: admin:$(ADMIN_PASSWORD)
+                  image: docker.io/stalwartlabs/stalwart:v1.1.1
+                  name: stalwart
+                  ports:
+                    http:
+                      containerPort: 8080
+                    imaps:
+                      containerPort: 993
+                    smtp:
+                      containerPort: 25
+                    submissions:
+                      containerPort: 465
+                  probe:
+                    httpGet:
+                      path: /healthz/live
+                  securityContext:
+                    capabilities:
+                      add:
+                        bind: NET_BIND_SERVICE
+                      drop:
+                        all: ALL
+                    runAsGroup: 2000
+                    runAsUser: 2000
+                  volumeMounts:
+                    config:
+                      mountPath: /etc/stalwart/config.json
+                      name: config
+                      readOnly: true
+                      subPath: config.json
+                    data:
+                      mountPath: /var/lib/stalwart
+                      name: data
+                    tmp:
+                      mountPath: /tmp
+                      name: tmp
+              securityContext:
+                fsGroup: 2000
+              volumes:
+                config:
+                  configMap:
+                    name: ref:stalwart-config
+                  name: config
+                data:
+                  name: data
+                  persistentVolumeClaim:
+                    claimName: ref:stalwart-data
+                tmp:
+                  emptyDir: {}
+                  name: tmp
+      listenerSets:
+        stalwart-mail:
+          listeners:
+            imaps:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              name: imaps
+              port: 993
+              protocol: TCP
+            smtp:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              name: smtp
+              port: 25
+              protocol: TCP
+            submissions:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              name: submissions
+              port: 465
+              protocol: TCP
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: cilium
+      persistentVolumeClaims:
+        stalwart-data:
+          resources:
+            requests:
+              storage: 20Gi
+          storageClassName: longhorn-db
+      services:
+        stalwart:
+          ports:
+            http:
+              port: 8080
+            imaps:
+              port: 993
+            smtp:
+              port: 25
+            submissions:
+              port: 465
+      tcpRoutes:
+        stalwart-imaps:
+          parentRefs:
+            stalwart-mail:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: stalwart-mail
+              sectionName: imaps
+          rules:
+            imaps:
+              backendRefs:
+                stalwart:
+                  name: stalwart
+                  port: 993
+        stalwart-smtp:
+          parentRefs:
+            stalwart-mail:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: stalwart-mail
+              sectionName: smtp
+          rules:
+            smtp:
+              backendRefs:
+                stalwart:
+                  name: stalwart
+                  port: 25
+        stalwart-submissions:
+          parentRefs:
+            stalwart-mail:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: stalwart-mail
+              sectionName: submissions
+          rules:
+            submissions:
+              backendRefs:
+                stalwart:
+                  name: stalwart
+                  port: 465
+---
+# Source: app-stalwart/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: stalwart-integration
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: bcl
+  dependsOn:
+  - name: stalwart
+  - name: app-cert-manager
+    namespace: cert-manager
+  - name: app-gateway-api
+    namespace: gateway-api
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    disableWait: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      stalwart:
+        configMaps:
+          stalwart-config:
+            name: stalwart-config
+            namespace: default
+        deployments:
+          stalwart:
+            labels:
+              app.kubernetes.io/component: stalwart
+              app.kubernetes.io/instance: stalwart
+            name: stalwart
+            namespace: default
+        listenerSets:
+          stalwart-mail:
+            name: stalwart-mail
+            namespace: default
+        persistentVolumeClaims:
+          stalwart-data:
+            name: stalwart-data
+            namespace: default
+        services:
+          stalwart:
+            name: stalwart
+            namespace: default
+        tcpRoutes:
+          stalwart-imaps:
+            name: stalwart-imaps
+            namespace: default
+          stalwart-smtp:
+            name: stalwart-smtp
+            namespace: default
+          stalwart-submissions:
+            name: stalwart-submissions
+            namespace: default
+      stalwart-integration:
+        certManagerCertificates:
+          stalwart-gateway:
+            name: stalwart-gateway
+            namespace: default
+            secretName: tls-stalwart-gateway
+        httpRoutes:
+          stalwart:
+            name: stalwart
+            namespace: default
+        listenerSets:
+          stalwart:
+            name: stalwart
+            namespace: default
+      stalwart-pre:
+        stringSecrets:
+          stalwart-admin:
+            name: stalwart-admin
+            namespace: default
+    resources:
+      certManagerCertificates:
+        stalwart-gateway:
+          dnsNames:
+            stalwart: mail.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-stalwart-gateway
+      httpRoutes:
+        stalwart:
+          hostnames:
+            stalwart: mail.test.com
+          parentRefs:
+            stalwart:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: stalwart
+              sectionName: stalwart
+          rules:
+            root:
+              backendRefs:
+                backend:
+                  name: ref:stalwart
+                  port: 8080
+      listenerSets:
+        stalwart:
+          listeners:
+            stalwart:
+              allowedRoutes:
+                namespaces:
+                  from: Same
+              hostname: mail.test.com
+              name: stalwart
+              port: 443
+              protocol: HTTPS
+              tls:
+                certificateRefs:
+                  tls:
+                    name: ref:stalwart-gateway
+                mode: Terminate
+          parentRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: shared
+            namespace: cilium
+---
+# Source: app-stalwart/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: stalwart-pre
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: bcl
+  dependsOn:
+  - name: app-external-secrets
+    namespace: external-secrets
+  - name: app-secret-generator
+    namespace: secret-generator
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      stalwart:
+        configMaps:
+          stalwart-config:
+            name: stalwart-config
+            namespace: default
+        deployments:
+          stalwart:
+            labels:
+              app.kubernetes.io/component: stalwart
+              app.kubernetes.io/instance: stalwart
+            name: stalwart
+            namespace: default
+        listenerSets:
+          stalwart-mail:
+            name: stalwart-mail
+            namespace: default
+        persistentVolumeClaims:
+          stalwart-data:
+            name: stalwart-data
+            namespace: default
+        services:
+          stalwart:
+            name: stalwart
+            namespace: default
+        tcpRoutes:
+          stalwart-imaps:
+            name: stalwart-imaps
+            namespace: default
+          stalwart-smtp:
+            name: stalwart-smtp
+            namespace: default
+          stalwart-submissions:
+            name: stalwart-submissions
+            namespace: default
+      stalwart-integration:
+        certManagerCertificates:
+          stalwart-gateway:
+            name: stalwart-gateway
+            namespace: default
+            secretName: tls-stalwart-gateway
+        httpRoutes:
+          stalwart:
+            name: stalwart
+            namespace: default
+        listenerSets:
+          stalwart:
+            name: stalwart
+            namespace: default
+      stalwart-pre:
+        stringSecrets:
+          stalwart-admin:
+            name: stalwart-admin
+            namespace: default
+    resources:
+      stringSecrets:
+        stalwart-admin:
+          fields:
+            password: {}
