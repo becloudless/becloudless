@@ -28,7 +28,7 @@ Rendered as a `global-values` ConfigMap in the namespace of each app, used by th
 
 {{- $lldapUsers := $config.lldapUsers | default dict }}
 
-{{- /* a node reachable from the internet (`bcl.role.kube.pop`) is the only one of its cluster: one replica and one database instance unless the cluster sets them */}}
+{{- /* TODO: default? . A node reachable from the internet (`bcl.role.kube.pop`) is the only one of its cluster: one replica and one database instance unless the cluster sets them */}}
 {{- $scaling := $config.scaling | default dict }}
 {{- if $config.pop }}
   {{- $scaling = merge (deepCopy $scaling) (dict "replicas" 1 "dbReplicas" 1) }}
