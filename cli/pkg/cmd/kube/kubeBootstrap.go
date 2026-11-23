@@ -33,7 +33,7 @@ const (
 	clusterAppsHrFile    = "bcl/bcl.hr.yaml"
 	defaultAppsNamespace = "bcl"
 	remoteKubeconfig     = "/etc/kubernetes/admin.conf"
-	apiServerPort        = "8443"
+	apiServerPort        = "6443" // of the apiserver of the node, reached through ssh on its loopback (certificate SAN 127.0.0.1)
 
 	// the policy allowing the DNS of the pods is declared by this release of this app, see renderDNSPolicy
 	dnsPolicyApp         = "cilium"
@@ -56,7 +56,8 @@ func kubeBootstrapCmd() *cobra.Command {
 		Use:   "bootstrap",
 		Short: "Fetch temporary cluster credentials from a server and apply the minimal apps resources extracted from the app charts",
 		Long: `Fetch the kubeconfig of the cluster from a server through ssh into a temporary file, removed when the command ends (it is never
-written in the infra folder), then render the app-bcl chart with the values of the cluster
+written in the infra folder). The API of the cluster is reached through an ssh tunnel to the apiserver of the server, which
+can be closed to the network. Then render the app-bcl chart with the values of the cluster
 (bcl/bcl.hr.yaml) restricted to the apps of the minimal group, render each of these app charts, and apply the resources
 flux needs to start: namespaces, helm releases coming from helm repositories (ex: cilium, coredns) and the flux installation.
 Everything else is left to flux once it runs. This command is re-entrant.`,
@@ -94,7 +95,19 @@ func BootstrapRemote(opts bootstrapRemoteOptions) error {
 	}()
 	ctx.KubeConfig = filepath.Join(tmpDir, "admin.conf")
 
-	if err := fetchKubeconfig(ctx.KubeConfig, opts); err != nil {
+	sshRunner, err := runner.NewSshRunner(&opts.ssh)
+	if err != nil {
+		return errs.WithEF(err, data.WithField("host", opts.ssh.Host), "Failed to connect to the server")
+	}
+
+	// the apiserver may not be reachable from here (firewall of a node on the internet): the API goes through the ssh connection
+	localAPI, stopForward, err := sshRunner.ForwardLocal(net.JoinHostPort("127.0.0.1", apiServerPort))
+	if err != nil {
+		return errs.WithE(err, "Failed to forward the apiserver port through ssh")
+	}
+	defer stopForward()
+
+	if err := fetchKubeconfig(sshRunner, ctx.KubeConfig, "https://"+localAPI, opts.ssh.Host); err != nil {
 		return errs.WithE(err, "Failed to fetch the kubeconfig")
 	}
 
@@ -174,19 +187,15 @@ func waitFluxCRDs(ctx kube.Context) error {
 	return nil
 }
 
-// fetchKubeconfig reads the kubeconfig on the server and writes it to destination.
-func fetchKubeconfig(destination string, opts bootstrapRemoteOptions) error {
-	logs.WithField("host", opts.ssh.Host).WithField("path", remoteKubeconfig).Info("Fetching kubeconfig")
-	sshRunner, err := runner.NewSshRunner(&opts.ssh)
-	if err != nil {
-		return errs.WithEF(err, data.WithField("host", opts.ssh.Host), "Failed to connect to the server")
-	}
+// fetchKubeconfig reads the kubeconfig on the server and writes it to destination, targeting the apiserver at server.
+func fetchKubeconfig(sshRunner *runner.SshRunner, destination string, server string, host string) error {
+	logs.WithField("host", host).WithField("path", remoteKubeconfig).Info("Fetching kubeconfig")
 	kubeconfig, err := sshRunner.ExecCmdGetStdout("sudo", "cat", remoteKubeconfig)
 	if err != nil {
-		return errs.WithEF(err, data.WithField("host", opts.ssh.Host).WithField("path", remoteKubeconfig), "Failed to read the kubeconfig through ssh")
+		return errs.WithEF(err, data.WithField("host", host).WithField("path", remoteKubeconfig), "Failed to read the kubeconfig through ssh")
 	}
 
-	content, err := rewriteKubeconfigServer([]byte(kubeconfig+"\n"), opts.ssh.Host)
+	content, err := rewriteKubeconfigServer([]byte(kubeconfig+"\n"), server)
 	if err != nil {
 		return err
 	}
@@ -201,9 +210,8 @@ func fetchKubeconfig(destination string, opts bootstrapRemoteOptions) error {
 	return nil
 }
 
-// rewriteKubeconfigServer sets the API url of the clusters to https://<serverHost>:8443,
-// since the kubeconfig of a control plane node targets itself.
-func rewriteKubeconfigServer(content []byte, serverHost string) ([]byte, error) {
+// rewriteKubeconfigServer sets the API url of the clusters to server, since the kubeconfig of a control plane node targets itself.
+func rewriteKubeconfigServer(content []byte, server string) ([]byte, error) {
 	var config map[string]any
 	if err := yaml.Unmarshal(content, &config); err != nil {
 		return nil, errs.WithE(err, "Failed to parse the kubeconfig")
@@ -216,7 +224,7 @@ func rewriteKubeconfigServer(content []byte, serverHost string) ([]byte, error) 
 		if cluster == nil {
 			continue
 		}
-		cluster["server"] = "https://" + net.JoinHostPort(serverHost, apiServerPort)
+		cluster["server"] = server
 	}
 
 	result, err := yaml.Marshal(config)
