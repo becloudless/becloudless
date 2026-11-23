@@ -1,7 +1,8 @@
 {{- include "base.loader.init" $ }}
 
-{{- /* The ConfigMap of the replica-repair script is prepared as a resource by default, values set by the cluster take precedence. */}}
+{{- /* The ConfigMaps of the repair scripts are prepared as resources by default, values set by the cluster take precedence. */}}
 {{- $featureValues := include "app-cnpg.replicaRepair" (dict "rootContext" $) | fromYaml }}
+{{- $featureValues = mustMergeOverwrite $featureValues (include "app-cnpg.volumeRepair" (dict "rootContext" $) | fromYaml) }}
 {{- $_ := set $ "Values" (mustMergeOverwrite $featureValues $.Values) }}
 
 {{- include "base.resources.renderResources" (dict "rootContext" $) }}

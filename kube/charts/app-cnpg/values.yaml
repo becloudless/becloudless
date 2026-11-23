@@ -26,6 +26,23 @@
 #    error recovers from the archive).
 # At most one instance by cluster is cloned again by run, an event `ReplicaRecloned` is created on the `Cluster`.
 # To only see what it would do, set `DRY_RUN: "true"` in the env of the CronJob.
+#
+# The CronJob `volume-repair` (`files/volume-repair.sh`, in the ConfigMap `volume-repair`) handles the PRIMARY whose volume is full of WAL,
+# which `replica-repair` never touches (it needs a healthy primary, and a primary can not be cloned again). Its log has `no free disk
+# space for WALs`, the pod loops, the cluster is `Not enough disk space`, and the operator waits for `the PVC group to be enlarged`.
+#  1. Enlarge: for a primary unready for `MIN_AGE` seconds with that error, a working WAL archive (the WAL is kept until it is archived:
+#     a bigger volume would only be filled later) and no volume enlarged for `COOLDOWN` seconds, all the PVCs of the cluster are
+#     patched to 150% of the size (at least +1Gi, at most `MAX_SIZE_GI`) and get the annotation `cnpg.bcl.tf/volume-repair-at`.
+#     The `Cluster` is not patched, it keeps its size.
+#  2. Shrink: once the cluster is healthy, with all its instances ready for `STABLE_AGE` seconds, the PVCs with that annotation that are
+#     bigger than `spec.storage.size` are brought back to it, one instance by run: the PVC and the pod of a replica are deleted, the
+#     operator clones it again at the size of the spec; when only the primary is left, a switchover is requested to a replica
+#     (`status.targetPrimary`, as `kubectl cnpg promote`), the old primary then is a replica. It is not done when the databases are
+#     bigger than `MAX_DATA_PERCENT` of the spec size (the new volume would not hold them), or when the size is unknown.
+# A volume can not be shrunk, the new size is only reached through a new volume. The WAL parameters of the chart `postgresql` (computed
+# from the size of the volume) are what keeps the volume from being filled again.
+# Not done for a cluster with `walStorage`, or with the annotation `cnpg.bcl.tf/volume-repair: "false"`. Events: `VolumeEnlarged`,
+# `VolumeShrunk`, `VolumeShrinkSwitchover` on the `Cluster`. `DRY_RUN: "true"` in the env of the CronJob only logs.
 
 resources:
   fluxHelmRepositories:
@@ -86,8 +103,17 @@ resources:
         kube-apiserver:
           toEntities: [kube-apiserver]
 
+    volume-repair:
+      endpointSelector:
+        matchLabels: {app.kubernetes.io/component: volume-repair}
+      egress:
+        kube-apiserver:
+          toEntities: [kube-apiserver]
+
   serviceAccounts:
     replica-repair:
+      automountServiceAccountToken: true # the API server
+    volume-repair:
       automountServiceAccountToken: true # the API server
 
   clusterRoles:
@@ -114,6 +140,37 @@ resources:
           resources: [ events ]
           verbs: [ create ]
 
+    volume-repair:
+      rules:
+        clusters:
+          apiGroups: [ postgresql.cnpg.io ]
+          resources: [ clusters ]
+          verbs: [ get, list ]
+        clusters-status: # the switchover, as `kubectl cnpg promote`
+          apiGroups: [ postgresql.cnpg.io ]
+          resources: [ clusters/status ]
+          verbs: [ patch ]
+        pods:
+          apiGroups: [ "" ]
+          resources: [ pods ]
+          verbs: [ get, list, delete ]
+        logs: # the error of the full WAL volume is in the log of postgres
+          apiGroups: [ "" ]
+          resources: [ pods/log ]
+          verbs: [ get ]
+        exec: # the size of the databases (psql on the primary)
+          apiGroups: [ "" ]
+          resources: [ pods/exec ]
+          verbs: [ create ]
+        pvcs:
+          apiGroups: [ "" ]
+          resources: [ persistentvolumeclaims ]
+          verbs: [ get, list, patch, delete ]
+        events:
+          apiGroups: [ "" ]
+          resources: [ events ]
+          verbs: [ create ]
+
   clusterRoleBindings:
     replica-repair:
       roleRef:
@@ -124,6 +181,16 @@ resources:
         replica-repair:
           kind: ServiceAccount
           name: replica-repair
+          namespace: "{{ .Release.Namespace }}"
+    volume-repair:
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: volume-repair
+      subjects:
+        volume-repair:
+          kind: ServiceAccount
+          name: volume-repair
           namespace: "{{ .Release.Namespace }}"
 
   cronJobs:
@@ -164,3 +231,41 @@ resources:
                   name: script
                   configMap:
                     name: replica-repair
+
+    volume-repair:
+      schedule: "*/10 * * * *"
+      jobTemplate:
+        spec:
+          backoffLimit: 0
+          activeDeadlineSeconds: 300
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/component: volume-repair
+            spec:
+              restartPolicy: Never
+              serviceAccountName: volume-repair
+              securityContext:
+                runAsUser: 65534
+                runAsGroup: 65534
+              containers:
+                repair:
+                  name: repair
+                  image: docker.io/alpine/k8s:1.37.2 # renovate: versioning=loose
+                  command: [ bash, /scripts/volume-repair.sh ]
+                  env:
+                    HOME: /tmp
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                  volumeMounts:
+                    script:
+                      name: script
+                      mountPath: /scripts
+                      readOnly: true
+              volumes:
+                script:
+                  name: script
+                  configMap:
+                    name: volume-repair
