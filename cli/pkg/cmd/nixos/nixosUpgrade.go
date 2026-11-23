@@ -222,12 +222,11 @@ func validateSystemName(flakeDir string, systemName string, overrideInputArgs []
 
 // upgradeLocalFromGit rebuilds the current (local) system from the local infra git repository state.
 func upgradeLocalFromGit(action string, systemName string, overrideInputs []string) error {
-	logs.WithField("repo", bcl.BCL.System.Repository).Warn("Update current system using local git repository state")
-
 	repository, err := openLocalInfraRepository()
 	if err != nil {
 		return err
 	}
+	logs.WithField("repo", repository.Root).Warn("Update current system using local git repository state")
 
 	flakeDir := filepath.Join(repository.Root, "nixos")
 	if err := validateOverrideInputs(flakeDir, overrideInputs); err != nil {
@@ -272,12 +271,11 @@ func upgradeLocalFromUpstream(action string, systemName string) error {
 // upgradeRemoteTargetHostFromGit builds locally from the local infra git repository state and deploys to a
 // remote host via nixos-rebuild's --target-host/--sudo.
 func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, action string, systemName string, overrideInputs []string, askSudoPassword bool) error {
-	logs.WithField("repo", bcl.BCL.System.Repository).Warn("Update remote system using local git repository state")
-
 	repository, err := openLocalInfraRepository()
 	if err != nil {
 		return err
 	}
+	logs.WithField("repo", repository.Root).Warn("Update remote system using local git repository state")
 
 	flakeDir := filepath.Join(repository.Root, "nixos")
 	if err := validateOverrideInputs(flakeDir, overrideInputs); err != nil {
@@ -337,7 +335,7 @@ func upgradeRemoteTargetHostFromGit(sshConfig *runner.SshConnectionConfig, actio
 // upgradeRemoteFromUpstream connects to a remote host over SSH and rebuilds it there, using the upstream
 // repository configured in that remote host's own system config.
 func upgradeRemoteFromUpstream(sshConfig *runner.SshConnectionConfig, action string, systemName string) error {
-	logs.WithField("repo", bcl.BCL.System.Repository).WithField("host", sshConfig.Host).Info("Update remote host using upstream state")
+	logs.WithField("host", sshConfig.Host).Info("Update remote host using upstream state")
 
 	run, err := runner.NewSshRunner(sshConfig)
 	if err != nil {
@@ -347,6 +345,7 @@ func upgradeRemoteFromUpstream(sshConfig *runner.SshConnectionConfig, action str
 	if err != nil {
 		return errs.WithE(err, "Failed to get system config from remote system")
 	}
+	logs.WithField("repo", config.Repository).WithField("host", sshConfig.Host).Debug("Upstream repository of the remote host")
 
 	sudoRun, err := runner.NewSudoRunner(run)
 	if err != nil {
