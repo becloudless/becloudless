@@ -76,8 +76,9 @@ in
         the DHCP of the provider (and its IPv6 router advertisements) on the interface, without bridge unless
         `bcl.network.bridge` is set (the provider only knows the MAC of the NIC), not from `bcl.network.cidr`, so
         `firstNodeIp` has to be set (the public address of the node), the firewall is enabled: etcd, the apiserver and the
-        kubelet are closed, and so are the NodePorts (the traffic of the pods, cilium and veth, is trusted), the disk is
-        encrypted, and the cluster is named `pop` unless `clusterName` is set
+        kubelet are closed, and so are the NodePorts (the traffic of the pods, cilium and veth, is trusted), the apiserver is
+        exposed on the port 443 by the Gateway of cilium (`kube.<clusterName>.<domain>`, the `hostname` of app-kube to set in the
+        cluster, its DNS record points to `firstNodeIp`), the disk is encrypted, and the cluster is named `pop` unless `clusterName` is set
       '';
       allowedTCPPorts = lib.mkOption {
         type = lib.types.listOf lib.types.port;
@@ -360,8 +361,8 @@ in
             ${lib.optionalString cfg.oidc.enable "authentication-config: ${authenticationConfigPath}"}
           ${lib.optionalString cfg.oidc.enable oidcApiServerExtraVolumes}
           certSANs:
-          - kube.${config.bcl.global.domain} # service name
-          - kube.${cfg.clusterName}.i.${config.bcl.global.domain} # service name
+          - kube.${config.bcl.global.domain} # global service name
+          - kube.${cfg.clusterName}.${config.bcl.global.domain} # region service name
           - ${nodeIp 1}
           - ${nodeIp 2}
           - ${nodeIp 3}
