@@ -54,8 +54,9 @@ func kubeBootstrapCmd() *cobra.Command {
 	opts := bootstrapRemoteOptions{}
 	cmd := cobra.Command{
 		Use:   "bootstrap",
-		Short: "Fetch the cluster credentials from a server and apply the minimal apps resources extracted from the app charts",
-		Long: `Fetch the kubeconfig of the cluster from a server through ssh, then render the app-bcl chart with the values of the cluster
+		Short: "Fetch temporary cluster credentials from a server and apply the minimal apps resources extracted from the app charts",
+		Long: `Fetch the kubeconfig of the cluster from a server through ssh into a temporary file, removed when the command ends (it is never
+written in the infra folder), then render the app-bcl chart with the values of the cluster
 (bcl/bcl.hr.yaml) restricted to the apps of the minimal group, render each of these app charts, and apply the resources
 flux needs to start: namespaces, helm releases coming from helm repositories (ex: cilium, coredns) and the flux installation.
 Everything else is left to flux once it runs. This command is re-entrant.`,
@@ -80,6 +81,18 @@ func BootstrapRemote(opts bootstrapRemoteOptions) error {
 	if ctx.KubeConfig == "" {
 		return errs.With("Current directory is not in a kube/cluster folder")
 	}
+
+	// the admin credentials only live for the duration of the bootstrap, they are not kept in the infra folder
+	tmpDir, err := os.MkdirTemp("", "bcl-bootstrap-kubeconfig-")
+	if err != nil {
+		return errs.WithE(err, "Failed to create kubeconfig temp directory")
+	}
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			logs.WithField("dir", tmpDir).WithField("error", err.Error()).Warn("Failed to remove kubeconfig temp dir")
+		}
+	}()
+	ctx.KubeConfig = filepath.Join(tmpDir, "admin.conf")
 
 	if err := fetchKubeconfig(ctx.KubeConfig, opts); err != nil {
 		return errs.WithE(err, "Failed to fetch the kubeconfig")
