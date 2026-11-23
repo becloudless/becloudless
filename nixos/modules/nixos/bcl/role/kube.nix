@@ -372,8 +372,7 @@ in
             ${lib.optionalString cfg.oidc.enable "authentication-config: ${authenticationConfigPath}"}
           ${lib.optionalString cfg.oidc.enable oidcApiServerExtraVolumes}
           certSANs:
-          - kube.${config.bcl.global.domain} # global service name
-          - kube.${cfg.clusterName}.${config.bcl.global.domain} # region service name
+          - ${cfg.apiServerName}
           - ${nodeIp 1}
           - ${nodeIp 2}
           - ${nodeIp 3}
