@@ -7,13 +7,6 @@ metadata:
   namespace: default
 spec:
   egress:
-  - toFQDNs:
-    - matchName: github.com
-    - matchName: objects.githubusercontent.com
-    toPorts:
-    - ports:
-      - port: "443"
-        protocol: TCP
   - toEndpoints:
     - matchLabels:
         k8s:app.kubernetes.io/component: edge
@@ -211,7 +204,13 @@ spec:
                         all: ALL
                     runAsGroup: 2000
                     runAsUser: 2000
+                  startupProbe:
+                    failureThreshold: 60
                   volumeMounts:
+                    assets:
+                      mountPath: /assets
+                      name: assets
+                      readOnly: true
                     config:
                       mountPath: /etc/stalwart/config.json
                       name: config
@@ -223,9 +222,31 @@ spec:
                     tmp:
                       mountPath: /tmp
                       name: tmp
+              initContainers:
+                assets:
+                  command:
+                  - cp
+                  - -r
+                  - /assets/.
+                  - /target
+                  image: ghcr.io/becloudless/stalwart-assets:latest
+                  name: assets
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                    runAsGroup: 2000
+                    runAsUser: 2000
+                  volumeMounts:
+                    assets:
+                      mountPath: /target
+                      name: assets
               securityContext:
                 fsGroup: 2000
               volumes:
+                assets:
+                  emptyDir: {}
+                  name: assets
                 config:
                   configMap:
                     name: ref:stalwart-config
@@ -655,6 +676,9 @@ spec:
         stalwart-setup:
           data:
             plan.ndjson: |-
+              {"@type":"upsert","matchOn":["description"],"object":"Application","value":{"web":{"description":"Stalwart Web Interface","resourceUrl":"file:///assets/webui.zip","unpackDirectory":"/var/lib/stalwart/webui","urlPrefix":{"/account":true,"/admin":true}}}}
+              {"@type":"update","object":"SpamSettings","value":{"spamFilterRulesUrl":"file:///assets/spam-filter-rules.json.gz"}}
+              {"@type":"update","object":"Asn","value":{"@type":"Resource","asnUrls":{"file:///assets/origin-asn-ipv4.csv":true,"file:///assets/origin-asn-ipv6.csv":true},"geoUrls":{"file:///assets/user-country-ipv4.csv":true,"file:///assets/user-country-ipv6.csv":true}}}
               {"@type":"upsert","matchOn":["name"],"object":"NetworkListener","value":{"imaps":{"name":"imaps","overrideProxyTrustedNetworks":{"10.42.0.0/16":true}},"smtp":{"name":"smtp","overrideProxyTrustedNetworks":{"10.42.0.0/16":true}},"submissions":{"name":"submissions","overrideProxyTrustedNetworks":{"10.42.0.0/16":true}}}}
               {"@type":"upsert","matchOn":["name"],"object":"MtaRoute","value":{"relay":{"@type":"Relay","host":"edge-relay.edge.svc","name":"edge-relay","port":2525}}}
               {"@type":"update","object":"MtaOutboundStrategy","value":{"route":{"else":"'edge-relay'","match":{"0":{"if":"is_local_domain(rcpt_domain)","then":"'local'"}}}}}
@@ -690,7 +714,7 @@ spec:
                         DEPLOYMENT: stalwart
                         HOME: /tmp
                         NAMESPACE: default
-                        PLAN_HASH: 7a5d540575edd0a8
+                        PLAN_HASH: 9ba59ba4f9dcf23a
                       image: docker.io/alpine/k8s:1.37.2
                       name: restart
                       securityContext:

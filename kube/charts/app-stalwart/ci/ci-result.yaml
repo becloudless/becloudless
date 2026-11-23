@@ -8,13 +8,6 @@ metadata:
 spec:
   egress:
   - toFQDNs:
-    - matchName: github.com
-    - matchName: objects.githubusercontent.com
-    toPorts:
-    - ports:
-      - port: "443"
-        protocol: TCP
-  - toFQDNs:
     - matchPattern: '*'
     toPorts:
     - ports:
@@ -167,6 +160,34 @@ spec:
           stalwart-admin:
             name: stalwart-admin
             namespace: default
+      stalwart-setup:
+        ciliumNetworkPolicies:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+        configMaps:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+        cronJobs:
+          stalwart-setup:
+            labels:
+              app.kubernetes.io/component: stalwart-setup
+              app.kubernetes.io/instance: stalwart-setup
+            name: stalwart-setup
+            namespace: default
+        roleBindings:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+        roles:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+        serviceAccounts:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
     resources:
       configMaps:
         stalwart-config:
@@ -214,7 +235,13 @@ spec:
                         all: ALL
                     runAsGroup: 2000
                     runAsUser: 2000
+                  startupProbe:
+                    failureThreshold: 60
                   volumeMounts:
+                    assets:
+                      mountPath: /assets
+                      name: assets
+                      readOnly: true
                     config:
                       mountPath: /etc/stalwart/config.json
                       name: config
@@ -226,9 +253,31 @@ spec:
                     tmp:
                       mountPath: /tmp
                       name: tmp
+              initContainers:
+                assets:
+                  command:
+                  - cp
+                  - -r
+                  - /assets/.
+                  - /target
+                  image: ghcr.io/becloudless/stalwart-assets:latest
+                  name: assets
+                  securityContext:
+                    capabilities:
+                      drop:
+                        all: ALL
+                    runAsGroup: 2000
+                    runAsUser: 2000
+                  volumeMounts:
+                    assets:
+                      mountPath: /target
+                      name: assets
               securityContext:
                 fsGroup: 2000
               volumes:
+                assets:
+                  emptyDir: {}
+                  name: assets
                 config:
                   configMap:
                     name: ref:stalwart-config
@@ -424,6 +473,34 @@ spec:
           stalwart-admin:
             name: stalwart-admin
             namespace: default
+      stalwart-setup:
+        ciliumNetworkPolicies:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+        configMaps:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+        cronJobs:
+          stalwart-setup:
+            labels:
+              app.kubernetes.io/component: stalwart-setup
+              app.kubernetes.io/instance: stalwart-setup
+            name: stalwart-setup
+            namespace: default
+        roleBindings:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+        roles:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+        serviceAccounts:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
     resources:
       certManagerCertificates:
         stalwart-gateway:
@@ -565,8 +642,293 @@ spec:
           stalwart-admin:
             name: stalwart-admin
             namespace: default
+      stalwart-setup:
+        ciliumNetworkPolicies:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+        configMaps:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+        cronJobs:
+          stalwart-setup:
+            labels:
+              app.kubernetes.io/component: stalwart-setup
+              app.kubernetes.io/instance: stalwart-setup
+            name: stalwart-setup
+            namespace: default
+        roleBindings:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+        roles:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+        serviceAccounts:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
     resources:
       stringSecrets:
         stalwart-admin:
           fields:
             password: {}
+---
+# Source: app-stalwart/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: stalwart-setup
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: bcl
+  dependsOn:
+  - name: stalwart
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      stalwart:
+        configMaps:
+          stalwart-config:
+            name: stalwart-config
+            namespace: default
+        deployments:
+          stalwart:
+            labels:
+              app.kubernetes.io/component: stalwart
+              app.kubernetes.io/instance: stalwart
+            name: stalwart
+            namespace: default
+        listenerSets:
+          stalwart-mail:
+            name: stalwart-mail
+            namespace: default
+        persistentVolumeClaims:
+          stalwart-data:
+            name: stalwart-data
+            namespace: default
+        services:
+          stalwart:
+            name: stalwart
+            namespace: default
+        tcpRoutes:
+          stalwart-imaps:
+            name: stalwart-imaps
+            namespace: default
+          stalwart-smtp:
+            name: stalwart-smtp
+            namespace: default
+          stalwart-submissions:
+            name: stalwart-submissions
+            namespace: default
+      stalwart-integration:
+        certManagerCertificates:
+          stalwart-gateway:
+            name: stalwart-gateway
+            namespace: default
+            secretName: tls-stalwart-gateway
+        httpRoutes:
+          stalwart:
+            name: stalwart
+            namespace: default
+        listenerSets:
+          stalwart:
+            name: stalwart
+            namespace: default
+      stalwart-pre:
+        stringSecrets:
+          stalwart-admin:
+            name: stalwart-admin
+            namespace: default
+      stalwart-setup:
+        ciliumNetworkPolicies:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+        configMaps:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+        cronJobs:
+          stalwart-setup:
+            labels:
+              app.kubernetes.io/component: stalwart-setup
+              app.kubernetes.io/instance: stalwart-setup
+            name: stalwart-setup
+            namespace: default
+        roleBindings:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+        roles:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+        serviceAccounts:
+          stalwart-setup:
+            name: stalwart-setup
+            namespace: default
+    resources:
+      ciliumNetworkPolicies:
+        stalwart-setup:
+          egress:
+            kube-apiserver:
+              toEntities:
+              - kube-apiserver
+            stalwart:
+              toEndpoints:
+                stalwart:
+                  matchLabels:
+                    app.kubernetes.io/component: stalwart
+              toPorts:
+              - 8080
+          endpointSelector:
+            matchLabels:
+              app.kubernetes.io/component: stalwart-setup
+      configMaps:
+        stalwart-setup:
+          data:
+            plan.ndjson: |-
+              {"@type":"upsert","matchOn":["description"],"object":"Application","value":{"web":{"description":"Stalwart Web Interface","resourceUrl":"file:///assets/webui.zip","unpackDirectory":"/var/lib/stalwart/webui","urlPrefix":{"/account":true,"/admin":true}}}}
+              {"@type":"update","object":"SpamSettings","value":{"spamFilterRulesUrl":"file:///assets/spam-filter-rules.json.gz"}}
+              {"@type":"update","object":"Asn","value":{"@type":"Resource","asnUrls":{"file:///assets/origin-asn-ipv4.csv":true,"file:///assets/origin-asn-ipv6.csv":true},"geoUrls":{"file:///assets/user-country-ipv4.csv":true,"file:///assets/user-country-ipv6.csv":true}}}
+            restart.sh: |-
+              set -eu
+              current=$(kubectl -n "$NAMESPACE" get deploy "$DEPLOYMENT" -o jsonpath='{.metadata.annotations.bcl\.tf/stalwart-setup-plan}')
+              if [ "$current" = "$PLAN_HASH" ]; then
+                echo "the plan $PLAN_HASH is already applied and read by $DEPLOYMENT"
+                exit 0
+              fi
+              echo "the plan $PLAN_HASH is applied (it was ${current:-none}), restarting $DEPLOYMENT: the listeners are read at its start"
+              kubectl -n "$NAMESPACE" annotate deploy "$DEPLOYMENT" "bcl.tf/stalwart-setup-plan=$PLAN_HASH" --overwrite
+              kubectl -n "$NAMESPACE" rollout restart "deploy/$DEPLOYMENT"
+      cronJobs:
+        stalwart-setup:
+          concurrencyPolicy: Forbid
+          jobTemplate:
+            spec:
+              activeDeadlineSeconds: 300
+              backoffLimit: 0
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/component: stalwart-setup
+                spec:
+                  containers:
+                    restart:
+                      command:
+                      - bash
+                      - /plan/restart.sh
+                      env:
+                        DEPLOYMENT: stalwart
+                        HOME: /tmp
+                        NAMESPACE: default
+                        PLAN_HASH: 72e8f4ecd8797091
+                      image: docker.io/alpine/k8s:1.37.2
+                      name: restart
+                      securityContext:
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        plan:
+                          mountPath: /plan
+                          name: plan
+                          readOnly: true
+                  initContainers:
+                    apply:
+                      args:
+                      - apply
+                      - --file
+                      - /plan/plan.ndjson
+                      - --no-color
+                      env:
+                        HOME: /home/nonroot
+                        STALWART_PASSWORD:
+                          secretKeyRef:
+                            key: password
+                            name: ref:stalwart-admin
+                        STALWART_URL: http://stalwart:8080
+                        STALWART_USER: admin
+                      image: ghcr.io/stalwartlabs/cli:2.0.0
+                      name: apply
+                      securityContext:
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        cache:
+                          mountPath: /home/nonroot/.cache
+                          name: cache
+                        plan:
+                          mountPath: /plan
+                          name: plan
+                          readOnly: true
+                  restartPolicy: Never
+                  securityContext:
+                    runAsGroup: 65532
+                    runAsUser: 65532
+                  serviceAccountName: stalwart-setup
+                  volumes:
+                    cache:
+                      emptyDir: {}
+                      name: cache
+                    plan:
+                      configMap:
+                        name: ref:stalwart-setup
+                      name: plan
+          schedule: '*/10 * * * *'
+      roleBindings:
+        stalwart-setup:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: stalwart-setup
+          subjects:
+            stalwart-setup:
+              kind: ServiceAccount
+              name: stalwart-setup
+              namespace: default
+      roles:
+        stalwart-setup:
+          rules:
+            deployments:
+              apiGroups:
+              - apps
+              resourceNames:
+              - stalwart
+              resources:
+              - deployments
+              verbs:
+              - get
+              - patch
+      serviceAccounts:
+        stalwart-setup:
+          automountServiceAccountToken: true

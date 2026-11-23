@@ -27,7 +27,7 @@
 #  - Stalwart reads the PROXY header from `edge` only, and sends its mails to the relay: this is in its database, set by the CronJob
 #    `stalwart-setup` (below).
 #
-# The CronJob `stalwart-setup` (disabled, `resources.fluxHelmReleases.stalwart-setup.enabled: true` in the cluster values) applies the plan `setup.plan`
+# The CronJob `stalwart-setup` (`resources.fluxHelmReleases.stalwart-setup.enabled: false` to remove it) applies the plan `setup.assetsPlan` and `setup.plan`
 # with the CLI of Stalwart (https://stalw.art/docs/management/cli/plan-format) every `setup.schedule`, so no credential is in git: it signs in
 # as `admin` (the recovery administrator, the password is the one of `stalwart-admin`). The plan is made of idempotent operations (`upsert`
 # with a `matchOn`, `update` of the singletons), applied again at every run. A run fails while Stalwart has not been set up yet (the listeners
@@ -52,7 +52,19 @@
 setup:
   image: ghcr.io/stalwartlabs/cli:2.0.0 # renovate: datasource=docker packageName=ghcr.io/stalwartlabs/cli
   schedule: "*/10 * * * *"
-  plan: [] # the operations of the plan, one object each (see above)
+  plan: [] # the operations of the plan, one object each (see above), applied after `assetsPlan`
+
+  # Stalwart downloads its web UI, the rules of its spam filter and the tables of the ASN and countries of the IPs from GitHub, which the pod is not
+  # allowed to reach: they are in the image `assets.image` (docker/misc/stalwart-assets, built again every week for the tables), copied by an init
+  # container to `/assets`, and `assetsPlan` points the settings of Stalwart to these files (`file://` URLs), applied by `stalwart-setup` before `plan`.
+  # Before the first run of `stalwart-setup` Stalwart tries to download them anyway: it needs up to a minute to start, and has no web UI until the
+  # restart that follows the plan.
+  assets:
+    image: ghcr.io/becloudless/stalwart-assets:latest # rebuilt every week with the new tables: `latest` is pulled at every start
+  assetsPlan:
+    - {"@type": upsert, object: Application, matchOn: [description], value: {web: {description: Stalwart Web Interface, resourceUrl: "file:///assets/webui.zip", unpackDirectory: /var/lib/stalwart/webui, urlPrefix: {/admin: true, /account: true}}}}
+    - {"@type": update, object: SpamSettings, value: {spamFilterRulesUrl: "file:///assets/spam-filter-rules.json.gz"}}
+    - {"@type": update, object: Asn, value: {"@type": Resource, asnUrls: {"file:///assets/origin-asn-ipv4.csv": true, "file:///assets/origin-asn-ipv6.csv": true}, geoUrls: {"file:///assets/user-country-ipv4.csv": true, "file:///assets/user-country-ipv6.csv": true}}}
 
 resources:
 
@@ -92,11 +104,6 @@ resources:
                 "k8s:app.kubernetes.io/instance": edge
                 "k8s:app.kubernetes.io/component": edge
           toPorts: [2525]
-        github: # the web UI bundle and the rules of the spam filter are downloaded from GitHub
-          toFQDNs:
-            github: {matchName: github.com}
-            objects: {matchName: objects.githubusercontent.com}
-          toPorts: [443]
 
   fluxHelmReleases:
     stalwart-pre:
@@ -146,6 +153,21 @@ resources:
                 spec:
                   securityContext:
                     fsGroup: 2000 # the volume is writable by the user of the container
+                  initContainers:
+                    assets: # what Stalwart would download from GitHub, read through the `file://` URLs of `setup.assetsPlan`
+                      name: assets
+                      image: '{{ .Values.setup.assets.image }}'
+                      command: [ cp, -r, /assets/., /target ]
+                      securityContext:
+                        runAsUser: 2000
+                        runAsGroup: 2000
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        assets:
+                          name: assets
+                          mountPath: /target
                   containers:
                     stalwart:
                       name: stalwart
@@ -172,6 +194,8 @@ resources:
                       probe:
                         httpGet:
                           path: /healthz/live
+                      startupProbe:
+                        failureThreshold: 60 # 5min: before the plan of `stalwart-setup` is applied, the downloads of GitHub time out before the start
                       securityContext:
                         runAsUser: 2000
                         runAsGroup: 2000
@@ -192,6 +216,10 @@ resources:
                         tmp:
                           name: tmp
                           mountPath: /tmp
+                        assets:
+                          name: assets
+                          mountPath: /assets
+                          readOnly: true
                   volumes:
                     config:
                       name: config
@@ -203,6 +231,9 @@ resources:
                         claimName: ref:stalwart-data
                     tmp:
                       name: tmp
+                      emptyDir: {}
+                    assets:
+                      name: assets
                       emptyDir: {}
 
           services:
@@ -293,7 +324,7 @@ resources:
     # the Deployment when the plan changed. The init container applies the plan (it fails while Stalwart is not set up, the next run tries again),
     # the container restarts Stalwart when the hash of the plan is not the one of the annotation of the Deployment (set at the same time).
     stalwart-setup:
-      enabled: false # `true` in the cluster values, with a plan
+      enabled: true
       dependsOn:
         - ref:stalwart
       values:
@@ -340,7 +371,7 @@ resources:
             stalwart-setup:
               data:
                 plan.ndjson: | # one operation per line
-                  {{- range .Values.setup.plan }}
+                  {{- range concat .Values.setup.assetsPlan .Values.setup.plan }}
                   {{ toJson . }}
                   {{- end }}
                 restart.sh: |
@@ -406,7 +437,7 @@ resources:
                             HOME: /tmp
                             NAMESPACE: "{{ .Release.Namespace }}"
                             DEPLOYMENT: stalwart
-                            PLAN_HASH: '{{ .Values.setup.plan | toJson | sha256sum | trunc 16 }}'
+                            PLAN_HASH: '{{ concat .Values.setup.assetsPlan .Values.setup.plan | toJson | sha256sum | trunc 16 }}'
                           securityContext:
                             capabilities:
                               drop:
