@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=../app/schema/values.schema.json
 
-# The entry point of the cluster from the internet through the pops (the nodes of the NixOS role `edge`, `bcl.role.edge`, plain VPS without cluster): like a Cloudflare Tunnel, no router in
+# The entry point of the cluster from the internet through the pops (the nodes with the NixOS module `bcl.edge`, the role `edge` for a plain VPS without cluster): like a Cloudflare Tunnel, no router in
 # the path and the address of the clients is kept.
 #
 #   client -> pop (haproxy: 80/443, by the SNI / Host) -> WireGuard tunnel -> this pod (haproxy) -> Gateway `shared` of the cluster
@@ -24,30 +24,30 @@
 #
 # Not done by this chart (the secret key stays out of git):
 #  - the private key of the tunnel, in the Secret `edge-wireguard` (key `privatekey`) of the namespace of the app, and its public key in
-#    `bcl.role.edge.upstream.publicKey` of the pops:
+#    `bcl.edge.upstream.publicKey` of the pops:
 #      wg genkey | tee privatekey | wg pubkey > publickey
 #      kubectl -n edge create secret generic edge-wireguard --from-file=privatekey
-#  - the public key and the address of each pop in `pops` (`wg show wg-edge public-key` on the pop, `bcl.role.edge.address`).
+#  - the public key and the address of each pop in `pops` (`wg show wg-edge public-key` on the pop, `bcl.edge.address`).
 
-# The tunnel network (the same as `bcl.role.edge` of the pops), the address of this pod in it.
+# The tunnel network (the same as `bcl.edge` of the pops), the address of this pod in it.
 tunnel:
   address: 10.99.0.254
   prefixLength: 24
-  popPort: 51820 # the UDP port of the pops (`bcl.role.edge.listenPort`)
+  popPort: 51820 # the UDP port of the pops (`bcl.edge.listenPort`)
 
-# The pops, by name: `address` is the public address of the pop, `tunnelAddress` its address in the tunnel network (`bcl.role.edge.address`).
+# The pops, by name: `address` is the public address of the pop, `tunnelAddress` its address in the tunnel network (`bcl.edge.address`).
 # A pop without `publicKey` is ignored until it has one.
 #   pop1: {address: 203.0.113.10, tunnelAddress: 10.99.0.1, publicKey: <public key>}
 pops: {}
 
-# The TCP services (not HTTP: the mail protocols) published by the pops (`bcl.role.edge.upstream.tcpPorts`), by name: `port` is the public
+# The TCP services (not HTTP: the mail protocols) published by the pops (`bcl.edge.upstream.tcpPorts`), by name: `port` is the public
 # port, `backend` the `host:port` of the server inside the cluster, which gets the PROXY header (v2) of the pop with the address of the client.
 # This pod listens for the pops on `tcpPortOffset` + `port`.
 #   smtp: {port: 25, backend: stalwart.stalwart.svc:25}
 tcp: {}
 tcpPortOffset: 10000
 
-# The relay of the outgoing mails: the Service `edge-relay` (port 2525) sends to the postfix of the pops (`bcl.role.edge.relay`,
+# The relay of the outgoing mails: the Service `edge-relay` (port 2525) sends to the postfix of the pops (`bcl.edge.relay`,
 # same port), so the mails leave from the public address of a pop (one of them, in turn).
 
 # The address of the LoadBalancer Service that takes the connections of the LAN and of the cluster (the former address of the Gateway).
