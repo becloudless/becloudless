@@ -10,6 +10,7 @@ import (
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/listShorthands"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/refs"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/stringifyFields"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/yamlNodes"
 
 	"gopkg.in/yaml.v3"
 )
@@ -45,6 +46,7 @@ type resourceMutations struct {
 	ExtractContent  *content.ExtractContent          `yaml:"extractContent"`
 	ArraysToMaps    *arraysToMaps.ArraysToMaps       `yaml:"arraysToMaps"`
 	StringifyFields *stringifyFields.StringifyFields `yaml:"stringifyFields"`
+	YamlNodes       *yamlNodes.YamlNodes             `yaml:"yamlNodes"`
 	ItemFields      itemFields.ItemFields            `yaml:"itemFields"`
 	ListShorthands  listShorthands.ListShorthands    `yaml:"listShorthands"`
 	Refs            refs.Refs                        `yaml:"refs"`

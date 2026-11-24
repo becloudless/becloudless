@@ -18,6 +18,7 @@
                                "base.resources.mutations.probes"
                                "base.resources.mutations.mapsToEnv"
                                "base.resources.mutations.mapsToPorts"
+                               "base.resources.mutations.yamlNodes"
                                "base.resources.mutations.content"
                                "base.resources.mutations.checksums") }}
     {{- $inputs := merge (dict "work" $work) $context }}

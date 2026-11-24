@@ -422,7 +422,7 @@ resources:
                 target:
                   kind: Deployment
                   name: mailu-(front|admin|postfix|dovecot|rspamd|webmail)
-                patch: |
+                patch:
                   apiVersion: apps/v1
                   kind: Deployment
                   metadata:
@@ -443,7 +443,7 @@ resources:
                 target:
                   kind: StatefulSet
                   name: mailu-clamav
-                patch: |
+                patch:
                   apiVersion: apps/v1
                   kind: StatefulSet
                   metadata:
@@ -467,7 +467,7 @@ resources:
                 target:
                   kind: Deployment
                   name: mailu-dovecot
-                patch: |
+                patch:
                   apiVersion: apps/v1
                   kind: Deployment
                   metadata:

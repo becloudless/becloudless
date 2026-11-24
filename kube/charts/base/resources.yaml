@@ -310,6 +310,9 @@ resources:
       arraysToMaps:
         ignore:
           - dependsOn # a list of the HelmReleases, there is nothing to merge: `- ref:db`, or `- {name, namespace}` for another release
+      yamlNodes:
+        fields:
+          - postRenderers.kustomize.patches.patch # the patch is a YAML node, not a string holding a YAML document
       refs:
         dependsOn: {kinds: [fluxHelmReleases], as: helmReleaseRef}
   - name: fluxKustomizations

@@ -608,8 +608,9 @@ spec:
             template:
               spec:
                 containers:
-                - name: clamav
-                  command: [ /init-unprivileged ]
+                - command:
+                  - /init-unprivileged
+                  name: clamav
         target:
           kind: StatefulSet
           name: mailu-clamav
@@ -624,24 +625,7 @@ spec:
             template:
               spec:
                 containers:
-                - name: fts-heal
-                  image: ghcr.io/mailu/dovecot:2024.06.72 # the one of the dovecot of the chart (xapian-check), to keep in sync with it
-                  securityContext:
-                    runAsUser: 8 # mail, the owner of the indexes
-                    runAsGroup: 12
-                    allowPrivilegeEscalation: false
-                    readOnlyRootFilesystem: true
-                    capabilities:
-                      drop: [ALL]
-                  resources:
-                    requests:
-                      cpu: 10m
-                      memory: 64Mi
-                    limits:
-                      cpu: 500m
-                      memory: 512Mi
-                  command: [ sh, -c ]
-                  args:
+                - args:
                   - |
                     interval=3600
                     log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
@@ -674,6 +658,26 @@ spec:
                       log "$checked shards checked, $removed indexes removed"
                       sleep $interval
                     done
+                  command:
+                  - sh
+                  - -c
+                  image: ghcr.io/mailu/dovecot:2024.06.72
+                  name: fts-heal
+                  resources:
+                    limits:
+                      cpu: 500m
+                      memory: 512Mi
+                    requests:
+                      cpu: 10m
+                      memory: 64Mi
+                  securityContext:
+                    allowPrivilegeEscalation: false
+                    capabilities:
+                      drop:
+                      - ALL
+                    readOnlyRootFilesystem: true
+                    runAsGroup: 12
+                    runAsUser: 8
                   volumeMounts:
                   - mountPath: /mail
                     name: data
@@ -692,9 +696,9 @@ spec:
             template:
               metadata:
                 annotations:
-                  policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+                  checksum/env: 5e24efb6541687de
                   policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
-                  checksum/env: "5e24efb6541687de"
+                  policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
         target:
           kind: Deployment
           name: mailu-(front|admin|postfix|dovecot|rspamd|webmail)

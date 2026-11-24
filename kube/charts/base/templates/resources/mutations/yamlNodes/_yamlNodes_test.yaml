@@ -1,0 +1,132 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: yamlNodes mutation (the patch of a post renderer of a HelmRelease is a string, or a YAML node serialized to a string)
+templates:
+  - loader.yaml
+release:
+  name: test-release
+  namespace: default
+tests:
+  - it: keeps a patch given as a string untouched
+    set:
+      resources:
+        fluxHelmReleases:
+          main:
+            interval: 10m
+            chart:
+              spec:
+                chart: app
+            postRenderers:
+              skip:
+                kustomize:
+                  patches:
+                    root:
+                      target: {kind: Deployment}
+                      patch: |
+                        apiVersion: apps/v1
+                        kind: Deployment
+                        metadata:
+                          name: any
+    asserts:
+      - equal:
+          path: spec.postRenderers[0].kustomize.patches[0].patch
+          value: |-
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: any
+
+  - it: serializes a patch given as a YAML node to a YAML string
+    set:
+      resources:
+        fluxHelmReleases:
+          main:
+            interval: 10m
+            chart:
+              spec:
+                chart: app
+            postRenderers:
+              skip:
+                kustomize:
+                  patches:
+                    root:
+                      target: {kind: Deployment}
+                      patch:
+                        apiVersion: apps/v1
+                        kind: Deployment
+                        metadata:
+                          name: any
+                        spec:
+                          template:
+                            metadata:
+                              annotations:
+                                policy: "true"
+    asserts:
+      - equal:
+          path: spec.postRenderers[0].kustomize.patches[0].patch
+          value: |-
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: any
+            spec:
+              template:
+                metadata:
+                  annotations:
+                    policy: "true"
+      - equal:
+          path: spec.postRenderers[0].kustomize.patches[0].target
+          value: {kind: Deployment}
+
+  - it: keeps a list of the patch as it is, and serializes the patches of every post renderer
+    set:
+      resources:
+        fluxHelmReleases:
+          main:
+            interval: 10m
+            chart:
+              spec:
+                chart: app
+            postRenderers:
+              first:
+                kustomize:
+                  patches:
+                    containers:
+                      patch:
+                        apiVersion: apps/v1
+                        kind: Deployment
+                        metadata:
+                          name: any
+                        spec:
+                          template:
+                            spec:
+                              containers:
+                                - name: sidecar
+                                  image: busybox:1
+                    plain:
+                      patch: "kind: Service"
+              second:
+                kustomize:
+                  patches:
+                    other:
+                      patch:
+                        kind: Service
+    asserts:
+      - equal:
+          path: spec.postRenderers[0].kustomize.patches[0].patch
+          value: |-
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: any
+            spec:
+              template:
+                spec:
+                  containers:
+                  - image: busybox:1
+                    name: sidecar
+      - equal:
+          path: spec.postRenderers[0].kustomize.patches[1].patch
+          value: "kind: Service"
+      - equal:
+          path: spec.postRenderers[1].kustomize.patches[0].patch
+          value: "kind: Service"

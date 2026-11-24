@@ -18,16 +18,20 @@ import (
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/required"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/stringifyFields"
 	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/templatedStrings"
+	"github.com/becloudless/becloudless/kube/charts/base/templates/resources/mutations/yamlNodes"
 )
 
 // Pipeline returns the ordered list of schema mutations applied to every
 // resource's instance schema (see fetchAndMutateSchema).
-func Pipeline(extractContent content.ExtractContent, arrays *arraysToMaps.ArraysToMaps, stringify *stringifyFields.StringifyFields, items itemFields.ItemFields, shorthands listShorthands.ListShorthands, references refs.Refs) []mutations.Mutation {
+func Pipeline(extractContent content.ExtractContent, arrays *arraysToMaps.ArraysToMaps, stringify *stringifyFields.StringifyFields, yamlNodesFields *yamlNodes.YamlNodes, items itemFields.ItemFields, shorthands listShorthands.ListShorthands, references refs.Refs) []mutations.Mutation {
 	if arrays == nil {
 		arrays = &arraysToMaps.ArraysToMaps{}
 	}
 	if stringify == nil {
 		stringify = &stringifyFields.StringifyFields{}
+	}
+	if yamlNodesFields == nil {
+		yamlNodesFields = &yamlNodes.YamlNodes{}
 	}
 	return []mutations.Mutation{
 		extractContent,
@@ -44,6 +48,7 @@ func Pipeline(extractContent content.ExtractContent, arrays *arraysToMaps.Arrays
 		required.Required{}, // after the mutations reshaping the nodes (env, ports and arrays), it moves the nested required out of the schema
 		references,          // after required: it takes the required out of the schema, a wrapped entry would keep it as an alternative
 		*stringify,
+		*yamlNodesFields,                    // before templatedStrings: it drops the validation of the strings it relaxes
 		templatedStrings.TemplatedStrings{}, // last of the schema relaxations: wraps the validation the other mutations left on the strings
 		additionalPropertiesFalse.AdditionalPropertiesFalse{},
 	}

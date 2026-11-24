@@ -87,6 +87,7 @@ func fetchAndMutateSchema(client *http.Client, e *resource, dest string) error {
 		extractContent,
 		e.Mutations.ArraysToMaps,
 		e.Mutations.StringifyFields,
+		e.Mutations.YamlNodes,
 		e.Mutations.ItemFields,
 		e.Mutations.ListShorthands,
 		e.Mutations.Refs,
