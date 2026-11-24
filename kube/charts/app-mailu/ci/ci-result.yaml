@@ -593,6 +593,22 @@ spec:
       patches:
       - patch: |-
           apiVersion: apps/v1
+          kind: StatefulSet
+          metadata:
+            name: mailu-clamav
+          spec:
+            template:
+              spec:
+                containers:
+                - name: clamav
+                  command: [ /init-unprivileged ]
+        target:
+          kind: StatefulSet
+          name: mailu-clamav
+  - kustomize:
+      patches:
+      - patch: |-
+          apiVersion: apps/v1
           kind: Deployment
           metadata:
             name: mailu-dovecot
@@ -657,6 +673,22 @@ spec:
         target:
           kind: Deployment
           name: mailu-dovecot
+  - kustomize:
+      patches:
+      - patch: |-
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: any
+          spec:
+            template:
+              metadata:
+                annotations:
+                  policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+                  policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
+        target:
+          kind: Deployment
+          name: mailu-(front|admin|postfix|dovecot|rspamd|webmail)
   timeout: 15m
   upgrade:
     cleanupOnFail: true
@@ -668,8 +700,31 @@ spec:
       updateStrategy:
         type: Recreate
     clamav:
+      containerSecurityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        enabled: true
+        readOnlyRootFilesystem: true
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      extraVolumeMounts:
+      - mountPath: /tmp
+        name: tmp
+      - mountPath: /var/log/clamav
+        name: log
+      extraVolumes:
+      - emptyDir: {}
+        name: tmp
+      - emptyDir: {}
+        name: log
       persistence:
         storageClass: longhorn-files
+      podSecurityContext:
+        enabled: true
+        fsGroup: 1000
       resources:
         limits:
           cpu: 1
@@ -754,6 +809,17 @@ spec:
         persistence:
           enabled: true
           storageClass: longhorn-db
+    oletools:
+      containerSecurityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        enabled: true
+        readOnlyRootFilesystem: true
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
     permanentSessionLifetime: 31536000
     persistence:
       single_pvc: false
@@ -772,9 +838,45 @@ spec:
         type: Recreate
     sessionTimeout: 259201
     subnet: 10.42.0.0/16
+    tika:
+      containerSecurityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        enabled: true
+        readOnlyRootFilesystem: true
+        runAsGroup: 35002
+        runAsNonRoot: true
+        runAsUser: 35002
+      extraVolumeMounts:
+      - mountPath: /tmp
+        name: tmp
+      extraVolumes:
+      - emptyDir: {}
+        name: tmp
     timezone: Europe/Paris
     webdav:
+      containerSecurityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        enabled: true
+        readOnlyRootFilesystem: true
+        runAsGroup: 1001
+        runAsNonRoot: true
+        runAsUser: 1001
       enabled: true
+      extraVolumeMounts:
+      - mountPath: /tmp
+        name: tmp
+      extraVolumes:
+      - emptyDir: {}
+        name: tmp
+      podSecurityContext:
+        enabled: true
+        fsGroup: 1001
       updateStrategy:
         type: Recreate
     webmail:

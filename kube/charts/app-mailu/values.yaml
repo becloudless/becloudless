@@ -386,6 +386,48 @@ resources:
             kind: HelmRepository
             name: mailu
       postRenderers:
+        # The images of Mailu (front, admin, postfix, dovecot, rspamd, webmail) start as root: their `start.py` chowns the volumes, writes the
+        # generated configuration in `/etc` and `/run`, then drops the privileges itself (`drop_privs_to`, `-u rspamd`, php-fpm...). The pods
+        # are rejected by the policies of Kyverno without these annotations. The other components (tika, oletools, webdav, clamav) run as a
+        # non root user with a read only filesystem, see their values.
+        skip-policies:
+          kustomize:
+            patches:
+              root-images:
+                target:
+                  kind: Deployment
+                  name: mailu-(front|admin|postfix|dovecot|rspamd|webmail)
+                patch: |
+                  apiVersion: apps/v1
+                  kind: Deployment
+                  metadata:
+                    name: any
+                  spec:
+                    template:
+                      metadata:
+                        annotations:
+                          policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
+                          policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
+        # The image of ClamAV has a second entrypoint for the non root user (it does not chown the volume, it needs `/tmp`, `/var/log/clamav`
+        # and the database directory to be writable).
+        clamav-unprivileged:
+          kustomize:
+            patches:
+              clamav:
+                target:
+                  kind: StatefulSet
+                  name: mailu-clamav
+                patch: |
+                  apiVersion: apps/v1
+                  kind: StatefulSet
+                  metadata:
+                    name: mailu-clamav
+                  spec:
+                    template:
+                      spec:
+                        containers:
+                        - name: clamav
+                          command: [ /init-unprivileged ]
         # The full text search index of a mailbox (fts_flatcurve, `/mail/<user>/[.<folder>/]fts-flatcurve/<shard>`) that gets corrupt (a write
         # interrupted by a full volume or a crash) is never repaired by dovecot: its indexer crashes (`Xapian::DatabaseCorruptError`, signal 6)
         # on every delivery to the mailbox, and the search of the mailbox is broken. This sidecar checks every shard and removes the whole
@@ -588,6 +630,25 @@ resources:
         clamav:
           persistence:
             storageClass: longhorn-files
+          # non root (the entrypoint `/init-unprivileged`, see the post renderer `clamav-unprivileged`)
+          podSecurityContext:
+            enabled: true
+            fsGroup: 1000
+          containerSecurityContext:
+            enabled: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          extraVolumeMounts:
+            - {name: tmp, mountPath: /tmp}
+            - {name: log, mountPath: /var/log/clamav}
+          extraVolumes:
+            - {name: tmp, emptyDir: {}}
+            - {name: log, emptyDir: {}}
           resources:
             requests:
               memory: 1.5Gi
@@ -611,6 +672,49 @@ resources:
           enabled: true
           updateStrategy:
             type: Recreate
+          podSecurityContext:
+            enabled: true
+            fsGroup: 1001
+          containerSecurityContext:
+            enabled: true
+            runAsUser: 1001
+            runAsGroup: 1001
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          extraVolumeMounts:
+            - {name: tmp, mountPath: /tmp}
+          extraVolumes:
+            - {name: tmp, emptyDir: {}}
+
+        # these images already have a non root user (`nobody` and 35002)
+        oletools:
+          containerSecurityContext:
+            enabled: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+
+        tika:
+          containerSecurityContext:
+            enabled: true
+            runAsUser: 35002
+            runAsGroup: 35002
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          extraVolumeMounts:
+            - {name: tmp, mountPath: /tmp}
+          extraVolumes:
+            - {name: tmp, emptyDir: {}}
 
     # the public exposure, applied once mailu is deployed and not waited for
     mailu-integration:
