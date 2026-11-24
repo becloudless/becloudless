@@ -124,6 +124,11 @@ resources:
             dovecot:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
           toPorts: [25]
+        authelia: # the notifications of Authelia (`mynetworks` of postfix: the pods of the cluster relay without authentication)
+          fromEndpoints:
+            authelia:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": authelia, "k8s:app.kubernetes.io/name": authelia}
+          toPorts: [25]
         submission: # the authenticated submission (465 and 587), proxied by the dovecot of the front
           fromEndpoints:
             front:

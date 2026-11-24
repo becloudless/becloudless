@@ -29,11 +29,14 @@ spec:
     - ports:
       - port: "5432"
         protocol: TCP
-  - toFQDNs:
-    - matchName: mail.test.com
+  - toEndpoints:
+    - matchLabels:
+        k8s:app.kubernetes.io/component: postfix
+        k8s:app.kubernetes.io/name: mailu
+        k8s:io.kubernetes.pod.namespace: mailu
     toPorts:
     - ports:
-      - port: "465"
+      - port: "25"
         protocol: TCP
   - toEndpoints:
     - matchLabels:
@@ -551,11 +554,13 @@ spec:
         filesystem:
           enabled: true
         smtp:
-          address: submissions://mail.test.com:465
+          address: smtp://mailu-postfix.mailu.svc.cluster.local:25
+          disable_require_tls: true
           enabled: false
-          password: {}
+          password:
+            disabled: true
           sender: test Authelia <authelia@test.com>
-          username: authelia@test.com
+          username: ""
       password_policy:
         zxcvbn:
           enabled: true

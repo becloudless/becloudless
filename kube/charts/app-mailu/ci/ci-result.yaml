@@ -354,6 +354,14 @@ spec:
   ingress:
   - fromEndpoints:
     - matchLabels:
+        k8s:app.kubernetes.io/name: authelia
+        k8s:io.kubernetes.pod.namespace: authelia
+    toPorts:
+    - ports:
+      - port: "25"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
         app.kubernetes.io/component: dovecot
         app.kubernetes.io/name: mailu
     - matchLabels:
