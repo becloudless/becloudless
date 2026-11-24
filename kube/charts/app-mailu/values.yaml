@@ -586,11 +586,17 @@ resources:
               enabled: true
               storageClass: longhorn-db
 
+        # `global.storageClass` is only used by clamav and the databases: the volumes of the other components need their own class, they are
+        # created without one (and stay Pending, there is no default class) otherwise.
         admin:
+          persistence:
+            storageClass: longhorn-db
           updateStrategy:
             type: Recreate
 
         postfix:
+          persistence:
+            storageClass: longhorn-db
           updateStrategy:
             type: Recreate
 
@@ -617,6 +623,8 @@ resources:
               cpu: 2
 
         rspamd:
+          persistence:
+            storageClass: longhorn-db
           updateStrategy:
             type: Recreate
           resources:
@@ -658,6 +666,8 @@ resources:
               cpu: 1
 
         webmail:
+          persistence:
+            storageClass: longhorn-db
           updateStrategy:
             type: Recreate
           resources:
@@ -670,6 +680,8 @@ resources:
 
         webdav:
           enabled: true
+          persistence:
+            storageClass: longhorn-db
           updateStrategy:
             type: Recreate
           podSecurityContext:

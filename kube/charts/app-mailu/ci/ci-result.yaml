@@ -697,6 +697,8 @@ spec:
       retryInterval: 5m
   values:
     admin:
+      persistence:
+        storageClass: longhorn-db
       updateStrategy:
         type: Recreate
     clamav:
@@ -824,9 +826,13 @@ spec:
     persistence:
       single_pvc: false
     postfix:
+      persistence:
+        storageClass: longhorn-db
       updateStrategy:
         type: Recreate
     rspamd:
+      persistence:
+        storageClass: longhorn-db
       resources:
         limits:
           cpu: 1
@@ -874,12 +880,16 @@ spec:
       extraVolumes:
       - emptyDir: {}
         name: tmp
+      persistence:
+        storageClass: longhorn-db
       podSecurityContext:
         enabled: true
         fsGroup: 1001
       updateStrategy:
         type: Recreate
     webmail:
+      persistence:
+        storageClass: longhorn-db
       resources:
         limits:
           cpu: 1
