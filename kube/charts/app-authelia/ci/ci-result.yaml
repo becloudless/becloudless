@@ -623,7 +623,7 @@ spec:
       - command:
         - sh
         - -ec
-        - |
+        - |-
           for dir in /secrets/authelia-oidc-*; do
             client=${dir#/secrets/authelia-oidc-}
             hash=$(authelia crypto hash generate pbkdf2 --variant sha512 --password "$(cat $dir/secret)" | sed 's/^Digest: //')
