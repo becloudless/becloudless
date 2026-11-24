@@ -599,7 +599,7 @@ resources:
 
         # the outgoing mails go to the relay of the edge nodes (no authentication: only the pods of the cluster reach it)
         externalRelay:
-          host: "[edge-relay.edge.svc]:2525"
+          host: "[edge-relay.edge.svc.cluster.local]:2525" # the full name: postfix resolves with DNSSEC, without the search domains (`edge-relay.edge.svc` is NXDOMAIN)
 
         mariadb:
           enabled: true

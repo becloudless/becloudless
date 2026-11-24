@@ -246,6 +246,7 @@ resources:
             smtp:
               enabled: true
               address: smtp://mailu-postfix.mailu.svc.cluster.local:25
+              timeout: 30 seconds # postfix answers after the antispam (rspamd) scanned the mail, more than the 5 seconds of the default
               sender: '{{ .Values.app.name }} Authelia <authelia@{{ .Values.app.domain }}>'
               username: ''
               disable_require_tls: true

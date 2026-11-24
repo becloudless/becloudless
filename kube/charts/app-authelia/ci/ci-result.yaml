@@ -560,6 +560,7 @@ spec:
           password:
             disabled: true
           sender: test Authelia <authelia@test.com>
+          timeout: 30 seconds
           username: ""
       password_policy:
         zxcvbn:

@@ -763,7 +763,7 @@ spec:
         type: Recreate
     existingSecret: mailu
     externalRelay:
-      host: '[edge-relay.edge.svc]:2525'
+      host: '[edge-relay.edge.svc.cluster.local]:2525'
     front:
       containerSecurityContext:
         capabilities:
