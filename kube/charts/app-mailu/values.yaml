@@ -412,6 +412,9 @@ resources:
         # generated configuration in `/etc` and `/run`, then drops the privileges itself (`drop_privs_to`, `-u rspamd`, php-fpm...). The pods
         # are rejected by the policies of Kyverno without these annotations. The other components (tika, oletools, webdav, clamav) run as a
         # non root user with a read only filesystem, see their values.
+        # `checksum/env`: the components read their settings from the environment (the ConfigMap `mailu-envvars`: the relay, the proxy
+        # authentication, the hostnames...), which the chart does not hash in its pods: without it a change of the values does not restart
+        # them, and they keep the old settings. The hash is the one of the values of the release, so any change of them restarts the pods.
         skip-policies:
           kustomize:
             patches:
@@ -430,6 +433,7 @@ resources:
                         annotations:
                           policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
                           policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
+                          checksum/env: "{{ list .Values.app.domain .Values.resources.fluxHelmReleases.mailu.values | toJson | sha256sum | trunc 16 }}"
         # The image of ClamAV has a second entrypoint for the non root user (it does not chown the volume, it needs `/tmp`, `/var/log/clamav`
         # and the database directory to be writable).
         clamav-unprivileged:

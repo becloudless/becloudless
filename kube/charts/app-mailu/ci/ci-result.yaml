@@ -694,6 +694,7 @@ spec:
                 annotations:
                   policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
                   policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
+                  checksum/env: "5e24efb6541687de"
         target:
           kind: Deployment
           name: mailu-(front|admin|postfix|dovecot|rspamd|webmail)
