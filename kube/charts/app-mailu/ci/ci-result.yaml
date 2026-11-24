@@ -992,7 +992,7 @@ spec:
       certManagerCertificates:
         mailu-gateway:
           dnsNames:
-            mailu: mail.test.com
+            mailu: mailu.test.com
           issuerRef:
             kind: ClusterIssuer
             name: letsencrypt-prod
@@ -1000,7 +1000,7 @@ spec:
       httpRoutes:
         mailu:
           hostnames:
-            mailu: mail.test.com
+            mailu: mailu.test.com
           parentRefs:
             mailu:
               group: gateway.networking.k8s.io
@@ -1052,7 +1052,7 @@ spec:
               allowedRoutes:
                 namespaces:
                   from: Same
-              hostname: mail.test.com
+              hostname: mailu.test.com
               name: mailu
               port: 443
               protocol: HTTPS

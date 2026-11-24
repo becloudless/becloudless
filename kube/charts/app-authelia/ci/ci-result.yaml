@@ -134,7 +134,7 @@ spec:
           - - group:app_jellyfin
           - - group:role_admin
         - domain:
-          - mail.test.com
+          - mailu.test.com
           policy: two_factor
           subject:
           - - group:app_mailu

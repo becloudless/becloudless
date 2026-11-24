@@ -92,6 +92,17 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        add:
+        - SYS_CHROOT
+        drop:
+        - ALL
+      readOnlyRootFilesystem: true
+      runAsGroup: 1000
+      runAsNonRoot: true
+      runAsUser: 1000
     gitea:
       additionalConfigFromEnvs:
       - name: FORGEJO__database__PASSWD

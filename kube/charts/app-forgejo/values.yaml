@@ -89,6 +89,19 @@ resources:
           storageClass: longhorn-files
           claimName: forgejo-shared-storage
 
+        # the rootless image runs as uid 1000 and only writes in `/data` and `/tmp` (volumes of the chart): the policies of Kyverno (non root,
+        # read only filesystem) are met by the init containers too. SYS_CHROOT: required by the ssh server on cri-o
+        # https://gitea.com/gitea/helm-chart/issues/161
+        containerSecurityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop: [ALL]
+            add: [SYS_CHROOT]
+
         test:
           enabled: false
 

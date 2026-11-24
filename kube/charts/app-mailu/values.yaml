@@ -11,7 +11,7 @@
 # The domain (`app.domain`) and the first admin account (`admin@<domain>`) are created by the admin at its start (`initialAccount`,
 # `flask mailu admin`, mode `ifmissing`: an existing account is never changed, so a password changed in the web UI stays). Its password is
 # generated in the secret `mailu-initial-account` (key `password`, backed up with the other generated secrets).
-# Web UI login (admin and webmail) by Authelia, so by lldap: the route of `mail.<domain>` has the forward auth (`expose` below), the users of the
+# Web UI login (admin and webmail) by Authelia, so by lldap: the route of `mailu.<domain>` has the forward auth (`expose` below), the users of the
 # groups `app_mailu` and `role_admin` sign in to Authelia, which gives the email of the user in the header `Remote-Email`. The admin
 # (`proxyAuth`) logs in the account of this email, created at the first login when its domain exists in mailu (`proxyAuth.create`: so the
 # email of the user in lldap has to be `<user>@<domain>`, as an account of mailu). Only the proxies of `proxyAuth.whitelist` (the pods of
@@ -19,7 +19,7 @@
 # The account created has a random password: the mail clients (IMAP, SMTP) can not use Authelia, they use the password of the account (to set in
 # the web UI) or a token. An administrator of mailu is the account of the email of its lldap user (the first one is `initialAccount`), the
 # other accounts are users. To log in with the password of an account instead (the admin of `initialAccount`):
-# `https://mail.<domain>/sso/login?noproxyauth`.
+# `https://mailu.<domain>/sso/login?noproxyauth`.
 # The contacts and the calendars (`/webdav`) have no forward auth (the clients can not follow the redirect to the login page), they use the
 # passwords of mailu.
 
@@ -782,5 +782,5 @@ expose:
   mailu: # the forward auth of Authelia, whose header is the one of `proxyAuth`
     service: mailu-front
     port: 80
-    hostname: mail
+    hostname: mailu # the web UI: `mail.<domain>` is the name of the mail protocols (certificate `tls-mailu`, MX, relay)
     auth: authelia

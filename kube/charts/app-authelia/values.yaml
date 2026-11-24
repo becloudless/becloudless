@@ -342,7 +342,7 @@ resources:
                   - [ 'group:role_admin' ]
                 policy: two_factor
               - domain:
-                  - mail.{{ .Values.app.domain }}
+                  - mailu.{{ .Values.app.domain }}
                 subject:
                   - [ 'group:app_mailu' ]
                   - [ 'group:role_admin' ]
