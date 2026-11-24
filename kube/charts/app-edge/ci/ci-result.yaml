@@ -215,7 +215,7 @@ spec:
                   - |-
                     { cat /usr/local/etc/haproxy/haproxy.cfg; echo; } > /tmp/haproxy.cfg
                     exec haproxy -W -db -f /tmp/haproxy.cfg
-                  image: docker.io/haproxy:2.6.6
+                  image: docker.io/haproxy:3.4.8
                   name: haproxy
                   ports:
                     lan-http:
