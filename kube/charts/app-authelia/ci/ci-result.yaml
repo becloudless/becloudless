@@ -104,7 +104,6 @@ spec:
           - homer.test.com
           - lldap.test.com
           - longhorn.test.com
-          - mail.test.com
           - grafana.test.com
           - alertmanager.test.com
           - prometheus.test.com
@@ -133,6 +132,12 @@ spec:
           policy: two_factor
           subject:
           - - group:app_jellyfin
+          - - group:role_admin
+        - domain:
+          - mail.test.com
+          policy: two_factor
+          subject:
+          - - group:app_mailu
           - - group:role_admin
         - domain:
           - forgejo.test.com
@@ -911,6 +916,10 @@ spec:
               group: gateway.networking.k8s.io
               kind: HTTPRoute
               namespace: longhorn-system
+            mailu:
+              group: gateway.networking.k8s.io
+              kind: HTTPRoute
+              namespace: mailu
             prometheus:
               group: gateway.networking.k8s.io
               kind: HTTPRoute

@@ -312,7 +312,6 @@ resources:
                   - homer.{{ .Values.app.domain }}
                   - lldap.{{ .Values.app.domain }}
                   - longhorn.{{ .Values.app.domain }}
-                  - mail.{{ .Values.app.domain }}
                   - grafana.{{ .Values.app.domain }}
                   - alertmanager.{{ .Values.app.domain }}
                   - prometheus.{{ .Values.app.domain }}
@@ -340,6 +339,12 @@ resources:
                   - jellyfin.{{ .Values.app.domain }}
                 subject:
                   - [ 'group:app_jellyfin' ]
+                  - [ 'group:role_admin' ]
+                policy: two_factor
+              - domain:
+                  - mail.{{ .Values.app.domain }}
+                subject:
+                  - [ 'group:app_mailu' ]
                   - [ 'group:role_admin' ]
                 policy: two_factor
               - domain:
@@ -439,6 +444,10 @@ resources:
                   group: gateway.networking.k8s.io
                   kind: HTTPRoute
                   namespace: syncthing
+                mailu:
+                  group: gateway.networking.k8s.io
+                  kind: HTTPRoute
+                  namespace: mailu
               to:
                 authelia:
                   group: ""

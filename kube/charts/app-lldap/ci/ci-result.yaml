@@ -652,6 +652,7 @@ spec:
               {"name":"app_immich"}
               {"name":"app_immich_one_factor"}
               {"name":"app_jellyfin"}
+              {"name":"app_mailu"}
               {"name":"app_paperless"}
               {"name":"app_pushprox"}
               {"name":"app_seafile"}
@@ -668,7 +669,7 @@ spec:
         lldap-bootstrap:
           activeDeadlineSeconds: 600
           backoffLimit: 0
-          fullNameOverride: lldap-bootstrap-1a05a9c513
+          fullNameOverride: lldap-bootstrap-d411b9827f
           template:
             spec:
               containers:

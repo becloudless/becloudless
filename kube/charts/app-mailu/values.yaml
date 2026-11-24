@@ -8,9 +8,20 @@
 #     submissions: {port: 465, backend: mailu-front-ext.mailu.svc:465}
 #     imaps: {port: 993, backend: mailu-front-ext.mailu.svc:993}
 # The front reads the PROXY header on the ports of this service (`ingress.proxyProtocol`), and the policy `mailu-front` only lets `edge` in on them.
-# The first admin account is created from the pod of the admin: `flask mailu admin <user> <domain> <password>`.
-# Not configured: Authelia (the web UI has its own login: the authentication of mailu cannot rely on a forward auth while the mail
-# is the fallback of the factors enrollment).
+# The domain (`app.domain`) and the first admin account (`admin@<domain>`) are created by the admin at its start (`initialAccount`,
+# `flask mailu admin`, mode `ifmissing`: an existing account is never changed, so a password changed in the web UI stays). Its password is
+# generated in the secret `mailu-initial-account` (key `password`, backed up with the other generated secrets).
+# Web UI login (admin and webmail) by Authelia, so by lldap: the route of `mail.<domain>` has the forward auth (`expose` below), the users of the
+# groups `app_mailu` and `role_admin` sign in to Authelia, which gives the email of the user in the header `Remote-Email`. The admin
+# (`proxyAuth`) logs in the account of this email, created at the first login when its domain exists in mailu (`proxyAuth.create`: so the
+# email of the user in lldap has to be `<user>@<domain>`, as an account of mailu). Only the proxies of `proxyAuth.whitelist` (the pods of
+# the cluster: the front only lets the Gateway, and the nodes, reach its web port, see the policy `mailu-front`) are trusted for the header.
+# The account created has a random password: the mail clients (IMAP, SMTP) can not use Authelia, they use the password of the account (to set in
+# the web UI) or a token. An administrator of mailu is the account of the email of its lldap user (the first one is `initialAccount`), the
+# other accounts are users. To log in with the password of an account instead (the admin of `initialAccount`):
+# `https://mail.<domain>/sso/login?noproxyauth`.
+# The contacts and the calendars (`/webdav`) have no forward auth (the clients can not follow the redirect to the login page), they use the
+# passwords of mailu.
 
 resources:
   fluxHelmRepositories:
@@ -361,6 +372,12 @@ resources:
                   encoding: hex
                   length: "32"
 
+            mailu-initial-account: # the password of the first admin account (`initialAccount`)
+              fields:
+                password:
+                  encoding: hex
+                  length: "32"
+
           # certificate of the web UI (terminated by the Gateway) and of the mail protocols (served by the front of mailu)
           certManagerCertificates:
             mailu:
@@ -514,6 +531,20 @@ resources:
         sessionTimeout: 259201 # 3d
         permanentSessionLifetime: 31536000 # 1y
         existingSecret: mailu
+
+        initialAccount:
+          enabled: true
+          username: admin
+          domain: "{{ .Values.app.domain }}"
+          mode: ifmissing
+          existingSecret: mailu-initial-account
+          existingSecretPasswordKey: password
+
+        # the login by the forward auth of Authelia (`expose` below)
+        proxyAuth:
+          header: Remote-Email
+          create: "true"
+          whitelist: 10.42.0.0/16 # the pods of the cluster (the Gateway has an address of it, see the policy `mailu-front`)
 
         global:
           storageClass: longhorn-db
@@ -728,54 +759,28 @@ resources:
           extraVolumes:
             - {name: tmp, emptyDir: {}}
 
-    # the public exposure, applied once mailu is deployed and not waited for
+    # The public exposure of the web UI by `expose` below, merged with the generated release: the contacts and the calendars have no forward auth.
+    # The mail protocols are not exposed by the Gateway, they come through `edge`.
     mailu-integration:
-      install:
-        disableWait: true
-      upgrade:
-        disableWait: true
-      dependsOn:
-        - ref:mailu
-        - name: app-cert-manager
-          namespace: cert-manager
-        - name: app-gateway-api
-          namespace: gateway-api
       values:
         resources:
-          # Web UI exposed by the Cilium Gateway `shared` (cilium), TLS terminated by the Gateway.
-          # It is not protected by forward auth: mailu has its own login.
-          # The mail protocols are not exposed by the Gateway, they come through `edge`.
-          listenerSets:
-            mailu:
-              parentRef:
-                group: gateway.networking.k8s.io
-                kind: Gateway
-                name: shared
-                namespace: cilium
-              listeners:
-                https:
-                  name: https
-                  hostname: mail.{{ .Values.app.domain }}
-                  port: 443
-                  protocol: HTTPS
-                  tls:
-                    mode: Terminate
-                    certificateRefs:
-                      tls:
-                        name: ref:certManagerCertificates/mailu
-                  allowedRoutes:
-                    namespaces:
-                      from: Same
-
           httpRoutes:
             mailu:
-              parentRefs:
-                mailu: ref:mailu
-              hostnames:
-                mail: mail.{{ .Values.app.domain }}
               rules:
-                root:
+                webdav: # the DAV clients can not follow the redirect to the login page: they use the passwords of mailu
+                  matches:
+                    webdav:
+                      path:
+                        type: PathPrefix
+                        value: /webdav
                   backendRefs:
                     front:
                       name: mailu-front
                       port: 80
+
+expose:
+  mailu: # the forward auth of Authelia, whose header is the one of `proxyAuth`
+    service: mailu-front
+    port: 80
+    hostname: mail
+    auth: authelia

@@ -793,6 +793,13 @@ spec:
       realIpFrom: 10.0.0.0/8
       realIpHeader: ""
       tlsFlavorOverride: mail
+    initialAccount:
+      domain: test.com
+      enabled: true
+      existingSecret: mailu-initial-account
+      existingSecretPasswordKey: password
+      mode: ifmissing
+      username: admin
     mariadb:
       auth:
         existingSecret: mailu-mariadb
@@ -830,6 +837,10 @@ spec:
         storageClass: longhorn-db
       updateStrategy:
         type: Recreate
+    proxyAuth:
+      create: "true"
+      header: Remote-Email
+      whitelist: 10.42.0.0/16
     rspamd:
       persistence:
         storageClass: longhorn-db
@@ -945,6 +956,11 @@ spec:
   values:
     refs:
       mailu-integration:
+        certManagerCertificates:
+          mailu-gateway:
+            name: mailu-gateway
+            namespace: default
+            secretName: tls-mailu-gateway
         httpRoutes:
           mailu:
             name: mailu
@@ -963,6 +979,9 @@ spec:
           mailu:
             name: mailu
             namespace: default
+          mailu-initial-account:
+            name: mailu-initial-account
+            namespace: default
           mailu-mariadb:
             name: mailu-mariadb
             namespace: default
@@ -970,33 +989,77 @@ spec:
             name: mailu-roundcube
             namespace: default
     resources:
+      certManagerCertificates:
+        mailu-gateway:
+          dnsNames:
+            mailu: mail.test.com
+          issuerRef:
+            kind: ClusterIssuer
+            name: letsencrypt-prod
+          secretName: tls-mailu-gateway
       httpRoutes:
         mailu:
           hostnames:
-            mail: mail.test.com
+            mailu: mail.test.com
           parentRefs:
-            mailu: ref:mailu
+            mailu:
+              group: gateway.networking.k8s.io
+              kind: ListenerSet
+              name: mailu
+              sectionName: mailu
           rules:
             root:
+              backendRefs:
+                backend:
+                  name: mailu-front
+                  port: 80
+              filters:
+                authelia:
+                  externalAuth:
+                    backendRef:
+                      name: authelia
+                      namespace: authelia
+                      port: 80
+                    http:
+                      allowedHeaders:
+                        accept: accept
+                        cookie: cookie
+                        proxy-authorization: proxy-authorization
+                        x-forwarded-for: x-forwarded-for
+                        x-forwarded-proto: x-forwarded-proto
+                      allowedResponseHeaders:
+                        remote-email: remote-email
+                        remote-groups: remote-groups
+                        remote-name: remote-name
+                        remote-user: remote-user
+                      path: /api/authz/ext-authz/
+                    protocol: HTTP
+                  type: ExternalAuth
+            webdav:
               backendRefs:
                 front:
                   name: mailu-front
                   port: 80
+              matches:
+                webdav:
+                  path:
+                    type: PathPrefix
+                    value: /webdav
       listenerSets:
         mailu:
           listeners:
-            https:
+            mailu:
               allowedRoutes:
                 namespaces:
                   from: Same
               hostname: mail.test.com
-              name: https
+              name: mailu
               port: 443
               protocol: HTTPS
               tls:
                 certificateRefs:
                   tls:
-                    name: ref:certManagerCertificates/mailu
+                    name: ref:mailu-gateway
                 mode: Terminate
           parentRef:
             group: gateway.networking.k8s.io
@@ -1046,6 +1109,11 @@ spec:
   values:
     refs:
       mailu-integration:
+        certManagerCertificates:
+          mailu-gateway:
+            name: mailu-gateway
+            namespace: default
+            secretName: tls-mailu-gateway
         httpRoutes:
           mailu:
             name: mailu
@@ -1063,6 +1131,9 @@ spec:
         stringSecrets:
           mailu:
             name: mailu
+            namespace: default
+          mailu-initial-account:
+            name: mailu-initial-account
             namespace: default
           mailu-mariadb:
             name: mailu-mariadb
@@ -1084,6 +1155,11 @@ spec:
         mailu:
           fields:
             secret-key:
+              encoding: hex
+              length: "32"
+        mailu-initial-account:
+          fields:
+            password:
               encoding: hex
               length: "32"
         mailu-mariadb:
