@@ -39,7 +39,7 @@ resources:
           toEndpoints:
             front:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": mailu, "k8s:app.kubernetes.io/name": mailu, "k8s:app.kubernetes.io/component": front}
-          toPorts: [587]
+          toPorts: [10025]
 
   fluxHelmReleases:
     authelia-postgresql:
@@ -265,12 +265,12 @@ resources:
             filesystem:
               enabled: false # only one notifier: the notifications are the mails of `smtp`, set it to `true` (and `smtp.enabled` to `false`) without mailu
             disable_startup_check: false # in case of emergency
-            # The mail server of the cluster (mailu): the authenticated submission of its front (587, STARTTLS with the certificate of
+            # The mail server of the cluster (mailu): the authenticated submission of its front (10025, STARTTLS with the certificate of
             # `mail.<domain>`) with the account `authelia@<domain>`, created by the Job of `mailu-post` with the password generated in the mailu
             # namespace and copied by the ExternalSecret `authelia-mailu` (it fails until the account exists, the pod restarts).
             smtp:
               enabled: true
-              address: submission://mailu-front.mailu.svc.cluster.local:587
+              address: submission://mailu-front.mailu.svc.cluster.local:10025
               timeout: 30 seconds # postfix answers after the antispam (rspamd) scanned the mail, more than the 5 seconds of the default
               sender: '{{ .Values.app.name }} Authelia <authelia@{{ .Values.app.domain }}>'
               username: 'authelia@{{ .Values.app.domain }}'

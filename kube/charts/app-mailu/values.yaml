@@ -23,7 +23,7 @@
 # The contacts and the calendars (`/webdav`) have no forward auth (the clients can not follow the redirect to the login page), they use the
 # passwords of mailu.
 # Nothing sends mails without authenticating: the postfix only lets the front and the dovecot in (policy `mailu-postfix`), the pods of the cluster
-# submit through the front (587, STARTTLS, no PROXY header: `ingress.proxyProtocol.submission`) with an account of mailu. The account of an
+# submit through the front (10025, the submission of dovecot: STARTTLS, authentication required, no PROXY header) with an account of mailu. The account of an
 # app is created by the Job of `mailu-post` (through the API of mailu, `api`), its password is generated here (`mailu-authelia`) and shared with
 # the app by an ExternalSecret of the namespace of the app (a Role of `mailu-pre` lets its service account read this secret only).
 
@@ -50,11 +50,11 @@ resources:
                 "k8s:app.kubernetes.io/instance": edge
                 "k8s:app.kubernetes.io/component": edge
           toPorts: [25, 465, 993, 995, 4190]
-        authelia: # the notifier of Authelia: the authenticated submission with STARTTLS (587, the port without the PROXY header)
+        authelia: # the notifier of Authelia: the authenticated submission with STARTTLS (10025: Mailu 2024.06 has no 587, this is the port of the webmail, without the PROXY header)
           fromEndpoints:
             authelia:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": authelia, "k8s:app.kubernetes.io/name": authelia}
-          toPorts: [587]
+          toPorts: [10025]
         webmail: # roundcube reaches the imap and the smtp of the users through the front
           fromEndpoints:
             webmail:
@@ -640,7 +640,7 @@ resources:
             imaps: true
             smtp: true
             smtps: true
-            submission: false # 587 is for the pods of the cluster (Authelia): no PROXY header, `edge` does not forward it
+            submission: true
             manageSieve: true
 
         front:

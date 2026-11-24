@@ -245,7 +245,7 @@ spec:
         k8s:io.kubernetes.pod.namespace: authelia
     toPorts:
     - ports:
-      - port: "587"
+      - port: "10025"
         protocol: TCP
   - fromEndpoints:
     - matchLabels:
@@ -725,7 +725,7 @@ spec:
             template:
               metadata:
                 annotations:
-                  checksum/env: ebcf11ac73d38f1b
+                  checksum/env: f16d0df1c4ddf037
                   policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
                   policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
         target:
@@ -836,7 +836,7 @@ spec:
         pop3s: true
         smtp: true
         smtps: true
-        submission: false
+        submission: true
       realIpFrom: 10.0.0.0/8
       realIpHeader: ""
       tlsFlavorOverride: mail

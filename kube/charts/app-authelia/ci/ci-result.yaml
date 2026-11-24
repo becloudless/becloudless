@@ -36,7 +36,7 @@ spec:
         k8s:io.kubernetes.pod.namespace: mailu
     toPorts:
     - ports:
-      - port: "587"
+      - port: "10025"
         protocol: TCP
   - toEndpoints:
     - matchLabels:
@@ -554,7 +554,7 @@ spec:
         filesystem:
           enabled: false
         smtp:
-          address: submission://mailu-front.mailu.svc.cluster.local:587
+          address: submission://mailu-front.mailu.svc.cluster.local:10025
           disable_require_tls: false
           enabled: true
           password:
