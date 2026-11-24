@@ -22,6 +22,10 @@
 # `https://mailu.<domain>/sso/login?noproxyauth`.
 # The contacts and the calendars (`/webdav`) have no forward auth (the clients can not follow the redirect to the login page), they use the
 # passwords of mailu.
+# Nothing sends mails without authenticating: the postfix only lets the front and the dovecot in (policy `mailu-postfix`), the pods of the cluster
+# submit through the front (587, STARTTLS, no PROXY header: `ingress.proxyProtocol.submission`) with an account of mailu. The account of an
+# app is created by the Job of `mailu-post` (through the API of mailu, `api`), its password is generated here (`mailu-authelia`) and shared with
+# the app by an ExternalSecret of the namespace of the app (a Role of `mailu-pre` lets its service account read this secret only).
 
 resources:
   fluxHelmRepositories:
@@ -46,6 +50,11 @@ resources:
                 "k8s:app.kubernetes.io/instance": edge
                 "k8s:app.kubernetes.io/component": edge
           toPorts: [25, 465, 993, 995, 4190]
+        authelia: # the notifier of Authelia: the authenticated submission with STARTTLS (587, the port without the PROXY header)
+          fromEndpoints:
+            authelia:
+              matchLabels: {"k8s:io.kubernetes.pod.namespace": authelia, "k8s:app.kubernetes.io/name": authelia}
+          toPorts: [587]
         webmail: # roundcube reaches the imap and the smtp of the users through the front
           fromEndpoints:
             webmail:
@@ -101,6 +110,12 @@ resources:
                   operator: In
                   values: {front: front, postfix: postfix, dovecot: dovecot, rspamd: rspamd, webmail: webmail, webdav: webdav}
           toPorts: [8080]
+        accounts: # the API, called by the Job of the accounts of the apps (`mailu-post`)
+          fromEndpoints:
+            accounts:
+              matchExpressions:
+                job: {key: job-name, operator: Exists}
+          toPorts: [8080]
       egress:
         mariadb:
           toEndpoints:
@@ -123,11 +138,6 @@ resources:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: front}
             dovecot:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: dovecot}
-          toPorts: [25]
-        authelia: # the notifications of Authelia (`mynetworks` of postfix: the pods of the cluster relay without authentication)
-          fromEndpoints:
-            authelia:
-              matchLabels: {"k8s:io.kubernetes.pod.namespace": authelia, "k8s:app.kubernetes.io/name": authelia}
           toPorts: [25]
         submission: # the authenticated submission (465 and 587), proxied by the dovecot of the front
           fromEndpoints:
@@ -328,6 +338,17 @@ resources:
               matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: webmail}
           toPorts: [3306]
 
+    mailu-accounts: # the Job creating the accounts of the apps
+      endpointSelector:
+        matchExpressions:
+          job: {key: job-name, operator: Exists}
+      egress:
+        admin:
+          toEndpoints:
+            admin:
+              matchLabels: {app.kubernetes.io/name: mailu, app.kubernetes.io/component: admin}
+          toPorts: [8080]
+
     mailu-redis:
       endpointSelector:
         matchLabels: {app.kubernetes.io/name: redis}
@@ -382,6 +403,38 @@ resources:
                 password:
                   encoding: hex
                   length: "32"
+
+            mailu-api: # the token of the API of mailu (`api`), used by the Job of `mailu-post`
+              fields:
+                api-token:
+                  encoding: hex
+                  length: "32"
+
+            mailu-authelia: # the password of the account of Authelia (`mailu-post`), copied to the namespace of authelia by its ExternalSecret `authelia-mailu`
+              fields:
+                password:
+                  encoding: hex
+                  length: "32"
+
+          # the `mailu-reader` service account of authelia reads `mailu-authelia` only (external-secrets reads a secret by its name (`get`),
+          # and its check of the store only looks for `get` on `secrets` in the rules, not at the names)
+          roles:
+            authelia-secrets-reader:
+              rules:
+                secrets:
+                  apiGroups: [ "" ]
+                  resources: [ secrets ]
+                  resourceNames: [ mailu-authelia ]
+                  verbs: [ get ]
+
+          roleBindings:
+            authelia-secrets-reader:
+              roleRef: ref:authelia-secrets-reader
+              subjects:
+                mailu-reader:
+                  kind: ServiceAccount
+                  name: mailu-reader
+                  namespace: authelia
 
           # certificate of the web UI (terminated by the Gateway) and of the mail protocols (served by the front of mailu)
           certManagerCertificates:
@@ -555,6 +608,13 @@ resources:
           create: "true"
           whitelist: 10.42.0.0/16 # the pods of the cluster (the Gateway has an address of it, see the policy `mailu-front`)
 
+        # the creation of the accounts of the apps (`mailu-post`). The web path `/api` of the route of the web UI is behind the forward auth too
+        api:
+          enabled: true
+          existingSecret: mailu-api
+          existingSecretTokenKey: api-token
+          webPath: /api
+
         global:
           storageClass: longhorn-db
           database:
@@ -580,7 +640,7 @@ resources:
             imaps: true
             smtp: true
             smtps: true
-            submission: true
+            submission: false # 587 is for the pods of the cluster (Authelia): no PROXY header, `edge` does not forward it
             manageSieve: true
 
         front:
@@ -767,6 +827,62 @@ resources:
             - {name: tmp, mountPath: /tmp}
           extraVolumes:
             - {name: tmp, emptyDir: {}}
+
+    # The accounts of the apps, created through the API of mailu once it runs: the account `authelia@<domain>` of the notifier of Authelia,
+    # with the password of the secret `mailu-authelia` (the account is created, or its password is set when it exists). The Job is named
+    # after its revision: change the 1 of its name when its spec changes (immutable fields), or delete it to run it again (a new database).
+    mailu-post:
+      dependsOn:
+        - ref:mailu
+      values:
+        resources:
+          jobs:
+            mailu-accounts:
+              fullNameOverride: 'mailu-accounts-{{ list 1 .Values.app.domain | toJson | sha256sum | trunc 10 }}'
+              backoffLimit: 0
+              activeDeadlineSeconds: 1200
+              template:
+                spec:
+                  restartPolicy: Never
+                  securityContext:
+                    runAsUser: 1000
+                    runAsGroup: 1000
+                  containers:
+                    accounts:
+                      name: accounts
+                      image: curlimages/curl:8.23.0 # renovate: versioning=loose
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        readOnlyRootFilesystem: true
+                        capabilities:
+                          drop:
+                            all: ALL
+                      command: [ sh, -ec ]
+                      args:
+                        - |
+                          api=http://mailu-admin:8080/api/v1
+                          auth="Authorization: Bearer $API_TOKEN"
+                          # the domain is created by the admin of mailu at its start (`initialAccount`)
+                          until curl -fsS -H "$auth" "$api/domain/$DOMAIN" > /dev/null; do sleep 5; done
+                          code=$(curl -sS -o /dev/null -w '%{http_code}' -H "$auth" "$api/user/$AUTHELIA_EMAIL")
+                          case "$code" in
+                            200) curl -fsS -X PATCH -H "$auth" -H 'Content-Type: application/json' \
+                                   -d "{\"raw_password\":\"$AUTHELIA_PASSWORD\"}" "$api/user/$AUTHELIA_EMAIL" ;;
+                            404) curl -fsS -X POST -H "$auth" -H 'Content-Type: application/json' \
+                                   -d "{\"email\":\"$AUTHELIA_EMAIL\",\"raw_password\":\"$AUTHELIA_PASSWORD\",\"comment\":\"Authelia notifier\"}" "$api/user" ;;
+                            *) echo "unexpected status $code"; exit 1 ;;
+                          esac
+                      env:
+                        DOMAIN: "{{ .Values.app.domain }}"
+                        AUTHELIA_EMAIL: authelia@{{ .Values.app.domain }}
+                        API_TOKEN:
+                          secretKeyRef:
+                            name: mailu-api
+                            key: api-token
+                        AUTHELIA_PASSWORD:
+                          secretKeyRef:
+                            name: mailu-authelia
+                            key: password
 
     # The public exposure of the web UI by `expose` below, merged with the generated release: the contacts and the calendars have no forward auth.
     # The mail protocols are not exposed by the Gateway, they come through `edge`.

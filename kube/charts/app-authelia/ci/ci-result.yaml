@@ -31,12 +31,12 @@ spec:
         protocol: TCP
   - toEndpoints:
     - matchLabels:
-        k8s:app.kubernetes.io/component: postfix
+        k8s:app.kubernetes.io/component: front
         k8s:app.kubernetes.io/name: mailu
         k8s:io.kubernetes.pod.namespace: mailu
     toPorts:
     - ports:
-      - port: "25"
+      - port: "587"
         protocol: TCP
   - toEndpoints:
     - matchLabels:
@@ -554,14 +554,20 @@ spec:
         filesystem:
           enabled: false
         smtp:
-          address: smtp://mailu-postfix.mailu.svc.cluster.local:25
-          disable_require_tls: true
+          address: submission://mailu-front.mailu.svc.cluster.local:587
+          disable_require_tls: false
           enabled: true
           password:
-            disabled: true
+            path: password
+            secret_name: authelia-mailu
+            value: password
           sender: test Authelia <authelia@test.com>
           timeout: 30 seconds
-          username: ""
+          tls:
+            minimum_version: TLS1.2
+            server_name: mail.test.com
+            skip_verify: false
+          username: authelia@test.com
       password_policy:
         zxcvbn:
           enabled: true
@@ -687,6 +693,7 @@ spec:
         authelia-generated: {}
         authelia-jwks: {}
         authelia-ldap: {}
+        authelia-mailu: {}
         authelia-oidc-forgejo: {}
         authelia-oidc-grafana: {}
         authelia-oidc-immich: {}
@@ -770,6 +777,9 @@ spec:
           authelia-ldap:
             name: authelia-ldap
             namespace: default
+          authelia-mailu:
+            name: authelia-mailu
+            namespace: default
         roleBindings:
           forgejo-secrets-reader:
             name: forgejo-secrets-reader
@@ -830,9 +840,15 @@ spec:
           lldap:
             name: lldap
             namespace: default
+          mailu:
+            name: mailu
+            namespace: default
         serviceAccounts:
           lldap-reader:
             name: lldap-reader
+            namespace: default
+          mailu-reader:
+            name: mailu-reader
             namespace: default
         stringSecrets:
           authelia-generated:
@@ -1066,6 +1082,9 @@ spec:
           authelia-ldap:
             name: authelia-ldap
             namespace: default
+          authelia-mailu:
+            name: authelia-mailu
+            namespace: default
         roleBindings:
           forgejo-secrets-reader:
             name: forgejo-secrets-reader
@@ -1126,9 +1145,15 @@ spec:
           lldap:
             name: lldap
             namespace: default
+          mailu:
+            name: mailu
+            namespace: default
         serviceAccounts:
           lldap-reader:
             name: lldap-reader
+            namespace: default
+          mailu-reader:
+            name: mailu-reader
             namespace: default
         stringSecrets:
           authelia-generated:
@@ -1179,6 +1204,15 @@ spec:
               secretKey: password
           refreshInterval: 1h
           secretStoreRef: ref:lldap
+        authelia-mailu:
+          data:
+            password:
+              remoteRef:
+                key: mailu-authelia
+                property: password
+              secretKey: password
+          refreshInterval: 1h
+          secretStoreRef: ref:mailu
       roleBindings:
         forgejo-secrets-reader:
           roleRef: ref:forgejo-secrets-reader
@@ -1356,8 +1390,22 @@ spec:
                   key: ca.crt
                   name: kube-root-ca.crt
                   type: ConfigMap
+        mailu:
+          provider:
+            kubernetes:
+              auth:
+                serviceAccount:
+                  name: ref:mailu-reader
+              remoteNamespace: mailu
+              server:
+                caProvider:
+                  key: ca.crt
+                  name: kube-root-ca.crt
+                  type: ConfigMap
       serviceAccounts:
         lldap-reader:
+          automountServiceAccountToken: false
+        mailu-reader:
           automountServiceAccountToken: false
       stringSecrets:
         authelia-generated:

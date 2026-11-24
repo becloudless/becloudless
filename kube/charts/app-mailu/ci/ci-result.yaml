@@ -3,6 +3,27 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
+  name: mailu-accounts
+  namespace: default
+spec:
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/component: admin
+        app.kubernetes.io/name: mailu
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
+  endpointSelector:
+    matchExpressions:
+    - key: job-name
+      operator: Exists
+---
+# Source: app-mailu/templates/loader.yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
   name: mailu-admin
   namespace: default
 spec:
@@ -26,6 +47,14 @@ spec:
       app.kubernetes.io/component: admin
       app.kubernetes.io/name: mailu
   ingress:
+  - fromEndpoints:
+    - matchExpressions:
+      - key: job-name
+        operator: Exists
+    toPorts:
+    - ports:
+      - port: "8080"
+        protocol: TCP
   - fromEndpoints:
     - matchExpressions:
       - key: app.kubernetes.io/component
@@ -212,6 +241,14 @@ spec:
   ingress:
   - fromEndpoints:
     - matchLabels:
+        k8s:app.kubernetes.io/name: authelia
+        k8s:io.kubernetes.pod.namespace: authelia
+    toPorts:
+    - ports:
+      - port: "587"
+        protocol: TCP
+  - fromEndpoints:
+    - matchLabels:
         k8s:app.kubernetes.io/component: edge
         k8s:app.kubernetes.io/instance: edge
         k8s:io.kubernetes.pod.namespace: edge
@@ -352,14 +389,6 @@ spec:
       app.kubernetes.io/component: postfix
       app.kubernetes.io/name: mailu
   ingress:
-  - fromEndpoints:
-    - matchLabels:
-        k8s:app.kubernetes.io/name: authelia
-        k8s:io.kubernetes.pod.namespace: authelia
-    toPorts:
-    - ports:
-      - port: "25"
-        protocol: TCP
   - fromEndpoints:
     - matchLabels:
         app.kubernetes.io/component: dovecot
@@ -696,7 +725,7 @@ spec:
             template:
               metadata:
                 annotations:
-                  checksum/env: 5e24efb6541687de
+                  checksum/env: ebcf11ac73d38f1b
                   policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
                   policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
         target:
@@ -714,6 +743,11 @@ spec:
         storageClass: longhorn-db
       updateStrategy:
         type: Recreate
+    api:
+      enabled: true
+      existingSecret: mailu-api
+      existingSecretTokenKey: api-token
+      webPath: /api
     clamav:
       containerSecurityContext:
         allowPrivilegeEscalation: false
@@ -802,7 +836,7 @@ spec:
         pop3s: true
         smtp: true
         smtps: true
-        submission: true
+        submission: false
       realIpFrom: 10.0.0.0/8
       realIpHeader: ""
       tlsFlavorOverride: mail
@@ -982,15 +1016,37 @@ spec:
           mailu:
             name: mailu
             namespace: default
+      mailu-post:
+        jobs:
+          mailu-accounts:
+            labels:
+              app.kubernetes.io/component: mailu-accounts
+              app.kubernetes.io/instance: mailu-post
+            name: ""
+            namespace: default
       mailu-pre:
         certManagerCertificates:
           mailu:
             name: mailu
             namespace: default
             secretName: tls-mailu
+        roleBindings:
+          authelia-secrets-reader:
+            name: authelia-secrets-reader
+            namespace: default
+        roles:
+          authelia-secrets-reader:
+            name: authelia-secrets-reader
+            namespace: default
         stringSecrets:
           mailu:
             name: mailu
+            namespace: default
+          mailu-api:
+            name: mailu-api
+            namespace: default
+          mailu-authelia:
+            name: mailu-authelia
             namespace: default
           mailu-initial-account:
             name: mailu-initial-account
@@ -1084,6 +1140,150 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
+  name: mailu-post
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: bcl
+  dependsOn:
+  - name: mailu
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      mailu-integration:
+        certManagerCertificates:
+          mailu-gateway:
+            name: mailu-gateway
+            namespace: default
+            secretName: tls-mailu-gateway
+        httpRoutes:
+          mailu:
+            name: mailu
+            namespace: default
+        listenerSets:
+          mailu:
+            name: mailu
+            namespace: default
+      mailu-post:
+        jobs:
+          mailu-accounts:
+            labels:
+              app.kubernetes.io/component: mailu-accounts
+              app.kubernetes.io/instance: mailu-post
+            name: ""
+            namespace: default
+      mailu-pre:
+        certManagerCertificates:
+          mailu:
+            name: mailu
+            namespace: default
+            secretName: tls-mailu
+        roleBindings:
+          authelia-secrets-reader:
+            name: authelia-secrets-reader
+            namespace: default
+        roles:
+          authelia-secrets-reader:
+            name: authelia-secrets-reader
+            namespace: default
+        stringSecrets:
+          mailu:
+            name: mailu
+            namespace: default
+          mailu-api:
+            name: mailu-api
+            namespace: default
+          mailu-authelia:
+            name: mailu-authelia
+            namespace: default
+          mailu-initial-account:
+            name: mailu-initial-account
+            namespace: default
+          mailu-mariadb:
+            name: mailu-mariadb
+            namespace: default
+          mailu-roundcube:
+            name: mailu-roundcube
+            namespace: default
+    resources:
+      jobs:
+        mailu-accounts:
+          activeDeadlineSeconds: 1200
+          backoffLimit: 0
+          fullNameOverride: mailu-accounts-97bd647638
+          template:
+            spec:
+              containers:
+                accounts:
+                  args:
+                  - |-
+                    api=http://mailu-admin:8080/api/v1
+                    auth="Authorization: Bearer $API_TOKEN"
+                    # the domain is created by the admin of mailu at its start (`initialAccount`)
+                    until curl -fsS -H "$auth" "$api/domain/$DOMAIN" > /dev/null; do sleep 5; done
+                    code=$(curl -sS -o /dev/null -w '%{http_code}' -H "$auth" "$api/user/$AUTHELIA_EMAIL")
+                    case "$code" in
+                      200) curl -fsS -X PATCH -H "$auth" -H 'Content-Type: application/json' \
+                             -d "{\"raw_password\":\"$AUTHELIA_PASSWORD\"}" "$api/user/$AUTHELIA_EMAIL" ;;
+                      404) curl -fsS -X POST -H "$auth" -H 'Content-Type: application/json' \
+                             -d "{\"email\":\"$AUTHELIA_EMAIL\",\"raw_password\":\"$AUTHELIA_PASSWORD\",\"comment\":\"Authelia notifier\"}" "$api/user" ;;
+                      *) echo "unexpected status $code"; exit 1 ;;
+                    esac
+                  command:
+                  - sh
+                  - -ec
+                  env:
+                    API_TOKEN:
+                      secretKeyRef:
+                        key: api-token
+                        name: mailu-api
+                    AUTHELIA_EMAIL: authelia@test.com
+                    AUTHELIA_PASSWORD:
+                      secretKeyRef:
+                        key: password
+                        name: mailu-authelia
+                    DOMAIN: test.com
+                  image: curlimages/curl:8.23.0
+                  name: accounts
+                  securityContext:
+                    allowPrivilegeEscalation: false
+                    capabilities:
+                      drop:
+                        all: ALL
+                    readOnlyRootFilesystem: true
+              restartPolicy: Never
+              securityContext:
+                runAsGroup: 1000
+                runAsUser: 1000
+---
+# Source: app-mailu/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
   name: mailu-pre
   namespace: default
 spec:
@@ -1135,15 +1335,37 @@ spec:
           mailu:
             name: mailu
             namespace: default
+      mailu-post:
+        jobs:
+          mailu-accounts:
+            labels:
+              app.kubernetes.io/component: mailu-accounts
+              app.kubernetes.io/instance: mailu-post
+            name: ""
+            namespace: default
       mailu-pre:
         certManagerCertificates:
           mailu:
             name: mailu
             namespace: default
             secretName: tls-mailu
+        roleBindings:
+          authelia-secrets-reader:
+            name: authelia-secrets-reader
+            namespace: default
+        roles:
+          authelia-secrets-reader:
+            name: authelia-secrets-reader
+            namespace: default
         stringSecrets:
           mailu:
             name: mailu
+            namespace: default
+          mailu-api:
+            name: mailu-api
+            namespace: default
+          mailu-authelia:
+            name: mailu-authelia
             namespace: default
           mailu-initial-account:
             name: mailu-initial-account
@@ -1164,10 +1386,40 @@ spec:
             kind: ClusterIssuer
             name: letsencrypt-prod
           secretName: tls-mailu
+      roleBindings:
+        authelia-secrets-reader:
+          roleRef: ref:authelia-secrets-reader
+          subjects:
+            mailu-reader:
+              kind: ServiceAccount
+              name: mailu-reader
+              namespace: authelia
+      roles:
+        authelia-secrets-reader:
+          rules:
+            secrets:
+              apiGroups:
+              - ""
+              resourceNames:
+              - mailu-authelia
+              resources:
+              - secrets
+              verbs:
+              - get
       stringSecrets:
         mailu:
           fields:
             secret-key:
+              encoding: hex
+              length: "32"
+        mailu-api:
+          fields:
+            api-token:
+              encoding: hex
+              length: "32"
+        mailu-authelia:
+          fields:
+            password:
               encoding: hex
               length: "32"
         mailu-initial-account:
