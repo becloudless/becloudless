@@ -552,11 +552,11 @@ spec:
       notifier:
         disable_startup_check: false
         filesystem:
-          enabled: true
+          enabled: false
         smtp:
           address: smtp://mailu-postfix.mailu.svc.cluster.local:25
           disable_require_tls: true
-          enabled: false
+          enabled: true
           password:
             disabled: true
           sender: test Authelia <authelia@test.com>

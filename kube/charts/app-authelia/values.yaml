@@ -35,7 +35,7 @@ resources:
             cloudflare: {matchName: time.cloudflare.com} # TODO check why
           toPorts:
             ntp: {ports: {p123: {port: "123", protocol: UDP}}}
-        smtp: # the notifier (`configMap.notifier.smtp`, off by default): the postfix of mailu. Authelia checks the connection to the server at its start and stops if it fails
+        smtp: # the notifier (`configMap.notifier.smtp`): the postfix of mailu. Authelia checks the connection to the server at its start and stops if it fails
           toEndpoints:
             postfix:
               matchLabels: {"k8s:io.kubernetes.pod.namespace": mailu, "k8s:app.kubernetes.io/name": mailu, "k8s:app.kubernetes.io/component": postfix}
@@ -238,13 +238,13 @@ resources:
                 path: password
           notifier:
             filesystem:
-              enabled: true # the notifications are in a file of the pod: `smtp.enabled` needs `filesystem.enabled: false` (only one notifier)
+              enabled: false # only one notifier: the notifications are the mails of `smtp`, set it to `true` (and `smtp.enabled` to `false`) without mailu
             disable_startup_check: false # in case of emergency
             # The mail server of the cluster (mailu): its postfix relays the mails of the pods of the cluster without authentication
             # (`mynetworks`, the policy `mailu-postfix` only lets Authelia in), and offers no TLS on this port (the front of mailu serves the
-            # TLS of the ports 465 and 993): no account, no secret. Enabled by the cluster where mailu is deployed.
+            # TLS of the ports 465 and 993): no account, no secret.
             smtp:
-              enabled: false
+              enabled: true
               address: smtp://mailu-postfix.mailu.svc.cluster.local:25
               sender: '{{ .Values.app.name }} Authelia <authelia@{{ .Values.app.domain }}>'
               username: ''
