@@ -1,13 +1,17 @@
 # yaml-language-server: $schema=../app/schema/values.schema.json
 
 # Behind the edge nodes (app `edge`, to deploy with it): the mail ports are the ones of the edge nodes, which send the PROXY header (the address of
-# the client) through `edge` to the service `mailu-front-ext` of the front, and the outgoing mails go to the relay of the edge nodes (`edge-relay`),
-# so they leave from the address of an edge node. In the cluster values of `edge`:
+# the client) through `edge` to the service `mailu-front-ext` of the front. In the cluster values of `edge`:
 #   tcp:
 #     smtp: {port: 25, backend: mailu-front-ext.mailu.svc:25}
 #     submissions: {port: 465, backend: mailu-front-ext.mailu.svc:465}
 #     imaps: {port: 993, backend: mailu-front-ext.mailu.svc:993}
 # The front reads the PROXY header on the ports of this service (`ingress.proxyProtocol`), and the policy `mailu-front` only lets `edge` in on them.
+# The outgoing mails leave directly, unless the cluster has the relay of the edge nodes (`edge-relay`, they leave from the address of an edge
+# node): in the cluster values of the release `mailu` (the chart of Mailu needs the credentials of a relay it creates only at the install, a
+# change of the host of an installed release fails without them: a relay set here for a release already installed needs `existingSecret`):
+#   externalRelay:
+#     host: "[edge-relay.edge.svc.cluster.local]:2525" # the full name: postfix resolves with DNSSEC, without the search domains
 # The domain (`app.domain`) and the first admin account (`admin@<domain>`) are created by the admin at its start (`initialAccount`,
 # `flask mailu admin`, mode `ifmissing`: an existing account is never changed, so a password changed in the web UI stays). Its password is
 # generated in the secret `mailu-initial-account` (key `password`, backed up with the other generated secrets).
@@ -660,10 +664,6 @@ resources:
           externalService:
             enabled: true
             type: ClusterIP
-
-        # the outgoing mails go to the relay of the edge nodes (no authentication: only the pods of the cluster reach it)
-        externalRelay:
-          host: "[edge-relay.edge.svc.cluster.local]:2525" # the full name: postfix resolves with DNSSEC, without the search domains (`edge-relay.edge.svc` is NXDOMAIN)
 
         mariadb:
           enabled: true
