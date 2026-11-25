@@ -78,7 +78,12 @@ in
     masterNodeCount = lib.mkOption {
       type = lib.types.int;
       default = 1;
-      description = "Number of master nodes in the cluster";
+      description = ''
+        Number of master nodes in the cluster. Lowering it turns the last masters into workers: the masters that stay remove the etcd
+        members of these nodes (see `kubeEtcdScaleDown.nix`), they keep their own `etcd-servers` until their next boot. etcd refuses to
+        remove a member when the running ones would not be a majority of the remaining members: the masters that stay have to be a
+        majority of the current members (5 to 3 works, 3 to 1 does not).
+      '';
     };
     worker = lib.mkOption {
       type = lib.types.bool;
