@@ -3,12 +3,21 @@ let
   cfg = config.bcl.role.kube;
   nodeIp = n: lib.bcl.net.ipAdd cfg.firstNodeIp (n - 1);
 
+  # The node number is the last digit of the host name (`kube.nix`), the name of a node is its host name: the cluster name is not part of it.
+  nodeNumber = lib.strings.toInt (builtins.substring ((builtins.stringLength config.networking.hostName) - 1) (-1) config.networking.hostName);
+  hostPrefix = lib.removeSuffix (toString nodeNumber) config.networking.hostName;
+
   # Same range as the hosts of `kube.nix`: the highest node number of a cluster.
   maxNodeNumber = 7;
 
-  # Removes from etcd the members of the nodes that are not masters any more, and the control-plane labels of these nodes. Only the
-  # members named `<clusterName><number>` with a number above `masterNodeCount` are removed: nothing else is touched. etcd refuses
-  # to remove a member when it would lose its quorum (strict reconfig check), the service is retried until it goes through.
+  # The nodes that are not masters any more, the highest number first: a node that is down has to go before the ones that are up, etcd
+  # refuses to remove a member while the started members would not be a majority of the remaining ones (`unhealthy cluster`).
+  staleNodes = lib.reverseList (lib.range (cfg.masterNodeCount + 1) maxNodeNumber);
+
+  # Removes from etcd the members of the nodes that are not masters any more, and the control-plane labels of these nodes. The members are
+  # found by their peer URL (the address of a node number above `masterNodeCount`), not by their name: a cluster renamed in the past has
+  # members with an older name. Nothing else is touched. etcd refuses to remove a member when it would lose its quorum (strict reconfig
+  # check), the service is retried until it goes through.
   etcdPruneMembers = pkgs.writeShellApplication {
     name = "etcd-prune-members";
     runtimeInputs = [ pkgs.etcd pkgs.kubernetes pkgs.gawk pkgs.coreutils ];
@@ -21,34 +30,29 @@ let
           --key=/etc/kubernetes/pki/etcd/healthcheck-client.key "$@"
       }
 
-      memberList=$(etcdctlOnMasters member list)
+      # Columns of the member list: id, status, name, peer urls, client urls, learner.
+      memberIdOfPeer() {
+        etcdctlOnMasters member list | awk -F', ' -v peer="$1" 'index($4, peer) { print $1; exit }'
+      }
 
-      # Columns of the member list: id, status, name, peer urls, client urls, learner. Highest node number first.
-      staleMembers=$(printf '%s\n' "$memberList" | awk -F', ' -v prefix="${cfg.clusterName}" -v max=${toString cfg.masterNodeCount} '
-        index($3, prefix) == 1 && substr($3, length(prefix) + 1) ~ /^[0-9]+$/ {
-          number = substr($3, length(prefix) + 1) + 0
-          if (number > max) print number, $1
-        }' | sort -rn)
-
-      failed=0
-      while read -r number memberId; do
-        [ -n "$memberId" ] || continue
-        echo "Removing the etcd member ${cfg.clusterName}$number ($memberId): the node is not a master any more"
+      # The removal of the next members depends on this one: stop at the first one that can not go through, the service is retried.
+      prune() {
+        node=$1
+        peer=$2
+        memberId=$(memberIdOfPeer "$peer")
+        [ -n "$memberId" ] || return 0
+        echo "Removing the etcd member of $node ($peer, $memberId): the node is not a master any more"
         if ! etcdctlOnMasters member remove "$memberId"; then
           # another master may have removed it at the same time
-          if etcdctlOnMasters member list | awk -F', ' -v id="$memberId" '$1 == id { found = 1 } END { exit !found }'; then
-            failed=1
-          fi
+          [ -z "$(memberIdOfPeer "$peer")" ] || return 1
         fi
-      done <<< "$staleMembers"
+      }
+
+      ${lib.concatMapStringsSep "\n" (n: ''prune "${hostPrefix}${toString n}" "https://${nodeIp n}:2380"'') staleNodes}
 
       # kubeadm marks the masters with these labels, the kubelet of a node that became a worker does not remove them
       export KUBECONFIG=/etc/kubernetes/admin.conf
-      for number in $(seq ${toString (cfg.masterNodeCount + 1)} ${toString maxNodeNumber}); do
-        kubectl label node "${cfg.clusterName}$number" node-role.kubernetes.io/control-plane- node.kubernetes.io/exclude-from-external-load-balancers- 2>/dev/null || true
-      done
-
-      exit "$failed"
+      ${lib.concatMapStringsSep "\n" (n: ''kubectl label node "${hostPrefix}${toString n}" node-role.kubernetes.io/control-plane- node.kubernetes.io/exclude-from-external-load-balancers- 2>/dev/null || true'') staleNodes}
     '';
   };
 in
