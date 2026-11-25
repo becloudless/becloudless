@@ -245,7 +245,7 @@ spec:
           runAsGroup: 1000
           runAsUser: 1000
         startupProbe:
-          failureThreshold: 360
+          failureThreshold: 60
           httpGet:
             path: /rest/noauth/health
             port: 8384
