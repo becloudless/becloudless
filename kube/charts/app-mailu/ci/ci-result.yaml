@@ -725,7 +725,7 @@ spec:
             template:
               metadata:
                 annotations:
-                  checksum/env: e0196110664b9ba5
+                  checksum/env: f04cf5659be7cf19
                   policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
                   policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
         target:
@@ -955,6 +955,8 @@ spec:
           memory: 100Mi
       updateStrategy:
         type: Recreate
+    welcomeMessage:
+      enabled: false
 ---
 # Source: app-mailu/templates/loader.yaml
 apiVersion: helm.toolkit.fluxcd.io/v2

@@ -612,6 +612,11 @@ resources:
           create: "true"
           whitelist: 10.42.0.0/16 # the pods of the cluster (the Gateway has an address of it, see the policy `mailu-front`)
 
+        # the admin sends it from its own process (SMTP to postfix, which the policies do not allow: nothing relays without authenticating), the
+        # first login of a user then hangs until the front times out (504). It asks to change the password, the users have none (Authelia)
+        welcomeMessage:
+          enabled: false
+
         # the creation of the accounts of the apps (`mailu-post`). The web path `/api` of the route of the web UI is behind the forward auth too
         api:
           enabled: true
