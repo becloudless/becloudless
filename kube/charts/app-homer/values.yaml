@@ -225,8 +225,8 @@ resources:
                             url: https://paperless.{{ .Values.app.domain }}
                           - name: Mailu
                             subtitle: Emails
-                            logo: https://mail.{{ .Values.app.domain }}/favicon.ico
-                            url: https://mail.{{ .Values.app.domain }}
+                            logo: https://mailu.{{ .Values.app.domain }}/favicon.ico
+                            url: https://mailu.{{ .Values.app.domain }}
                           - name: Element
                             subtitle: Chat (Matrix)
                             logo: https://element.{{ .Values.app.domain }}/favicon.ico
