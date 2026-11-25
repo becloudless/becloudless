@@ -185,8 +185,8 @@ spec:
                       url: https://paperless.test.com
                     - name: Mailu
                       subtitle: Emails
-                      logo: https://mail.test.com/favicon.ico
-                      url: https://mail.test.com
+                      logo: https://mailu.test.com/favicon.ico
+                      url: https://mailu.test.com
                     - name: Element
                       subtitle: Chat (Matrix)
                       logo: https://element.test.com/favicon.ico
