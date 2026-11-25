@@ -177,6 +177,9 @@ resources:
                 "k8s:app.kubernetes.io/instance": edge
                 "k8s:app.kubernetes.io/component": edge
           toPorts: [2525]
+        internet: # the outgoing mails without a relay: the smtp of the other servers, and the MTA-STS policies (https)
+          toEntities: [world]
+          toPorts: [25, 443]
 
     mailu-dovecot: # the mailboxes
       endpointSelector:

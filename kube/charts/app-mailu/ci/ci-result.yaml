@@ -367,6 +367,14 @@ spec:
     - ports:
       - port: "2525"
         protocol: TCP
+  - toEntities:
+    - world
+    toPorts:
+    - ports:
+      - port: "25"
+        protocol: TCP
+      - port: "443"
+        protocol: TCP
   - toEndpoints:
     - matchLabels:
         k8s:app.kubernetes.io/component: edge
