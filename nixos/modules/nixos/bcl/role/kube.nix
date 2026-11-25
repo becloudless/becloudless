@@ -291,7 +291,6 @@ in
         apiVersion: kubeadm.k8s.io/v1beta3
         kind: ClusterConfiguration
         kubernetesVersion: stable
-        clusterName: ${cfg.clusterName}
         controlPlaneEndpoint: ${cfg.apiServerName}:8443
         networking:
           serviceSubnet: 172.16.42.0/24
