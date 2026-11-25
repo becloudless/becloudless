@@ -54,11 +54,11 @@ resources:
               env:
                 TZ: Europe/Paris
                 STNODEFAULTFOLDER: "1" # the folders are added in the UI
-              startupProbe:
+              startupProbe: # the UI listens once the first scan of the folders is done: long on a big volume (30 min, a restart would start it again)
                 httpGet:
                   path: /rest/noauth/health
                   port: 8384
-                failureThreshold: 60
+                failureThreshold: 360
               readinessProbe:
                 httpGet:
                   path: /rest/noauth/health

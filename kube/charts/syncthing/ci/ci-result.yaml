@@ -5,7 +5,7 @@ data:
   relay.sh: |-
     #!/bin/sh
     # Sidecar of the Syncthing instance: keeps the sync protocol listen address of the instance on the relay of the cluster, so that the
-    # instance is reachable through it without any manual step in the UI. It also removes the GUI user and password (an instance restored from an
+    # instance is reachable through it without any manual step in the UI. It also removes the GUI user (an instance restored from an
     # older configuration has them, the UI would ask for them behind authelia) and sets `gui.insecureAdminAccess`, which only turns off the
     # warning of the UI about the missing password (the access is restricted by authelia and the Gateway), and acknowledges the notification
     # about the GUI user and password.
@@ -63,11 +63,13 @@ data:
         # the user and the password of an instance restored from an older configuration are removed (the UI asks for them otherwise)
         gui=$(curl -sf -H "X-API-Key: $key" http://localhost:8384/rest/config/gui 2>/dev/null | tr -d ' \n' || true)
         if [ -n "$gui" ]; then
+          # without a user the UI asks for no login (whatever the password): `password` is not sent, Syncthing hashes an empty one (it never
+          # reads back as empty), and each change of the GUI restarts its listener
           case "$gui" in
-            *'"user":""'*'"password":""'*) ;;
+            *'"user":""'*) ;;
             *)
-              if curl -sf -X PATCH -H "X-API-Key: $key" -d '{"user":"","password":""}' http://localhost:8384/rest/config/gui >/dev/null; then
-                echo "the user and the password of the UI are removed"
+              if curl -sf -X PATCH -H "X-API-Key: $key" -d '{"user":""}' http://localhost:8384/rest/config/gui >/dev/null; then
+                echo "the user of the UI is removed"
               fi
               ;;
           esac
@@ -168,7 +170,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmaps: 5f1d79aef39f3e72363a5ff45a8be1db3d54504d149d1e1f4bff2ac1a5371179
+        checksum/configmaps: d813b7a908a98f7785452b6dc1db731aa79fc545a521d11bca6ef6da1cbd253e
       labels:
         app.kubernetes.io/component: main
         app.kubernetes.io/instance: test-release
@@ -243,7 +245,7 @@ spec:
           runAsGroup: 1000
           runAsUser: 1000
         startupProbe:
-          failureThreshold: 60
+          failureThreshold: 360
           httpGet:
             path: /rest/noauth/health
             port: 8384
