@@ -515,6 +515,14 @@ resources:
               annotations:
                 helm.sh/resource-policy: keep
               value: "16"
+            # The replicas of a node that is cordoned and drained for a reboot (kured) are stopped, and rebuilt on the other nodes once this
+            # delay (default 600s, the `drainTimeout` of kured) has passed: a drain that waits for a budget, or a slow reboot, moves the
+            # replicas of all the volumes of the node. The delay covers the drain (10m) and the reboot of the node, so that its replicas just
+            # start again.
+            replica-replenishment-wait-interval:
+              annotations:
+                helm.sh/resource-policy: keep
+              value: "3600"
 
           storageClasses:
             # for the databases: 2 replicas, and small backup blocks (2Mi) so that the incremental backups of the

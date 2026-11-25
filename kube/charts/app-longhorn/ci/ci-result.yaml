@@ -525,6 +525,9 @@ spec:
           default-backup-block-size:
             name: default-backup-block-size
             namespace: default
+          replica-replenishment-wait-interval:
+            name: replica-replenishment-wait-interval
+            namespace: default
           upgrade-checker:
             name: upgrade-checker
             namespace: default
@@ -964,6 +967,9 @@ spec:
           default-backup-block-size:
             name: default-backup-block-size
             namespace: default
+          replica-replenishment-wait-interval:
+            name: replica-replenishment-wait-interval
+            namespace: default
           upgrade-checker:
             name: upgrade-checker
             namespace: default
@@ -1179,6 +1185,9 @@ spec:
           default-backup-block-size:
             name: default-backup-block-size
             namespace: default
+          replica-replenishment-wait-interval:
+            name: replica-replenishment-wait-interval
+            namespace: default
           upgrade-checker:
             name: upgrade-checker
             namespace: default
@@ -1242,6 +1251,10 @@ spec:
           annotations:
             helm.sh/resource-policy: keep
           value: "16"
+        replica-replenishment-wait-interval:
+          annotations:
+            helm.sh/resource-policy: keep
+          value: "3600"
         upgrade-checker:
           annotations:
             helm.sh/resource-policy: keep
@@ -1411,6 +1424,9 @@ spec:
             namespace: default
           default-backup-block-size:
             name: default-backup-block-size
+            namespace: default
+          replica-replenishment-wait-interval:
+            name: replica-replenishment-wait-interval
             namespace: default
           upgrade-checker:
             name: upgrade-checker

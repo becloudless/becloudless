@@ -1,6 +1,6 @@
 #!/bin/sh
 # Sidecar of the Syncthing instance: keeps the sync protocol listen address of the instance on the relay of the cluster, so that the
-# instance is reachable through it without any manual step in the UI. It also removes the GUI user and password (an instance restored from an
+# instance is reachable through it without any manual step in the UI. It also removes the GUI user (an instance restored from an
 # older configuration has them, the UI would ask for them behind authelia) and sets `gui.insecureAdminAccess`, which only turns off the
 # warning of the UI about the missing password (the access is restricted by authelia and the Gateway), and acknowledges the notification
 # about the GUI user and password.
@@ -58,11 +58,13 @@ while true; do
     # the user and the password of an instance restored from an older configuration are removed (the UI asks for them otherwise)
     gui=$(curl -sf -H "X-API-Key: $key" http://localhost:8384/rest/config/gui 2>/dev/null | tr -d ' \n' || true)
     if [ -n "$gui" ]; then
+      # without a user the UI asks for no login (whatever the password): `password` is not sent, Syncthing hashes an empty one (it never
+      # reads back as empty), and each change of the GUI restarts its listener
       case "$gui" in
-        *'"user":""'*'"password":""'*) ;;
+        *'"user":""'*) ;;
         *)
-          if curl -sf -X PATCH -H "X-API-Key: $key" -d '{"user":"","password":""}' http://localhost:8384/rest/config/gui >/dev/null; then
-            echo "the user and the password of the UI are removed"
+          if curl -sf -X PATCH -H "X-API-Key: $key" -d '{"user":""}' http://localhost:8384/rest/config/gui >/dev/null; then
+            echo "the user of the UI is removed"
           fi
           ;;
       esac
