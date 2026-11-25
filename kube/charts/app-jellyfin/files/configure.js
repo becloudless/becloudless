@@ -43,9 +43,10 @@ async function configure() {
 
   // the name of the server (the pod name by default) is the name of the cluster
   const system = await jellyfin('GET', '/System/Configuration', undefined, token);
-  if (system.ServerName !== env.SERVER_NAME) {
-    await jellyfin('POST', '/System/Configuration', Object.assign({}, system, { ServerName: env.SERVER_NAME }), token);
-    console.log('server name set to ' + env.SERVER_NAME);
+  // Quick Connect is what the login page offers next to the SSO button, for the clients that cannot use SSO
+  if (system.ServerName !== env.SERVER_NAME || system.QuickConnectAvailable !== true) {
+    await jellyfin('POST', '/System/Configuration', Object.assign({}, system, { ServerName: env.SERVER_NAME, QuickConnectAvailable: true }), token);
+    console.log('server name set to ' + env.SERVER_NAME + ', quick connect enabled');
   }
 
   // https://github.com/9p4/jellyfin-plugin-sso/blob/main/providers.md#authelia (the plugin answers 404 until it is loaded)
@@ -70,10 +71,11 @@ async function configure() {
     schemeOverride: 'https', // the redirect uri, jellyfin sees the http of the gateway to the pod
   }, canonicalLinks ? { canonicalLinks: canonicalLinks } : {}), token);
 
-  // the button of the login page, the other ways to sign in (user list, manual form, quick connect, forgotten
-  // password) and the change of password of the profile are hidden: the password is the one of authelia
+  // the button of the login page, the other ways to sign in (user list, manual form, forgotten password) and the change
+  // of password of the profile are hidden: the password is the one of authelia. Quick Connect stays: it signs a client in
+  // from a session that is already open (the TV and mobile apps)
   const hidden = [
-    '.manualLoginForm', '.visualLoginForm', '.btnManual', '.btnQuick', '.btnForgotPassword', '.btnSelectServer',
+    '.manualLoginForm', '.visualLoginForm', '.btnManual', '.btnForgotPassword', '.btnSelectServer',
     '.updatePasswordForm', '.passwordSection',
   ].join(', ') + ' { display: none !important; }';
   const branding = await jellyfin('GET', '/System/Configuration/branding', undefined, token);
