@@ -327,6 +327,7 @@ in
           ${lib.optionalString cfg.oidc.enable oidcApiServerExtraVolumes}
           certSANs:
           - ${cfg.apiServerName}
+          - kube.${config.bcl.global.domain} # the global name, shared by the clusters of the domain
           - ${nodeIp 1}
           - ${nodeIp 2}
           - ${nodeIp 3}
