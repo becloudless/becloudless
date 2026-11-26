@@ -733,7 +733,7 @@ spec:
             template:
               metadata:
                 annotations:
-                  checksum/env: f04cf5659be7cf19
+                  checksum/env: fef44ead1d424270
                   policy.bcl.tf/skipContainerRequireReadOnlyRootFilesystem: "true"
                   policy.bcl.tf/skipContainerRequireRunAsNonRoot: "true"
         target:
@@ -809,6 +809,8 @@ spec:
       updateStrategy:
         type: Recreate
     existingSecret: mailu
+    externalRelay:
+      existingSecret: mailu-external-relay
     front:
       containerSecurityContext:
         capabilities:
@@ -1056,6 +1058,9 @@ spec:
           mailu-authelia:
             name: mailu-authelia
             namespace: default
+          mailu-external-relay:
+            name: mailu-external-relay
+            namespace: default
           mailu-initial-account:
             name: mailu-initial-account
             namespace: default
@@ -1228,6 +1233,9 @@ spec:
           mailu-authelia:
             name: mailu-authelia
             namespace: default
+          mailu-external-relay:
+            name: mailu-external-relay
+            namespace: default
           mailu-initial-account:
             name: mailu-initial-account
             namespace: default
@@ -1375,6 +1383,9 @@ spec:
           mailu-authelia:
             name: mailu-authelia
             namespace: default
+          mailu-external-relay:
+            name: mailu-external-relay
+            namespace: default
           mailu-initial-account:
             name: mailu-initial-account
             namespace: default
@@ -1430,6 +1441,14 @@ spec:
             password:
               encoding: hex
               length: "32"
+        mailu-external-relay:
+          fields:
+            relay-password:
+              encoding: hex
+              length: "32"
+            relay-username:
+              encoding: hex
+              length: "8"
         mailu-initial-account:
           fields:
             password:
