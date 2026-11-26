@@ -538,9 +538,6 @@ spec:
           longhorn-files:
             name: longhorn-files
             namespace: default
-          longhorn-single-local-replica:
-            name: longhorn-single-local-replica
-            namespace: default
         volumeSnapshotClasses:
           longhorn-backing-image:
             name: longhorn-backing-image
@@ -568,6 +565,42 @@ spec:
             namespace: default
           longhorn-skip-security-audit:
             name: longhorn-skip-security-audit
+            namespace: default
+      longhorn-volume-replicas:
+        ciliumNetworkPolicies:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        clusterRoleBindings:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        clusterRoles:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        configMaps:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        cronJobs:
+          volume-replicas:
+            labels:
+              app.kubernetes.io/component: volume-replicas
+              app.kubernetes.io/instance: longhorn-volume-replicas
+            name: volume-replicas
+            namespace: default
+        roleBindings:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        roles:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        serviceAccounts:
+          volume-replicas:
+            name: volume-replicas
             namespace: default
     resources:
       ciliumNetworkPolicies:
@@ -980,9 +1013,6 @@ spec:
           longhorn-files:
             name: longhorn-files
             namespace: default
-          longhorn-single-local-replica:
-            name: longhorn-single-local-replica
-            namespace: default
         volumeSnapshotClasses:
           longhorn-backing-image:
             name: longhorn-backing-image
@@ -1010,6 +1040,42 @@ spec:
             namespace: default
           longhorn-skip-security-audit:
             name: longhorn-skip-security-audit
+            namespace: default
+      longhorn-volume-replicas:
+        ciliumNetworkPolicies:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        clusterRoleBindings:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        clusterRoles:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        configMaps:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        cronJobs:
+          volume-replicas:
+            labels:
+              app.kubernetes.io/component: volume-replicas
+              app.kubernetes.io/instance: longhorn-volume-replicas
+            name: volume-replicas
+            namespace: default
+        roleBindings:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        roles:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        serviceAccounts:
+          volume-replicas:
+            name: volume-replicas
             namespace: default
     resources:
       certManagerCertificates:
@@ -1198,9 +1264,6 @@ spec:
           longhorn-files:
             name: longhorn-files
             namespace: default
-          longhorn-single-local-replica:
-            name: longhorn-single-local-replica
-            namespace: default
         volumeSnapshotClasses:
           longhorn-backing-image:
             name: longhorn-backing-image
@@ -1228,6 +1291,42 @@ spec:
             namespace: default
           longhorn-skip-security-audit:
             name: longhorn-skip-security-audit
+            namespace: default
+      longhorn-volume-replicas:
+        ciliumNetworkPolicies:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        clusterRoleBindings:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        clusterRoles:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        configMaps:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        cronJobs:
+          volume-replicas:
+            labels:
+              app.kubernetes.io/component: volume-replicas
+              app.kubernetes.io/instance: longhorn-volume-replicas
+            name: volume-replicas
+            namespace: default
+        roleBindings:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        roles:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        serviceAccounts:
+          volume-replicas:
+            name: volume-replicas
             namespace: default
     resources:
       longhornRecurringJobs:
@@ -1280,19 +1379,6 @@ spec:
             backupBlockSize: 16Mi
             fsType: ext4
             numberOfReplicas: "2"
-            staleReplicaTimeout: "60"
-          provisioner: driver.longhorn.io
-          reclaimPolicy: Delete
-          volumeBindingMode: Immediate
-        longhorn-single-local-replica:
-          allowVolumeExpansion: true
-          annotations:
-            storageclass.kubernetes.io/is-default-class: "false"
-          parameters:
-            dataLocality: strict-local
-            fsType: ext4
-            numberOfReplicas: "2"
-            recurringJobSelector: '[{"name":"single-local-replica","isGroup":true}]'
             staleReplicaTimeout: "60"
           provisioner: driver.longhorn.io
           reclaimPolicy: Delete
@@ -1438,9 +1524,6 @@ spec:
           longhorn-files:
             name: longhorn-files
             namespace: default
-          longhorn-single-local-replica:
-            name: longhorn-single-local-replica
-            namespace: default
         volumeSnapshotClasses:
           longhorn-backing-image:
             name: longhorn-backing-image
@@ -1468,6 +1551,42 @@ spec:
             namespace: default
           longhorn-skip-security-audit:
             name: longhorn-skip-security-audit
+            namespace: default
+      longhorn-volume-replicas:
+        ciliumNetworkPolicies:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        clusterRoleBindings:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        clusterRoles:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        configMaps:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        cronJobs:
+          volume-replicas:
+            labels:
+              app.kubernetes.io/component: volume-replicas
+              app.kubernetes.io/instance: longhorn-volume-replicas
+            name: volume-replicas
+            namespace: default
+        roleBindings:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        roles:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        serviceAccounts:
+          volume-replicas:
+            name: volume-replicas
             namespace: default
     resources:
       configMaps:
@@ -1600,6 +1719,388 @@ spec:
                     +(policy.bcl.tf/skipContainerRequireRunAsNonRoot): "true"
                     +(policy.bcl.tf/skipPodRestrictHostAccess): "true"
             name: pod-add-skip-annotations
+---
+# Source: app-longhorn/templates/loader.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: longhorn-volume-replicas
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: ./kube/charts/base-loader
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: bcl
+        namespace: bcl
+  dependsOn:
+  - name: longhorn
+  driftDetection:
+    mode: enabled
+  healthCheckExprs:
+  - apiVersion: postgresql.cnpg.io/v1
+    current: has(status.readyInstances) && status.readyInstances >= 1 && has(status.currentPrimary)
+      && status.currentPrimary != ''
+    kind: Cluster
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 10m
+  timeout: 10m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  values:
+    refs:
+      longhorn-attachment-repair:
+        ciliumNetworkPolicies:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        clusterRoleBindings:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        clusterRoles:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        configMaps:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        cronJobs:
+          attachment-repair:
+            labels:
+              app.kubernetes.io/component: attachment-repair
+              app.kubernetes.io/instance: longhorn-attachment-repair
+            name: attachment-repair
+            namespace: default
+        roleBindings:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        roles:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+        serviceAccounts:
+          attachment-repair:
+            name: attachment-repair
+            namespace: default
+      longhorn-integration:
+        certManagerCertificates:
+          longhorn-gateway:
+            name: longhorn-gateway
+            namespace: default
+            secretName: tls-longhorn-gateway
+        httpRoutes:
+          longhorn:
+            name: longhorn
+            namespace: default
+        listenerSets:
+          longhorn:
+            name: longhorn
+            namespace: default
+      longhorn-post:
+        longhornRecurringJobs:
+          daily-backups:
+            name: daily-backups
+            namespace: default
+        longhornSettings:
+          allow-collecting-longhorn-usage-metrics:
+            name: allow-collecting-longhorn-usage-metrics
+            namespace: default
+          concurrent-automatic-engine-upgrade-per-node-limit:
+            name: concurrent-automatic-engine-upgrade-per-node-limit
+            namespace: default
+          default-backup-block-size:
+            name: default-backup-block-size
+            namespace: default
+          replica-replenishment-wait-interval:
+            name: replica-replenishment-wait-interval
+            namespace: default
+          upgrade-checker:
+            name: upgrade-checker
+            namespace: default
+        storageClasses:
+          longhorn-db:
+            name: longhorn-db
+            namespace: default
+          longhorn-files:
+            name: longhorn-files
+            namespace: default
+        volumeSnapshotClasses:
+          longhorn-backing-image:
+            name: longhorn-backing-image
+            namespace: default
+          longhorn-backup-full:
+            name: longhorn-backup-full
+            namespace: default
+          longhorn-backup-incremental:
+            name: longhorn-backup-incremental
+            namespace: default
+          longhorn-snapshot:
+            name: longhorn-snapshot
+            namespace: default
+      longhorn-pre:
+        configMaps:
+          longhorn-nixos-path:
+            name: longhorn-nixos-path
+            namespace: default
+        kyvernoClusterPolicies:
+          longhorn-add-nixos-path:
+            name: longhorn-add-nixos-path
+            namespace: default
+          longhorn-host-users:
+            name: longhorn-host-users
+            namespace: default
+          longhorn-skip-security-audit:
+            name: longhorn-skip-security-audit
+            namespace: default
+      longhorn-volume-replicas:
+        ciliumNetworkPolicies:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        clusterRoleBindings:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        clusterRoles:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        configMaps:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        cronJobs:
+          volume-replicas:
+            labels:
+              app.kubernetes.io/component: volume-replicas
+              app.kubernetes.io/instance: longhorn-volume-replicas
+            name: volume-replicas
+            namespace: default
+        roleBindings:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        roles:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+        serviceAccounts:
+          volume-replicas:
+            name: volume-replicas
+            namespace: default
+    resources:
+      ciliumNetworkPolicies:
+        volume-replicas:
+          egress:
+            kube-apiserver:
+              toEntities:
+              - kube-apiserver
+          endpointSelector:
+            matchLabels:
+              app.kubernetes.io/component: volume-replicas
+      clusterRoleBindings:
+        volume-replicas:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: volume-replicas
+          subjects:
+            volume-replicas:
+              kind: ServiceAccount
+              name: volume-replicas
+              namespace: default
+      clusterRoles:
+        volume-replicas:
+          rules:
+            persistentvolumes:
+              apiGroups:
+              - ""
+              resources:
+              - persistentvolumes
+              verbs:
+              - get
+              - list
+      configMaps:
+        volume-replicas:
+          data:
+            volume-replicas.sh: |-
+              #!/usr/bin/env bash
+              # See the header of the values of the chart app-longhorn.
+              set -uo pipefail
+
+              NAMESPACE=${NAMESPACE:-longhorn-system}
+              REPLICAS=${REPLICAS:-} # JSON object: the number of replicas by StorageClass or by volume name
+              DRY_RUN=${DRY_RUN:-false}
+
+              log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
+
+              # <volume> <reason> <message>: an event on the Longhorn volume
+              event() {
+                kubectl create -f - <<EOF || true
+              apiVersion: v1
+              kind: Event
+              metadata:
+                generateName: volume-replicas-
+                namespace: $NAMESPACE
+              type: Normal
+              reason: $2
+              message: "$3"
+              involvedObject: {apiVersion: longhorn.io/v1beta2, kind: Volume, name: $1, namespace: $NAMESPACE}
+              source: {component: volume-replicas}
+              EOF
+              }
+
+              [ -n "$REPLICAS" ] || REPLICAS='{}'
+              if ! jq -e 'type == "object" and all(.[]; type == "number" and . >= 1 and . == floor)' <<<"$REPLICAS" >/dev/null; then
+                log "volumeReplicas must be an object of integers >= 1, by StorageClass or by volume name: $REPLICAS"
+                exit 1
+              fi
+              if [ "$(jq length <<<"$REPLICAS")" -eq 0 ]; then
+                log "no number of replicas configured, nothing to do"
+                exit 0
+              fi
+
+              volumes=$(kubectl -n "$NAMESPACE" get volumes.longhorn.io -o json) || { log "cannot list the volumes"; exit 1; }
+              pvs=$(kubectl get persistentvolumes -o json) || { log "cannot list the persistent volumes"; exit 1; }
+
+              # One line for each volume that has not the wanted number of replicas: `<volume> <StorageClass> <current> <wanted> <robustness>`
+              # (tab separated, `-` for a volume without StorageClass: `read` would drop an empty field). The name of the volume wins over
+              # its StorageClass, the volumes of the other classes are not listed.
+              changes=$(jq -r --argjson want "$REPLICAS" --argjson pvs "$pvs" '
+                ($pvs.items | map({key: .metadata.name, value: (.spec.storageClassName // "")}) | from_entries) as $class
+                | .items[]
+                | select(.metadata.deletionTimestamp == null)
+                | .metadata.name as $name
+                | (.status.kubernetesStatus.pvName // "") as $pv
+                | ($class[if $pv != "" then $pv else $name end] // "") as $sc
+                | ($want[$name] // $want[$sc]) as $n
+                | select($n != null and .spec.numberOfReplicas != $n)
+                | [$name, (if $sc == "" then "-" else $sc end), .spec.numberOfReplicas, $n, (.status.robustness // "")] | @tsv' <<<"$volumes" | sort) || { log "cannot compute the changes"; exit 1; }
+              if [ -z "$changes" ]; then
+                log "the volumes have the wanted number of replicas"
+                exit 0
+              fi
+              log "volumes to change (volume, StorageClass, current, wanted, robustness):"
+              echo "$changes"
+
+              # a replica is added when no volume is degraded, then the volume that got it is: one rebuild at a time
+              degraded=$(jq '[.items[] | select(.status.robustness == "degraded")] | length' <<<"$volumes")
+
+              status=0
+              while IFS=$'\t' read -r volume class current wanted robustness; do
+                ctx="volume $volume (StorageClass '$class'): $current -> $wanted replicas"
+                if [ "$robustness" = faulted ]; then
+                  log "$ctx: the volume is faulted, skipped"
+                  continue
+                fi
+                if [ "$wanted" -gt "$current" ] && [ "$degraded" -gt 0 ]; then
+                  log "$ctx: $degraded volume(s) degraded, no replica is added until they are healthy"
+                  continue
+                fi
+                if [ "$DRY_RUN" = true ]; then
+                  log "$ctx: DRY RUN, would change it"
+                  continue
+                fi
+                log "$ctx: changing it"
+                # `test`: the volume is only changed if it still has the number of replicas that was checked
+                if ! kubectl -n "$NAMESPACE" patch volumes.longhorn.io "$volume" --type=json \
+                  -p "[{\"op\":\"test\",\"path\":\"/spec/numberOfReplicas\",\"value\":$current},{\"op\":\"replace\",\"path\":\"/spec/numberOfReplicas\",\"value\":$wanted}]"; then
+                  log "$ctx: cannot change it"
+                  status=1
+                  continue
+                fi
+                [ "$wanted" -le "$current" ] || degraded=$((degraded + 1))
+                event "$volume" VolumeReplicasChanged "the number of replicas was changed from $current to $wanted (volumeReplicas of the app longhorn)"
+              done <<<"$changes"
+              exit $status
+      cronJobs:
+        volume-replicas:
+          concurrencyPolicy: Forbid
+          jobTemplate:
+            spec:
+              activeDeadlineSeconds: 240
+              backoffLimit: 0
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/component: volume-replicas
+                spec:
+                  containers:
+                    replicas:
+                      command:
+                      - bash
+                      - /scripts/volume-replicas.sh
+                      env:
+                        HOME: /tmp
+                        NAMESPACE: default
+                        REPLICAS: '{"longhorn-db":3,"longhorn-files":2,"pvc-1234":1}'
+                      image: docker.io/alpine/k8s:1.37.2
+                      name: replicas
+                      securityContext:
+                        capabilities:
+                          drop:
+                            all: ALL
+                      volumeMounts:
+                        script:
+                          mountPath: /scripts
+                          name: script
+                          readOnly: true
+                  restartPolicy: Never
+                  securityContext:
+                    runAsGroup: 65534
+                    runAsUser: 65534
+                  serviceAccountName: volume-replicas
+                  volumes:
+                    script:
+                      configMap:
+                        name: volume-replicas
+                      name: script
+          schedule: '*/10 * * * *'
+      roleBindings:
+        volume-replicas:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: volume-replicas
+          subjects:
+            volume-replicas:
+              kind: ServiceAccount
+              name: volume-replicas
+              namespace: default
+      roles:
+        volume-replicas:
+          rules:
+            events:
+              apiGroups:
+              - ""
+              resources:
+              - events
+              verbs:
+              - create
+            volumes:
+              apiGroups:
+              - longhorn.io
+              resources:
+              - volumes
+              verbs:
+              - get
+              - list
+              - patch
+      serviceAccounts:
+        volume-replicas:
+          automountServiceAccountToken: true
 ---
 # Source: app-longhorn/templates/loader.yaml
 apiVersion: source.toolkit.fluxcd.io/v1

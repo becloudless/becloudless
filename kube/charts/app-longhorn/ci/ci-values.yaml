@@ -2,3 +2,9 @@ app:
   domain: test.com
   name: test
   lldapdn: dc=test,dc=com
+
+# the number of replicas of the live volumes, rendered to be checked
+volumeReplicas:
+  longhorn-db: 3
+  longhorn-files: 2
+  pvc-1234: 1

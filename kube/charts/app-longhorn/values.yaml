@@ -26,6 +26,21 @@
 # At most `MAX_REPAIRS` replicas at once. An event `StaleReplicaRemoved` is created on the `Volume`.
 #
 # To only see what it would do, set `DRY_RUN: "true"` in the env of the CronJob.
+#
+# The CronJob `volume-replicas` (sub HelmRelease `longhorn-volume-replicas`) changes the number of replicas of the live volumes: the
+# parameters of a StorageClass can not be updated, and a volume keeps the number of replicas it was created with. `volumeReplicas` maps
+# a StorageClass, or the name of a volume (for the static PVs, which have no class; it wins over the class), to the number of replicas
+# its volumes must have (each replica is a full copy of the data on another node: do not ask for more than the number of nodes with a
+# disk, the new replica would never be scheduled). Longhorn adds or removes the replicas; the volumes of the other classes are not
+# touched, nor are the ones that are faulted. A replica is added only when no volume is degraded (one rebuild at a time, the disks of
+# the nodes are slow): the volume that got a new replica is degraded until it is rebuilt, the others wait for it.
+# The StorageClasses are not changed: the volumes created later get their `numberOfReplicas` first, then the CronJob changes it.
+# An event `VolumeReplicasChanged` is created on the `Volume`. The defaults are the `numberOfReplicas` of the StorageClasses below (keep
+# them in sync): the volumes that have another number are brought back to it, nothing is changed otherwise.
+# ex: `volumeReplicas: {longhorn-db: 1, pvc-1234abcd-...: 3}`
+volumeReplicas:
+  longhorn-db: 2
+  longhorn-files: 2
 
 resources:
 
@@ -554,20 +569,6 @@ resources:
                 fsType: ext4
                 backupBlockSize: 16Mi
 
-            longhorn-single-local-replica: # TODO drop?
-              annotations:
-                storageclass.kubernetes.io/is-default-class: "false"
-              provisioner: driver.longhorn.io
-              allowVolumeExpansion: true
-              volumeBindingMode: Immediate
-              reclaimPolicy: Delete
-              parameters:
-                numberOfReplicas: "2"
-                staleReplicaTimeout: "60" # 1h
-                fsType: ext4
-                dataLocality: strict-local
-                recurringJobSelector: '[{"name":"single-local-replica","isGroup":true}]'
-
           # needs the snapshot CRDs from external-snapshotter
           volumeSnapshotClasses:
             longhorn-snapshot:
@@ -869,6 +870,205 @@ resources:
                           name: script
                           configMap:
                             name: attachment-repair
+
+    # the number of replicas of the live volumes (see the header), once longhorn is installed
+    longhorn-volume-replicas:
+      dependsOn:
+        - ref:longhorn
+      values:
+        resources:
+          ciliumNetworkPolicies:
+            volume-replicas:
+              endpointSelector:
+                matchLabels: {app.kubernetes.io/component: volume-replicas}
+              egress:
+                kube-apiserver:
+                  toEntities: [kube-apiserver]
+
+          serviceAccounts:
+            volume-replicas:
+              automountServiceAccountToken: true # the API server
+
+          # the PersistentVolumes are not namespaced, they give the StorageClass of the volumes
+          clusterRoles:
+            volume-replicas:
+              rules:
+                persistentvolumes:
+                  apiGroups: [ "" ]
+                  resources: [ persistentvolumes ]
+                  verbs: [ get, list ]
+
+          clusterRoleBindings:
+            volume-replicas:
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: ClusterRole
+                name: volume-replicas
+              subjects:
+                volume-replicas:
+                  kind: ServiceAccount
+                  name: volume-replicas
+                  namespace: "{{ .Release.Namespace }}"
+
+          roles:
+            volume-replicas:
+              rules:
+                volumes:
+                  apiGroups: [ longhorn.io ]
+                  resources: [ volumes ]
+                  verbs: [ get, list, patch ]
+                events:
+                  apiGroups: [ "" ]
+                  resources: [ events ]
+                  verbs: [ create ]
+
+          roleBindings:
+            volume-replicas:
+              roleRef:
+                apiGroup: rbac.authorization.k8s.io
+                kind: Role
+                name: volume-replicas
+              subjects:
+                volume-replicas:
+                  kind: ServiceAccount
+                  name: volume-replicas
+                  namespace: "{{ .Release.Namespace }}"
+
+          configMaps:
+            volume-replicas:
+              data:
+                volume-replicas.sh: |
+                  #!/usr/bin/env bash
+                  # See the header of the values of the chart app-longhorn.
+                  set -uo pipefail
+
+                  NAMESPACE=${NAMESPACE:-longhorn-system}
+                  REPLICAS=${REPLICAS:-} # JSON object: the number of replicas by StorageClass or by volume name
+                  DRY_RUN=${DRY_RUN:-false}
+
+                  log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
+
+                  # <volume> <reason> <message>: an event on the Longhorn volume
+                  event() {
+                    kubectl create -f - <<EOF || true
+                  apiVersion: v1
+                  kind: Event
+                  metadata:
+                    generateName: volume-replicas-
+                    namespace: $NAMESPACE
+                  type: Normal
+                  reason: $2
+                  message: "$3"
+                  involvedObject: {apiVersion: longhorn.io/v1beta2, kind: Volume, name: $1, namespace: $NAMESPACE}
+                  source: {component: volume-replicas}
+                  EOF
+                  }
+
+                  [ -n "$REPLICAS" ] || REPLICAS='{}'
+                  if ! jq -e 'type == "object" and all(.[]; type == "number" and . >= 1 and . == floor)' <<<"$REPLICAS" >/dev/null; then
+                    log "volumeReplicas must be an object of integers >= 1, by StorageClass or by volume name: $REPLICAS"
+                    exit 1
+                  fi
+                  if [ "$(jq length <<<"$REPLICAS")" -eq 0 ]; then
+                    log "no number of replicas configured, nothing to do"
+                    exit 0
+                  fi
+
+                  volumes=$(kubectl -n "$NAMESPACE" get volumes.longhorn.io -o json) || { log "cannot list the volumes"; exit 1; }
+                  pvs=$(kubectl get persistentvolumes -o json) || { log "cannot list the persistent volumes"; exit 1; }
+
+                  # One line for each volume that has not the wanted number of replicas: `<volume> <StorageClass> <current> <wanted> <robustness>`
+                  # (tab separated, `-` for a volume without StorageClass: `read` would drop an empty field). The name of the volume wins over
+                  # its StorageClass, the volumes of the other classes are not listed.
+                  changes=$(jq -r --argjson want "$REPLICAS" --argjson pvs "$pvs" '
+                    ($pvs.items | map({key: .metadata.name, value: (.spec.storageClassName // "")}) | from_entries) as $class
+                    | .items[]
+                    | select(.metadata.deletionTimestamp == null)
+                    | .metadata.name as $name
+                    | (.status.kubernetesStatus.pvName // "") as $pv
+                    | ($class[if $pv != "" then $pv else $name end] // "") as $sc
+                    | ($want[$name] // $want[$sc]) as $n
+                    | select($n != null and .spec.numberOfReplicas != $n)
+                    | [$name, (if $sc == "" then "-" else $sc end), .spec.numberOfReplicas, $n, (.status.robustness // "")] | @tsv' <<<"$volumes" | sort) || { log "cannot compute the changes"; exit 1; }
+                  if [ -z "$changes" ]; then
+                    log "the volumes have the wanted number of replicas"
+                    exit 0
+                  fi
+                  log "volumes to change (volume, StorageClass, current, wanted, robustness):"
+                  echo "$changes"
+
+                  # a replica is added when no volume is degraded, then the volume that got it is: one rebuild at a time
+                  degraded=$(jq '[.items[] | select(.status.robustness == "degraded")] | length' <<<"$volumes")
+
+                  status=0
+                  while IFS=$'\t' read -r volume class current wanted robustness; do
+                    ctx="volume $volume (StorageClass '$class'): $current -> $wanted replicas"
+                    if [ "$robustness" = faulted ]; then
+                      log "$ctx: the volume is faulted, skipped"
+                      continue
+                    fi
+                    if [ "$wanted" -gt "$current" ] && [ "$degraded" -gt 0 ]; then
+                      log "$ctx: $degraded volume(s) degraded, no replica is added until they are healthy"
+                      continue
+                    fi
+                    if [ "$DRY_RUN" = true ]; then
+                      log "$ctx: DRY RUN, would change it"
+                      continue
+                    fi
+                    log "$ctx: changing it"
+                    # `test`: the volume is only changed if it still has the number of replicas that was checked
+                    if ! kubectl -n "$NAMESPACE" patch volumes.longhorn.io "$volume" --type=json \
+                      -p "[{\"op\":\"test\",\"path\":\"/spec/numberOfReplicas\",\"value\":$current},{\"op\":\"replace\",\"path\":\"/spec/numberOfReplicas\",\"value\":$wanted}]"; then
+                      log "$ctx: cannot change it"
+                      status=1
+                      continue
+                    fi
+                    [ "$wanted" -le "$current" ] || degraded=$((degraded + 1))
+                    event "$volume" VolumeReplicasChanged "the number of replicas was changed from $current to $wanted (volumeReplicas of the app longhorn)"
+                  done <<<"$changes"
+                  exit $status
+
+          cronJobs:
+            volume-replicas:
+              schedule: "*/10 * * * *"
+              concurrencyPolicy: Forbid
+              jobTemplate:
+                spec:
+                  backoffLimit: 0
+                  activeDeadlineSeconds: 240
+                  template:
+                    metadata:
+                      labels:
+                        app.kubernetes.io/component: volume-replicas
+                    spec:
+                      restartPolicy: Never
+                      serviceAccountName: volume-replicas
+                      securityContext:
+                        runAsUser: 65534
+                        runAsGroup: 65534
+                      containers:
+                        replicas:
+                          name: replicas
+                          image: docker.io/alpine/k8s:1.37.2 # renovate: versioning=loose
+                          command: [ bash, /scripts/volume-replicas.sh ]
+                          env:
+                            HOME: /tmp
+                            NAMESPACE: "{{ .Release.Namespace }}"
+                            REPLICAS: '{{ toJson .Values.volumeReplicas }}'
+                          securityContext:
+                            capabilities:
+                              drop:
+                                all: ALL
+                          volumeMounts:
+                            script:
+                              name: script
+                              mountPath: /scripts
+                              readOnly: true
+                      volumes:
+                        script:
+                          name: script
+                          configMap:
+                            name: volume-replicas
 
 expose:
   longhorn:
