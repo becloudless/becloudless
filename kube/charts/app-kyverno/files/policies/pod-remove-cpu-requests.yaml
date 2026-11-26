@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=../../../base/schema/resources/kyvernoClusterPolicies.json
+
+# Opt-in, disabled by default: a cluster with few CPUs, where the requests of the pods fill the nodes long before they are used, sets
+# `resources.fluxHelmReleases.kyverno-post.values.resources.kyvernoClusterPolicies.pod-remove-cpu-requests.enabled: true`
+# (in the values of the `kyverno` app).
+# The CPU requests of the containers and init containers are set to `0`, so the scheduler does not reserve any CPU: the pods are no longer
+# refused for `Insufficient cpu`, and share the CPU of the node by the cpu shares of their requests (all equal to the minimum). The limits
+# are kept. It is `0` and not a removal on purpose: a container with a CPU limit and no request gets the limit as its request when the
+# object is defaulted, after the webhook. A `0` request is not counted in the QoS class of the pod.
+# The pods that exist are not changed (the resources of a pod are immutable): they are mutated when they are created again.
+# Not applied to:
+#  - the static pods (mirror pods), only the kubelet manages them;
+#  - the pods with the annotation `policy.bcl.tf/skipPodRemoveCpuRequests: "true"`, to opt out a pod that needs its CPU (set in the pod
+#    template, for the pods of a chart).
+# `Ignore`: a Kyverno outage must not block the creation of pods.
+enabled: false
+failurePolicy: Ignore
+rules:
+  - name: pod-remove-cpu-requests
+    match:
+      any:
+        - resources:
+            kinds:
+              - Pod
+            operations:
+              - CREATE
+    exclude:
+      any:
+        - resources:
+            annotations:
+              kubernetes.io/config.mirror: "?*"
+        - resources:
+            annotations:
+              policy.bcl.tf/skipPodRemoveCpuRequests: "true"
+    mutate:
+      foreach:
+        - list: request.object.spec.containers
+          preconditions:
+            all:
+              - key: "{{ element.resources.requests.cpu || '' }}"
+                operator: NotEquals
+                value: ""
+          patchesJson6902: |-
+            - op: replace
+              path: /spec/containers/{{ elementIndex }}/resources/requests/cpu
+              value: "0"
+        - list: request.object.spec.initContainers || `[]`
+          preconditions:
+            all:
+              - key: "{{ element.resources.requests.cpu || '' }}"
+                operator: NotEquals
+                value: ""
+          patchesJson6902: |-
+            - op: replace
+              path: /spec/initContainers/{{ elementIndex }}/resources/requests/cpu
+              value: "0"

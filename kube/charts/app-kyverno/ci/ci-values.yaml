@@ -2,3 +2,13 @@ app:
   domain: test.com
   name: test
   lldapdn: dc=test,dc=com
+
+# opt-in policy, rendered here to be checked
+resources:
+  fluxHelmReleases:
+    kyverno-post:
+      values:
+        resources:
+          kyvernoClusterPolicies:
+            pod-remove-cpu-requests:
+              enabled: true

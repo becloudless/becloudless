@@ -197,6 +197,9 @@ spec:
           pod-host-users-require-annotation:
             name: pod-host-users-require-annotation
             namespace: default
+          pod-remove-cpu-requests:
+            name: pod-remove-cpu-requests
+            namespace: default
           pod-restrict-host-access:
             name: pod-restrict-host-access
             namespace: default
@@ -467,6 +470,48 @@ spec:
                 "true"`. Add the annotation to the pod, which documents the opt-out,
                 or remove `spec.hostUsers` so that the pod runs in a user namespace.'
           validationFailureAction: Enforce
+        pod-remove-cpu-requests:
+          enabled: true
+          failurePolicy: Ignore
+          rules:
+          - exclude:
+              any:
+              - resources:
+                  annotations:
+                    kubernetes.io/config.mirror: ?*
+              - resources:
+                  annotations:
+                    policy.bcl.tf/skipPodRemoveCpuRequests: "true"
+            match:
+              any:
+              - resources:
+                  kinds:
+                  - Pod
+                  operations:
+                  - CREATE
+            mutate:
+              foreach:
+              - list: request.object.spec.containers
+                patchesJson6902: |-
+                  - op: replace
+                    path: /spec/containers/{{"{{"}} elementIndex {{"}}"}}/resources/requests/cpu
+                    value: "0"
+                preconditions:
+                  all:
+                  - key: '{{"{{"}} element.resources.requests.cpu || '''' {{"}}"}}'
+                    operator: NotEquals
+                    value: ""
+              - list: request.object.spec.initContainers || `[]`
+                patchesJson6902: |-
+                  - op: replace
+                    path: /spec/initContainers/{{"{{"}} elementIndex {{"}}"}}/resources/requests/cpu
+                    value: "0"
+                preconditions:
+                  all:
+                  - key: '{{"{{"}} element.resources.requests.cpu || '''' {{"}}"}}'
+                    operator: NotEquals
+                    value: ""
+            name: pod-remove-cpu-requests
         pod-restrict-host-access:
           background: true
           failurePolicy: Ignore
