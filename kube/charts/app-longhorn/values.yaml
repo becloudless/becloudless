@@ -35,6 +35,7 @@
 # touched, nor are the ones that are faulted. A replica is added only when no volume is degraded (one rebuild at a time, the disks of
 # the nodes are slow): the volume that got a new replica is degraded until it is rebuilt, the others wait for it.
 # The StorageClasses are not changed: the volumes created later get their `numberOfReplicas` first, then the CronJob changes it.
+# Longhorn only deletes the replicas that exceed the new number through the setting `replica-auto-balance` (`best-effort`, see `longhorn-post`).
 # An event `VolumeReplicasChanged` is created on the `Volume`. The defaults are the `numberOfReplicas` of the StorageClasses below (keep
 # them in sync): the volumes that have another number are brought back to it, nothing is changed otherwise.
 # ex: `volumeReplicas: {longhorn-db: 1, pvc-1234abcd-...: 3}`
@@ -538,6 +539,13 @@ resources:
               annotations:
                 helm.sh/resource-policy: keep
               value: "3600"
+            # Longhorn does not delete the healthy replicas that exceed `numberOfReplicas` of a volume (the `volume-replicas` CronJob lowers it):
+            # only the auto balance does (or an eviction, or the data locality). `best-effort` spreads the replicas evenly across the nodes
+            # and the zones, and removes the surplus ones. For all the volumes (a volume can override it with `spec.replicaAutoBalance`).
+            replica-auto-balance:
+              annotations:
+                helm.sh/resource-policy: keep
+              value: best-effort
 
           storageClasses:
             # for the databases: 2 replicas, and small backup blocks (2Mi) so that the incremental backups of the

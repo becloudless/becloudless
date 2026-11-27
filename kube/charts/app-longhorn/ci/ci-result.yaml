@@ -525,6 +525,9 @@ spec:
           default-backup-block-size:
             name: default-backup-block-size
             namespace: default
+          replica-auto-balance:
+            name: replica-auto-balance
+            namespace: default
           replica-replenishment-wait-interval:
             name: replica-replenishment-wait-interval
             namespace: default
@@ -1000,6 +1003,9 @@ spec:
           default-backup-block-size:
             name: default-backup-block-size
             namespace: default
+          replica-auto-balance:
+            name: replica-auto-balance
+            namespace: default
           replica-replenishment-wait-interval:
             name: replica-replenishment-wait-interval
             namespace: default
@@ -1251,6 +1257,9 @@ spec:
           default-backup-block-size:
             name: default-backup-block-size
             namespace: default
+          replica-auto-balance:
+            name: replica-auto-balance
+            namespace: default
           replica-replenishment-wait-interval:
             name: replica-replenishment-wait-interval
             namespace: default
@@ -1350,6 +1359,10 @@ spec:
           annotations:
             helm.sh/resource-policy: keep
           value: "16"
+        replica-auto-balance:
+          annotations:
+            helm.sh/resource-policy: keep
+          value: best-effort
         replica-replenishment-wait-interval:
           annotations:
             helm.sh/resource-policy: keep
@@ -1510,6 +1523,9 @@ spec:
             namespace: default
           default-backup-block-size:
             name: default-backup-block-size
+            namespace: default
+          replica-auto-balance:
+            name: replica-auto-balance
             namespace: default
           replica-replenishment-wait-interval:
             name: replica-replenishment-wait-interval
@@ -1822,6 +1838,9 @@ spec:
             namespace: default
           default-backup-block-size:
             name: default-backup-block-size
+            namespace: default
+          replica-auto-balance:
+            name: replica-auto-balance
             namespace: default
           replica-replenishment-wait-interval:
             name: replica-replenishment-wait-interval
