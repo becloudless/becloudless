@@ -480,6 +480,9 @@ spec:
                   annotations:
                     kubernetes.io/config.mirror: ?*
               - resources:
+                  namespaces:
+                  - longhorn-system
+              - resources:
                   annotations:
                     policy.bcl.tf/skipPodRemoveCpuRequests: "true"
             match:
