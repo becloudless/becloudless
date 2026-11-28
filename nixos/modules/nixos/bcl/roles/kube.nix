@@ -11,9 +11,6 @@ let
   # (8 spaces here), the continuation lines are indented as the list in the stripped text (2 spaces): with more spaces, YAML folds
   # the items in a single one.
   apiServerPublicDomainNamesYaml = lib.concatStringsSep "\n  - " apiServerPublicDomainNames;
-  kubeadmStaticConfigPath = "/etc/kubernetes/kubeadm.yaml";
-  # Copy of the static config with the etcd state decided at boot (the static one is read-only).
-  kubeadmInitConfigPath = "/run/kubeadm/kubeadm.yaml";
   # OIDC authentication of the apiserver (structured authentication configuration, read by the apiserver at its start).
   authenticationConfigPath = "/etc/kubernetes/authentication-config.yaml";
   # The Mozilla CA bundle is inlined: the apiserver pod mounts /etc/ssl/certs of the host, whose files are symlinks into /etc/static
@@ -49,18 +46,6 @@ let
     "  readOnly: true"
     "  pathType: File"
   ];
-  etcdJoinExistingCluster = pkgs.writeShellApplication {
-    name = "etcd-join-existing-cluster";
-    runtimeInputs = [ pkgs.etcd pkgs.kubernetes pkgs.gawk pkgs.gnused pkgs.coreutils ];
-    text = lib.bcl.kube.etcdJoinExistingClusterScript {
-      memberName = nodeName nodeNumber;
-      peerUrl = "https://${myIp}:2380";
-      otherMasterEndpoints = map (n: "https://${nodeIp n}:2379")
-        (lib.filter (n: n != nodeNumber) (lib.range 1 cfg.masterNodeCount));
-      staticConfigPath = kubeadmStaticConfigPath;
-      initConfigPath = kubeadmInitConfigPath;
-    };
-  };
 in
 {
   options.bcl.role.kube = {
@@ -179,10 +164,9 @@ in
         RestartSec = 30;
       };
 
-      preStart = "${etcdJoinExistingCluster}/bin/etcd-join-existing-cluster";
-
+      # preStart: see `kubeEtcdJoin.nix`
       script = ''
-        ${pkgs.kubernetes}/bin/kubeadm init --skip-phases=preflight,bootstrap-token,addon/coredns,addon/kube-proxy,show-join-command --config=${kubeadmInitConfigPath}
+        ${pkgs.kubernetes}/bin/kubeadm init --skip-phases=preflight,bootstrap-token,addon/coredns,addon/kube-proxy,show-join-command --config=${lib.bcl.kube.kubeadmInitConfigPath}
       '';
       after = [ "network-online.target" "time-sync.target" ];
       wants = [ "network-online.target" "time-sync.target" ];
