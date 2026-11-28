@@ -612,6 +612,8 @@ spec:
         issuer: test Authelia
       webauthn:
         display_name: test Authelia
+    image:
+      tag: 4.39.28
     ingress:
       enabled: false
     pod:

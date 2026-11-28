@@ -176,6 +176,8 @@ resources:
             kind: HelmRepository
             name: authelia
       values:
+        image:
+          tag: 4.39.28 # renovate: datasource=github-releases packageName=authelia/authelia extractVersion=^v(?<version>.+)$
         ingress:
           enabled: false # Gateway instead
 
