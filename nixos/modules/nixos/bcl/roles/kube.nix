@@ -7,6 +7,10 @@ let
   myIp = nodeIp nodeNumber;
   # The default name and the one set (the same by default) are both resolved locally and in the SANs of the apiserver certificate.
   apiServerPublicDomainNames = lib.unique [ "kube.${config.bcl.global.domain}" cfg.apiServerPublicDomainName ];
+  # Items of the YAML list `certSANs` after the first one. An interpolated text is not stripped of the indentation of the '' string
+  # (8 spaces here), the continuation lines are indented as the list in the stripped text (2 spaces): with more spaces, YAML folds
+  # the items in a single one.
+  apiServerPublicDomainNamesYaml = lib.concatStringsSep "\n  - " apiServerPublicDomainNames;
   kubeadmStaticConfigPath = "/etc/kubernetes/kubeadm.yaml";
   # Copy of the static config with the etcd state decided at boot (the static one is read-only).
   kubeadmInitConfigPath = "/run/kubeadm/kubeadm.yaml";
@@ -327,7 +331,7 @@ in
             ${lib.optionalString cfg.oidc.enable "authentication-config: ${authenticationConfigPath}"}
           ${lib.optionalString cfg.oidc.enable oidcApiServerExtraVolumes}
           certSANs:
-          - ${lib.concatStringsSep "\n          - " apiServerPublicDomainNames}
+          - ${apiServerPublicDomainNamesYaml}
           - ${nodeIp 1}
           - ${nodeIp 2}
           - ${nodeIp 3}
