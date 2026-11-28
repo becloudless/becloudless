@@ -108,7 +108,7 @@ func removeNode(ctx kube.Context, options nodeRemoveOptions) error {
 		return readyStatus != "True", err
 	})
 	if err != nil {
-		return errs.WithEF(err, fields, "The node is still running, power it off then run the command again")
+		return errs.WithEF(err, fields, "The node is still running after the timeout, power it off then run the command again")
 	}
 
 	if hasLonghornNode {
@@ -199,14 +199,18 @@ func waitUntil(timeout time.Duration, pollPeriod time.Duration, isDone func() (b
 	deadline := time.Now().Add(timeout)
 	for {
 		done, err := isDone()
-		if err != nil {
-			return err
-		}
-		if done {
+		if err == nil && done {
 			return nil
 		}
 		if time.Now().After(deadline) {
-			return errs.WithF(data.WithField("timeout", timeout), "Timeout reached")
+			fields := data.WithField("timeout", timeout)
+			if err != nil {
+				return errs.WithEF(err, fields, "Timeout reached, the last attempt failed")
+			}
+			return errs.WithF(fields, "Timeout reached")
+		}
+		if err != nil {
+			logs.WithE(err).Warn("Attempt failed, retrying") // the apiserver is often slow or restarting while the cluster is moving
 		}
 		time.Sleep(pollPeriod)
 	}

@@ -42,6 +42,16 @@ spec:
       metadata:
         name: snapshot-controller
       spec:
+        replicas: 2
+    target:
+      kind: Deployment
+      name: snapshot-controller
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: snapshot-controller
+      spec:
         template:
           spec:
             securityContext:

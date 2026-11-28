@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../base/schema/values.schema.json
+# yaml-language-server: $schema=../app/schema/values.schema.json
 
 resources:
   fluxGitRepositories:
@@ -42,6 +42,17 @@ resources:
       # the upstream manifest sets no security context: compliant with container-require-run-as-non-root and
       # container-require-read-only-root-filesystem (see app-kyverno)
       patches:
+        replicas:
+          target:
+            kind: Deployment
+            name: snapshot-controller
+          patch: |
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: snapshot-controller
+            spec:
+              replicas: {{ .Values.app.scaling.replicas }}
         security-context:
           target:
             kind: Deployment
