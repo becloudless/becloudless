@@ -4,7 +4,7 @@
   "private": true,
   "description": "Renovate configuration files",
   "engines": {
-    "node": "^24.14.0"
+    "node": "^26.0.0"
   },
   "scripts": {
     "fmt": "prettier --write config/**/*.json5",
