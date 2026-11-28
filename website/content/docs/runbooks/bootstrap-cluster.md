@@ -20,7 +20,7 @@ Full sequence for provisioning a new BeCloudLess Kubernetes cluster from bare me
 For each node:
 
 ```bash
-bcl nixos install <hostname>
+bcl nixos install --host <ip> --system <hostname>
 ```
 
 This runs `nixos-anywhere` to partition, format, and install NixOS using the machine's configuration from the flake.

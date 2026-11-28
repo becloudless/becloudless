@@ -34,7 +34,7 @@ Manage NixOS machines.
 |---|---|
 | `bcl nixos build <hostname>` | Build the NixOS configuration without deploying |
 | `bcl nixos deploy <hostname>` | Deploy (switch) the NixOS configuration to the target host |
-| `bcl nixos install <hostname>` | Bootstrap NixOS onto a fresh machine (runs nixos-anywhere) |
+| `bcl nixos install --host <host>` | Bootstrap NixOS onto a fresh machine (runs nixos-anywhere). Flags: `--system` (name of the system, otherwise found with the optional `bcl.system.id` or asked), `--yes` (skip the confirmation that precedes erasing the disks) |
 
 ---
 

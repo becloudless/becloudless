@@ -19,6 +19,7 @@ in {
       description = "Enable the bcl stack on the machine (boot, disks, hardware, /etc/bcl/config.yaml, upgrades with the bcl CLI). On with a role, or a group.";
     };
     id = lib.mkOption {
+      description = "Optional identity of the machine. `bcl nixos install` uses it to find the system of a target when `--system` is not given, and warns when it does not match the target of `--system`.";
       type = lib.types.submodule {
         options = {
           motherboardUuid = lib.mkOption {

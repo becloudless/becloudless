@@ -68,7 +68,7 @@ Apply and wait for the `Cluster` to reach `Ready` state.
 Re-install NixOS on each node:
 
 ```bash
-bcl nixos install <hostname>
+bcl nixos install --host <ip> --system <hostname>
 ```
 
 ### 3.2 — Bootstrap Flux

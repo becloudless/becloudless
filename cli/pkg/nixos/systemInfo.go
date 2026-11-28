@@ -30,6 +30,10 @@ type SystemInfo struct {
 	IsInstaller     bool     `json:"isInstaller"`
 }
 
+func (s SystemInfo) HasIdentity() bool {
+	return s.MotherboardUuid != "" || s.CpuSerial != "" || len(s.NetworkMacs) > 0 || len(s.NetworkIps) > 0 || len(s.Disks) > 0
+}
+
 func (s SystemInfo) Matches(other SystemInfo) bool {
 	if s.MotherboardUuid != "" && s.MotherboardUuid == other.MotherboardUuid {
 		return true

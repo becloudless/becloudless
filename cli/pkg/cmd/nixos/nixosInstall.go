@@ -16,6 +16,8 @@ func nixosInstallCmd() *cobra.Command {
 	var diskPassword string
 	var diskPasswordFile string
 	var buildOn string
+	var systemName string
+	var assumeYes bool
 
 	var sshConfig runner.SshConnectionConfig
 	sudoPassword := memguarded.NewService()
@@ -37,7 +39,12 @@ func nixosInstallCmd() *cobra.Command {
 				diskPassword = string(content)
 			}
 
-			return nixos.InstallAnywhere(&sshConfig, diskPassword, buildOn)
+			return nixos.InstallAnywhere(&sshConfig, nixos.InstallOptions{
+				DiskPassword: diskPassword,
+				BuildOn:      buildOn,
+				System:       systemName,
+				AssumeYes:    assumeYes,
+			})
 		},
 	}
 
@@ -47,6 +54,8 @@ func nixosInstallCmd() *cobra.Command {
 		logs.WithE(err).Fatal("Failed to mark host flag as required")
 	}
 
+	cmd.Flags().StringVar(&systemName, "system", "", "name of the system to install, when empty it is found with the optional bcl.system.id or asked")
+	cmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "do not ask confirmation before erasing the disks of the target")
 	cmd.Flags().StringVar(&diskPassword, "disk-password", "", "disk password")
 	cmd.Flags().StringVar(&diskPasswordFile, "disk-password-file", "", "disk password file")
 	cmd.Flags().StringVar(&buildOn, "build-on", "auto", "where to build the system closure: remote, local or auto")

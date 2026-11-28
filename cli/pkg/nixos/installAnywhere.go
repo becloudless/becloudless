@@ -3,8 +3,10 @@ package nixos
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -21,7 +23,17 @@ import (
 
 const fileFacter = "facter.json"
 
-func InstallAnywhere(sshConfig *runner.SshConnectionConfig, diskPassword string, buildOn string) error {
+type InstallOptions struct {
+	DiskPassword string
+	BuildOn      string
+	// System is the name of the system to install, when empty it is found with bcl.system.id or asked
+	System    string
+	AssumeYes bool
+}
+
+func InstallAnywhere(sshConfig *runner.SshConnectionConfig, options InstallOptions) error {
+	diskPassword := options.DiskPassword
+	buildOn := options.BuildOn
 	infra, err := bcl.FindInfraFromPath(".")
 	if err != nil {
 		return errs.WithE(err, "Failed to open current infra repository")
@@ -51,20 +63,20 @@ func InstallAnywhere(sshConfig *runner.SshConnectionConfig, diskPassword string,
 		return errs.WithE(err, "Failed to extract system information from host to install")
 	}
 
-	logs.Info("Looking for matching system")
+	logs.Info("Looking for the system to install")
 	// nix flakes only see tracked files, so new systems must be added to git first
 	if err := infra.Git.AddAll(); err != nil {
 		return errs.WithE(err, "Failed to add new files to git repository")
 	}
 	localRunner := runner.NewLocalRunner()
-	systemName, err := findSystem(infra, localRunner, info)
+	selection, err := selectSystem(infra, localRunner, info, options.System, options.AssumeYes)
 	if err != nil {
 		return errs.WithE(err, "Fail during process to find the system to install")
 	}
-
-	if systemName == "" {
-		return errs.WithF(data.WithField("info", info), "Cannot find matching system to install")
+	if err := confirmInstall(sshConfig.Host, selection, info, options.AssumeYes); err != nil {
+		return err
 	}
+	systemName := selection.name
 	//var systemConfig SystemConfig
 	//systemParentFolder := path.Join(infra.GetNixosDir(), "systems", "x86_64-linux")
 	//if systemName == "" {
@@ -243,7 +255,15 @@ func prepareDiskPassword(repo *bcl.Infra, temp string, systemName string, diskPa
 	return nil
 }
 
-func findSystem(repo *bcl.Infra, localRunner *runner.LocalRunner, info SystemInfo) (string, error) {
+type systemSelection struct {
+	name string
+	// matchedById is true when bcl.system.id of the system matched the target, so nothing was chosen by hand
+	matchedById bool
+	// idMismatch is true when the system declares a bcl.system.id that does not match the target
+	idMismatch bool
+}
+
+func listSystems(repo *bcl.Infra, localRunner *runner.LocalRunner) ([]string, error) {
 	flakeShow, err := localRunner.ExecCmdGetStdout(
 		"nix",
 		"--extra-experimental-features", "nix-command flakes",
@@ -253,7 +273,7 @@ func findSystem(repo *bcl.Infra, localRunner *runner.LocalRunner, info SystemInf
 		"--json",
 		"--all-systems")
 	if err != nil {
-		return "", errs.WithE(err, "Listing hosts declared in nix failed")
+		return nil, errs.WithE(err, "Listing hosts declared in nix failed")
 	}
 
 	flake := struct {
@@ -261,29 +281,103 @@ func findSystem(repo *bcl.Infra, localRunner *runner.LocalRunner, info SystemInf
 	}{}
 
 	if err := json.Unmarshal([]byte(flakeShow), &flake); err != nil {
-		return "", errs.WithE(err, "Failed to list nixos configurations")
+		return nil, errs.WithE(err, "Failed to list nixos configurations")
 	}
 
-	for confName := range flake.NixosConfigurations {
-		idJSON, err := localRunner.ExecCmdGetStdout(
-			"nix",
-			"--extra-experimental-features", "nix-command flakes",
-			"eval", repo.GetNixosDir()+"#nixosConfigurations."+confName+".config.bcl.system.id",
-			"--json")
+	names := make([]string, 0, len(flake.NixosConfigurations))
+	for name := range flake.NixosConfigurations {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	return names, nil
+}
+
+func declaredSystemId(repo *bcl.Infra, localRunner *runner.LocalRunner, systemName string) (SystemInfo, error) {
+	idJSON, err := localRunner.ExecCmdGetStdout(
+		"nix",
+		"--extra-experimental-features", "nix-command flakes",
+		"eval", repo.GetNixosDir()+"#nixosConfigurations."+systemName+".config.bcl.system.id",
+		"--json")
+	if err != nil {
+		return SystemInfo{}, errs.WithE(err, "Failed to evaluate bcl.system.id, system config is probably broken")
+	}
+
+	var declared SystemInfo
+	if err := json.Unmarshal([]byte(idJSON), &declared); err != nil {
+		return SystemInfo{}, errs.WithEF(err, data.WithField("id", idJSON), "Failed to parse bcl.system.id")
+	}
+	return declared, nil
+}
+
+// selectSystem uses the requested system, else the only system whose optional bcl.system.id matches the target, else asks
+func selectSystem(repo *bcl.Infra, localRunner *runner.LocalRunner, info SystemInfo, requested string, assumeYes bool) (systemSelection, error) {
+	names, err := listSystems(repo, localRunner)
+	if err != nil {
+		return systemSelection{}, err
+	}
+
+	if requested != "" {
+		if !slices.Contains(names, requested) {
+			return systemSelection{}, errs.WithF(data.WithField("system", requested).WithField("available", names), "System is not declared in the repository")
+		}
+		declared, err := declaredSystemId(repo, localRunner, requested)
 		if err != nil {
-			logs.WithField("system", confName).Warn("system config is probably broken")
+			return systemSelection{}, errs.WithEF(err, data.WithField("system", requested), "Cannot read the system identity")
+		}
+		return systemSelection{name: requested, idMismatch: declared.HasIdentity() && !declared.Matches(info)}, nil
+	}
+
+	var matches []string
+	for _, name := range names {
+		declared, err := declaredSystemId(repo, localRunner, name)
+		if err != nil {
+			logs.WithEF(err, data.WithField("system", name)).Warn("Skipping system")
 			continue
 		}
-
-		var current SystemInfo
-		if err := json.Unmarshal([]byte(idJSON), &current); err != nil {
-			logs.WithField("system", confName).WithField("id", idJSON).Warn("failed to parse bcl.system.id")
-			continue
-		}
-
-		if current.Matches(info) {
-			return confName, nil
+		if declared.Matches(info) {
+			matches = append(matches, name)
 		}
 	}
-	return "", nil
+
+	switch len(matches) {
+	case 1:
+		return systemSelection{name: matches[0], matchedById: true}, nil
+	case 0:
+		if assumeYes {
+			return systemSelection{}, errs.WithF(data.WithField("info", info), "No system matches the target, select one with --system")
+		}
+		chosen, err := utils.AskChoice("No system declares an id matching the target, which system to install?", names)
+		if err != nil {
+			return systemSelection{}, err
+		}
+		return systemSelection{name: chosen}, nil
+	default:
+		return systemSelection{}, errs.WithF(data.WithField("matches", matches), "Several systems match the target, select one with --system")
+	}
+}
+
+// confirmInstall protects the target disks, nothing is asked when the system was found by its id
+func confirmInstall(host string, selection systemSelection, info SystemInfo, assumeYes bool) error {
+	if selection.idMismatch {
+		logs.WithField("system", selection.name).Warn("The target does not match the bcl.system.id of the system")
+		if assumeYes {
+			return errs.WithF(data.WithField("system", selection.name), "The target does not match the bcl.system.id of the system, fix or remove the id")
+		}
+	}
+	if selection.matchedById || assumeYes {
+		return nil
+	}
+
+	fmt.Printf("Install system %q on %s, this erases its disks\n", selection.name, host)
+	fmt.Printf("  disks:  %s\n", strings.Join(info.Disks, ", "))
+	fmt.Printf("  macs:   %s\n", strings.Join(info.NetworkMacs, ", "))
+	fmt.Printf("  memory: %d MiB\n", info.Memory/1024)
+	confirmed, err := utils.AskConfirm("Install?")
+	if err != nil {
+		return err
+	}
+	if !confirmed {
+		return errs.With("Install aborted")
+	}
+	return nil
 }
