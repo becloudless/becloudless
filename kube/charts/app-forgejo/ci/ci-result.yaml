@@ -131,6 +131,8 @@ spec:
         oauth2_client:
           ENABLE_AUTO_REGISTRATION: true
           USERNAME: preferred_username
+        openid:
+          ENABLE_OPENID_SIGNIN: false
         queue:
           TYPE: level
         server:
@@ -144,6 +146,7 @@ spec:
           DEFAULT_KEEP_EMAIL_PRIVATE: true
           DEFAULT_USER_VISIBILITY: private
           DISABLE_REGISTRATION: true
+          ENABLE_INTERNAL_SIGNIN: false
         session:
           PROVIDER: db
         ui:
