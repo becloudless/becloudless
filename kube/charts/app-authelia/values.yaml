@@ -462,6 +462,10 @@ resources:
                   group: gateway.networking.k8s.io
                   kind: HTTPRoute
                   namespace: longhorn-system
+                lldap:
+                  group: gateway.networking.k8s.io
+                  kind: HTTPRoute
+                  namespace: lldap
                 homer:
                   group: gateway.networking.k8s.io
                   kind: HTTPRoute

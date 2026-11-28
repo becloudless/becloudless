@@ -572,5 +572,6 @@ resources:
 expose:
   lldap:
     port: 17170
+    auth: authelia
     dependsOn:
       - ref:lldap-post

@@ -934,6 +934,10 @@ spec:
               group: gateway.networking.k8s.io
               kind: HTTPRoute
               namespace: homer
+            lldap:
+              group: gateway.networking.k8s.io
+              kind: HTTPRoute
+              namespace: lldap
             longhorn:
               group: gateway.networking.k8s.io
               kind: HTTPRoute
