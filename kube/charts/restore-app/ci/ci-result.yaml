@@ -355,6 +355,7 @@ spec:
             name: script
           - emptyDir: {}
             name: tmp
+      ttlSecondsAfterFinished: 86400
   schedule: 7 * * * *
   startingDeadlineSeconds: 30
   successfulJobsHistoryLimit: 1

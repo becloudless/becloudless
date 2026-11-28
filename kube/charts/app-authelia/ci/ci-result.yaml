@@ -674,7 +674,7 @@ spec:
           name: secret-authelia-oidc-tuwunel
           readOnly: true
       kind: Deployment
-      replicas: 1
+      replicas: 2
       securityContext:
         container:
           allowPrivilegeEscalation: false

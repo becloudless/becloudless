@@ -14,6 +14,7 @@ func KubeCmd() *cobra.Command {
 		chart.ChartsCmd(),
 		kubeBootstrapCmd(),
 		kubeContextCmd(),
+		kubeNodesCmd(),
 		kubeSecretCmd(),
 	)
 	return &cmd

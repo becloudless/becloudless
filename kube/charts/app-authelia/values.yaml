@@ -181,7 +181,7 @@ resources:
 
         pod:
           kind: Deployment
-          replicas: 1 # TODO the notifications are files of the pod
+          replicas: "{{ .Values.app.scaling.replicas }}"
           env:
             - name: TZ
               value: Europe/Paris
