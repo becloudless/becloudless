@@ -5,7 +5,7 @@
 # A cluster sets it with `apps.cilium.values.pop: true`.
 pop: false
 
-# The name of the apiserver, resolved to the node by its `/etc/hosts` (`bcl.role.kube.apiServerName` of the NixOS role, `kube.<clusterName>.<domain>`),
+# The name of the apiserver, resolved to the node by its `/etc/hosts` (`bcl.role.kube.apiServerPublicDomainName` of the NixOS role, `kube.<domain>` by default),
 # `kube.<domain>` when empty (the global name of the clusters of a private network).
 apiServerHost: ""
 

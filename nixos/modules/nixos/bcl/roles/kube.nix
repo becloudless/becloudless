@@ -5,6 +5,8 @@ let
   nodeName = n: "${config.bcl.role.kube.clusterName}${toString n}";
   nodeNumber = lib.strings.toInt(builtins.substring ((builtins.stringLength config.networking.hostName) -1)  (-1) config.networking.hostName);
   myIp = nodeIp nodeNumber;
+  # The default name and the one set (the same by default) are both resolved locally and in the SANs of the apiserver certificate.
+  apiServerPublicDomainNames = lib.unique [ "kube.${config.bcl.global.domain}" cfg.apiServerPublicDomainName ];
   kubeadmStaticConfigPath = "/etc/kubernetes/kubeadm.yaml";
   # Copy of the static config with the etcd state decided at boot (the static one is read-only).
   kubeadmInitConfigPath = "/run/kubeadm/kubeadm.yaml";
@@ -59,14 +61,14 @@ in
 {
   options.bcl.role.kube = {
     clusterName = lib.mkOption {type = lib.types.str;};
-    apiServerName = lib.mkOption {
+    apiServerPublicDomainName = lib.mkOption {
       type = lib.types.str;
-      readOnly = true;
-      default = "kube.${cfg.clusterName}.${config.bcl.global.domain}";
-      defaultText = lib.literalExpression ''"kube.''${clusterName}.''${config.bcl.global.domain}"'';
+      default = "kube.${config.bcl.global.domain}";
+      defaultText = lib.literalExpression ''"kube.''${config.bcl.global.domain}"'';
       description = ''
-        Name of the apiserver of this cluster, the control plane endpoint (port 8443, the haproxy of the node): it resolves to the node
-        itself (`/etc/hosts`). It contains the name of the cluster, the global name `kube.<domain>` is shared by the clusters of the domain.
+        Public name of the apiserver, the control plane endpoint (port 8443, the haproxy of the node): it resolves to the node itself
+        (`/etc/hosts`). The default name `kube.<domain>` is always kept in the SANs of the apiserver certificate and in `/etc/hosts`,
+        next to the value set.
       '';
     };
     firstNodeIp = lib.mkOption {
@@ -252,8 +254,7 @@ in
     };
 
     networking.extraHosts = ''
-      127.0.0.1       ${cfg.apiServerName}
-      127.0.0.1       kube.${config.bcl.global.domain} # the global name, shared by the clusters of the domain
+      127.0.0.1       ${lib.concatStringsSep " " apiServerPublicDomainNames}
 
       ${nodeIp 1}   ${nodeName 1}
       ${nodeIp 2}   ${nodeName 2}
@@ -296,7 +297,7 @@ in
         apiVersion: kubeadm.k8s.io/v1beta3
         kind: ClusterConfiguration
         kubernetesVersion: stable
-        controlPlaneEndpoint: ${cfg.apiServerName}:8443
+        controlPlaneEndpoint: ${cfg.apiServerPublicDomainName}:8443
         networking:
           serviceSubnet: 172.16.42.0/24
           podSubnet: 10.42.0.0/16
@@ -326,8 +327,7 @@ in
             ${lib.optionalString cfg.oidc.enable "authentication-config: ${authenticationConfigPath}"}
           ${lib.optionalString cfg.oidc.enable oidcApiServerExtraVolumes}
           certSANs:
-          - ${cfg.apiServerName}
-          - kube.${config.bcl.global.domain} # the global name, shared by the clusters of the domain
+          - ${lib.concatStringsSep "\n          - " apiServerPublicDomainNames}
           - ${nodeIp 1}
           - ${nodeIp 2}
           - ${nodeIp 3}

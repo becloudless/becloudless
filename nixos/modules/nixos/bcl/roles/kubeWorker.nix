@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.bcl.role.kube;
-  endpoint = "${cfg.apiServerName}:8443"; # the local haproxy, see kubeHap.nix
+  endpoint = "${cfg.apiServerPublicDomainName}:8443"; # the local haproxy, see kubeHap.nix
 in
 {
   config = lib.mkIf (config.bcl.role.name == "kube" && cfg.worker) {
