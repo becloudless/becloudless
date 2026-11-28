@@ -2,3 +2,17 @@ app:
   domain: test.com
   name: test
   lldapdn: dc=test,dc=com
+  lldapUsers:
+    n0rad:
+      displayName: n0rad
+      email: n0rad@test.com
+      groups:
+        - role_admin
+        - app_mailu
+    external:
+      displayName: External
+      email: external@example.org
+      groups:
+        - app_mailu
+    guest:
+      email: guest@test.com

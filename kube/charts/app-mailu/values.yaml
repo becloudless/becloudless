@@ -20,7 +20,8 @@
 # (`proxyAuth`) logs in the account of this email, created at the first login when its domain exists in mailu (`proxyAuth.create`: so the
 # email of the user in lldap has to be `<user>@<domain>`, as an account of mailu). Only the proxies of `proxyAuth.whitelist` (the pods of
 # the cluster: the front only lets the Gateway, and the nodes, reach its web port, see the policy `mailu-front`) are trusted for the header.
-# The account created has a random password: the mail clients (IMAP, SMTP) can not use Authelia, they use the password of the account (to set in
+# The accounts of the users of lldap member of `app_mailu` are created with the Job of `mailu-post` (see there), so that they exist before the first
+# login. The account created has a random password: the mail clients (IMAP, SMTP) can not use Authelia, they use the password of the account (to set in
 # the web UI) or a token. An administrator of mailu is the account of the email of its lldap user (the first one is `initialAccount`), the
 # other accounts are users. To log in with the password of an account instead (the admin of `initialAccount`):
 # `https://mailu.<domain>/sso/login?noproxyauth`.
@@ -850,9 +851,14 @@ resources:
           extraVolumes:
             - {name: tmp, emptyDir: {}}
 
-    # The accounts of the apps, created through the API of mailu once it runs: the account `authelia@<domain>` of the notifier of Authelia,
-    # with the password of the secret `mailu-authelia` (the account is created, or its password is set when it exists). The Job is named
-    # after its revision: change the 1 of its name when its spec changes (immutable fields), or delete it to run it again (a new database).
+    # The accounts, created through the API of mailu once it runs:
+    #  - the account `authelia@<domain>` of the notifier of Authelia, with the password of the secret `mailu-authelia` (the account is created,
+    #    or its password is set when it exists)
+    #  - the account of each user of lldap member of the group `app_mailu` (`app.lldapUsers`), at the email of the user (the one Authelia gives to
+    #    the web UI, `proxyAuth`), created with a random password and never changed after: the user sets its password in the web UI. A user whose
+    #    email is not in `app.domain` is skipped (logged), and the account of a user removed from the group is kept (its mails).
+    # The Job is named after its revision and the users: change the 2 of its name when its spec changes (immutable fields), or delete it to run
+    # it again (a new database).
     mailu-post:
       dependsOn:
         - ref:mailu
@@ -860,7 +866,7 @@ resources:
         resources:
           jobs:
             mailu-accounts:
-              fullNameOverride: 'mailu-accounts-{{ list 1 .Values.app.domain | toJson | sha256sum | trunc 10 }}'
+              fullNameOverride: 'mailu-accounts-{{ list 2 .Values.app.domain (.Values.app.lldapUsers | default dict) | toJson | sha256sum | trunc 10 }}'
               backoffLimit: 0
               activeDeadlineSeconds: 1200
               template:
@@ -894,9 +900,33 @@ resources:
                                    -d "{\"email\":\"$AUTHELIA_EMAIL\",\"raw_password\":\"$AUTHELIA_PASSWORD\",\"comment\":\"Authelia notifier\"}" "$api/user" ;;
                             *) echo "unexpected status $code"; exit 1 ;;
                           esac
+                          printf '%s\n' "$ACCOUNTS" | while read -r id email name; do
+                            case "$id" in ''|'#'*) continue ;; esac
+                            case "$email" in
+                              *"@$DOMAIN") ;;
+                              *) echo "skip $id: its email '$email' is not in $DOMAIN"; continue ;;
+                            esac
+                            name=$(printf '%s' "$name" | tr -d '"\\')
+                            code=$(curl -sS -o /dev/null -w '%{http_code}' -H "$auth" "$api/user/$email")
+                            case "$code" in
+                              200) echo "$email exists" ;;
+                              404) password=$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32)
+                                   curl -fsS -X POST -H "$auth" -H 'Content-Type: application/json' \
+                                     -d "{\"email\":\"$email\",\"raw_password\":\"$password\",\"displayed_name\":\"$name\",\"comment\":\"lldap user $id\"}" "$api/user" ;;
+                              *) echo "unexpected status $code for $email"; exit 1 ;;
+                            esac
+                          done
                       env:
                         DOMAIN: "{{ .Values.app.domain }}"
                         AUTHELIA_EMAIL: authelia@{{ .Values.app.domain }}
+                        ACCOUNTS: |
+                          # <id> <email> <display name>, the users of lldap member of `app_mailu`
+                          {{- range $id, $user := (.Values.app.lldapUsers | default dict) }}
+                          {{- $u := $user | default dict }}
+                          {{- if has "app_mailu" ($u.groups | default list) }}
+                          {{ $id }} {{ $u.email | default "-" }} {{ $u.displayName | default $id }}
+                          {{- end }}
+                          {{- end }}
                         API_TOKEN:
                           secretKeyRef:
                             name: mailu-api

@@ -1250,7 +1250,7 @@ spec:
         mailu-accounts:
           activeDeadlineSeconds: 1200
           backoffLimit: 0
-          fullNameOverride: mailu-accounts-97bd647638
+          fullNameOverride: mailu-accounts-9af48ea18a
           template:
             spec:
               containers:
@@ -1269,10 +1269,30 @@ spec:
                              -d "{\"email\":\"$AUTHELIA_EMAIL\",\"raw_password\":\"$AUTHELIA_PASSWORD\",\"comment\":\"Authelia notifier\"}" "$api/user" ;;
                       *) echo "unexpected status $code"; exit 1 ;;
                     esac
+                    printf '%s\n' "$ACCOUNTS" | while read -r id email name; do
+                      case "$id" in ''|'#'*) continue ;; esac
+                      case "$email" in
+                        *"@$DOMAIN") ;;
+                        *) echo "skip $id: its email '$email' is not in $DOMAIN"; continue ;;
+                      esac
+                      name=$(printf '%s' "$name" | tr -d '"\\')
+                      code=$(curl -sS -o /dev/null -w '%{http_code}' -H "$auth" "$api/user/$email")
+                      case "$code" in
+                        200) echo "$email exists" ;;
+                        404) password=$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32)
+                             curl -fsS -X POST -H "$auth" -H 'Content-Type: application/json' \
+                               -d "{\"email\":\"$email\",\"raw_password\":\"$password\",\"displayed_name\":\"$name\",\"comment\":\"lldap user $id\"}" "$api/user" ;;
+                        *) echo "unexpected status $code for $email"; exit 1 ;;
+                      esac
+                    done
                   command:
                   - sh
                   - -ec
                   env:
+                    ACCOUNTS: |-
+                      # <id> <email> <display name>, the users of lldap member of `app_mailu`
+                      external external@example.org External
+                      n0rad n0rad@test.com n0rad
                     API_TOKEN:
                       secretKeyRef:
                         key: api-token
