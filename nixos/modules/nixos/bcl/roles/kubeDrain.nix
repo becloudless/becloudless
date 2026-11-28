@@ -2,9 +2,6 @@
 let
   cfg = config.bcl.role.kube;
 
-  # Set on the node by `kube-drain` when it cordons it, so the node is uncordoned at the next boot (and only then: a node cordoned by hand stays so).
-  uncordonAnnotation = "bcl.tf/uncordon-on-boot";
-
   # Masters have the cluster admin kubeconfig. Workers hold the cluster CA (see kubeWorker.nix), so they sign a short-lived admin client
   # certificate: their own node identity is not allowed to evict pods nor to cordon.
   kubeLib = ''
@@ -30,14 +27,12 @@ let
       ${kubeLib}
       setup_kubeconfig
       node=${config.networking.hostName}
-      if [ "$(kubectl get node "$node" -o jsonpath='{.spec.unschedulable}')" != true ]; then
-        kubectl annotate node "$node" ${uncordonAnnotation}=true --overwrite
-      fi
       timeout ${toString (cfg.shutdownDrainTimeout + 30)} kubectl drain "$node" --timeout ${toString cfg.shutdownDrainTimeout}s --ignore-daemonsets --delete-emptydir-data
     '';
   };
 
-  # At boot, uncordon the node if it was cordoned by `kube-drain`.
+  # At boot, always uncordon the node, whoever cordoned it (`kube-drain`, kured, by hand): the cordon of kured is lost when its lock
+  # expired during a long outage, and nothing else would uncordon the node.
   kubeUncordonOnBoot = pkgs.writeShellApplication {
     name = "kube-uncordon-on-boot";
     runtimeInputs = [ pkgs.kubernetes pkgs.coreutils ];
@@ -45,11 +40,9 @@ let
       ${kubeLib}
       node=${config.networking.hostName}
       for _ in $(seq 120); do
-        # the apiserver may still be starting: retry every step until all of them went through
-        if setup_kubeconfig && value=$(kubectl get node "$node" -o jsonpath='{.metadata.annotations.bcl\.tf/uncordon-on-boot}' 2>/dev/null); then
-          if [ "$value" != true ] || { kubectl uncordon "$node" && kubectl annotate node "$node" ${uncordonAnnotation}-; }; then
-            exit 0
-          fi
+        # the apiserver may still be starting: retry until the node is uncordoned
+        if setup_kubeconfig && kubectl uncordon "$node"; then
+          exit 0
         fi
         sleep 5
       done
@@ -107,7 +100,7 @@ in
     };
 
     systemd.services."kube-uncordon-on-boot" = {
-      description = "Uncordon the kubernetes node if it was cordoned by kube-drain";
+      description = "Uncordon the kubernetes node at boot";
       inherit after;
       wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
