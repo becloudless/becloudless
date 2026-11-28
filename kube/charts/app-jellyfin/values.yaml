@@ -173,7 +173,7 @@ resources:
                   initContainers:
                     sso-plugin:
                       name: sso-plugin
-                      image: ghcr.io/becloudless/jellyfin:1.261111.1207
+                      image: ghcr.io/becloudless/jellyfin:1.261121.56
                       command:
                         - jellyfin-init
                       securityContext:
@@ -224,7 +224,7 @@ resources:
                           readOnly: true
                     jellyfin:
                       name: jellyfin
-                      image: ghcr.io/becloudless/jellyfin:1.261111.1207
+                      image: ghcr.io/becloudless/jellyfin:1.261121.56
                       ports:
                         http:
                           containerPort: 8096
