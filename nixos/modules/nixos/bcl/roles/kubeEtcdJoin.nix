@@ -31,11 +31,15 @@ let
 in
 {
   config = lib.mkIf (config.bcl.role.name == "kube" && !cfg.worker) {
-    # Before `kubeadm init`: decides if the etcd of the node starts a new cluster or joins the running one, as a learner.
-    systemd.services."kubeadm".preStart = "${etcdJoinExistingCluster}/bin/etcd-join-existing-cluster";
+    # Before `kubeadm init`: decides if the etcd of the node starts a new cluster or joins the running one, as a learner. The
+    # promotion is started right after, it has to run while `kubeadm` waits for the control plane: the apiserver of the node does not
+    # get healthy before its etcd member is promoted. At boot the service starts too, it has nothing to do (no member yet, or already
+    # promoted) unless the node restarted while still a learner.
+    systemd.services."kubeadm".preStart = ''
+      ${etcdJoinExistingCluster}/bin/etcd-join-existing-cluster
+      ${lib.optionalString (otherMasterEndpoints != [ ]) "${config.systemd.package}/bin/systemctl start --no-block etcd-promote-learner.service"}
+    '';
 
-    # The node joined the running etcd cluster as a learner, it votes once promoted. Not ordered after `kubeadm`: it waits for the
-    # control plane of the node, which may need the promotion.
     systemd.services."etcd-promote-learner" = lib.mkIf (otherMasterEndpoints != [ ]) {
       description = "Promote the etcd member of the node when it joined the running cluster as a learner";
       after = [ "network-online.target" ];
